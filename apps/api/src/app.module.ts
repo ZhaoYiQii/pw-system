@@ -14,6 +14,7 @@ import { LedgerModule } from "./modules/ledger/ledger.module.js";
 import { AuditModule } from "./modules/audit/audit.module.js";
 import { DisputesModule } from "./modules/disputes/disputes.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
+import { AiAssistantModule } from "./modules/ai-assistant/ai.module.js";
 
 @Module({
   controllers: [HealthController],
@@ -31,7 +32,8 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
     LedgerModule,
     AuditModule,
     DisputesModule,
-    NotificationsModule
+    NotificationsModule,
+    AiAssistantModule
   ]
 })
 export class AppModule {}
