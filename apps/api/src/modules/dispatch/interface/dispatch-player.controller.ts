@@ -6,6 +6,8 @@ import { TenantScope } from "../../../common/auth/decorators.js";
 import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { ApiOkResponse } from "@nestjs/swagger";
+import { dataArraySchema, hallOrderSchema } from "../../../openapi/schemas.js";
 
 @RequireAddon("addon.player_order_hall")
 @Controller("api/v1/tenant/player")
@@ -33,6 +35,7 @@ export class DispatchPlayerController {
 
   @TenantScope()
   @Get("order-hall")
+  @ApiOkResponse({ schema: dataArraySchema(hallOrderSchema) as never })
   async hall(@Req() req: AuthenticatedRequest) {
     return { data: await this.dispatch.hallOrders(this.ctx(req).tenantId) };
   }

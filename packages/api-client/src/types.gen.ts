@@ -336,8 +336,155 @@ export type CustomerSelfMyOrdersData = {
 };
 
 export type CustomerSelfMyOrdersResponses = {
-    200: unknown;
+    200: {
+        data: Array<{
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        }>;
+    };
 };
+
+export type CustomerSelfMyOrdersResponse = CustomerSelfMyOrdersResponses[keyof CustomerSelfMyOrdersResponses];
 
 export type CustomerSelfCreateOrderData = {
     body?: never;
@@ -347,8 +494,158 @@ export type CustomerSelfCreateOrderData = {
 };
 
 export type CustomerSelfCreateOrderResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单视图（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        };
+    };
 };
+
+export type CustomerSelfCreateOrderResponse = CustomerSelfCreateOrderResponses[keyof CustomerSelfCreateOrderResponses];
 
 export type CustomerSelfConfirmCompleteData = {
     body?: never;
@@ -360,8 +657,24 @@ export type CustomerSelfConfirmCompleteData = {
 };
 
 export type CustomerSelfConfirmCompleteResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单核算结果
+         */
+        data: {
+            /**
+             * earning id
+             */
+            earningId: string;
+            /**
+             * 陪玩分成（十进制字符串分，>=0）
+             */
+            playerShareFen: string;
+        };
+    };
 };
+
+export type CustomerSelfConfirmCompleteResponse = CustomerSelfConfirmCompleteResponses[keyof CustomerSelfConfirmCompleteResponses];
 
 export type OrdersListData = {
     body?: never;
@@ -371,8 +684,155 @@ export type OrdersListData = {
 };
 
 export type OrdersListResponses = {
-    200: unknown;
+    200: {
+        data: Array<{
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        }>;
+    };
 };
+
+export type OrdersListResponse = OrdersListResponses[keyof OrdersListResponses];
 
 export type OrdersCreateData = {
     body?: never;
@@ -382,8 +842,158 @@ export type OrdersCreateData = {
 };
 
 export type OrdersCreateResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单视图（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        };
+    };
 };
+
+export type OrdersCreateResponse = OrdersCreateResponses[keyof OrdersCreateResponses];
 
 export type OrdersGetData = {
     body?: never;
@@ -395,8 +1005,158 @@ export type OrdersGetData = {
 };
 
 export type OrdersGetResponses = {
-    200: unknown;
+    200: {
+        /**
+         * 订单视图（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        };
+    };
 };
+
+export type OrdersGetResponse = OrdersGetResponses[keyof OrdersGetResponses];
 
 export type OrdersConfirmData = {
     body?: never;
@@ -408,8 +1168,158 @@ export type OrdersConfirmData = {
 };
 
 export type OrdersConfirmResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单视图（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        };
+    };
 };
+
+export type OrdersConfirmResponse = OrdersConfirmResponses[keyof OrdersConfirmResponses];
 
 export type OrdersCancelData = {
     body?: never;
@@ -421,8 +1331,158 @@ export type OrdersCancelData = {
 };
 
 export type OrdersCancelResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单视图（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 客户档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 客户名
+             */
+            customerName: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 计划开始
+             */
+            scheduledStartAt: string | null;
+            /**
+             * 备注
+             */
+            remark: string | null;
+            /**
+             * 乐观锁版本
+             */
+            version: number;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            requirement: {
+                /**
+                 * 需求描述
+                 */
+                description: string;
+                /**
+                 * 游戏 id
+                 */
+                gameId?: string | null;
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId?: string | null;
+                /**
+                 * 游戏名
+                 */
+                gameName?: string | null;
+                /**
+                 * 产品名
+                 */
+                productName?: string | null;
+                /**
+                 * 期望开始时间
+                 */
+                desiredStartAt?: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds?: number;
+                /**
+                 * 最低预算（十进制字符串分，>=0）
+                 */
+                minBudgetFen?: string;
+                /**
+                 * 最高预算（十进制字符串分，>=0）
+                 */
+                maxBudgetFen?: string;
+                /**
+                 * 备注
+                 */
+                note?: string | null;
+            } | null;
+            snapshot: Array<{
+                /**
+                 * 服务产品 id
+                 */
+                serviceProductId: string | null;
+                /**
+                 * 产品名
+                 */
+                productName: string;
+                /**
+                 * 区服名
+                 */
+                regionName: string | null;
+                /**
+                 * 时长（秒）
+                 */
+                durationSeconds: number;
+                /**
+                 * 单价（十进制字符串分，>0）
+                 */
+                unitPriceFen: string;
+                /**
+                 * 陪玩成本（十进制字符串分，>=0）
+                 */
+                playerCostFen: string;
+                /**
+                 * 行小计（十进制字符串分，>0）
+                 */
+                lineTotalFen: string;
+                /**
+                 * 币种
+                 */
+                currency: string;
+            }> | null;
+            timeline: Array<{
+                /**
+                 * 事件 id
+                 */
+                id: string;
+                /**
+                 * 事件类型
+                 */
+                eventType: string;
+                /**
+                 * 原状态
+                 */
+                fromStatus: string | null;
+                /**
+                 * 目标状态
+                 */
+                toStatus: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+            }>;
+        };
+    };
 };
+
+export type OrdersCancelResponse = OrdersCancelResponses[keyof OrdersCancelResponses];
 
 export type OrdersStaffConfirmData = {
     body?: never;
@@ -434,8 +1494,24 @@ export type OrdersStaffConfirmData = {
 };
 
 export type OrdersStaffConfirmResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单核算结果
+         */
+        data: {
+            /**
+             * earning id
+             */
+            earningId: string;
+            /**
+             * 陪玩分成（十进制字符串分，>=0）
+             */
+            playerShareFen: string;
+        };
+    };
 };
+
+export type OrdersStaffConfirmResponse = OrdersStaffConfirmResponses[keyof OrdersStaffConfirmResponses];
 
 export type PlatformFinanceGetData = {
     body?: never;
@@ -471,8 +1547,21 @@ export type TenantFinanceGetData = {
 };
 
 export type TenantFinanceGetResponses = {
-    200: unknown;
+    200: {
+        data: {
+            /**
+             * 平台费率 bp
+             */
+            platformFeeBp: number;
+            /**
+             * 门店抽成 bp
+             */
+            storeCutBp: number;
+        };
+    };
 };
+
+export type TenantFinanceGetResponse = TenantFinanceGetResponses[keyof TenantFinanceGetResponses];
 
 export type TenantFinanceSetStoreCutData = {
     body?: never;
@@ -486,15 +1575,43 @@ export type TenantFinanceSetStoreCutResponses = {
 };
 
 export type TenantFinancePreviewData = {
-    body?: never;
+    /**
+     * 分账试算入参（十进制字符串分）
+     */
+    body: {
+        /**
+         * 老板应付金额（十进制字符串分，>0）
+         */
+        amountFen: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/tenant/finance-rules/split-preview';
 };
 
 export type TenantFinancePreviewResponses = {
-    201: unknown;
+    200: {
+        /**
+         * 分账试算结果
+         */
+        data: {
+            /**
+             * 平台服务费（十进制字符串分，>=0）
+             */
+            platformFeeFen: string;
+            /**
+             * 门店抽成（十进制字符串分，>=0）
+             */
+            storeCutFen: string;
+            /**
+             * 陪玩到手（十进制字符串分，>=0）
+             */
+            playerShareFen: string;
+        };
+    };
 };
+
+export type TenantFinancePreviewResponse = TenantFinancePreviewResponses[keyof TenantFinancePreviewResponses];
 
 export type AccountingAccountingData = {
     body?: never;
@@ -506,8 +1623,24 @@ export type AccountingAccountingData = {
 };
 
 export type AccountingAccountingResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 订单核算结果
+         */
+        data: {
+            /**
+             * earning id
+             */
+            earningId: string;
+            /**
+             * 陪玩分成（十进制字符串分，>=0）
+             */
+            playerShareFen: string;
+        };
+    };
 };
+
+export type AccountingAccountingResponse = AccountingAccountingResponses[keyof AccountingAccountingResponses];
 
 export type PlayerFinanceFinanceData = {
     body?: never;
@@ -517,8 +1650,28 @@ export type PlayerFinanceFinanceData = {
 };
 
 export type PlayerFinanceFinanceResponses = {
-    200: unknown;
+    200: {
+        /**
+         * 陪玩财务汇总
+         */
+        data: {
+            /**
+             * 待入账金额（十进制字符串分，>=0）
+             */
+            pendingFen: string;
+            /**
+             * 已入批金额（十进制字符串分，>=0）
+             */
+            batchedFen: string;
+            /**
+             * 已支付金额（十进制字符串分，>=0）
+             */
+            paidFen: string;
+        };
+    };
 };
+
+export type PlayerFinanceFinanceResponse = PlayerFinanceFinanceResponses[keyof PlayerFinanceFinanceResponses];
 
 export type SettlementsListData = {
     body?: never;
@@ -937,11 +2090,72 @@ export type CatalogListRulesData = {
 };
 
 export type CatalogListRulesResponses = {
-    200: unknown;
+    200: {
+        data: Array<{
+            /**
+             * 价格规则 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 服务产品 id
+             */
+            serviceProductId: string;
+            /**
+             * 时长（秒）
+             */
+            durationSeconds: number;
+            /**
+             * 售价（十进制字符串分，>0）
+             */
+            priceFen: string;
+            /**
+             * 陪玩成本（十进制字符串分，>=0）
+             */
+            playerCostFen: string;
+            /**
+             * 是否启用
+             */
+            enabled: boolean;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+        }>;
+    };
 };
 
+export type CatalogListRulesResponse = CatalogListRulesResponses[keyof CatalogListRulesResponses];
+
 export type CatalogCreateRuleData = {
-    body?: never;
+    /**
+     * 创建价格规则
+     */
+    body: {
+        /**
+         * 时长（秒）
+         */
+        durationSeconds: number;
+        /**
+         * 售价（十进制字符串分，>0）
+         */
+        priceFen: string;
+        /**
+         * 陪玩成本（十进制字符串分，>=0）
+         */
+        playerCostFen?: string;
+        /**
+         * 是否启用
+         */
+        enabled?: boolean;
+    };
     path: {
         productId: string;
     };
@@ -950,8 +2164,52 @@ export type CatalogCreateRuleData = {
 };
 
 export type CatalogCreateRuleResponses = {
-    201: unknown;
+    201: {
+        /**
+         * 价格规则（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 价格规则 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 服务产品 id
+             */
+            serviceProductId: string;
+            /**
+             * 时长（秒）
+             */
+            durationSeconds: number;
+            /**
+             * 售价（十进制字符串分，>0）
+             */
+            priceFen: string;
+            /**
+             * 陪玩成本（十进制字符串分，>=0）
+             */
+            playerCostFen: string;
+            /**
+             * 是否启用
+             */
+            enabled: boolean;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+        };
+    };
 };
+
+export type CatalogCreateRuleResponse = CatalogCreateRuleResponses[keyof CatalogCreateRuleResponses];
 
 export type CatalogRemoveRuleData = {
     body?: never;
@@ -967,7 +2225,27 @@ export type CatalogRemoveRuleResponses = {
 };
 
 export type CatalogUpdateRuleData = {
-    body?: never;
+    /**
+     * 更新价格规则
+     */
+    body: {
+        /**
+         * 时长（秒）
+         */
+        durationSeconds?: number;
+        /**
+         * 售价（十进制字符串分，>0）
+         */
+        priceFen?: string;
+        /**
+         * 陪玩成本（十进制字符串分，>=0）
+         */
+        playerCostFen?: string;
+        /**
+         * 是否启用
+         */
+        enabled?: boolean;
+    };
     path: {
         id: string;
     };
@@ -976,8 +2254,52 @@ export type CatalogUpdateRuleData = {
 };
 
 export type CatalogUpdateRuleResponses = {
-    200: unknown;
+    200: {
+        /**
+         * 价格规则（金额字段为十进制字符串分）
+         */
+        data: {
+            /**
+             * 价格规则 id
+             */
+            id: string;
+            /**
+             * 租户 id
+             */
+            tenantId: string;
+            /**
+             * 服务产品 id
+             */
+            serviceProductId: string;
+            /**
+             * 时长（秒）
+             */
+            durationSeconds: number;
+            /**
+             * 售价（十进制字符串分，>0）
+             */
+            priceFen: string;
+            /**
+             * 陪玩成本（十进制字符串分，>=0）
+             */
+            playerCostFen: string;
+            /**
+             * 是否启用
+             */
+            enabled: boolean;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+        };
+    };
 };
+
+export type CatalogUpdateRuleResponse = CatalogUpdateRuleResponses[keyof CatalogUpdateRuleResponses];
 
 export type DispatchAdminPublishData = {
     body?: never;
@@ -1040,8 +2362,41 @@ export type DispatchPlayerHallData = {
 };
 
 export type DispatchPlayerHallResponses = {
-    200: unknown;
+    200: {
+        data: Array<{
+            /**
+             * 订单 id
+             */
+            id: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 产品名
+             */
+            productName: string;
+            /**
+             * 时长（秒）
+             */
+            durationSeconds: number;
+            /**
+             * 单价（十进制字符串分，>0）
+             */
+            unitPriceFen: string;
+            /**
+             * 期望开始
+             */
+            desiredStartAt: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+        }>;
+    };
 };
+
+export type DispatchPlayerHallResponse = DispatchPlayerHallResponses[keyof DispatchPlayerHallResponses];
 
 export type DispatchPlayerMineData = {
     body?: never;

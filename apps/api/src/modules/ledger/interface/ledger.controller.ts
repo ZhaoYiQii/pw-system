@@ -4,6 +4,8 @@ import { PlayersService } from "../../players/application/players.service.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
+import { accountingResultSchema, dataSchema, playerFinanceSchema } from "../../../openapi/schemas.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -21,6 +23,7 @@ export class AccountingController {
   @TenantScope()
   @Permissions("finance.manage")
   @Post("orders/:orderId/accounting")
+  @ApiCreatedResponse({ schema: dataSchema(accountingResultSchema) as never })
   async accounting(@Req() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     const role = req.principal?.role;
     if (role !== "TENANT_OWNER" && role !== "FINANCE") throw new ForbiddenException("仅店主/财务可核算");
@@ -51,6 +54,7 @@ export class PlayerFinanceController {
 
   @TenantScope()
   @Get("finance")
+  @ApiOkResponse({ schema: dataSchema(playerFinanceSchema) as never })
   async finance(@Req() req: AuthenticatedRequest) {
     const p = req.principal;
     if (!p?.tenantId || p.role !== "PLAYER") throw new ForbiddenException("需要陪玩身份");

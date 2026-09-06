@@ -14,6 +14,8 @@ import {
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
+import { accountingResultSchema, dataArraySchema, dataSchema, orderSchema } from "../../../openapi/schemas.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -52,6 +54,7 @@ export class OrdersController {
   @TenantScope()
   @Permissions("order.manage")
   @Get()
+  @ApiOkResponse({ schema: dataArraySchema(orderSchema) as never })
   async list(@Req() req: AuthenticatedRequest, @Query("status") status?: unknown) {
     const s = typeof status === "string" && status ? status : undefined;
     return { data: await this.orders.list(tenantIdOf(req), s) };
@@ -60,6 +63,7 @@ export class OrdersController {
   @TenantScope()
   @Permissions("order.manage")
   @Post()
+  @ApiCreatedResponse({ schema: dataSchema(orderSchema) as never })
   async create(@Req() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
     try {
       const created = await this.orders.create(tenantIdOf(req), actorIdOf(req), {
@@ -87,6 +91,7 @@ export class OrdersController {
   @TenantScope()
   @Permissions("order.manage")
   @Get(":id")
+  @ApiOkResponse({ schema: dataSchema(orderSchema) as never })
   async get(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
       return { data: await this.orders.get(tenantIdOf(req), id) };
@@ -98,6 +103,7 @@ export class OrdersController {
   @TenantScope()
   @Permissions("order.manage")
   @Post(":id/confirm")
+  @ApiCreatedResponse({ schema: dataSchema(orderSchema) as never })
   async confirm(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
       const updated = await this.orders.confirm(tenantIdOf(req), id, actorIdOf(req));
@@ -119,6 +125,7 @@ export class OrdersController {
   @TenantScope()
   @Permissions("order.manage")
   @Post(":id/cancel")
+  @ApiCreatedResponse({ schema: dataSchema(orderSchema) as never })
   async cancel(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body() body: { reason?: unknown }) {
     try {
       const updated = await this.orders.cancel(tenantIdOf(req), id, actorIdOf(req), body && typeof body.reason === "string" ? body.reason : null);
@@ -141,6 +148,7 @@ export class OrdersController {
   @TenantScope()
   @Permissions("order.manage")
   @Post(":id/staff-confirm")
+  @ApiCreatedResponse({ schema: dataSchema(accountingResultSchema) as never })
   async staffConfirm(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     const role = req.principal?.role;
     if (role !== "TENANT_OWNER" && role !== "CUSTOMER_SERVICE") throw new ForbiddenException("仅客服/店主可确认完成");

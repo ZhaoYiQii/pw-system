@@ -3,6 +3,8 @@ import { LedgerRulesService } from "../application/ledger-rules.service.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { ApiBody, ApiOkResponse } from "@nestjs/swagger";
+import { dataSchema, financeRulesSchema, splitPreviewBodySchema, splitPreviewSchema } from "../../../openapi/schemas.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -23,6 +25,7 @@ export class TenantFinanceController {
 
   @TenantScope()
   @Get()
+  @ApiOkResponse({ schema: dataSchema(financeRulesSchema) as never })
   async get(@Req() req: AuthenticatedRequest) {
     return { data: await this.rules.effective(tenantIdOf(req)) };
   }
@@ -50,6 +53,8 @@ export class TenantFinanceController {
 
   @TenantScope()
   @Post("split-preview")
+  @ApiBody({ schema: splitPreviewBodySchema as never })
+  @ApiOkResponse({ schema: dataSchema(splitPreviewSchema) as never })
   async preview(@Req() req: AuthenticatedRequest, @Body() body: { amountFen?: unknown }) {
     try {
       return { data: await this.rules.preview(tenantIdOf(req), body.amountFen) };

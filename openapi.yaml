@@ -275,6 +275,202 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - tenantId
+                        - orderNo
+                        - customerProfileId
+                        - customerName
+                        - status
+                        - scheduledStartAt
+                        - remark
+                        - version
+                        - createdAt
+                        - updatedAt
+                        - requirement
+                        - snapshot
+                        - timeline
+                      properties:
+                        id:
+                          type: string
+                          description: 订单 id
+                        tenantId:
+                          type: string
+                          description: 租户 id
+                        orderNo:
+                          type: string
+                          description: 订单号
+                        customerProfileId:
+                          type: string
+                          description: 客户档案 id
+                        customerName:
+                          type: string
+                          description: 客户名
+                        status:
+                          type: string
+                          description: 订单状态
+                        scheduledStartAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: 计划开始
+                        remark:
+                          type: string
+                          nullable: true
+                          description: 备注
+                        version:
+                          type: integer
+                          minimum: 0
+                          description: 乐观锁版本
+                        createdAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 创建时间
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 更新时间
+                        requirement:
+                          type: object
+                          nullable: true
+                          properties:
+                            description:
+                              type: string
+                              description: 需求描述
+                            gameId:
+                              type: string
+                              nullable: true
+                              description: 游戏 id
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            gameName:
+                              type: string
+                              nullable: true
+                              description: 游戏名
+                            productName:
+                              type: string
+                              nullable: true
+                              description: 产品名
+                            desiredStartAt:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: 期望开始时间
+                            durationSeconds:
+                              type: integer
+                              minimum: 1
+                              description: 时长（秒）
+                            minBudgetFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 最低预算（十进制字符串分，>=0）
+                            maxBudgetFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 最高预算（十进制字符串分，>=0）
+                            note:
+                              type: string
+                              nullable: true
+                              description: 备注
+                          required:
+                            - description
+                        snapshot:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - serviceProductId
+                              - productName
+                              - regionName
+                              - durationSeconds
+                              - unitPriceFen
+                              - playerCostFen
+                              - lineTotalFen
+                              - currency
+                            properties:
+                              serviceProductId:
+                                type: string
+                                nullable: true
+                                description: 服务产品 id
+                              productName:
+                                type: string
+                                description: 产品名
+                              regionName:
+                                type: string
+                                nullable: true
+                                description: 区服名
+                              durationSeconds:
+                                type: integer
+                                minimum: 0
+                                description: 时长（秒）
+                              unitPriceFen:
+                                type: string
+                                pattern: ^[1-9][0-9]*$
+                                example: "1500"
+                                description: 单价（十进制字符串分，>0）
+                              playerCostFen:
+                                type: string
+                                pattern: ^(?:0|[1-9][0-9]*)$
+                                example: "800"
+                                description: 陪玩成本（十进制字符串分，>=0）
+                              lineTotalFen:
+                                type: string
+                                pattern: ^[1-9][0-9]*$
+                                example: "1500"
+                                description: 行小计（十进制字符串分，>0）
+                              currency:
+                                type: string
+                                description: 币种
+                            description: 订单价格快照行
+                          nullable: true
+                        timeline:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - eventType
+                              - fromStatus
+                              - toStatus
+                              - occurredAt
+                            properties:
+                              id:
+                                type: string
+                                description: 事件 id
+                              eventType:
+                                type: string
+                                description: 事件类型
+                              fromStatus:
+                                type: string
+                                nullable: true
+                                description: 原状态
+                              toStatus:
+                                type: string
+                                nullable: true
+                                description: 目标状态
+                              occurredAt:
+                                type: string
+                                format: date-time
+                                nullable: false
+                                description: 发生时间
+                      description: 订单视图（金额字段为十进制字符串分）
       tags: *a7
     post:
       operationId: customerSelf_createOrder
@@ -282,6 +478,200 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - orderNo
+                      - customerProfileId
+                      - customerName
+                      - status
+                      - scheduledStartAt
+                      - remark
+                      - version
+                      - createdAt
+                      - updatedAt
+                      - requirement
+                      - snapshot
+                      - timeline
+                    properties:
+                      id:
+                        type: string
+                        description: 订单 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      orderNo:
+                        type: string
+                        description: 订单号
+                      customerProfileId:
+                        type: string
+                        description: 客户档案 id
+                      customerName:
+                        type: string
+                        description: 客户名
+                      status:
+                        type: string
+                        description: 订单状态
+                      scheduledStartAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 计划开始
+                      remark:
+                        type: string
+                        nullable: true
+                        description: 备注
+                      version:
+                        type: integer
+                        minimum: 0
+                        description: 乐观锁版本
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      requirement:
+                        type: object
+                        nullable: true
+                        properties:
+                          description:
+                            type: string
+                            description: 需求描述
+                          gameId:
+                            type: string
+                            nullable: true
+                            description: 游戏 id
+                          serviceProductId:
+                            type: string
+                            nullable: true
+                            description: 服务产品 id
+                          gameName:
+                            type: string
+                            nullable: true
+                            description: 游戏名
+                          productName:
+                            type: string
+                            nullable: true
+                            description: 产品名
+                          desiredStartAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 期望开始时间
+                          durationSeconds:
+                            type: integer
+                            minimum: 1
+                            description: 时长（秒）
+                          minBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最低预算（十进制字符串分，>=0）
+                          maxBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最高预算（十进制字符串分，>=0）
+                          note:
+                            type: string
+                            nullable: true
+                            description: 备注
+                        required:
+                          - description
+                      snapshot:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - serviceProductId
+                            - productName
+                            - regionName
+                            - durationSeconds
+                            - unitPriceFen
+                            - playerCostFen
+                            - lineTotalFen
+                            - currency
+                          properties:
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            productName:
+                              type: string
+                              description: 产品名
+                            regionName:
+                              type: string
+                              nullable: true
+                              description: 区服名
+                            durationSeconds:
+                              type: integer
+                              minimum: 0
+                              description: 时长（秒）
+                            unitPriceFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 单价（十进制字符串分，>0）
+                            playerCostFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 陪玩成本（十进制字符串分，>=0）
+                            lineTotalFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 行小计（十进制字符串分，>0）
+                            currency:
+                              type: string
+                              description: 币种
+                          description: 订单价格快照行
+                        nullable: true
+                      timeline:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - eventType
+                            - fromStatus
+                            - toStatus
+                            - occurredAt
+                          properties:
+                            id:
+                              type: string
+                              description: 事件 id
+                            eventType:
+                              type: string
+                              description: 事件类型
+                            fromStatus:
+                              type: string
+                              nullable: true
+                              description: 原状态
+                            toStatus:
+                              type: string
+                              nullable: true
+                              description: 目标状态
+                            occurredAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 发生时间
+                    description: 订单视图（金额字段为十进制字符串分）
       tags: *a7
   /api/v1/tenant/customer/orders/{orderId}/complete:
     post:
@@ -295,6 +685,28 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - earningId
+                      - playerShareFen
+                    properties:
+                      earningId:
+                        type: string
+                        description: earning id
+                      playerShareFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 陪玩分成（十进制字符串分，>=0）
+                    description: 订单核算结果
       tags: *a7
   /api/v1/tenant/orders:
     get:
@@ -303,6 +715,202 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - tenantId
+                        - orderNo
+                        - customerProfileId
+                        - customerName
+                        - status
+                        - scheduledStartAt
+                        - remark
+                        - version
+                        - createdAt
+                        - updatedAt
+                        - requirement
+                        - snapshot
+                        - timeline
+                      properties:
+                        id:
+                          type: string
+                          description: 订单 id
+                        tenantId:
+                          type: string
+                          description: 租户 id
+                        orderNo:
+                          type: string
+                          description: 订单号
+                        customerProfileId:
+                          type: string
+                          description: 客户档案 id
+                        customerName:
+                          type: string
+                          description: 客户名
+                        status:
+                          type: string
+                          description: 订单状态
+                        scheduledStartAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: 计划开始
+                        remark:
+                          type: string
+                          nullable: true
+                          description: 备注
+                        version:
+                          type: integer
+                          minimum: 0
+                          description: 乐观锁版本
+                        createdAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 创建时间
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 更新时间
+                        requirement:
+                          type: object
+                          nullable: true
+                          properties:
+                            description:
+                              type: string
+                              description: 需求描述
+                            gameId:
+                              type: string
+                              nullable: true
+                              description: 游戏 id
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            gameName:
+                              type: string
+                              nullable: true
+                              description: 游戏名
+                            productName:
+                              type: string
+                              nullable: true
+                              description: 产品名
+                            desiredStartAt:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: 期望开始时间
+                            durationSeconds:
+                              type: integer
+                              minimum: 1
+                              description: 时长（秒）
+                            minBudgetFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 最低预算（十进制字符串分，>=0）
+                            maxBudgetFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 最高预算（十进制字符串分，>=0）
+                            note:
+                              type: string
+                              nullable: true
+                              description: 备注
+                          required:
+                            - description
+                        snapshot:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - serviceProductId
+                              - productName
+                              - regionName
+                              - durationSeconds
+                              - unitPriceFen
+                              - playerCostFen
+                              - lineTotalFen
+                              - currency
+                            properties:
+                              serviceProductId:
+                                type: string
+                                nullable: true
+                                description: 服务产品 id
+                              productName:
+                                type: string
+                                description: 产品名
+                              regionName:
+                                type: string
+                                nullable: true
+                                description: 区服名
+                              durationSeconds:
+                                type: integer
+                                minimum: 0
+                                description: 时长（秒）
+                              unitPriceFen:
+                                type: string
+                                pattern: ^[1-9][0-9]*$
+                                example: "1500"
+                                description: 单价（十进制字符串分，>0）
+                              playerCostFen:
+                                type: string
+                                pattern: ^(?:0|[1-9][0-9]*)$
+                                example: "800"
+                                description: 陪玩成本（十进制字符串分，>=0）
+                              lineTotalFen:
+                                type: string
+                                pattern: ^[1-9][0-9]*$
+                                example: "1500"
+                                description: 行小计（十进制字符串分，>0）
+                              currency:
+                                type: string
+                                description: 币种
+                            description: 订单价格快照行
+                          nullable: true
+                        timeline:
+                          type: array
+                          items:
+                            type: object
+                            required:
+                              - id
+                              - eventType
+                              - fromStatus
+                              - toStatus
+                              - occurredAt
+                            properties:
+                              id:
+                                type: string
+                                description: 事件 id
+                              eventType:
+                                type: string
+                                description: 事件类型
+                              fromStatus:
+                                type: string
+                                nullable: true
+                                description: 原状态
+                              toStatus:
+                                type: string
+                                nullable: true
+                                description: 目标状态
+                              occurredAt:
+                                type: string
+                                format: date-time
+                                nullable: false
+                                description: 发生时间
+                      description: 订单视图（金额字段为十进制字符串分）
       tags: &a8
         - Orders
     post:
@@ -311,6 +919,200 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - orderNo
+                      - customerProfileId
+                      - customerName
+                      - status
+                      - scheduledStartAt
+                      - remark
+                      - version
+                      - createdAt
+                      - updatedAt
+                      - requirement
+                      - snapshot
+                      - timeline
+                    properties:
+                      id:
+                        type: string
+                        description: 订单 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      orderNo:
+                        type: string
+                        description: 订单号
+                      customerProfileId:
+                        type: string
+                        description: 客户档案 id
+                      customerName:
+                        type: string
+                        description: 客户名
+                      status:
+                        type: string
+                        description: 订单状态
+                      scheduledStartAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 计划开始
+                      remark:
+                        type: string
+                        nullable: true
+                        description: 备注
+                      version:
+                        type: integer
+                        minimum: 0
+                        description: 乐观锁版本
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      requirement:
+                        type: object
+                        nullable: true
+                        properties:
+                          description:
+                            type: string
+                            description: 需求描述
+                          gameId:
+                            type: string
+                            nullable: true
+                            description: 游戏 id
+                          serviceProductId:
+                            type: string
+                            nullable: true
+                            description: 服务产品 id
+                          gameName:
+                            type: string
+                            nullable: true
+                            description: 游戏名
+                          productName:
+                            type: string
+                            nullable: true
+                            description: 产品名
+                          desiredStartAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 期望开始时间
+                          durationSeconds:
+                            type: integer
+                            minimum: 1
+                            description: 时长（秒）
+                          minBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最低预算（十进制字符串分，>=0）
+                          maxBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最高预算（十进制字符串分，>=0）
+                          note:
+                            type: string
+                            nullable: true
+                            description: 备注
+                        required:
+                          - description
+                      snapshot:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - serviceProductId
+                            - productName
+                            - regionName
+                            - durationSeconds
+                            - unitPriceFen
+                            - playerCostFen
+                            - lineTotalFen
+                            - currency
+                          properties:
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            productName:
+                              type: string
+                              description: 产品名
+                            regionName:
+                              type: string
+                              nullable: true
+                              description: 区服名
+                            durationSeconds:
+                              type: integer
+                              minimum: 0
+                              description: 时长（秒）
+                            unitPriceFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 单价（十进制字符串分，>0）
+                            playerCostFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 陪玩成本（十进制字符串分，>=0）
+                            lineTotalFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 行小计（十进制字符串分，>0）
+                            currency:
+                              type: string
+                              description: 币种
+                          description: 订单价格快照行
+                        nullable: true
+                      timeline:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - eventType
+                            - fromStatus
+                            - toStatus
+                            - occurredAt
+                          properties:
+                            id:
+                              type: string
+                              description: 事件 id
+                            eventType:
+                              type: string
+                              description: 事件类型
+                            fromStatus:
+                              type: string
+                              nullable: true
+                              description: 原状态
+                            toStatus:
+                              type: string
+                              nullable: true
+                              description: 目标状态
+                            occurredAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 发生时间
+                    description: 订单视图（金额字段为十进制字符串分）
       tags: *a8
   /api/v1/tenant/orders/{id}:
     get:
@@ -324,6 +1126,200 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - orderNo
+                      - customerProfileId
+                      - customerName
+                      - status
+                      - scheduledStartAt
+                      - remark
+                      - version
+                      - createdAt
+                      - updatedAt
+                      - requirement
+                      - snapshot
+                      - timeline
+                    properties:
+                      id:
+                        type: string
+                        description: 订单 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      orderNo:
+                        type: string
+                        description: 订单号
+                      customerProfileId:
+                        type: string
+                        description: 客户档案 id
+                      customerName:
+                        type: string
+                        description: 客户名
+                      status:
+                        type: string
+                        description: 订单状态
+                      scheduledStartAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 计划开始
+                      remark:
+                        type: string
+                        nullable: true
+                        description: 备注
+                      version:
+                        type: integer
+                        minimum: 0
+                        description: 乐观锁版本
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      requirement:
+                        type: object
+                        nullable: true
+                        properties:
+                          description:
+                            type: string
+                            description: 需求描述
+                          gameId:
+                            type: string
+                            nullable: true
+                            description: 游戏 id
+                          serviceProductId:
+                            type: string
+                            nullable: true
+                            description: 服务产品 id
+                          gameName:
+                            type: string
+                            nullable: true
+                            description: 游戏名
+                          productName:
+                            type: string
+                            nullable: true
+                            description: 产品名
+                          desiredStartAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 期望开始时间
+                          durationSeconds:
+                            type: integer
+                            minimum: 1
+                            description: 时长（秒）
+                          minBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最低预算（十进制字符串分，>=0）
+                          maxBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最高预算（十进制字符串分，>=0）
+                          note:
+                            type: string
+                            nullable: true
+                            description: 备注
+                        required:
+                          - description
+                      snapshot:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - serviceProductId
+                            - productName
+                            - regionName
+                            - durationSeconds
+                            - unitPriceFen
+                            - playerCostFen
+                            - lineTotalFen
+                            - currency
+                          properties:
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            productName:
+                              type: string
+                              description: 产品名
+                            regionName:
+                              type: string
+                              nullable: true
+                              description: 区服名
+                            durationSeconds:
+                              type: integer
+                              minimum: 0
+                              description: 时长（秒）
+                            unitPriceFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 单价（十进制字符串分，>0）
+                            playerCostFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 陪玩成本（十进制字符串分，>=0）
+                            lineTotalFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 行小计（十进制字符串分，>0）
+                            currency:
+                              type: string
+                              description: 币种
+                          description: 订单价格快照行
+                        nullable: true
+                      timeline:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - eventType
+                            - fromStatus
+                            - toStatus
+                            - occurredAt
+                          properties:
+                            id:
+                              type: string
+                              description: 事件 id
+                            eventType:
+                              type: string
+                              description: 事件类型
+                            fromStatus:
+                              type: string
+                              nullable: true
+                              description: 原状态
+                            toStatus:
+                              type: string
+                              nullable: true
+                              description: 目标状态
+                            occurredAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 发生时间
+                    description: 订单视图（金额字段为十进制字符串分）
       tags: *a8
   /api/v1/tenant/orders/{id}/confirm:
     post:
@@ -337,6 +1333,200 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - orderNo
+                      - customerProfileId
+                      - customerName
+                      - status
+                      - scheduledStartAt
+                      - remark
+                      - version
+                      - createdAt
+                      - updatedAt
+                      - requirement
+                      - snapshot
+                      - timeline
+                    properties:
+                      id:
+                        type: string
+                        description: 订单 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      orderNo:
+                        type: string
+                        description: 订单号
+                      customerProfileId:
+                        type: string
+                        description: 客户档案 id
+                      customerName:
+                        type: string
+                        description: 客户名
+                      status:
+                        type: string
+                        description: 订单状态
+                      scheduledStartAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 计划开始
+                      remark:
+                        type: string
+                        nullable: true
+                        description: 备注
+                      version:
+                        type: integer
+                        minimum: 0
+                        description: 乐观锁版本
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      requirement:
+                        type: object
+                        nullable: true
+                        properties:
+                          description:
+                            type: string
+                            description: 需求描述
+                          gameId:
+                            type: string
+                            nullable: true
+                            description: 游戏 id
+                          serviceProductId:
+                            type: string
+                            nullable: true
+                            description: 服务产品 id
+                          gameName:
+                            type: string
+                            nullable: true
+                            description: 游戏名
+                          productName:
+                            type: string
+                            nullable: true
+                            description: 产品名
+                          desiredStartAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 期望开始时间
+                          durationSeconds:
+                            type: integer
+                            minimum: 1
+                            description: 时长（秒）
+                          minBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最低预算（十进制字符串分，>=0）
+                          maxBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最高预算（十进制字符串分，>=0）
+                          note:
+                            type: string
+                            nullable: true
+                            description: 备注
+                        required:
+                          - description
+                      snapshot:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - serviceProductId
+                            - productName
+                            - regionName
+                            - durationSeconds
+                            - unitPriceFen
+                            - playerCostFen
+                            - lineTotalFen
+                            - currency
+                          properties:
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            productName:
+                              type: string
+                              description: 产品名
+                            regionName:
+                              type: string
+                              nullable: true
+                              description: 区服名
+                            durationSeconds:
+                              type: integer
+                              minimum: 0
+                              description: 时长（秒）
+                            unitPriceFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 单价（十进制字符串分，>0）
+                            playerCostFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 陪玩成本（十进制字符串分，>=0）
+                            lineTotalFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 行小计（十进制字符串分，>0）
+                            currency:
+                              type: string
+                              description: 币种
+                          description: 订单价格快照行
+                        nullable: true
+                      timeline:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - eventType
+                            - fromStatus
+                            - toStatus
+                            - occurredAt
+                          properties:
+                            id:
+                              type: string
+                              description: 事件 id
+                            eventType:
+                              type: string
+                              description: 事件类型
+                            fromStatus:
+                              type: string
+                              nullable: true
+                              description: 原状态
+                            toStatus:
+                              type: string
+                              nullable: true
+                              description: 目标状态
+                            occurredAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 发生时间
+                    description: 订单视图（金额字段为十进制字符串分）
       tags: *a8
   /api/v1/tenant/orders/{id}/cancel:
     post:
@@ -350,6 +1540,200 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - orderNo
+                      - customerProfileId
+                      - customerName
+                      - status
+                      - scheduledStartAt
+                      - remark
+                      - version
+                      - createdAt
+                      - updatedAt
+                      - requirement
+                      - snapshot
+                      - timeline
+                    properties:
+                      id:
+                        type: string
+                        description: 订单 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      orderNo:
+                        type: string
+                        description: 订单号
+                      customerProfileId:
+                        type: string
+                        description: 客户档案 id
+                      customerName:
+                        type: string
+                        description: 客户名
+                      status:
+                        type: string
+                        description: 订单状态
+                      scheduledStartAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 计划开始
+                      remark:
+                        type: string
+                        nullable: true
+                        description: 备注
+                      version:
+                        type: integer
+                        minimum: 0
+                        description: 乐观锁版本
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      requirement:
+                        type: object
+                        nullable: true
+                        properties:
+                          description:
+                            type: string
+                            description: 需求描述
+                          gameId:
+                            type: string
+                            nullable: true
+                            description: 游戏 id
+                          serviceProductId:
+                            type: string
+                            nullable: true
+                            description: 服务产品 id
+                          gameName:
+                            type: string
+                            nullable: true
+                            description: 游戏名
+                          productName:
+                            type: string
+                            nullable: true
+                            description: 产品名
+                          desiredStartAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 期望开始时间
+                          durationSeconds:
+                            type: integer
+                            minimum: 1
+                            description: 时长（秒）
+                          minBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最低预算（十进制字符串分，>=0）
+                          maxBudgetFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 最高预算（十进制字符串分，>=0）
+                          note:
+                            type: string
+                            nullable: true
+                            description: 备注
+                        required:
+                          - description
+                      snapshot:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - serviceProductId
+                            - productName
+                            - regionName
+                            - durationSeconds
+                            - unitPriceFen
+                            - playerCostFen
+                            - lineTotalFen
+                            - currency
+                          properties:
+                            serviceProductId:
+                              type: string
+                              nullable: true
+                              description: 服务产品 id
+                            productName:
+                              type: string
+                              description: 产品名
+                            regionName:
+                              type: string
+                              nullable: true
+                              description: 区服名
+                            durationSeconds:
+                              type: integer
+                              minimum: 0
+                              description: 时长（秒）
+                            unitPriceFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 单价（十进制字符串分，>0）
+                            playerCostFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 陪玩成本（十进制字符串分，>=0）
+                            lineTotalFen:
+                              type: string
+                              pattern: ^[1-9][0-9]*$
+                              example: "1500"
+                              description: 行小计（十进制字符串分，>0）
+                            currency:
+                              type: string
+                              description: 币种
+                          description: 订单价格快照行
+                        nullable: true
+                      timeline:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - eventType
+                            - fromStatus
+                            - toStatus
+                            - occurredAt
+                          properties:
+                            id:
+                              type: string
+                              description: 事件 id
+                            eventType:
+                              type: string
+                              description: 事件类型
+                            fromStatus:
+                              type: string
+                              nullable: true
+                              description: 原状态
+                            toStatus:
+                              type: string
+                              nullable: true
+                              description: 目标状态
+                            occurredAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 发生时间
+                    description: 订单视图（金额字段为十进制字符串分）
       tags: *a8
   /api/v1/tenant/orders/{id}/staff-confirm:
     post:
@@ -363,6 +1747,28 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - earningId
+                      - playerShareFen
+                    properties:
+                      earningId:
+                        type: string
+                        description: earning id
+                      playerShareFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 陪玩分成（十进制字符串分，>=0）
+                    description: 订单核算结果
       tags: *a8
   /api/v1/platform/tenants/{tenantId}/finance-rules:
     get:
@@ -397,6 +1803,27 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - platformFeeBp
+                      - storeCutBp
+                    properties:
+                      platformFeeBp:
+                        type: integer
+                        minimum: 0
+                        description: 平台费率 bp
+                      storeCutBp:
+                        type: integer
+                        minimum: 0
+                        description: 门店抽成 bp
       tags: &a10
         - TenantFinance
   /api/v1/tenant/finance-rules/store-cut:
@@ -411,9 +1838,54 @@ paths:
     post:
       operationId: tenantFinance_preview
       parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amountFen
+              properties:
+                amountFen:
+                  type: string
+                  pattern: ^[1-9][0-9]*$
+                  example: "1500"
+                  description: 老板应付金额（十进制字符串分，>0）
+              description: 分账试算入参（十进制字符串分）
       responses:
-        "201":
+        "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - platformFeeFen
+                      - storeCutFen
+                      - playerShareFen
+                    properties:
+                      platformFeeFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 平台服务费（十进制字符串分，>=0）
+                      storeCutFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 门店抽成（十进制字符串分，>=0）
+                      playerShareFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 陪玩到手（十进制字符串分，>=0）
+                    description: 分账试算结果
       tags: *a10
   /api/v1/tenant/orders/{orderId}/accounting:
     post:
@@ -427,6 +1899,28 @@ paths:
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - earningId
+                      - playerShareFen
+                    properties:
+                      earningId:
+                        type: string
+                        description: earning id
+                      playerShareFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 陪玩分成（十进制字符串分，>=0）
+                    description: 订单核算结果
       tags:
         - Accounting
   /api/v1/tenant/player/finance:
@@ -436,6 +1930,36 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - pendingFen
+                      - batchedFen
+                      - paidFen
+                    properties:
+                      pendingFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 待入账金额（十进制字符串分，>=0）
+                      batchedFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 已入批金额（十进制字符串分，>=0）
+                      paidFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 已支付金额（十进制字符串分，>=0）
+                    description: 陪玩财务汇总
       tags:
         - PlayerFinance
   /api/v1/tenant/settlements:
@@ -823,6 +2347,65 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - tenantId
+                        - serviceProductId
+                        - durationSeconds
+                        - priceFen
+                        - playerCostFen
+                        - enabled
+                        - createdAt
+                        - updatedAt
+                      properties:
+                        id:
+                          type: string
+                          description: 价格规则 id
+                        tenantId:
+                          type: string
+                          description: 租户 id
+                        serviceProductId:
+                          type: string
+                          description: 服务产品 id
+                        durationSeconds:
+                          type: integer
+                          minimum: 0
+                          description: 时长（秒）
+                        priceFen:
+                          type: string
+                          pattern: ^[1-9][0-9]*$
+                          example: "1500"
+                          description: 售价（十进制字符串分，>0）
+                        playerCostFen:
+                          type: string
+                          pattern: ^(?:0|[1-9][0-9]*)$
+                          example: "800"
+                          description: 陪玩成本（十进制字符串分，>=0）
+                        enabled:
+                          type: boolean
+                          description: 是否启用
+                        createdAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 创建时间
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 更新时间
+                      description: 价格规则（金额字段为十进制字符串分）
       tags: *a14
     post:
       operationId: catalog_createRule
@@ -832,9 +2415,94 @@ paths:
           in: path
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - durationSeconds
+                - priceFen
+              properties:
+                durationSeconds:
+                  type: integer
+                  minimum: 1
+                  description: 时长（秒）
+                priceFen:
+                  type: string
+                  pattern: ^[1-9][0-9]*$
+                  example: "1500"
+                  description: 售价（十进制字符串分，>0）
+                playerCostFen:
+                  type: string
+                  pattern: ^(?:0|[1-9][0-9]*)$
+                  example: "800"
+                  description: 陪玩成本（十进制字符串分，>=0）
+                enabled:
+                  type: boolean
+                  description: 是否启用
+              description: 创建价格规则
       responses:
         "201":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - serviceProductId
+                      - durationSeconds
+                      - priceFen
+                      - playerCostFen
+                      - enabled
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        description: 价格规则 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      serviceProductId:
+                        type: string
+                        description: 服务产品 id
+                      durationSeconds:
+                        type: integer
+                        minimum: 0
+                        description: 时长（秒）
+                      priceFen:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                        example: "1500"
+                        description: 售价（十进制字符串分，>0）
+                      playerCostFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 陪玩成本（十进制字符串分，>=0）
+                      enabled:
+                        type: boolean
+                        description: 是否启用
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                    description: 价格规则（金额字段为十进制字符串分）
       tags: *a14
   /api/v1/tenant/catalog/pricing/{id}:
     patch:
@@ -845,9 +2513,92 @@ paths:
           in: path
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: []
+              properties:
+                durationSeconds:
+                  type: integer
+                  minimum: 1
+                  description: 时长（秒）
+                priceFen:
+                  type: string
+                  pattern: ^[1-9][0-9]*$
+                  example: "1500"
+                  description: 售价（十进制字符串分，>0）
+                playerCostFen:
+                  type: string
+                  pattern: ^(?:0|[1-9][0-9]*)$
+                  example: "800"
+                  description: 陪玩成本（十进制字符串分，>=0）
+                enabled:
+                  type: boolean
+                  description: 是否启用
+              description: 更新价格规则
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - tenantId
+                      - serviceProductId
+                      - durationSeconds
+                      - priceFen
+                      - playerCostFen
+                      - enabled
+                      - createdAt
+                      - updatedAt
+                    properties:
+                      id:
+                        type: string
+                        description: 价格规则 id
+                      tenantId:
+                        type: string
+                        description: 租户 id
+                      serviceProductId:
+                        type: string
+                        description: 服务产品 id
+                      durationSeconds:
+                        type: integer
+                        minimum: 0
+                        description: 时长（秒）
+                      priceFen:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                        example: "1500"
+                        description: 售价（十进制字符串分，>0）
+                      playerCostFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 陪玩成本（十进制字符串分，>=0）
+                      enabled:
+                        type: boolean
+                        description: 是否启用
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                    description: 价格规则（金额字段为十进制字符串分）
       tags: *a14
     delete:
       operationId: catalog_removeRule
@@ -926,6 +2677,55 @@ paths:
       responses:
         "200":
           description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - orderNo
+                        - productName
+                        - durationSeconds
+                        - unitPriceFen
+                        - desiredStartAt
+                        - createdAt
+                      properties:
+                        id:
+                          type: string
+                          description: 订单 id
+                        orderNo:
+                          type: string
+                          description: 订单号
+                        productName:
+                          type: string
+                          description: 产品名
+                        durationSeconds:
+                          type: integer
+                          minimum: 0
+                          description: 时长（秒）
+                        unitPriceFen:
+                          type: string
+                          pattern: ^[1-9][0-9]*$
+                          example: "1500"
+                          description: 单价（十进制字符串分，>0）
+                        desiredStartAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: 期望开始
+                        createdAt:
+                          type: string
+                          format: date-time
+                          nullable: false
+                          description: 创建时间
+                      description: 接单大厅订单
       tags: &a16
         - DispatchPlayer
   /api/v1/tenant/player/applications:

@@ -1,0 +1,4410 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants": {
+      "post": {
+        "operationId": "tenancy_createTenant",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tenancy"
+        ]
+      },
+      "get": {
+        "operationId": "tenancy_listTenants",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{id}/deactivate": {
+      "post": {
+        "operationId": "tenancy_deactivateTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    },
+    "/api/v1/public/tenant-resolve": {
+      "get": {
+        "operationId": "tenancy_resolveTenant",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tenancy"
+        ]
+      }
+    },
+    "/api/v1/tenant/audit": {
+      "get": {
+        "operationId": "audit_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "auth_login",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "auth_refresh",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "auth_logout",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "auth_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/platform/me": {
+      "get": {
+        "operationId": "me_platformMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/v1/tenant/me": {
+      "get": {
+        "operationId": "me_tenantMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/v1/tenant/features": {
+      "get": {
+        "operationId": "entitlements_listTenantFeatures",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Entitlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/addon/{featureKey}": {
+      "get": {
+        "operationId": "entitlements_addonCapability",
+        "parameters": [
+          {
+            "name": "featureKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Entitlements"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenantId}/entitlements": {
+      "get": {
+        "operationId": "entitlements_listEntitlements",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Entitlements"
+        ]
+      },
+      "post": {
+        "operationId": "entitlements_setEntitlement",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Entitlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/config": {
+      "get": {
+        "operationId": "tenantConfig_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantConfig"
+        ]
+      },
+      "post": {
+        "operationId": "tenantConfig_save",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantConfig"
+        ]
+      }
+    },
+    "/api/v1/tenant/config/rollback": {
+      "post": {
+        "operationId": "tenantConfig_rollback",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantConfig"
+        ]
+      }
+    },
+    "/api/v1/tenant/config/versions": {
+      "get": {
+        "operationId": "tenantConfig_versions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantConfig"
+        ]
+      }
+    },
+    "/api/v1/public/storefront/config": {
+      "get": {
+        "operationId": "storefrontConfig_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StorefrontConfig"
+        ]
+      }
+    },
+    "/api/v1/tenant/customers": {
+      "get": {
+        "operationId": "customers_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      },
+      "post": {
+        "operationId": "customers_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/v1/tenant/customers/{id}": {
+      "get": {
+        "operationId": "customers_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      },
+      "patch": {
+        "operationId": "customers_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      },
+      "delete": {
+        "operationId": "customers_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/v1/tenant/customers/{id}/account": {
+      "post": {
+        "operationId": "customers_bind",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/v1/tenant/customer/me": {
+      "get": {
+        "operationId": "customerSelf_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "CustomerSelf"
+        ]
+      }
+    },
+    "/api/v1/tenant/customer/orders": {
+      "get": {
+        "operationId": "customerSelf_myOrders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "tenantId",
+                          "orderNo",
+                          "customerProfileId",
+                          "customerName",
+                          "status",
+                          "scheduledStartAt",
+                          "remark",
+                          "version",
+                          "createdAt",
+                          "updatedAt",
+                          "requirement",
+                          "snapshot",
+                          "timeline"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "订单 id"
+                          },
+                          "tenantId": {
+                            "type": "string",
+                            "description": "租户 id"
+                          },
+                          "orderNo": {
+                            "type": "string",
+                            "description": "订单号"
+                          },
+                          "customerProfileId": {
+                            "type": "string",
+                            "description": "客户档案 id"
+                          },
+                          "customerName": {
+                            "type": "string",
+                            "description": "客户名"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "订单状态"
+                          },
+                          "scheduledStartAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "计划开始"
+                          },
+                          "remark": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "备注"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "乐观锁版本"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "创建时间"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "更新时间"
+                          },
+                          "requirement": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "description": {
+                                "type": "string",
+                                "description": "需求描述"
+                              },
+                              "gameId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "游戏 id"
+                              },
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "gameName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "游戏名"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "产品名"
+                              },
+                              "desiredStartAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "期望开始时间"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "时长（秒）"
+                              },
+                              "minBudgetFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "最低预算（十进制字符串分，>=0）"
+                              },
+                              "maxBudgetFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "最高预算（十进制字符串分，>=0）"
+                              },
+                              "note": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "备注"
+                              }
+                            },
+                            "required": [
+                              "description"
+                            ]
+                          },
+                          "snapshot": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "serviceProductId",
+                                "productName",
+                                "regionName",
+                                "durationSeconds",
+                                "unitPriceFen",
+                                "playerCostFen",
+                                "lineTotalFen",
+                                "currency"
+                              ],
+                              "properties": {
+                                "serviceProductId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "服务产品 id"
+                                },
+                                "productName": {
+                                  "type": "string",
+                                  "description": "产品名"
+                                },
+                                "regionName": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "区服名"
+                                },
+                                "durationSeconds": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "时长（秒）"
+                                },
+                                "unitPriceFen": {
+                                  "type": "string",
+                                  "pattern": "^[1-9][0-9]*$",
+                                  "example": "1500",
+                                  "description": "单价（十进制字符串分，>0）"
+                                },
+                                "playerCostFen": {
+                                  "type": "string",
+                                  "pattern": "^(?:0|[1-9][0-9]*)$",
+                                  "example": "800",
+                                  "description": "陪玩成本（十进制字符串分，>=0）"
+                                },
+                                "lineTotalFen": {
+                                  "type": "string",
+                                  "pattern": "^[1-9][0-9]*$",
+                                  "example": "1500",
+                                  "description": "行小计（十进制字符串分，>0）"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "description": "币种"
+                                }
+                              },
+                              "description": "订单价格快照行"
+                            },
+                            "nullable": true
+                          },
+                          "timeline": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "eventType",
+                                "fromStatus",
+                                "toStatus",
+                                "occurredAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "事件 id"
+                                },
+                                "eventType": {
+                                  "type": "string",
+                                  "description": "事件类型"
+                                },
+                                "fromStatus": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "原状态"
+                                },
+                                "toStatus": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "目标状态"
+                                },
+                                "occurredAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "nullable": false,
+                                  "description": "发生时间"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "description": "订单视图（金额字段为十进制字符串分）"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CustomerSelf"
+        ]
+      },
+      "post": {
+        "operationId": "customerSelf_createOrder",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "orderNo",
+                        "customerProfileId",
+                        "customerName",
+                        "status",
+                        "scheduledStartAt",
+                        "remark",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "requirement",
+                        "snapshot",
+                        "timeline"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "订单 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "orderNo": {
+                          "type": "string",
+                          "description": "订单号"
+                        },
+                        "customerProfileId": {
+                          "type": "string",
+                          "description": "客户档案 id"
+                        },
+                        "customerName": {
+                          "type": "string",
+                          "description": "客户名"
+                        },
+                        "status": {
+                          "type": "string",
+                          "description": "订单状态"
+                        },
+                        "scheduledStartAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "计划开始"
+                        },
+                        "remark": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "备注"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "乐观锁版本"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "requirement": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "description": {
+                              "type": "string",
+                              "description": "需求描述"
+                            },
+                            "gameId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏 id"
+                            },
+                            "serviceProductId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "服务产品 id"
+                            },
+                            "gameName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏名"
+                            },
+                            "productName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "产品名"
+                            },
+                            "desiredStartAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "期望开始时间"
+                            },
+                            "durationSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "时长（秒）"
+                            },
+                            "minBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最低预算（十进制字符串分，>=0）"
+                            },
+                            "maxBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最高预算（十进制字符串分，>=0）"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "备注"
+                            }
+                          },
+                          "required": [
+                            "description"
+                          ]
+                        },
+                        "snapshot": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "serviceProductId",
+                              "productName",
+                              "regionName",
+                              "durationSeconds",
+                              "unitPriceFen",
+                              "playerCostFen",
+                              "lineTotalFen",
+                              "currency"
+                            ],
+                            "properties": {
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "description": "产品名"
+                              },
+                              "regionName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "区服名"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "时长（秒）"
+                              },
+                              "unitPriceFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "单价（十进制字符串分，>0）"
+                              },
+                              "playerCostFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "陪玩成本（十进制字符串分，>=0）"
+                              },
+                              "lineTotalFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "行小计（十进制字符串分，>0）"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "币种"
+                              }
+                            },
+                            "description": "订单价格快照行"
+                          },
+                          "nullable": true
+                        },
+                        "timeline": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "eventType",
+                              "fromStatus",
+                              "toStatus",
+                              "occurredAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "事件 id"
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "description": "事件类型"
+                              },
+                              "fromStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "原状态"
+                              },
+                              "toStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "目标状态"
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "发生时间"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "订单视图（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CustomerSelf"
+        ]
+      }
+    },
+    "/api/v1/tenant/customer/orders/{orderId}/complete": {
+      "post": {
+        "operationId": "customerSelf_confirmComplete",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "earningId",
+                        "playerShareFen"
+                      ],
+                      "properties": {
+                        "earningId": {
+                          "type": "string",
+                          "description": "earning id"
+                        },
+                        "playerShareFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩分成（十进制字符串分，>=0）"
+                        }
+                      },
+                      "description": "订单核算结果"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "CustomerSelf"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders": {
+      "get": {
+        "operationId": "orders_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "tenantId",
+                          "orderNo",
+                          "customerProfileId",
+                          "customerName",
+                          "status",
+                          "scheduledStartAt",
+                          "remark",
+                          "version",
+                          "createdAt",
+                          "updatedAt",
+                          "requirement",
+                          "snapshot",
+                          "timeline"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "订单 id"
+                          },
+                          "tenantId": {
+                            "type": "string",
+                            "description": "租户 id"
+                          },
+                          "orderNo": {
+                            "type": "string",
+                            "description": "订单号"
+                          },
+                          "customerProfileId": {
+                            "type": "string",
+                            "description": "客户档案 id"
+                          },
+                          "customerName": {
+                            "type": "string",
+                            "description": "客户名"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "订单状态"
+                          },
+                          "scheduledStartAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "计划开始"
+                          },
+                          "remark": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "备注"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "乐观锁版本"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "创建时间"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "更新时间"
+                          },
+                          "requirement": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "description": {
+                                "type": "string",
+                                "description": "需求描述"
+                              },
+                              "gameId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "游戏 id"
+                              },
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "gameName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "游戏名"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "产品名"
+                              },
+                              "desiredStartAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "期望开始时间"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "时长（秒）"
+                              },
+                              "minBudgetFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "最低预算（十进制字符串分，>=0）"
+                              },
+                              "maxBudgetFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "最高预算（十进制字符串分，>=0）"
+                              },
+                              "note": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "备注"
+                              }
+                            },
+                            "required": [
+                              "description"
+                            ]
+                          },
+                          "snapshot": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "serviceProductId",
+                                "productName",
+                                "regionName",
+                                "durationSeconds",
+                                "unitPriceFen",
+                                "playerCostFen",
+                                "lineTotalFen",
+                                "currency"
+                              ],
+                              "properties": {
+                                "serviceProductId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "服务产品 id"
+                                },
+                                "productName": {
+                                  "type": "string",
+                                  "description": "产品名"
+                                },
+                                "regionName": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "区服名"
+                                },
+                                "durationSeconds": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "时长（秒）"
+                                },
+                                "unitPriceFen": {
+                                  "type": "string",
+                                  "pattern": "^[1-9][0-9]*$",
+                                  "example": "1500",
+                                  "description": "单价（十进制字符串分，>0）"
+                                },
+                                "playerCostFen": {
+                                  "type": "string",
+                                  "pattern": "^(?:0|[1-9][0-9]*)$",
+                                  "example": "800",
+                                  "description": "陪玩成本（十进制字符串分，>=0）"
+                                },
+                                "lineTotalFen": {
+                                  "type": "string",
+                                  "pattern": "^[1-9][0-9]*$",
+                                  "example": "1500",
+                                  "description": "行小计（十进制字符串分，>0）"
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "description": "币种"
+                                }
+                              },
+                              "description": "订单价格快照行"
+                            },
+                            "nullable": true
+                          },
+                          "timeline": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "eventType",
+                                "fromStatus",
+                                "toStatus",
+                                "occurredAt"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "事件 id"
+                                },
+                                "eventType": {
+                                  "type": "string",
+                                  "description": "事件类型"
+                                },
+                                "fromStatus": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "原状态"
+                                },
+                                "toStatus": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "目标状态"
+                                },
+                                "occurredAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "nullable": false,
+                                  "description": "发生时间"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "description": "订单视图（金额字段为十进制字符串分）"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      },
+      "post": {
+        "operationId": "orders_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "orderNo",
+                        "customerProfileId",
+                        "customerName",
+                        "status",
+                        "scheduledStartAt",
+                        "remark",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "requirement",
+                        "snapshot",
+                        "timeline"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "订单 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "orderNo": {
+                          "type": "string",
+                          "description": "订单号"
+                        },
+                        "customerProfileId": {
+                          "type": "string",
+                          "description": "客户档案 id"
+                        },
+                        "customerName": {
+                          "type": "string",
+                          "description": "客户名"
+                        },
+                        "status": {
+                          "type": "string",
+                          "description": "订单状态"
+                        },
+                        "scheduledStartAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "计划开始"
+                        },
+                        "remark": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "备注"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "乐观锁版本"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "requirement": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "description": {
+                              "type": "string",
+                              "description": "需求描述"
+                            },
+                            "gameId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏 id"
+                            },
+                            "serviceProductId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "服务产品 id"
+                            },
+                            "gameName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏名"
+                            },
+                            "productName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "产品名"
+                            },
+                            "desiredStartAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "期望开始时间"
+                            },
+                            "durationSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "时长（秒）"
+                            },
+                            "minBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最低预算（十进制字符串分，>=0）"
+                            },
+                            "maxBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最高预算（十进制字符串分，>=0）"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "备注"
+                            }
+                          },
+                          "required": [
+                            "description"
+                          ]
+                        },
+                        "snapshot": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "serviceProductId",
+                              "productName",
+                              "regionName",
+                              "durationSeconds",
+                              "unitPriceFen",
+                              "playerCostFen",
+                              "lineTotalFen",
+                              "currency"
+                            ],
+                            "properties": {
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "description": "产品名"
+                              },
+                              "regionName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "区服名"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "时长（秒）"
+                              },
+                              "unitPriceFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "单价（十进制字符串分，>0）"
+                              },
+                              "playerCostFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "陪玩成本（十进制字符串分，>=0）"
+                              },
+                              "lineTotalFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "行小计（十进制字符串分，>0）"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "币种"
+                              }
+                            },
+                            "description": "订单价格快照行"
+                          },
+                          "nullable": true
+                        },
+                        "timeline": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "eventType",
+                              "fromStatus",
+                              "toStatus",
+                              "occurredAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "事件 id"
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "description": "事件类型"
+                              },
+                              "fromStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "原状态"
+                              },
+                              "toStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "目标状态"
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "发生时间"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "订单视图（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}": {
+      "get": {
+        "operationId": "orders_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "orderNo",
+                        "customerProfileId",
+                        "customerName",
+                        "status",
+                        "scheduledStartAt",
+                        "remark",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "requirement",
+                        "snapshot",
+                        "timeline"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "订单 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "orderNo": {
+                          "type": "string",
+                          "description": "订单号"
+                        },
+                        "customerProfileId": {
+                          "type": "string",
+                          "description": "客户档案 id"
+                        },
+                        "customerName": {
+                          "type": "string",
+                          "description": "客户名"
+                        },
+                        "status": {
+                          "type": "string",
+                          "description": "订单状态"
+                        },
+                        "scheduledStartAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "计划开始"
+                        },
+                        "remark": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "备注"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "乐观锁版本"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "requirement": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "description": {
+                              "type": "string",
+                              "description": "需求描述"
+                            },
+                            "gameId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏 id"
+                            },
+                            "serviceProductId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "服务产品 id"
+                            },
+                            "gameName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏名"
+                            },
+                            "productName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "产品名"
+                            },
+                            "desiredStartAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "期望开始时间"
+                            },
+                            "durationSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "时长（秒）"
+                            },
+                            "minBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最低预算（十进制字符串分，>=0）"
+                            },
+                            "maxBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最高预算（十进制字符串分，>=0）"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "备注"
+                            }
+                          },
+                          "required": [
+                            "description"
+                          ]
+                        },
+                        "snapshot": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "serviceProductId",
+                              "productName",
+                              "regionName",
+                              "durationSeconds",
+                              "unitPriceFen",
+                              "playerCostFen",
+                              "lineTotalFen",
+                              "currency"
+                            ],
+                            "properties": {
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "description": "产品名"
+                              },
+                              "regionName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "区服名"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "时长（秒）"
+                              },
+                              "unitPriceFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "单价（十进制字符串分，>0）"
+                              },
+                              "playerCostFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "陪玩成本（十进制字符串分，>=0）"
+                              },
+                              "lineTotalFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "行小计（十进制字符串分，>0）"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "币种"
+                              }
+                            },
+                            "description": "订单价格快照行"
+                          },
+                          "nullable": true
+                        },
+                        "timeline": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "eventType",
+                              "fromStatus",
+                              "toStatus",
+                              "occurredAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "事件 id"
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "description": "事件类型"
+                              },
+                              "fromStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "原状态"
+                              },
+                              "toStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "目标状态"
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "发生时间"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "订单视图（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/confirm": {
+      "post": {
+        "operationId": "orders_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "orderNo",
+                        "customerProfileId",
+                        "customerName",
+                        "status",
+                        "scheduledStartAt",
+                        "remark",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "requirement",
+                        "snapshot",
+                        "timeline"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "订单 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "orderNo": {
+                          "type": "string",
+                          "description": "订单号"
+                        },
+                        "customerProfileId": {
+                          "type": "string",
+                          "description": "客户档案 id"
+                        },
+                        "customerName": {
+                          "type": "string",
+                          "description": "客户名"
+                        },
+                        "status": {
+                          "type": "string",
+                          "description": "订单状态"
+                        },
+                        "scheduledStartAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "计划开始"
+                        },
+                        "remark": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "备注"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "乐观锁版本"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "requirement": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "description": {
+                              "type": "string",
+                              "description": "需求描述"
+                            },
+                            "gameId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏 id"
+                            },
+                            "serviceProductId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "服务产品 id"
+                            },
+                            "gameName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏名"
+                            },
+                            "productName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "产品名"
+                            },
+                            "desiredStartAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "期望开始时间"
+                            },
+                            "durationSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "时长（秒）"
+                            },
+                            "minBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最低预算（十进制字符串分，>=0）"
+                            },
+                            "maxBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最高预算（十进制字符串分，>=0）"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "备注"
+                            }
+                          },
+                          "required": [
+                            "description"
+                          ]
+                        },
+                        "snapshot": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "serviceProductId",
+                              "productName",
+                              "regionName",
+                              "durationSeconds",
+                              "unitPriceFen",
+                              "playerCostFen",
+                              "lineTotalFen",
+                              "currency"
+                            ],
+                            "properties": {
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "description": "产品名"
+                              },
+                              "regionName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "区服名"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "时长（秒）"
+                              },
+                              "unitPriceFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "单价（十进制字符串分，>0）"
+                              },
+                              "playerCostFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "陪玩成本（十进制字符串分，>=0）"
+                              },
+                              "lineTotalFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "行小计（十进制字符串分，>0）"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "币种"
+                              }
+                            },
+                            "description": "订单价格快照行"
+                          },
+                          "nullable": true
+                        },
+                        "timeline": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "eventType",
+                              "fromStatus",
+                              "toStatus",
+                              "occurredAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "事件 id"
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "description": "事件类型"
+                              },
+                              "fromStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "原状态"
+                              },
+                              "toStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "目标状态"
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "发生时间"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "订单视图（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/cancel": {
+      "post": {
+        "operationId": "orders_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "orderNo",
+                        "customerProfileId",
+                        "customerName",
+                        "status",
+                        "scheduledStartAt",
+                        "remark",
+                        "version",
+                        "createdAt",
+                        "updatedAt",
+                        "requirement",
+                        "snapshot",
+                        "timeline"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "订单 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "orderNo": {
+                          "type": "string",
+                          "description": "订单号"
+                        },
+                        "customerProfileId": {
+                          "type": "string",
+                          "description": "客户档案 id"
+                        },
+                        "customerName": {
+                          "type": "string",
+                          "description": "客户名"
+                        },
+                        "status": {
+                          "type": "string",
+                          "description": "订单状态"
+                        },
+                        "scheduledStartAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "计划开始"
+                        },
+                        "remark": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "备注"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "乐观锁版本"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "requirement": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "description": {
+                              "type": "string",
+                              "description": "需求描述"
+                            },
+                            "gameId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏 id"
+                            },
+                            "serviceProductId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "服务产品 id"
+                            },
+                            "gameName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "游戏名"
+                            },
+                            "productName": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "产品名"
+                            },
+                            "desiredStartAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "期望开始时间"
+                            },
+                            "durationSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "时长（秒）"
+                            },
+                            "minBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最低预算（十进制字符串分，>=0）"
+                            },
+                            "maxBudgetFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "最高预算（十进制字符串分，>=0）"
+                            },
+                            "note": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "备注"
+                            }
+                          },
+                          "required": [
+                            "description"
+                          ]
+                        },
+                        "snapshot": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "serviceProductId",
+                              "productName",
+                              "regionName",
+                              "durationSeconds",
+                              "unitPriceFen",
+                              "playerCostFen",
+                              "lineTotalFen",
+                              "currency"
+                            ],
+                            "properties": {
+                              "serviceProductId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "服务产品 id"
+                              },
+                              "productName": {
+                                "type": "string",
+                                "description": "产品名"
+                              },
+                              "regionName": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "区服名"
+                              },
+                              "durationSeconds": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "时长（秒）"
+                              },
+                              "unitPriceFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "单价（十进制字符串分，>0）"
+                              },
+                              "playerCostFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "陪玩成本（十进制字符串分，>=0）"
+                              },
+                              "lineTotalFen": {
+                                "type": "string",
+                                "pattern": "^[1-9][0-9]*$",
+                                "example": "1500",
+                                "description": "行小计（十进制字符串分，>0）"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "description": "币种"
+                              }
+                            },
+                            "description": "订单价格快照行"
+                          },
+                          "nullable": true
+                        },
+                        "timeline": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "eventType",
+                              "fromStatus",
+                              "toStatus",
+                              "occurredAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "事件 id"
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "description": "事件类型"
+                              },
+                              "fromStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "原状态"
+                              },
+                              "toStatus": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "目标状态"
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "发生时间"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "订单视图（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/staff-confirm": {
+      "post": {
+        "operationId": "orders_staffConfirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "earningId",
+                        "playerShareFen"
+                      ],
+                      "properties": {
+                        "earningId": {
+                          "type": "string",
+                          "description": "earning id"
+                        },
+                        "playerShareFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩分成（十进制字符串分，>=0）"
+                        }
+                      },
+                      "description": "订单核算结果"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenantId}/finance-rules": {
+      "get": {
+        "operationId": "platformFinance_get",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformFinance"
+        ]
+      },
+      "patch": {
+        "operationId": "platformFinance_set",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformFinance"
+        ]
+      }
+    },
+    "/api/v1/tenant/finance-rules": {
+      "get": {
+        "operationId": "tenantFinance_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "platformFeeBp",
+                        "storeCutBp"
+                      ],
+                      "properties": {
+                        "platformFeeBp": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "平台费率 bp"
+                        },
+                        "storeCutBp": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "门店抽成 bp"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TenantFinance"
+        ]
+      }
+    },
+    "/api/v1/tenant/finance-rules/store-cut": {
+      "post": {
+        "operationId": "tenantFinance_setStoreCut",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantFinance"
+        ]
+      }
+    },
+    "/api/v1/tenant/finance-rules/split-preview": {
+      "post": {
+        "operationId": "tenantFinance_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amountFen"
+                ],
+                "properties": {
+                  "amountFen": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$",
+                    "example": "1500",
+                    "description": "老板应付金额（十进制字符串分，>0）"
+                  }
+                },
+                "description": "分账试算入参（十进制字符串分）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "platformFeeFen",
+                        "storeCutFen",
+                        "playerShareFen"
+                      ],
+                      "properties": {
+                        "platformFeeFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "平台服务费（十进制字符串分，>=0）"
+                        },
+                        "storeCutFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "门店抽成（十进制字符串分，>=0）"
+                        },
+                        "playerShareFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩到手（十进制字符串分，>=0）"
+                        }
+                      },
+                      "description": "分账试算结果"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TenantFinance"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{orderId}/accounting": {
+      "post": {
+        "operationId": "accounting_accounting",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "earningId",
+                        "playerShareFen"
+                      ],
+                      "properties": {
+                        "earningId": {
+                          "type": "string",
+                          "description": "earning id"
+                        },
+                        "playerShareFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩分成（十进制字符串分，>=0）"
+                        }
+                      },
+                      "description": "订单核算结果"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Accounting"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/finance": {
+      "get": {
+        "operationId": "playerFinance_finance",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "pendingFen",
+                        "batchedFen",
+                        "paidFen"
+                      ],
+                      "properties": {
+                        "pendingFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "待入账金额（十进制字符串分，>=0）"
+                        },
+                        "batchedFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "已入批金额（十进制字符串分，>=0）"
+                        },
+                        "paidFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "已支付金额（十进制字符串分，>=0）"
+                        }
+                      },
+                      "description": "陪玩财务汇总"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PlayerFinance"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements": {
+      "get": {
+        "operationId": "settlements_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      },
+      "post": {
+        "operationId": "settlements_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/{id}/items": {
+      "post": {
+        "operationId": "settlements_addItems",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/{id}/review": {
+      "post": {
+        "operationId": "settlements_review",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/{id}/approve": {
+      "post": {
+        "operationId": "settlements_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/{id}/pay": {
+      "post": {
+        "operationId": "settlements_pay",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/{id}/void": {
+      "post": {
+        "operationId": "settlements_voidBatch",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/players": {
+      "get": {
+        "operationId": "players_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      },
+      "post": {
+        "operationId": "players_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/players/{id}": {
+      "get": {
+        "operationId": "players_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      },
+      "patch": {
+        "operationId": "players_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      },
+      "delete": {
+        "operationId": "players_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/players/{id}/skills": {
+      "post": {
+        "operationId": "players_addSkill",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/players/{id}/skills/{skillId}": {
+      "delete": {
+        "operationId": "players_removeSkill",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skillId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/players/{id}/availability": {
+      "post": {
+        "operationId": "players_addAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/players/{id}/account": {
+      "post": {
+        "operationId": "players_bind",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/players/{id}/availability/{availabilityId}": {
+      "delete": {
+        "operationId": "players_removeAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "availabilityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/me": {
+      "get": {
+        "operationId": "playerSelf_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerSelf"
+        ]
+      },
+      "patch": {
+        "operationId": "playerSelf_updateMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerSelf"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/availability": {
+      "post": {
+        "operationId": "playerSelf_addAvailability",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerSelf"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/availability/{availabilityId}": {
+      "delete": {
+        "operationId": "playerSelf_removeAvailability",
+        "parameters": [
+          {
+            "name": "availabilityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerSelf"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/games": {
+      "get": {
+        "operationId": "catalog_listGames",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "catalog_createGame",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/games/{id}": {
+      "patch": {
+        "operationId": "catalog_updateGame",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "catalog_removeGame",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/regions": {
+      "get": {
+        "operationId": "catalog_listRegions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/games/{gameId}/regions": {
+      "post": {
+        "operationId": "catalog_createRegion",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/regions/{id}": {
+      "patch": {
+        "operationId": "catalog_updateRegion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "catalog_removeRegion",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/products": {
+      "get": {
+        "operationId": "catalog_listProducts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "catalog_createProduct",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/products/{id}": {
+      "patch": {
+        "operationId": "catalog_updateProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "catalog_removeProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/products/{productId}/pricing": {
+      "get": {
+        "operationId": "catalog_listRules",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "tenantId",
+                          "serviceProductId",
+                          "durationSeconds",
+                          "priceFen",
+                          "playerCostFen",
+                          "enabled",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "价格规则 id"
+                          },
+                          "tenantId": {
+                            "type": "string",
+                            "description": "租户 id"
+                          },
+                          "serviceProductId": {
+                            "type": "string",
+                            "description": "服务产品 id"
+                          },
+                          "durationSeconds": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "时长（秒）"
+                          },
+                          "priceFen": {
+                            "type": "string",
+                            "pattern": "^[1-9][0-9]*$",
+                            "example": "1500",
+                            "description": "售价（十进制字符串分，>0）"
+                          },
+                          "playerCostFen": {
+                            "type": "string",
+                            "pattern": "^(?:0|[1-9][0-9]*)$",
+                            "example": "800",
+                            "description": "陪玩成本（十进制字符串分，>=0）"
+                          },
+                          "enabled": {
+                            "type": "boolean",
+                            "description": "是否启用"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "创建时间"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "更新时间"
+                          }
+                        },
+                        "description": "价格规则（金额字段为十进制字符串分）"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "catalog_createRule",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "durationSeconds",
+                  "priceFen"
+                ],
+                "properties": {
+                  "durationSeconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "时长（秒）"
+                  },
+                  "priceFen": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$",
+                    "example": "1500",
+                    "description": "售价（十进制字符串分，>0）"
+                  },
+                  "playerCostFen": {
+                    "type": "string",
+                    "pattern": "^(?:0|[1-9][0-9]*)$",
+                    "example": "800",
+                    "description": "陪玩成本（十进制字符串分，>=0）"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "是否启用"
+                  }
+                },
+                "description": "创建价格规则"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "serviceProductId",
+                        "durationSeconds",
+                        "priceFen",
+                        "playerCostFen",
+                        "enabled",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "价格规则 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "serviceProductId": {
+                          "type": "string",
+                          "description": "服务产品 id"
+                        },
+                        "durationSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "时长（秒）"
+                        },
+                        "priceFen": {
+                          "type": "string",
+                          "pattern": "^[1-9][0-9]*$",
+                          "example": "1500",
+                          "description": "售价（十进制字符串分，>0）"
+                        },
+                        "playerCostFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩成本（十进制字符串分，>=0）"
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "是否启用"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        }
+                      },
+                      "description": "价格规则（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/catalog/pricing/{id}": {
+      "patch": {
+        "operationId": "catalog_updateRule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                  "durationSeconds": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "时长（秒）"
+                  },
+                  "priceFen": {
+                    "type": "string",
+                    "pattern": "^[1-9][0-9]*$",
+                    "example": "1500",
+                    "description": "售价（十进制字符串分，>0）"
+                  },
+                  "playerCostFen": {
+                    "type": "string",
+                    "pattern": "^(?:0|[1-9][0-9]*)$",
+                    "example": "800",
+                    "description": "陪玩成本（十进制字符串分，>=0）"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "是否启用"
+                  }
+                },
+                "description": "更新价格规则"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "tenantId",
+                        "serviceProductId",
+                        "durationSeconds",
+                        "priceFen",
+                        "playerCostFen",
+                        "enabled",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "价格规则 id"
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "description": "租户 id"
+                        },
+                        "serviceProductId": {
+                          "type": "string",
+                          "description": "服务产品 id"
+                        },
+                        "durationSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "时长（秒）"
+                        },
+                        "priceFen": {
+                          "type": "string",
+                          "pattern": "^[1-9][0-9]*$",
+                          "example": "1500",
+                          "description": "售价（十进制字符串分，>0）"
+                        },
+                        "playerCostFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩成本（十进制字符串分，>=0）"
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "是否启用"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        }
+                      },
+                      "description": "价格规则（金额字段为十进制字符串分）"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "catalog_removeRule",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/publish": {
+      "post": {
+        "operationId": "dispatchAdmin_publish",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchAdmin"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/applications": {
+      "get": {
+        "operationId": "dispatchAdmin_applications",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchAdmin"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/applications/{applicationId}/shortlist": {
+      "post": {
+        "operationId": "dispatchAdmin_shortlist",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "applicationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchAdmin"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{id}/assignment": {
+      "post": {
+        "operationId": "dispatchAdmin_assign",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchAdmin"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/order-hall": {
+      "get": {
+        "operationId": "dispatchPlayer_hall",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "orderNo",
+                          "productName",
+                          "durationSeconds",
+                          "unitPriceFen",
+                          "desiredStartAt",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "订单 id"
+                          },
+                          "orderNo": {
+                            "type": "string",
+                            "description": "订单号"
+                          },
+                          "productName": {
+                            "type": "string",
+                            "description": "产品名"
+                          },
+                          "durationSeconds": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "时长（秒）"
+                          },
+                          "unitPriceFen": {
+                            "type": "string",
+                            "pattern": "^[1-9][0-9]*$",
+                            "example": "1500",
+                            "description": "单价（十进制字符串分，>0）"
+                          },
+                          "desiredStartAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "期望开始"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "创建时间"
+                          }
+                        },
+                        "description": "接单大厅订单"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "DispatchPlayer"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/applications": {
+      "get": {
+        "operationId": "dispatchPlayer_mine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchPlayer"
+        ]
+      }
+    },
+    "/api/v1/tenant/player/orders/{orderId}/applications": {
+      "post": {
+        "operationId": "dispatchPlayer_apply",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchPlayer"
+        ]
+      }
+    },
+    "/api/v1/tenant/customer/orders/{orderId}/applications": {
+      "get": {
+        "operationId": "dispatchCustomer_candidates",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchCustomer"
+        ]
+      }
+    },
+    "/api/v1/tenant/customer/orders/{orderId}/assignment": {
+      "post": {
+        "operationId": "dispatchCustomer_select",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DispatchCustomer"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{orderId}/session": {
+      "get": {
+        "operationId": "sessions_session",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{orderId}/session/start": {
+      "post": {
+        "operationId": "sessions_start",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{orderId}/session/end": {
+      "post": {
+        "operationId": "sessions_end",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/tenant/sessions/{sessionId}/adjustments": {
+      "post": {
+        "operationId": "sessions_adjust",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/tenant/sessions/{sessionId}/adjustments/{adjustmentId}/review": {
+      "post": {
+        "operationId": "sessions_review",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "adjustmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/tenant/sessions/{sessionId}/evidence": {
+      "post": {
+        "operationId": "evidence_upload",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-file-name",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Evidence"
+        ]
+      }
+    },
+    "/api/v1/tenant/evidence/{id}": {
+      "get": {
+        "operationId": "evidence_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Evidence"
+        ]
+      }
+    },
+    "/api/v1/tenant/orders/{orderId}/disputes": {
+      "get": {
+        "operationId": "disputes_list",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Disputes"
+        ]
+      },
+      "post": {
+        "operationId": "disputes_open",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Disputes"
+        ]
+      }
+    },
+    "/api/v1/tenant/disputes/{disputeId}/resolve": {
+      "post": {
+        "operationId": "disputes_resolve",
+        "parameters": [
+          {
+            "name": "disputeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Disputes"
+        ]
+      }
+    },
+    "/api/v1/tenant/notifications": {
+      "get": {
+        "operationId": "notifications_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/tenant/ai/capabilities": {
+      "get": {
+        "operationId": "ai_capabilities",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ai"
+        ]
+      }
+    },
+    "/api/v1/tenant/ai/parse-requirement": {
+      "post": {
+        "operationId": "ai_parse",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ai"
+        ]
+      }
+    },
+    "/api/v1/tenant/ai/orders/{orderId}/recommendations": {
+      "get": {
+        "operationId": "ai_recommend",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ai"
+        ]
+      }
+    },
+    "/api/v1/platform/packages": {
+      "get": {
+        "operationId": "platformBilling_packages",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformBilling"
+        ]
+      }
+    },
+    "/api/v1/platform/onboarding/tenants": {
+      "post": {
+        "operationId": "platformBilling_onboard",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformBilling"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenantId}/package": {
+      "post": {
+        "operationId": "platformBilling_assign",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformBilling"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenantId}/activate": {
+      "post": {
+        "operationId": "platformBilling_activate",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformBilling"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "陪玩门店多租户 SaaS API",
+    "description": "一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "access-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "tenant/platform access token"
+      }
+    },
+    "schemas": {}
+  }
+}

@@ -3,6 +3,14 @@ import { CatalogService } from "../application/catalog.service.js";
 import { CatalogInUseError, CatalogNotFoundError, DuplicateCatalogEntryError, InvalidCatalogInputError } from "../domain/errors.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { ApiBody, ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
+import {
+  dataArraySchema,
+  dataSchema,
+  pricingRuleBodySchema,
+  pricingRuleSchema,
+  updatePricingRuleBodySchema
+} from "../../../openapi/schemas.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -197,6 +205,7 @@ export class CatalogController {
   @TenantScope()
   @Permissions("catalog.manage")
   @Get("products/:productId/pricing")
+  @ApiOkResponse({ schema: dataArraySchema(pricingRuleSchema) as never })
   async listRules(@Req() req: AuthenticatedRequest, @Param("productId") productId: string) {
     try {
       return { data: await this.catalog.listRules(tenantIdOf(req), productId) };
@@ -208,6 +217,8 @@ export class CatalogController {
   @TenantScope()
   @Permissions("catalog.manage")
   @Post("products/:productId/pricing")
+  @ApiBody({ schema: pricingRuleBodySchema as never })
+  @ApiCreatedResponse({ schema: dataSchema(pricingRuleSchema) as never })
   async createRule(
     @Req() req: AuthenticatedRequest,
     @Param("productId") productId: string,
@@ -229,6 +240,8 @@ export class CatalogController {
   @TenantScope()
   @Permissions("catalog.manage")
   @Patch("pricing/:id")
+  @ApiBody({ schema: updatePricingRuleBodySchema as never })
+  @ApiOkResponse({ schema: dataSchema(pricingRuleSchema) as never })
   async updateRule(
     @Req() req: AuthenticatedRequest,
     @Param("id") id: string,

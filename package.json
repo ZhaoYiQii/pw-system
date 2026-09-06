@@ -20,7 +20,7 @@
     "build:h5": "turbo run build:h5",
     "build:weapp": "turbo run build:weapp",
     "openapi:generate": "pnpm --filter @pw/api openapi:document && openapi-ts -f openapi-ts.config.ts && pnpm --filter @pw/api-client typecheck",
-    "openapi:check": "pnpm openapi:generate && git diff --exit-code -- openapi.yaml packages/api-client/src",
+    "openapi:check": "pnpm openapi:generate && git diff --exit-code -- openapi.yaml openapi.json packages/api-client/src",
     "db:migrate:check": "node scripts/not-implemented.mjs db:migrate:check \"Slice 1（packages/database）\"",
     "db:seed:test": "node scripts/not-implemented.mjs db:seed:test \"Slice 1\"",
     "db:seed:dev": "node scripts/seed-dev.mjs"

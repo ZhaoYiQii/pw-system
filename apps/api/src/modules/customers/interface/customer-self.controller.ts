@@ -7,6 +7,8 @@ import { TenantScope } from "../../../common/auth/decorators.js";
 import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
+import { accountingResultSchema, dataArraySchema, dataSchema, orderSchema } from "../../../openapi/schemas.js";
 
 @RequireAddon("addon.customer_self_service")
 @Controller("api/v1/tenant/customer")
@@ -40,6 +42,7 @@ export class CustomerSelfController {
 
   @TenantScope()
   @Get("orders")
+  @ApiOkResponse({ schema: dataArraySchema(orderSchema) as never })
   async myOrders(@Req() req: AuthenticatedRequest) {
     const ctx = this.requireCustomer(req);
     try {
@@ -55,6 +58,7 @@ export class CustomerSelfController {
 
   @TenantScope()
   @Post("orders")
+  @ApiCreatedResponse({ schema: dataSchema(orderSchema) as never })
   async createOrder(@Req() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
     const ctx = this.requireCustomer(req);
     try {
@@ -87,6 +91,7 @@ export class CustomerSelfController {
   /** 老板确认完成：PENDING_CONFIRMATION → COMPLETED（并完成核算）。 */
   @TenantScope()
   @Post("orders/:orderId/complete")
+  @ApiCreatedResponse({ schema: dataSchema(accountingResultSchema) as never })
   async confirmComplete(@Req() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     const ctx = this.requireCustomer(req);
     try {

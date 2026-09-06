@@ -100,7 +100,14 @@ export const tenantFinanceGet = <ThrowOnError extends boolean = false>(options?:
 
 export const tenantFinanceSetStoreCut = <ThrowOnError extends boolean = false>(options?: Options<TenantFinanceSetStoreCutData, ThrowOnError>): RequestResult<TenantFinanceSetStoreCutResponses, unknown, ThrowOnError> => (options?.client ?? client).post<TenantFinanceSetStoreCutResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/finance-rules/store-cut', ...options });
 
-export const tenantFinancePreview = <ThrowOnError extends boolean = false>(options?: Options<TenantFinancePreviewData, ThrowOnError>): RequestResult<TenantFinancePreviewResponses, unknown, ThrowOnError> => (options?.client ?? client).post<TenantFinancePreviewResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/finance-rules/split-preview', ...options });
+export const tenantFinancePreview = <ThrowOnError extends boolean = false>(options: Options<TenantFinancePreviewData, ThrowOnError>): RequestResult<TenantFinancePreviewResponses, unknown, ThrowOnError> => (options.client ?? client).post<TenantFinancePreviewResponses, unknown, ThrowOnError>({
+    url: '/api/v1/tenant/finance-rules/split-preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const accountingAccounting = <ThrowOnError extends boolean = false>(options: Options<AccountingAccountingData, ThrowOnError>): RequestResult<AccountingAccountingResponses, unknown, ThrowOnError> => (options.client ?? client).post<AccountingAccountingResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/orders/{orderId}/accounting', ...options });
 
@@ -174,11 +181,25 @@ export const catalogUpdateProduct = <ThrowOnError extends boolean = false>(optio
 
 export const catalogListRules = <ThrowOnError extends boolean = false>(options: Options<CatalogListRulesData, ThrowOnError>): RequestResult<CatalogListRulesResponses, unknown, ThrowOnError> => (options.client ?? client).get<CatalogListRulesResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/catalog/products/{productId}/pricing', ...options });
 
-export const catalogCreateRule = <ThrowOnError extends boolean = false>(options: Options<CatalogCreateRuleData, ThrowOnError>): RequestResult<CatalogCreateRuleResponses, unknown, ThrowOnError> => (options.client ?? client).post<CatalogCreateRuleResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/catalog/products/{productId}/pricing', ...options });
+export const catalogCreateRule = <ThrowOnError extends boolean = false>(options: Options<CatalogCreateRuleData, ThrowOnError>): RequestResult<CatalogCreateRuleResponses, unknown, ThrowOnError> => (options.client ?? client).post<CatalogCreateRuleResponses, unknown, ThrowOnError>({
+    url: '/api/v1/tenant/catalog/products/{productId}/pricing',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const catalogRemoveRule = <ThrowOnError extends boolean = false>(options: Options<CatalogRemoveRuleData, ThrowOnError>): RequestResult<CatalogRemoveRuleResponses, unknown, ThrowOnError> => (options.client ?? client).delete<CatalogRemoveRuleResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/catalog/pricing/{id}', ...options });
 
-export const catalogUpdateRule = <ThrowOnError extends boolean = false>(options: Options<CatalogUpdateRuleData, ThrowOnError>): RequestResult<CatalogUpdateRuleResponses, unknown, ThrowOnError> => (options.client ?? client).patch<CatalogUpdateRuleResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/catalog/pricing/{id}', ...options });
+export const catalogUpdateRule = <ThrowOnError extends boolean = false>(options: Options<CatalogUpdateRuleData, ThrowOnError>): RequestResult<CatalogUpdateRuleResponses, unknown, ThrowOnError> => (options.client ?? client).patch<CatalogUpdateRuleResponses, unknown, ThrowOnError>({
+    url: '/api/v1/tenant/catalog/pricing/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const dispatchAdminPublish = <ThrowOnError extends boolean = false>(options: Options<DispatchAdminPublishData, ThrowOnError>): RequestResult<DispatchAdminPublishResponses, unknown, ThrowOnError> => (options.client ?? client).post<DispatchAdminPublishResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/orders/{id}/publish', ...options });
 
