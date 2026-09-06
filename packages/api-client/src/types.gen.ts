@@ -2617,6 +2617,30 @@ export type NotificationsListResponses = {
     200: unknown;
 };
 
+export type NotificationsMarkReadData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/notifications/{id}/read';
+};
+
+export type NotificationsMarkReadResponses = {
+    201: unknown;
+};
+
+export type NotificationsMarkAllReadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/notifications/read-all';
+};
+
+export type NotificationsMarkAllReadResponses = {
+    201: unknown;
+};
+
 export type AiCapabilitiesData = {
     body?: never;
     path?: never;

@@ -2948,8 +2948,29 @@ paths:
       responses:
         "200":
           description: ""
-      tags:
+      tags: &a21
         - Notifications
+  /api/v1/tenant/notifications/{id}/read:
+    post:
+      operationId: notifications_markRead
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a21
+  /api/v1/tenant/notifications/read-all:
+    post:
+      operationId: notifications_markAllRead
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a21
   /api/v1/tenant/ai/capabilities:
     get:
       operationId: ai_capabilities
@@ -2957,7 +2978,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a21
+      tags: &a22
         - Ai
   /api/v1/tenant/ai/parse-requirement:
     post:
@@ -2966,7 +2987,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a21
+      tags: *a22
   /api/v1/tenant/ai/orders/{orderId}/recommendations:
     get:
       operationId: ai_recommend
@@ -2979,7 +3000,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a21
+      tags: *a22
   /api/v1/platform/packages:
     get:
       operationId: platformBilling_packages
@@ -2987,7 +3008,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a22
+      tags: &a23
         - PlatformBilling
   /api/v1/platform/onboarding/tenants:
     post:
@@ -2996,7 +3017,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a22
+      tags: *a23
   /api/v1/platform/tenants/{tenantId}/package:
     post:
       operationId: platformBilling_assign
@@ -3009,7 +3030,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a22
+      tags: *a23
   /api/v1/platform/tenants/{tenantId}/activate:
     post:
       operationId: platformBilling_activate
@@ -3022,7 +3043,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a22
+      tags: *a23
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

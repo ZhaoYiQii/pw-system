@@ -837,6 +837,7 @@ model NotificationDelivery {
   channel      String
   title        String?
   content      String
+  readAt       DateTime?  @map("read_at") @db.Timestamptz
   status       String    @default("PENDING")
   attempts     Int       @default(0)
   nextRetryAt  DateTime? @map("next_retry_at") @db.Timestamptz

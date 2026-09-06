@@ -4299,6 +4299,43 @@
         ]
       }
     },
+    "/api/v1/tenant/notifications/{id}/read": {
+      "post": {
+        "operationId": "notifications_markRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/tenant/notifications/read-all": {
+      "post": {
+        "operationId": "notifications_markAllRead",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
     "/api/v1/tenant/ai/capabilities": {
       "get": {
         "operationId": "ai_capabilities",
