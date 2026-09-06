@@ -152,4 +152,30 @@ describe("Slice 6 dispatch (publish/apply/shortlist/assign 并发与冲突)", ()
     await req(ownerToken).post(`/api/v1/tenant/orders/${o2}/publish`).expect(201);
     await req(p1Token).post(`/api/v1/tenant/player/orders/${o2}/applications`).expect(400);
   });
-});
+
+  it("老板（客户本人）可看候选并自助选人；非本人订单 403", async () => {
+    // 绑定 customer 账号到订单所属客户档案
+    const customerProfile = (await client.customerProfile.findFirst({ where: { tenantId } })) as { id: string };
+    const hash = await hashPassword(PW);
+    const acc = await client.tenantAccount.create({ data: { tenantId, username: `boss_c_${suffix}`, passwordHash: hash } });
+    await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: acc.id, role: "CUSTOMER" } });
+    await client.customerProfile.update({ where: { id: customerProfile.id }, data: { tenantAccountId: acc.id } });
+
+    const orderId = await makeConfirmedOrder();
+    await req(ownerToken).post(`/api/v1/tenant/orders/${orderId}/publish`).expect(201);
+    await req(p1Token).post(`/api/v1/tenant/player/orders/${orderId}/applications`).expect(201);
+    await req(p2Token).post(`/api/v1/tenant/player/orders/${orderId}/applications`).expect(201);
+
+    const login = await request(app.getHttpServer()).post("/api/v1/auth/login").send({ kind: "tenant", tenantCode, username: `boss_c_${suffix}`, password: PW }).expect(201);
+    const cToken = (login.body as { data: Data }).data.accessToken as string;
+
+    const candidates = (await req(cToken).get(`/api/v1/tenant/customer/orders/${orderId}/applications`).expect(200)).body.data as Array<{ id: string }>;
+    expect(candidates).toHaveLength(2);
+
+    await req(cToken).post(`/api/v1/tenant/customer/orders/${orderId}/assignment`, { applicationId: candidates[0]?.id }).expect(201);
+    expect(await client.assignment.count({ where: { tenantId, orderId } })).toBe(1);
+    await req(cToken).post(`/api/v1/tenant/customer/orders/${orderId}/assignment`, { applicationId: candidates[1]?.id }).expect(409);
+
+    // 客服/店主不能再指派（已 ASSIGNED）
+    await req(ownerToken).post(`/api/v1/tenant/orders/${orderId}/assignment`, { applicationId: candidates[0]?.id }).expect(409);
+  });});
