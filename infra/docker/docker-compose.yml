@@ -1,0 +1,50 @@
+name: pw-saas-local
+
+# Slice 0 骨架：仅定义本地开发依赖的容器。
+# 镜像 tag 目前取主版本，精确 patch 在 Docker Desktop 启动并 docker pull 验证后于 ADR-0000 记录。
+# 凭据仅为本地开发默认值，生产凭据必须来自 secret manager / 环境注入，禁止提交真实密钥。
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: pw
+      POSTGRES_PASSWORD: pw_dev_only
+      POSTGRES_DB: pw_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pw -d pw_saas"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_dev_only
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  miniodata: {}

@@ -1,0 +1,13 @@
+node_modules/
+.turbo/
+.next/
+dist/
+lib/
+coverage/
+.pnpm-store/
+.pnpm-cache/
+pnpm-lock.yaml
+docs/adr/
+docs/specs/
+docs/acceptance/
+docs/runbooks/

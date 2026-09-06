@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 10 默认拦截依赖 postinstall；以下为仓库所需的原生/构建脚本依赖白名单。
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - "@swc/core"
+  - "@tarojs/binding"
+  - "@tarojs/cli"
+  - "core-js"
+  - "core-js-pure"
+  - "esbuild"

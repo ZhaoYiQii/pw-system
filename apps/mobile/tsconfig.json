@@ -1,0 +1,21 @@
+{
+  "extends": "../../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["es2017", "dom"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "outDir": "lib",
+    "rootDir": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@platform-runtime": ["./src/platform/h5/runtime.ts"]
+    }
+  },
+  "include": ["./src", "./types", "./config"],
+  "compileOnSave": false
+}
