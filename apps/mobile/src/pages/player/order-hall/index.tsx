@@ -42,6 +42,23 @@ export default function OrderHallPage() {
   const [hall, setHall] = useState<HallItem[]>([]);
   const [mine, setMine] = useState<MyApp[]>([]);
   const [sessions, setSessions] = useState<Record<string, SessionView>>({});
+  const [hallEnabled, setHallEnabled] = useState(true);
+
+  const loadFeatureGate = async (t: string) => {
+    try {
+      const feats = await apiAdapter.request<
+        Array<{ featureKey: string; enabled: boolean }>
+      >("/api/v1/tenant/features", { token: t });
+      const enabled = feats.find(
+        (f) => f.featureKey === "addon.player_order_hall",
+      )?.enabled;
+      setHallEnabled(enabled !== false);
+      if (enabled === false)
+        setMsg("该门店未开通接单大厅 addon，无法报名接单。");
+    } catch {
+      setHallEnabled(true);
+    }
+  };
 
   const load = async (t: string) => {
     try {
@@ -81,7 +98,10 @@ export default function OrderHallPage() {
   useLoad(async () => {
     const t = session.getToken();
     setToken(t);
-    if (t) await load(t);
+    if (t) {
+      await load(t);
+      await loadFeatureGate(t);
+    }
     const info = await tenantLocator.resolveTenant();
     if (info.state === "ok" && info.tenant?.code)
       setTenantCode(info.tenant.code);
@@ -103,6 +123,7 @@ export default function OrderHallPage() {
       setToken(s.accessToken);
       setPassword("");
       await load(s.accessToken);
+      await loadFeatureGate(s.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -237,13 +258,15 @@ export default function OrderHallPage() {
                   期望开始：{new Date(o.desiredStartAt).toLocaleString()}
                 </Text>
               ) : null}
-              <Button
-                className="btn primary"
-                disabled={busy}
-                onClick={() => void apply(o.id)}
-              >
-                报名
-              </Button>
+              {hallEnabled ? (
+                <Button
+                  className="btn primary"
+                  disabled={busy}
+                  onClick={() => void apply(o.id)}
+                >
+                  报名
+                </Button>
+              ) : null}
             </View>
           ))}
           <View className="card">

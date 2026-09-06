@@ -51,6 +51,7 @@ export default function CandidatesPage() {
   const [newProductId, setNewProductId] = useState("");
   const [newDuration, setNewDuration] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [selfEnabled, setSelfEnabled] = useState(true);
 
   const loadOrders = async (t: string) => {
     try {
@@ -77,6 +78,22 @@ export default function CandidatesPage() {
     } catch {
       setProducts([]);
       setRules([]);
+    }
+  };
+
+  const loadFeatureGate = async (t: string) => {
+    try {
+      const feats = await apiAdapter.request<
+        Array<{ featureKey: string; enabled: boolean }>
+      >("/api/v1/tenant/features", { token: t });
+      const enabled = feats.find(
+        (f) => f.featureKey === "addon.customer_self_service",
+      )?.enabled;
+      setSelfEnabled(enabled !== false);
+      if (enabled === false)
+        setMsg("该门店未开通客户自助服务，无法自助下单/选人。");
+    } catch {
+      setSelfEnabled(true);
     }
   };
 
@@ -113,7 +130,10 @@ export default function CandidatesPage() {
   useLoad(async () => {
     const t = session.getToken();
     setToken(t);
-    if (t) await loadOrders(t);
+    if (t) {
+      await loadOrders(t);
+      await loadFeatureGate(t);
+    }
     const info = await tenantLocator.resolveTenant();
     if (info.state === "ok" && info.tenant?.code)
       setTenantCode(info.tenant.code);
@@ -136,6 +156,7 @@ export default function CandidatesPage() {
       setPassword("");
       await loadOrders(s.accessToken);
       await loadCatalog(s.accessToken);
+      await loadFeatureGate(s.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -234,7 +255,7 @@ export default function CandidatesPage() {
       ) : (
         <>
           {msg ? <Text className="err">{msg}</Text> : null}
-          {products.length > 0 ? (
+          {selfEnabled && products.length > 0 ? (
             <View className="card">
               <Text className="strong">自助下单</Text>
               <Text className="label">选择服务产品</Text>
