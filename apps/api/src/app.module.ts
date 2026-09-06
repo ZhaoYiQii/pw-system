@@ -13,6 +13,7 @@ import { ServiceSessionsModule } from "./modules/service-sessions/service-sessio
 import { LedgerModule } from "./modules/ledger/ledger.module.js";
 import { AuditModule } from "./modules/audit/audit.module.js";
 import { DisputesModule } from "./modules/disputes/disputes.module.js";
+import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 
 @Module({
   controllers: [HealthController],
@@ -29,7 +30,8 @@ import { DisputesModule } from "./modules/disputes/disputes.module.js";
     ServiceSessionsModule,
     LedgerModule,
     AuditModule,
-    DisputesModule
+    DisputesModule,
+    NotificationsModule
   ]
 })
 export class AppModule {}
