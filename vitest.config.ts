@@ -6,7 +6,8 @@ export default defineConfig({
     include: [
       "apps/api/src/**/*.spec.ts",
       "apps/worker/src/**/*.spec.ts",
-      "packages/config-schema/src/**/*.spec.ts"
+      "packages/config-schema/src/**/*.spec.ts",
+      "apps/mobile/src/features/**/*.spec.ts"
     ],
     env: {
       SESSION_SECRET:
@@ -20,3 +21,4 @@ export default defineConfig({
     }
   }
 });
+

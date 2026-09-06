@@ -91,3 +91,52 @@ describe("tenant-config + entitlements", () => {
     await expect(entitlements.ensureAddonEnabled(tenantId, "addon.customer_self_service")).resolves.toBe("addon.customer_self_service");
   });
 });
+
+describe("tenant-config CONFIG_ERROR 持久化与回滚", () => {
+  let client: PrismaClient;
+  let config: TenantConfigService;
+  let tenantId: string;
+  const tenantCode = `cfg_err_${suffix}`;
+
+  beforeAll(async () => {
+    client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
+    const tenant = await client.tenant.create({ data: { code: tenantCode, name: "错误回滚测试店" } });
+    tenantId = tenant.id;
+    config = new TenantConfigService(new PrismaConfigRepository(client));
+    await config.save(tenantId, {
+      schemaVersion: "v1",
+      brand: { primaryColor: "#333333", accentColor: "#fa8c16", logoText: "V1", borderRadius: 8 },
+      storefront: { allowCustomerSelection: true, showServiceDuration: true }
+    });
+    // 直接写入损坏的 v2 ACTIVE（模拟历史配置损坏）
+    await client.tenantConfigVersion.updateMany({ where: { tenantId }, data: { status: "SUPERSEDED" } });
+    await client.tenantConfigVersion.create({
+      data: { tenantId, version: 2, status: "ACTIVE", config: { brand: { primaryColor: "red" } } }
+    });
+  });
+
+  afterAll(async () => {
+    if (client) {
+      await client.tenantConfigVersion.deleteMany({ where: { tenantId } });
+      await client.tenant.deleteMany({ where: { id: tenantId } });
+    }
+  });
+
+  it("损坏版本被标记后仍持续 CONFIG_ERROR（不回落到默认值）", async () => {
+    const first = await config.getEffective(tenantId);
+    expect(first.status).toBe("CONFIG_ERROR");
+    expect(first.version).toBe(2);
+    expect(first.config).toBeNull();
+    const second = await config.getEffective(tenantId);
+    expect(second.status).toBe("CONFIG_ERROR");
+    expect(second.version).toBe(2);
+    expect(second.config).toBeNull();
+  });
+
+  it("从 CONFIG_ERROR 回滚到上一有效版本", async () => {
+    const eff = await config.rollback(tenantId);
+    expect(eff.status).toBe("ACTIVE");
+    expect(eff.version).toBe(1);
+    expect(eff.config?.brand.primaryColor).toBe("#333333");
+  });
+});

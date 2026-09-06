@@ -1,13 +1,16 @@
 import { Module } from "@nestjs/common";
+import { TenancyModule } from "../tenancy/tenancy.module.js";
 import { createDatabaseClient } from "@pw/database";
 import { TenantConfigService } from "./application/config.service.js";
 import { PrismaConfigRepository } from "./infrastructure/prisma-config.repository.js";
 import { TenantConfigController } from "./interface/config.controller.js";
+import { StorefrontConfigController } from "./interface/storefront-config.controller.js";
 
 export const CONFIG_DB_CLIENT = "CONFIG_DB_CLIENT";
 
 @Module({
-  controllers: [TenantConfigController],
+  controllers: [TenantConfigController, StorefrontConfigController],
+  imports: [TenancyModule],
   providers: [
     {
       provide: CONFIG_DB_CLIENT,
@@ -31,3 +34,4 @@ export const CONFIG_DB_CLIENT = "CONFIG_DB_CLIENT";
   exports: [TenantConfigService]
 })
 export class TenantConfigModule {}
+

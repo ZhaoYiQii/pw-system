@@ -23,6 +23,9 @@
       ],
       "@platform-locator": [
         "./src/platform/h5/tenant-locator.ts"
+      ],
+      "@platform-runtime-config": [
+        "./src/platform/h5/runtime-config.ts"
       ]
     }
   },
@@ -33,3 +36,4 @@
   ],
   "compileOnSave": false
 }
+

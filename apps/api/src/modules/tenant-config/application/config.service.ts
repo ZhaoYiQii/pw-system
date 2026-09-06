@@ -35,6 +35,12 @@ export class TenantConfigService {
   async getEffective(tenantId: string): Promise<EffectiveConfig> {
     const active = await this.repository.active(tenantId);
     if (!active) {
+      const rows = await this.repository.list(tenantId);
+      if (rows.length > 0) {
+        // 已保存过版本但当前无 ACTIVE（例如损坏版本被标记 CONFIG_ERROR 后）：
+        // 持续保持 CONFIG_ERROR 而不是回落到默认值，直到修复保存或回滚。
+        return { status: "CONFIG_ERROR", version: rows[0]!.version, config: null, hasSaved: true };
+      }
       return { status: "ACTIVE", version: 0, config: DEFAULT_TENANT_CONFIG, hasSaved: false };
     }
     const parsed = safeParseTenantConfig(active.config);
@@ -75,3 +81,4 @@ export class TenantConfigService {
     return this.repository.list(tenantId);
   }
 }
+

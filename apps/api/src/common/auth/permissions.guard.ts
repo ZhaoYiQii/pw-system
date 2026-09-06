@@ -4,13 +4,15 @@ import { permissionsFor } from "../../modules/identity-access/domain/roles.js";
 import { REQUIRED_PERMISSIONS_KEY } from "./decorators.js";
 import type { AuthenticatedRequest } from "./auth.guard.js";
 
-/** 基于角色→权限矩阵的细粒度授权（主规格 7.2：前端隐藏按钮不是授权，后端必须重复检查）。 */
+/**
+ * 基于角色→权限矩阵的细粒度授权（主规格 7.2：前端隐藏按钮不是授权，后端必须重复检查）。
+ * Reflector 仅包装 Reflect metadata，无外部状态，按调用即时创建即可，避免 @UseGuards
+ * 在模块上下文中对构造注入 Reflector 的解析问题（生产 tsc 构建与 esbuild 测试行为差异）。
+ */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector | undefined) {}
-
   canActivate(context: ExecutionContext): boolean {
-    const reflector = this.reflector ?? new Reflector();
+    const reflector = new Reflector();
     const required = reflector.getAllAndOverride<string[] | undefined>(REQUIRED_PERMISSIONS_KEY, [
       context.getHandler(),
       context.getClass()

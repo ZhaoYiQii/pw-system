@@ -53,10 +53,16 @@ export class PrismaConfigRepository implements ConfigRepository {
 
   async rollback(tenantId: string): Promise<number> {
     return this.client.$transaction(async (tx) => {
-      const current = await tx.tenantConfigVersion.findFirst({
-        where: { tenantId, status: "ACTIVE" },
-        orderBy: { version: "desc" }
-      });
+      // 生效版本可以是 ACTIVE；若损坏版本已被标记 CONFIG_ERROR（无 ACTIVE），也允许回滚。
+      const current =
+        (await tx.tenantConfigVersion.findFirst({
+          where: { tenantId, status: "ACTIVE" },
+          orderBy: { version: "desc" }
+        })) ??
+        (await tx.tenantConfigVersion.findFirst({
+          where: { tenantId, status: "CONFIG_ERROR" },
+          orderBy: { version: "desc" }
+        }));
       const previous = await tx.tenantConfigVersion.findFirst({
         where: { tenantId, status: "SUPERSEDED" },
         orderBy: { version: "desc" }
@@ -74,3 +80,4 @@ export class PrismaConfigRepository implements ConfigRepository {
     });
   }
 }
+

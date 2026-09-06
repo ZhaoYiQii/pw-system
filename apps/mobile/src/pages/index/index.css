@@ -10,8 +10,45 @@
   color: #888888;
 }
 
+.tenant-name {
+  font-size: 32px;
+  font-weight: 600;
+}
+
 .unavailable {
   padding: 24px;
   background-color: #fff1f0;
   color: #cf1322;
+}
+
+.brand-card {
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brand-logo {
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.brand-sub {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 26px;
+}
+
+.swatch-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e5e6eb;
 }

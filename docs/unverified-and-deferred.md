@@ -30,3 +30,14 @@
 ## D. Slice 3 剩余（2026-09-06 更新：Phase A+B 完成，剩余 UI/mobile）
 - 完成：@pw/config-schema；tenant_config_versions/tenant_entitlements 迁移+RLS；tenant-config（版本化/回滚/CONFIG_ERROR 关闭）与 entitlements（core 常开、addon 默认关、门禁）API；契约测试（test:contract 3/3）。
 - 剩余：admin 门店设置页（品牌 token/版本/回滚）、平台功能开关页；mobile runtime-config 品牌应用（运行态需 API+域名）
+## E. Slice 3 收尾（2026-09-06）
+- 完成（locally-verified，证据见 slice-3-acceptance.md）：
+  - 公开 storefront-config 端点（host→品牌 token）；admin 平台/门店登录与鉴权接线（lib/api.ts）、套餐与功能开关页、门店设置页（品牌/版本/回滚/CONFIG_ERROR）；mobile runtime-config（H5 动态品牌 + CONFIG_ERROR 不可用，weapp typed unsupported）。
+  - 修复：PermissionsGuard 生产 DI（改即时 Reflector）；CONFIG_ERROR 持久化（不回落默认值）与从 CONFIG_ERROR 回滚；H5 process 守卫；API 受控 CORS。
+- 新增待办（解除条件）：
+  | 项 | 状态日期 | 解除条件 |
+  |---|---|---|
+  | `pnpm db:seed:dev` root 脚本无法运行（根缺 @pw/database 链接） | 2026-09-06 | root package.json 增加 @pw/database workspace 依赖（或迁移脚本到有该依赖的包）后安装验证 |
+  | Taro dev watch 缺 @pmmmwh/react-refresh-webpack-plugin | 2026-09-06 | 需要 watch 开发时补 devDependency（build:h5/weapp 不受影响） |
+  | H5/品牌运行态需“已验证域名 + 同源反代/公网”拓扑 | 2026-09-06 | 提供真实域名并部署；本地已用静态+反代(:10086→:3100)验证 |
+  | CI 不跑 integration/tenant-isolation（无 PostgreSQL service） | 2026-09-06 | GitHub Actions 增加 postgres service 或外部库 |

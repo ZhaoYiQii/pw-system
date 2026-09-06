@@ -19,6 +19,10 @@ function applyRuntimeAlias(chain: {
     "@platform-locator",
     path.join(process.cwd(), runtimeDir, "tenant-locator")
   );
+  chain.resolve.alias.set(
+    "@platform-runtime-config",
+    path.join(process.cwd(), runtimeDir, "runtime-config")
+  );
 }
 
 export default defineConfig<"webpack5">(async (merge) => {
@@ -91,3 +95,4 @@ export default defineConfig<"webpack5">(async (merge) => {
   }
   return merge({}, baseConfig, prodConfig);
 });
+

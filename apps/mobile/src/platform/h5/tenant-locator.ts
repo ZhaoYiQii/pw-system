@@ -1,7 +1,13 @@
-import type { ResolvedTenantInfo, TenantLocatorAdapter } from "../contracts/tenant-locator";
+import type {
+  ResolvedTenantInfo,
+  TenantLocatorAdapter,
+} from "../contracts/tenant-locator";
 
 function apiBase(): string {
-  if (process.env.TARO_APP_API_BASE) return process.env.TARO_APP_API_BASE;
+  // H5 运行时无 Node `process`；仅在存在时读取，避免 ReferenceError。
+  const configured =
+    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
+  if (configured) return configured;
   if (typeof location !== "undefined") return location.origin;
   return "";
 }
@@ -14,17 +20,20 @@ export const tenantLocator: TenantLocatorAdapter = {
       const base = apiBase();
       if (!host || !base) return { state: "unconfigured" };
       const res = await fetch(
-        `${base}/api/v1/public/tenant-resolve?host=${encodeURIComponent(host)}`
+        `${base}/api/v1/public/tenant-resolve?host=${encodeURIComponent(host)}`,
       );
       if (res.status === 404) return { state: "not_found" };
       if (!res.ok) return { state: "error" };
-      const body = (await res.json()) as { data?: { id: string; code: string; name: string; status: string } };
+      const body = (await res.json()) as {
+        data?: { id: string; code: string; name: string; status: string };
+      };
       const data = body.data;
       if (!data) return { state: "error" };
-      if (data.status === "INACTIVE") return { state: "inactive", tenant: data };
+      if (data.status === "INACTIVE")
+        return { state: "inactive", tenant: data };
       return { state: "ok", tenant: data };
     } catch {
       return { state: "error" };
     }
-  }
+  },
 };
