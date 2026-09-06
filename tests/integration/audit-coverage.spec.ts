@@ -445,4 +445,39 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
       expect(actions).toContain(expected);
     }
   });
+
+  it("审计读取脱敏手机号/密钥值；平台只读审计需要 reason 并落审计", async () => {
+    const account = await client.tenantAccount.findFirst({
+      where: { tenantId, username: "boss" },
+    });
+    await client.auditLog.create({
+      data: {
+        tenantId,
+        actorType: "tenant_account",
+        actorId: account?.id ?? null,
+        action: "debug.pii",
+        summary: "手机 13800138000 token=abc123456",
+      },
+    });
+    const rows = (await req(ownerToken).get("/api/v1/tenant/audit").expect(200))
+      .body.data as Array<{ action: string; summary: string | null }>;
+    const pii = rows.find((r) => r.action === "debug.pii");
+    expect(pii?.summary).toContain("138****8000");
+    expect(pii?.summary).not.toContain("13800138000");
+    expect(pii?.summary).not.toContain("abc123456");
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/platform/tenants/${tenantId}/audit`)
+      .set("authorization", `Bearer ${platformToken}`)
+      .expect(400);
+    const platformRows = (
+      await request(app.getHttpServer())
+        .get(`/api/v1/platform/tenants/${tenantId}/audit?reason=合规核查`)
+        .set("authorization", `Bearer ${platformToken}`)
+        .expect(200)
+    ).body.data as Array<{ action: string; summary: string | null }>;
+    expect(platformRows.some((r) => r.action === "platform.audit.read")).toBe(
+      true,
+    );
+  });
 });
