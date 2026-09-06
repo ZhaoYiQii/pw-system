@@ -623,3 +623,134 @@ model EvidenceAsset {
   @@index([tenantId, sessionId])
   @@map("evidence_assets")
 }
+// ===== Slice 8：核算、账本与陪玩结算（主规格 10.4/10.5/11.4）=====
+// 金额一律 bigint 分 CNY；ledger 只追加（无 updated_at）；批次 DRAFT→REVIEWED→APPROVED→PAID/VOID。
+
+enum Direction {
+  DEBIT
+  CREDIT
+}
+
+enum EarningStatus {
+  PENDING
+  BATCHED
+  PAID
+}
+
+enum BatchStatus {
+  DRAFT
+  REVIEWED
+  APPROVED
+  PAID
+  VOID
+}
+
+model LedgerAccount {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  code      String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("ledger_accounts")
+}
+
+/// 账本交易组：任一组的借方=贷方由提交逻辑保证；只追加。
+model LedgerTransaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  txNo        String   @map("tx_no")
+  description String?
+  occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, txNo])
+  @@index([tenantId, occurredAt])
+  @@map("ledger_transactions")
+}
+
+/// 账本分录：只追加，不更新不删除。
+model LedgerEntry {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  transactionId String    @map("transaction_id") @db.Uuid
+  accountId     String    @map("account_id") @db.Uuid
+  direction     Direction
+  amountFen     BigInt    @map("amount_fen") @db.BigInt
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId, transactionId])
+  @@index([tenantId, accountId])
+  @@map("ledger_entries")
+}
+
+/// 陪玩应收：每订单一条；进入批次后状态流转。
+model Earning {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  playerId    String        @map("player_id") @db.Uuid
+  orderId     String        @map("order_id") @db.Uuid
+  amountFen   BigInt        @map("amount_fen") @db.BigInt
+  status      EarningStatus @default(PENDING)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  version     Int           @default(1)
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, playerId, status])
+  @@map("earnings")
+}
+
+model SettlementBatch {
+  id            String      @id @default(uuid()) @db.Uuid
+  tenantId      String      @map("tenant_id") @db.Uuid
+  batchNo       String      @map("batch_no")
+  status        BatchStatus @default(DRAFT)
+  totalAmountFen BigInt     @map("total_amount_fen") @db.BigInt
+  createdBy     String?     @map("created_by") @db.Uuid
+  reviewedBy    String?     @map("reviewed_by") @db.Uuid
+  approvedBy    String?     @map("approved_by") @db.Uuid
+  paidBy        String?     @map("paid_by") @db.Uuid
+  remark        String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  version       Int         @default(1)
+
+  @@unique([tenantId, batchNo])
+  @@index([tenantId, status, createdAt])
+  @@map("settlement_batches")
+}
+
+model SettlementItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  batchId    String   @map("batch_id") @db.Uuid
+  earningId  String   @map("earning_id") @db.Uuid
+  amountFen  BigInt   @map("amount_fen") @db.BigInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, batchId, earningId])
+  @@index([tenantId, earningId])
+  @@index([tenantId, batchId])
+  @@map("settlement_items")
+}
+
+/// 线下付款结果记录（第一期仅线下）。
+model ManualPaymentRecord {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  batchId    String   @map("batch_id") @db.Uuid
+  amountFen  BigInt   @map("amount_fen") @db.BigInt
+  paidAt     DateTime @default(now()) @map("paid_at") @db.Timestamptz
+  channel    String   @default("OFFLINE")
+  operatorId String?  @map("operator_id") @db.Uuid
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, batchId])
+  @@map("manual_payment_records")
+}
