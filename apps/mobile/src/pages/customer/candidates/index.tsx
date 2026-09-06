@@ -4,6 +4,7 @@ import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
+import { apiAdapter } from "@platform-api";
 import "./index.css";
 
 interface OrderRow {
@@ -19,43 +20,6 @@ interface Candidate {
   playerNote: string | null;
 }
 
-function base(): string {
-  const cfg =
-    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
-  if (cfg) return cfg;
-  if (typeof location !== "undefined") return location.origin;
-  return "";
-}
-
-async function api(path: string, token: string, init?: RequestInit) {
-  const res = await fetch(`${base()}${path}`, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-  const text = await res.text();
-  let data: unknown = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = null;
-  }
-  if (!res.ok) {
-    const message =
-      data &&
-      typeof data === "object" &&
-      "message" in data &&
-      typeof (data as { message?: unknown }).message === "string"
-        ? (data as { message: string }).message
-        : `HTTP ${res.status}`;
-    throw new Error(message);
-  }
-  return (data as { data?: unknown })?.data;
-}
-
 export default function CandidatesPage() {
   const [token, setToken] = useState<string | null>(session.getToken());
   const [tenantCode, setTenantCode] = useState("");
@@ -69,10 +33,10 @@ export default function CandidatesPage() {
 
   const loadOrders = async (t: string) => {
     try {
-      const list = (await api(
+      const list = await apiAdapter.request<OrderRow[]>(
         "/api/v1/tenant/customer/orders",
-        t,
-      )) as OrderRow[];
+        { token: t },
+      );
       setOrders(list);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -118,10 +82,10 @@ export default function CandidatesPage() {
     setOpenOrder(orderId);
     setMsg(null);
     try {
-      const list = (await api(
+      const list = await apiAdapter.request<Candidate[]>(
         `/api/v1/tenant/customer/orders/${orderId}/applications`,
-        token,
-      )) as Candidate[];
+        { token },
+      );
       setCands(
         list.filter(
           (c) => c.status === "APPLIED" || c.status === "SHORTLISTED",
@@ -137,10 +101,10 @@ export default function CandidatesPage() {
     setBusy(true);
     setMsg(null);
     try {
-      await api(`/api/v1/tenant/customer/orders/${orderId}/assignment`, token, {
-        method: "POST",
-        body: JSON.stringify({ applicationId: appId }),
-      });
+      await apiAdapter.request(
+        `/api/v1/tenant/customer/orders/${orderId}/assignment`,
+        { method: "POST", token, body: { applicationId: appId } },
+      );
       setMsg("已选定陪玩，其余报名自动过期。");
       await loadOrders(token);
       setOpenOrder(null);

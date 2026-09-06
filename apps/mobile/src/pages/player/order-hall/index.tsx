@@ -4,6 +4,7 @@ import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
+import { apiAdapter } from "@platform-api";
 import { formatFenYuan } from "../../../features/money/money";
 import "./index.css";
 
@@ -22,43 +23,6 @@ interface MyApp {
   createdAt: string;
 }
 
-function base(): string {
-  const cfg =
-    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
-  if (cfg) return cfg;
-  if (typeof location !== "undefined") return location.origin;
-  return "";
-}
-
-async function api(path: string, token: string, init?: RequestInit) {
-  const res = await fetch(`${base()}${path}`, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-  const text = await res.text();
-  let data: unknown = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = null;
-  }
-  if (!res.ok) {
-    const message =
-      data &&
-      typeof data === "object" &&
-      "message" in data &&
-      typeof (data as { message?: unknown }).message === "string"
-        ? (data as { message: string }).message
-        : `HTTP ${res.status}`;
-    throw new Error(message);
-  }
-  return (data as { data?: unknown })?.data;
-}
-
 export default function OrderHallPage() {
   const [token, setToken] = useState<string | null>(session.getToken());
   const [tenantCode, setTenantCode] = useState("");
@@ -71,11 +35,14 @@ export default function OrderHallPage() {
 
   const load = async (t: string) => {
     try {
-      const h = (await api(
+      const h = await apiAdapter.request<HallItem[]>(
         "/api/v1/tenant/player/order-hall",
-        t,
-      )) as HallItem[];
-      const m = (await api("/api/v1/tenant/player/applications", t)) as MyApp[];
+        { token: t },
+      );
+      const m = await apiAdapter.request<MyApp[]>(
+        "/api/v1/tenant/player/applications",
+        { token: t },
+      );
       setHall(h);
       setMine(m);
     } catch (error) {
@@ -124,10 +91,10 @@ export default function OrderHallPage() {
     setBusy(true);
     setMsg(null);
     try {
-      await api(`/api/v1/tenant/player/orders/${orderId}/applications`, token, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
+      await apiAdapter.request(
+        `/api/v1/tenant/player/orders/${orderId}/applications`,
+        { method: "POST", token, body: {} },
+      );
       setMsg("报名成功");
       await load(token);
     } catch (error) {

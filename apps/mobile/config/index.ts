@@ -31,6 +31,10 @@ function applyRuntimeAlias(chain: {
     "@platform-session",
     path.join(process.cwd(), runtimeDir, "session-store"),
   );
+  chain.resolve.alias.set(
+    "@platform-api",
+    path.join(process.cwd(), runtimeDir, "api-adapter"),
+  );
 }
 
 export default defineConfig<"webpack5">(async (merge) => {
