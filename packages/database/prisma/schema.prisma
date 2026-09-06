@@ -766,3 +766,81 @@ model FinanceRateRule {
 
   @@map("finance_rate_rules")
 }
+// ===== Slice 9：客诉、审计、通知与重试（主规格 10.x/11.4/14.2）=====
+// disputes 独立状态机并可冻结结算；audit_logs/notification_deliveries 支持可追溯与重试。
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+model Dispute {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  orderId        String        @map("order_id") @db.Uuid
+  earningId      String?       @map("earning_id") @db.Uuid
+  playerId       String        @map("player_id") @db.Uuid
+  customerProfileId String     @map("customer_profile_id") @db.Uuid
+  reason         String
+  status         DisputeStatus @default(OPEN)
+  openedBy       String?       @map("opened_by") @db.Uuid
+  resolvedBy     String?       @map("resolved_by") @db.Uuid
+  resolution     String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  version        Int           @default(1)
+
+  @@index([tenantId, earningId, status])
+  @@index([tenantId, orderId])
+  @@map("disputes")
+}
+
+model DisputeEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  disputeId  String   @map("dispute_id") @db.Uuid
+  eventType  String   @map("event_type")
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  actorType  String?  @map("actor_type")
+  actorId    String?  @map("actor_id") @db.Uuid
+  payload    Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([tenantId, disputeId, occurredAt])
+  @@map("dispute_events")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  actorType    String?  @map("actor_type")
+  actorId      String?  @map("actor_id") @db.Uuid
+  action       String
+  resourceType String?  @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  summary      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+model NotificationDelivery {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String?   @map("tenant_id") @db.Uuid
+  recipientType String?  @map("recipient_type")
+  recipientId  String?   @map("recipient_id")
+  channel      String
+  title        String?
+  content      String
+  status       String    @default("PENDING")
+  attempts     Int       @default(0)
+  nextRetryAt  DateTime? @map("next_retry_at") @db.Timestamptz
+  lastError    String?   @map("last_error")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, nextRetryAt])
+  @@map("notification_deliveries")
+}
