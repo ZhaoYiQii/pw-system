@@ -68,3 +68,6 @@
 ## M. Slice 7 Phase A（2026-09-06）
 - 迁移 `20260906000900_service_sessions`：service_sessions/session_events/session_adjustments/evidence_assets + SessionStatus/AdjustmentStatus + CHECK + RLS；isolation sessions.spec 2 → 22/22。
 - 待办（Phase B/C）：场次状态机（SCHEDULED→STARTED→ENDED→CONFIRMED/ADJUSTMENT_PENDING，服务器权威时钟、幂等）、调整复核、证据上传（intent/内容 magic bytes/≤10MiB/授权下载；生产对象存储待台账 A）、H5/weapp media adapter 与 session 页。
+## N. Slice 7 Phase B/C（2026-09-06）
+- 完成：场次状态机（服务器时钟/幂等 start/end）+ 调整申请与复核（integration session-idempotency 3）；证据上传（magic bytes JPEG/PNG/WebP、≤10MiB、SHA-256、对象键、授权下载；本地 EVIDENCE_ROOT，生产对象存储待台账 A）→ integration 49/49。
+- 剩余：H5/weapp media-adapter + 陪玩场次页（开始/结束/截图/调时长）+ admin /sessions 页（UI 后续统一重做）。
