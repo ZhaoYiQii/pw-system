@@ -85,3 +85,7 @@
 ## R. 简单 UI 首批（2026-09-06）
 - 门店「财务」页 /finance：费率展示与调整（门店抽成）+ 分账试算（接入 finance-rules/store-cut/split-preview）；导航/首页加入 财务。截图 s8-finance-rules/preview。
 - 原则：后续 UI 先做“简单可用”版本随功能走，美观后置；Slice 8 Phase C-2（结算批次）仍未开始。
+## S. Slice 8 Phase C-2（2026-09-06）— 结算批次
+- 完成：结算批次 list/create/add earning(行锁,仅 PENDING,不可双活)/review/approve(发起人不可批自己)/pay(线下记录→earning PAID)/void(退回 PENDING)；PAID 后不可改。
+- unit 20/20、integration 54/54（settlement-concurrency 2）、lint/typecheck 绿。
+- 待办：开放争议阻止结算（随 Slice9 disputes）、陪玩提现流程、财务 UI 完善（后置）。
