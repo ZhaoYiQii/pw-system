@@ -845,3 +845,34 @@ model NotificationDelivery {
   @@index([status, nextRetryAt])
   @@map("notification_deliveries")
 }
+// ===== Slice 10：AI 辅助需求与匹配（主规格 11.4/15/16）=====
+// ai_suggestions 结构化受限；生产无授权 provider 时 unavailable（不伪装）；可审计与人工采纳。
+
+model AiRun {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  runType      String   @map("run_type")
+  provider     String   @default("deterministic")
+  modelVersion String   @map("model_version")
+  promptVersion String  @map("prompt_version")
+  status       String   @default("SUCCESS")
+  requestedBy  String?  @map("requested_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@map("ai_runs")
+}
+
+model AiSuggestion {
+  id            String  @id @default(uuid()) @db.Uuid
+  tenantId      String  @map("tenant_id") @db.Uuid
+  runId         String  @map("run_id") @db.Uuid
+  suggestionType String @map("suggestion_type")
+  payload       Json
+  confidenceBp  Int     @map("confidence_bp")
+  status        String  @default("SUGGESTED")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, runId])
+  @@map("ai_suggestions")
+}
