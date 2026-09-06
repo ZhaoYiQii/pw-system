@@ -2,9 +2,9 @@ import type { PrismaClient } from "@pw/database";
 import { splitSettlement } from "../domain/split.js";
 
 export interface PlayerFinanceView {
-  pendingFen: number;
-  batchedFen: number;
-  paidFen: number;
+  pendingFen: string;
+  batchedFen: string;
+  paidFen: string;
 }
 
 export class PrismaLedgerRepository {
@@ -23,10 +23,10 @@ export class PrismaLedgerRepository {
     });
   }
 
-  /** 生成 earning + 平衡账本；幂等（已有 earning 返回既有）。 */
-  async completeAccounting(tenantId: string, orderId: string, actorId: string): Promise<{ earningId: string; playerShareFen: number } | null> {
+  /** 生成 earning + 平衡账本；幂等（已有 earning 返回既有）。金额输出十进制字符串（分）。 */
+  async completeAccounting(tenantId: string, orderId: string, actorId: string): Promise<{ earningId: string; playerShareFen: string } | null> {
     const existing = await this.client.earning.findFirst({ where: { tenantId, orderId } });
-    if (existing) return { earningId: existing.id, playerShareFen: Number(existing.amountFen) };
+    if (existing) return { earningId: existing.id, playerShareFen: existing.amountFen.toString() };
 
     return this.client.$transaction(async (tx) => {
       const order = await tx.order.findFirst({ where: { tenantId, id: orderId }, select: { id: true, orderNo: true, status: true } });
@@ -36,8 +36,9 @@ export class PrismaLedgerRepository {
       const assignment = await tx.assignment.findFirst({ where: { tenantId, orderId }, select: { playerId: true } });
       if (!assignment) return null;
       const snapshot = await tx.orderPriceSnapshot.findMany({ where: { tenantId, orderId } });
-      const total = snapshot.reduce((sum, s) => sum + Number(s.lineTotalFen), 0);
-      if (total <= 0) return null;
+      let total = 0n;
+      for (const s of snapshot) total += s.lineTotalFen;
+      if (total <= 0n) return null;
       const rates = await this.rates(tenantId);
       const split = splitSettlement(total, rates);
 
@@ -47,7 +48,7 @@ export class PrismaLedgerRepository {
       await this.ensureAccount(tenantId, "PLAYER_PAYABLE", "应付陪玩款");
 
       const earning = await tx.earning.create({
-        data: { tenantId, orderId, playerId: assignment.playerId, amountFen: BigInt(split.playerShareFen) }
+        data: { tenantId, orderId, playerId: assignment.playerId, amountFen: split.playerShareFen }
       });
       const txRow = await tx.ledgerTransaction.create({
         data: { tenantId, txNo: `T${Date.now().toString(36).toUpperCase()}`, description: `订单核算 ${order.orderNo}` }
@@ -57,17 +58,17 @@ export class PrismaLedgerRepository {
         select: { id: true, code: true }
       });
       const idOf = (code: string) => accs.find((a) => a.code === code)?.id as string;
-      const entries: Array<{ accountId: string; direction: string; amountFen: bigint }> = [
-        { accountId: idOf("CUSTOMER_RECEIVABLE"), direction: "DEBIT", amountFen: BigInt(total) },
-        { accountId: idOf("PLATFORM_REVENUE"), direction: "CREDIT", amountFen: BigInt(split.platformFeeFen) },
-        { accountId: idOf("STORE_COMMISSION"), direction: "CREDIT", amountFen: BigInt(split.storeCutFen) },
-        { accountId: idOf("PLAYER_PAYABLE"), direction: "CREDIT", amountFen: BigInt(split.playerShareFen) }
+      const entries: Array<{ accountId: string; direction: "DEBIT" | "CREDIT"; amountFen: bigint }> = [
+        { accountId: idOf("CUSTOMER_RECEIVABLE"), direction: "DEBIT", amountFen: total },
+        { accountId: idOf("PLATFORM_REVENUE"), direction: "CREDIT", amountFen: split.platformFeeFen },
+        { accountId: idOf("STORE_COMMISSION"), direction: "CREDIT", amountFen: split.storeCutFen },
+        { accountId: idOf("PLAYER_PAYABLE"), direction: "CREDIT", amountFen: split.playerShareFen }
       ];
       const debit = entries.filter((e) => e.direction === "DEBIT").reduce((a, e) => a + e.amountFen, 0n);
       const credit = entries.filter((e) => e.direction === "CREDIT").reduce((a, e) => a + e.amountFen, 0n);
       if (debit !== credit) throw new Error("ledger unbalanced");
       for (const e of entries) {
-        await tx.ledgerEntry.create({ data: { tenantId, transactionId: txRow.id, accountId: e.accountId, direction: e.direction as never, amountFen: e.amountFen } });
+        await tx.ledgerEntry.create({ data: { tenantId, transactionId: txRow.id, accountId: e.accountId, direction: e.direction, amountFen: e.amountFen } });
       }
       // 场次 ENDED/CONFIRMED → CONFIRMED（核算/确认完成时定稿）
       if (session.status !== "CONFIRMED") {
@@ -78,12 +79,12 @@ export class PrismaLedgerRepository {
       }
       await tx.order.update({ where: { id: orderId }, data: { status: "COMPLETED" } });
       await tx.orderEvent.create({
-        data: { tenantId, orderId, eventType: "ORDER_ACCOUNTED", fromStatus: order.status, toStatus: "COMPLETED", actorType: "tenant_account", actorId, payload: { earningId: earning.id, playerShareFen: split.playerShareFen } }
+        data: { tenantId, orderId, eventType: "ORDER_ACCOUNTED", fromStatus: order.status, toStatus: "COMPLETED", actorType: "tenant_account", actorId, payload: { earningId: earning.id, playerShareFen: split.playerShareFen.toString() } }
       });
       await tx.outboxEvent.create({
         data: { tenantId, aggregateType: "order", aggregateId: orderId, eventType: "order.accounted", payload: { orderId, earningId: earning.id } }
       });
-      return { earningId: earning.id, playerShareFen: split.playerShareFen };
+      return { earningId: earning.id, playerShareFen: split.playerShareFen.toString() };
     });
   }
 
@@ -93,12 +94,12 @@ export class PrismaLedgerRepository {
       where: { tenantId, playerId },
       _sum: { amountFen: true }
     });
-    const out: PlayerFinanceView = { pendingFen: 0, batchedFen: 0, paidFen: 0 };
+    const out: PlayerFinanceView = { pendingFen: "0", batchedFen: "0", paidFen: "0" };
     for (const r of rows) {
-      const v = Number(r._sum.amountFen ?? 0);
-      if (r.status === "PAID") out.paidFen = v;
-      else if (r.status === "BATCHED") out.batchedFen = v;
-      else out.pendingFen = v;
+      const value = (r._sum.amountFen ?? 0n).toString();
+      if (r.status === "PAID") out.paidFen = value;
+      else if (r.status === "BATCHED") out.batchedFen = value;
+      else out.pendingFen = value;
     }
     return out;
   }

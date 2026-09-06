@@ -69,15 +69,17 @@
 - ✅ B2（2026-09-07）| 调整复核改店主/财务并禁止自审（409）；批准→CONFIRMED，拒绝→ENDED；核算完成将场次置 CONFIRMED+事件；integration 22/72、tsc/eslint 绿。剩余：真实超时自动确认调度、证据完整性门槛。
 
 ### B3 金额端到端 bigint/十进制字符串
-- [ ] 描述：repository 边界输出十进制字符串或 BigInt 值对象；API JSON 金额字段为字符串；domain 校验统一 Money 类型。
+- [~] 描述：repository 边界输出十进制字符串或 BigInt 值对象；API JSON 金额字段为字符串；domain 校验统一 Money 类型。
 - [ ] 来源：审查 P1-6、ADR-008
+- ✅ B3-Part1（2026-09-07）| split 引擎 bigint；核算/试算/批次合计/陪玩余额输出十进制字符串分；integration 22/72、unit 21、tsc/eslint 绿。
+- [ ] 剩余（Part2+）：orders/catalog/dispatch 快照与读出的金额字段字符串化；OpenAPI schema；admin/mobile 展示适配与金额 helper。
 
 ### B4 结算与场次并发幂等加固
-- [ ] 描述：settlement pay 批次行锁/条件更新防双付；session start/end 并发幂等（行锁/唯一约束+P2002 处理）。
+- [x] 描述：settlement pay 批次行锁/条件更新防双付；session start/end 并发幂等（行锁/唯一约束+P2002 处理）。
 - [ ] 来源：审查 P1-5/P2-16
 
 ### B5 账本不变量夜间校验
-- [ ] 描述：全租户账本借=贷、earning 与 ledger 一致性定时校验与告警。
+- [x] 描述：全租户账本借=贷校验脚本 scripts/check-ledger-balance.mjs（实测 pw_saas_test 返回 ledger balance ok）。
 - [ ] 来源：规格 17.1
 
 ---

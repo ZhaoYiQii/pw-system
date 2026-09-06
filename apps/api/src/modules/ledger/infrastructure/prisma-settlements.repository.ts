@@ -4,7 +4,7 @@ export interface BatchView {
   id: string;
   batchNo: string;
   status: string;
-  totalAmountFen: number;
+  totalAmountFen: string;
   itemCount: number;
   createdBy: string | null;
   createdAt: Date;
@@ -26,7 +26,7 @@ export class PrismaSettlementsRepository {
         id: r.id,
         batchNo: r.batchNo,
         status: r.status,
-        totalAmountFen: items.reduce((a, i) => a + Number(i.amountFen), 0),
+        totalAmountFen: items.reduce((a, i) => a + i.amountFen, 0n).toString(),
         itemCount: items.length,
         createdBy: r.createdBy,
         createdAt: r.createdAt
@@ -84,6 +84,12 @@ export class PrismaSettlementsRepository {
   async pay(tenantId: string, id: string, actorId: string): Promise<void> {
     await this.guardStatus(tenantId, id, ["APPROVED"], "PAID", actorId);
     await this.client.$transaction(async (tx) => {
+      const locks = await tx.$queryRaw<Array<{ id: string; status: string }>>`
+        SELECT id, status FROM settlement_batches
+        WHERE id = ${id}::uuid AND tenant_id = ${tenantId}::uuid
+        FOR UPDATE`;
+      if (locks.length === 0) throw new Error("批次不存在");
+      if (locks[0]?.status !== "APPROVED") throw new Error(`状态不允许 ${locks[0]?.status ?? "?"} -> PAID`);
       const items = await tx.settlementItem.findMany({ where: { tenantId, batchId: id } });
       const openD = await tx.dispute.findFirst({ where: { tenantId, earningId: { in: items.map((i) => i.earningId) }, status: "OPEN" }, select: { id: true } });
       if (openD) throw new Error("批次含开放争议 earning，不能结算");
@@ -92,7 +98,11 @@ export class PrismaSettlementsRepository {
         data: { tenantId, batchId: id, amountFen: total, channel: "OFFLINE", operatorId: actorId }
       });
       await tx.earning.updateMany({ where: { tenantId, id: { in: items.map((i) => i.earningId) } }, data: { status: "PAID" } });
-      await tx.settlementBatch.update({ where: { id }, data: { status: "PAID", paidBy: actorId, totalAmountFen: total } });
+      const paidRes = await tx.settlementBatch.updateMany({
+        where: { tenantId, id, status: "APPROVED" },
+        data: { status: "PAID", paidBy: actorId, totalAmountFen: total }
+      });
+      if (paidRes.count === 0) throw new Error("批次状态已变化，拒绝重复支付");
     });
   }
 

@@ -4,9 +4,11 @@ import { CustomerNotFoundError } from "../domain/errors.js";
 import { OrdersService } from "../../orders/application/orders.service.js";
 import { LedgerService } from "../../ledger/application/ledger.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
+import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
 
+@RequireAddon("addon.customer_self_service")
 @Controller("api/v1/tenant/customer")
 export class CustomerSelfController {
   constructor(

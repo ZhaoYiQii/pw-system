@@ -30,6 +30,7 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
     const hash = await hashPassword(PW);
     tenantCode = `o5_${suffix}`;
     const t = await client.tenant.create({ data: { code: tenantCode, name: "订单店" } });
+    await client.tenantEntitlement.createMany({ data: [ { tenantId: t.id, featureKey: "addon.customer_self_service", enabled: true, source: "test" }, { tenantId: t.id, featureKey: "addon.player_order_hall", enabled: true, source: "test" } ] });
     const owner = await client.tenantAccount.create({ data: { tenantId: t.id, username: "boss", passwordHash: hash } });
     await client.tenantAccountRole.create({ data: { tenantId: t.id, tenantAccountId: owner.id, role: "TENANT_OWNER" } });
     await client.customerProfile.create({ data: { tenantId: t.id, name: "下单客" } });
@@ -69,6 +70,7 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
         await client.idempotencyRecord.deleteMany({ where: { tenantId: t.id } });
         await client.tenantAccountRole.deleteMany({ where: { tenantId: t.id } });
         await client.tenantAccount.deleteMany({ where: { tenantId: t.id } });
+        await client.tenantEntitlement.deleteMany({ where: { tenantId: t.id } });
         await client.tenant.deleteMany({ where: { id: t.id } });
       }
       await client.$disconnect();

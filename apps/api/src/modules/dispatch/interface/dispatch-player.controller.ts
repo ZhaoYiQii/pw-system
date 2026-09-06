@@ -3,9 +3,11 @@ import { DispatchService } from "../application/dispatch.service.js";
 import { ApplicationConflictError, DispatchNotFoundError, OrderStateConflictError, PlayerNotAcceptingError, PlayerSkillMissingError, PlayerTimeConflictError } from "../domain/errors.js";
 import { PlayersService } from "../../players/application/players.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
+import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
 
+@RequireAddon("addon.player_order_hall")
 @Controller("api/v1/tenant/player")
 export class DispatchPlayerController {
   constructor(

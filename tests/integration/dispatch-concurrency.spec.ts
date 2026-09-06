@@ -29,6 +29,7 @@ describe("Slice 6 dispatch (publish/apply/shortlist/assign 并发与冲突)", ()
     tenantCode = `d6_${suffix}`;
     const t = await client.tenant.create({ data: { code: tenantCode, name: "派单店" } });
     tenantId = t.id;
+    await client.tenantEntitlement.createMany({ data: [ { tenantId: tenantId, featureKey: "addon.customer_self_service", enabled: true, source: "test" }, { tenantId: tenantId, featureKey: "addon.player_order_hall", enabled: true, source: "test" } ] });
     const owner = await client.tenantAccount.create({ data: { tenantId, username: "boss", passwordHash: hash } });
     await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" } });
     const customer = await client.customerProfile.create({ data: { tenantId, name: "派单客" } });
@@ -85,6 +86,7 @@ describe("Slice 6 dispatch (publish/apply/shortlist/assign 并发与冲突)", ()
         await client.customerProfile.deleteMany({ where: { tenantId } });
         await client.tenantAccountRole.deleteMany({ where: { tenantId } });
         await client.tenantAccount.deleteMany({ where: { tenantId } });
+        await client.tenantEntitlement.deleteMany({ where: { tenantId } });
         await client.tenant.deleteMany({ where: { id: tenantId } });
       }
       await client.$disconnect();

@@ -28,6 +28,7 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
     tenantCode = `s7_${suffix}`;
     const t = await client.tenant.create({ data: { code: tenantCode, name: "场次店" } });
     tenantId = t.id;
+    await client.tenantEntitlement.createMany({ data: [ { tenantId: tenantId, featureKey: "addon.customer_self_service", enabled: true, source: "test" }, { tenantId: tenantId, featureKey: "addon.player_order_hall", enabled: true, source: "test" } ] });
     const owner = await client.tenantAccount.create({ data: { tenantId, username: "boss", passwordHash: hash } });
     await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" } });
     const cust = await client.customerProfile.create({ data: { tenantId, name: "场次客" } });
@@ -90,6 +91,7 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
       await client.customerProfile.deleteMany({ where: { tenantId } });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
+      await client.tenantEntitlement.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
       await client.$disconnect();
     }

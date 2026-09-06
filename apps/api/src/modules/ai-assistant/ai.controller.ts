@@ -1,13 +1,27 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Inject, Param, Post, Req } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, HttpException, HttpStatus, Inject, Param, Post, Req } from "@nestjs/common";
 import { AiAssistantService } from "./ai.service.js";
+import { EntitlementsService } from "../entitlements/application/entitlements.service.js";
+import { FeatureDisabledError } from "../entitlements/domain/errors.js";
 import { Permissions, TenantScope } from "../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
 
-function tenantIdOf(req: AuthenticatedRequest): string { const id = req.principal?.tenantId; if (!id) throw new HttpException("tenant missing", HttpStatus.UNAUTHORIZED); return id; }
+function tenantIdOf(req: AuthenticatedRequest): string {
+  const id = req.principal?.tenantId;
+  if (!id) throw new HttpException("tenant missing", HttpStatus.UNAUTHORIZED);
+  return id;
+}
 
 @Controller("api/v1/tenant/ai")
 export class AiController {
-  constructor(@Inject(AiAssistantService) private readonly ai: AiAssistantService) {}
+  constructor(
+    @Inject(AiAssistantService) private readonly ai: AiAssistantService,
+    @Inject(EntitlementsService) private readonly entitlements: EntitlementsService
+  ) {}
+
+  private mapError(error: unknown): never {
+    if (error instanceof FeatureDisabledError) throw new ForbiddenException(error.message);
+    throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
+  }
 
   @TenantScope()
   @Get("capabilities")
@@ -20,6 +34,7 @@ export class AiController {
   @Post("parse-requirement")
   async parse(@Req() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
     try {
+      await this.entitlements.ensureAddonEnabled(tenantIdOf(req), "addon.ai_requirement_parser");
       const fields: {
         description?: string;
         serviceProductId?: string | null;
@@ -38,7 +53,7 @@ export class AiController {
       if (body.maxBudgetFen !== undefined) fields.maxBudgetFen = body.maxBudgetFen as number | null;
       return { data: await this.ai.parseRequirement(tenantIdOf(req), req.principal?.sub ?? "system", fields) };
     } catch (error) {
-      throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
+      this.mapError(error);
     }
   }
 
@@ -47,9 +62,10 @@ export class AiController {
   @Get("orders/:orderId/recommendations")
   async recommend(@Req() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
     try {
+      await this.entitlements.ensureAddonEnabled(tenantIdOf(req), "addon.ai_match_recommendation");
       return { data: await this.ai.recommendPlayers(tenantIdOf(req), req.principal?.sub ?? "system", orderId) };
     } catch (error) {
-      throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
+      this.mapError(error);
     }
   }
 }

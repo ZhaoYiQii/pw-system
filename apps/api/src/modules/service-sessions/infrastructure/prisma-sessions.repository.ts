@@ -110,7 +110,7 @@ export class PrismaSessionsRepository {
     return (await this.detailById(tenantId, id)) as SessionView;
   }
 
-  /** 结束场次：服务器时间核算 duration；已结束幂等返回同一场次。 */
+  /** 结束场次：服务器时间核算 duration；条件更新保证并发下仅一次成功，幂等返回同一场次。 */
   async end(tenantId: string, orderId: string, actorId: string): Promise<SessionView> {
     const id = await this.client.$transaction(async (tx) => {
       const s = await tx.serviceSession.findFirst({ where: { tenantId, orderId }, select: { id: true, status: true, startedAt: true } });
@@ -120,14 +120,21 @@ export class PrismaSessionsRepository {
       if (!s.startedAt) throw new InvalidSessionInputError("缺少 startedAt");
       const now = new Date();
       const duration = Math.max(0, Math.floor((now.getTime() - s.startedAt.getTime()) / 1000));
-      await tx.serviceSession.update({ where: { id: s.id }, data: { status: "ENDED", endedAt: now, durationSeconds: duration } });
+      const updated = await tx.serviceSession.updateMany({
+        where: { tenantId, id: s.id, status: "STARTED" },
+        data: { status: "ENDED", endedAt: now, durationSeconds: duration }
+      });
+      if (updated.count === 0) {
+        const after = await tx.serviceSession.findFirst({ where: { tenantId, id: s.id }, select: { status: true } });
+        if (after?.status === "ENDED") return s.id;
+        throw new SessionStateConflictError(s.id, s.status ?? "STARTED", "END");
+      }
       await tx.sessionEvent.create({
         data: { tenantId, sessionId: s.id, eventType: "SESSION_ENDED", fromStatus: "STARTED", toStatus: "ENDED", actorType: "tenant_account", actorId, payload: { endedAt: now.toISOString(), durationSeconds: duration } }
       });
       await tx.outboxEvent.create({
         data: { tenantId, aggregateType: "session", aggregateId: s.id, eventType: "session.ended", payload: { orderId, durationSeconds: duration } }
       });
-      // 场次结束 → 订单 IN_PROGRESS → PENDING_CONFIRMATION（仅首次成功时写事件）
       const orderRes = await tx.order.updateMany({
         where: { tenantId, id: orderId, status: "IN_PROGRESS" },
         data: { status: "PENDING_CONFIRMATION" }
@@ -141,7 +148,6 @@ export class PrismaSessionsRepository {
     });
     return (await this.detailById(tenantId, id)) as SessionView;
   }
-
   async requestAdjustment(tenantId: string, sessionId: string, requestedDurationSeconds: number, reason: string, actorId: string): Promise<SessionView> {
     if (!Number.isInteger(requestedDurationSeconds) || requestedDurationSeconds <= 0) {
       throw new InvalidSessionInputError("requestedDurationSeconds 必须为正整数");

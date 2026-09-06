@@ -88,7 +88,7 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
       .set("authorization", `Bearer ${ownerToken}`)
       .expect(201);
     const first = res.body.data as { earningId: string; playerShareFen: number };
-    expect(first.playerShareFen).toBe(7700);
+    expect(first.playerShareFen).toBe("7700");
     const earning = await client.earning.findFirst({ where: { tenantId, orderId } });
     expect(earning?.amountFen).toBe(BigInt(7700));
 

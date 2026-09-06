@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
 import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { EntitlementsService } from "./application/entitlements.service.js";
@@ -7,6 +7,7 @@ import { EntitlementsController } from "./interface/entitlements.controller.js";
 
 export const ENTITLEMENT_DB_CLIENT = "ENTITLEMENT_DB_CLIENT";
 
+@Global()
 @Module({
   controllers: [EntitlementsController],
   providers: [

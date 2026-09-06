@@ -3,10 +3,12 @@ import { createDatabaseClient } from "@pw/database";
 import { DeterministicAiProvider } from "./provider.js";
 import { AiAssistantService } from "./ai.service.js";
 import { AiController } from "./ai.controller.js";
+import { EntitlementsModule } from "../entitlements/entitlements.module.js";
 
 export const AI_DB_CLIENT = "AI_DB_CLIENT";
 
 @Module({
+  imports: [EntitlementsModule],
   controllers: [AiController],
   providers: [
     { provide: AI_DB_CLIENT, useFactory: () => { const url = process.env.DATABASE_URL; if (!url) throw new Error("db url missing"); return createDatabaseClient(url); } },

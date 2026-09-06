@@ -25,6 +25,7 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
     const hash = await hashPassword(PW);
     const t = await client.tenant.create({ data: { code: `sm_${suffix}`, name: "状态机店" } });
     tenantId = t.id;
+    await client.tenantEntitlement.createMany({ data: [ { tenantId: tenantId, featureKey: "addon.customer_self_service", enabled: true, source: "test" }, { tenantId: tenantId, featureKey: "addon.player_order_hall", enabled: true, source: "test" } ] });
     const owner = await client.tenantAccount.create({ data: { tenantId, username: "boss", passwordHash: hash } });
     await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" } });
     const pAcc = await client.tenantAccount.create({ data: { tenantId, username: "player", passwordHash: hash } });
@@ -76,6 +77,7 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
       await client.game.deleteMany({ where: { tenantId } });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
+      await client.tenantEntitlement.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
       await client.$disconnect();
     }

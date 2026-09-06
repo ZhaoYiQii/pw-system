@@ -94,6 +94,26 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
     await req(ownerToken).post(`/api/v1/tenant/settlements/${b1.id}/void`).expect(409);
   });
 
+  it("并发 pay：批次行锁保证仅一次成功、一条线下支付记录", async () => {
+    const cust = await client.customerProfile.create({ data: { tenantId, name: "并发客" } });
+    const order = await client.order.create({ data: { tenantId, orderNo: `so4_${suffix}`, customerProfileId: cust.id } });
+    const player = await client.playerProfile.findFirst({ where: { tenantId } });
+    const e4 = await client.earning.create({ data: { tenantId, orderId: order.id, playerId: player?.id as string, amountFen: BigInt(7700) } });
+    const b4 = (await req(ownerToken).post("/api/v1/tenant/settlements").expect(201)).body.data as { id: string };
+    await req(ownerToken).post(`/api/v1/tenant/settlements/${b4.id}/items`, { earningIds: [e4.id] }).expect(201);
+    await req(financeToken).post(`/api/v1/tenant/settlements/${b4.id}/review`).expect(201);
+    await req(financeToken).post(`/api/v1/tenant/settlements/${b4.id}/approve`).expect(201);
+
+    const results = await Promise.allSettled([
+      req(ownerToken).post(`/api/v1/tenant/settlements/${b4.id}/pay`),
+      req(ownerToken).post(`/api/v1/tenant/settlements/${b4.id}/pay`)
+    ]);
+    const fulfilled = results.filter((r) => r.status === "fulfilled" && r.value.status === 201).length;
+    const rejectedOrConflict = results.filter((r) => r.status === "rejected" || (r.status === "fulfilled" && r.value.status === 409)).length;
+    expect(fulfilled).toBe(1);
+    expect(rejectedOrConflict).toBe(1);
+    expect(await client.manualPaymentRecord.count({ where: { tenantId, batchId: b4.id } })).toBe(1);
+  });
   it("VOID 可让 DRAFT/REVIEWED 批次退回 earning 为 PENDING", async () => {
     const cust = await client.customerProfile.create({ data: { tenantId, name: "客3" } });
     const order = await client.order.create({ data: { tenantId, orderNo: `so3_${suffix}`, customerProfileId: cust.id } });

@@ -25,6 +25,12 @@ describe("Slice 10 AI (deterministic/不可用标记/合法候选)", () => {
     const hash = await hashPassword(PW);
     const t = await client.tenant.create({ data: { code: `ai_${suffix}`, name: "AI店" } });
     tenantId = t.id;
+    await client.tenantEntitlement.createMany({
+      data: [
+        { tenantId, featureKey: "addon.ai_requirement_parser", enabled: true, source: "test" },
+        { tenantId, featureKey: "addon.ai_match_recommendation", enabled: true, source: "test" }
+      ]
+    });
     const owner = await client.tenantAccount.create({ data: { tenantId, username: "boss", passwordHash: hash } });
     await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" } });
     const cust = await client.customerProfile.create({ data: { tenantId, name: "AI客" } });
@@ -61,6 +67,7 @@ describe("Slice 10 AI (deterministic/不可用标记/合法候选)", () => {
       await client.customerProfile.deleteMany({ where: { tenantId } });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
+      await client.tenantEntitlement.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
       await client.$disconnect();
     }

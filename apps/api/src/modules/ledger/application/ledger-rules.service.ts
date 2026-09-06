@@ -1,5 +1,11 @@
 import { LedgerRulesRepository, RuleRow } from "../infrastructure/prisma-ledger-rules.repository.js";
-import { splitSettlement, SplitResult } from "../domain/split.js";
+import { splitSettlement } from "../domain/split.js";
+
+export interface SplitPreview {
+  platformFeeFen: string;
+  storeCutFen: string;
+  playerShareFen: string;
+}
 
 export class LedgerRulesService {
   constructor(private readonly repo: LedgerRulesRepository) {}
@@ -22,11 +28,16 @@ export class LedgerRulesService {
     return this.repo.setPlatformFee(tenantId, bp);
   }
 
-  async preview(tenantId: string, amountFen: unknown): Promise<SplitResult> {
-    const amount = Number(amountFen);
-    if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error("amountFen 必须为正整数（分）");
+  async preview(tenantId: string, amountFen: unknown): Promise<SplitPreview> {
+    const raw = String(amountFen);
+    if (!/^[1-9][0-9]*$/.test(raw)) throw new Error("amountFen 必须为正整数字符串（分）");
     const rules = await this.repo.get(tenantId);
-    return splitSettlement(amount, rules);
+    const result = splitSettlement(BigInt(raw), rules);
+    return {
+      platformFeeFen: result.platformFeeFen.toString(),
+      storeCutFen: result.storeCutFen.toString(),
+      playerShareFen: result.playerShareFen.toString()
+    };
   }
 
   private parseBp(value: unknown, label: string): number {

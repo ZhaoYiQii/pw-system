@@ -51,6 +51,7 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
     tenantCode = `ac_${suffix}`;
     const t = await client.tenant.create({ data: { code: tenantCode, name: "审计店" } });
     tenantId = t.id;
+    await client.tenantEntitlement.createMany({ data: [ { tenantId, featureKey: "addon.customer_self_service", enabled: true, source: "test" }, { tenantId, featureKey: "addon.player_order_hall", enabled: true, source: "test" } ] });
 
     const owner = await client.tenantAccount.create({ data: { tenantId, username: "boss", passwordHash: hash } });
     await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" } });

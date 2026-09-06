@@ -4,10 +4,12 @@ import { ApplicationConflictError, AssignmentExistsError, DispatchNotFoundError,
 import { CustomersService } from "../../customers/application/customers.service.js";
 import { OrdersService } from "../../orders/application/orders.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
+import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
 
 /** 老板端（客户自助）：查看本人订单候选并选人。 */
+@RequireAddon("addon.customer_self_service")
 @Controller("api/v1/tenant/customer")
 export class DispatchCustomerController {
   constructor(
