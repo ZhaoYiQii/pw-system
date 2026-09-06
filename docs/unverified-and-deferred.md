@@ -47,3 +47,7 @@
 ## G. Slice 4（2026-09-06，见 slice-4-acceptance.md）
 - 完成：数据层 004/005 + RLS；customers/players/catalog API；全局 PermissionsGuard；admin 客户/陪玩/服务目录三页；陪玩账号绑定 + /tenant/player/me 自助；mobile player 页面注册（双端构建）。
 - 新增待办：mobile 自助页真实数据接线依赖 H5 登录 UI（后端已就绪）；运行态公网域名 E2E。
+## H. Slice 5 Phase A（2026-09-06）
+- 迁移 `20260906000600_orders` 应用到开发/测试库：orders/order_requirements/order_price_snapshots/order_events/outbox_events/idempotency_records + OrderStatus + RLS；快照/事件不可变；line_total=unit*qty CHECK；幂等唯一(tenant,key,op)。
+- tenant-isolation orders.spec 4 项 → 17/17；lint/typecheck 绿。
+- 待办（Phase B 起）：订单状态机 DRAFT→CONFIRMED、价格快照生成、需求完整性校验、双入口（客服/客户自助）、时间线、Outbox 事件、H5 登录接线。
