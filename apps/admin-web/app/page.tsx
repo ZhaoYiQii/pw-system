@@ -39,6 +39,9 @@ export default function HomePage() {
           <Link className="btn" href="/catalog">
             服务目录
           </Link>
+          <Link className="btn" href="/finance">
+            财务
+          </Link>
           <Link className="btn" href="/settings">
             门店设置
           </Link>
