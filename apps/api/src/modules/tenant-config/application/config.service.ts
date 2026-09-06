@@ -25,9 +25,7 @@ export interface EffectiveConfig {
 }
 
 export interface ConfigRepository {
-  active(
-    tenantId: string,
-  ): Promise<{
+  active(tenantId: string): Promise<{
     id: string;
     version: number;
     status: string;
