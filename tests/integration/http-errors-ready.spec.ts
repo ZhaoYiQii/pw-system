@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
+import { HealthService } from "../../apps/api/src/health/health.service.js";
 
 describe("R2-a HTTP 错误结构与 /ready 门禁", () => {
   let app: INestApplication;
@@ -50,5 +51,29 @@ describe("R2-a HTTP 错误结构与 /ready 门禁", () => {
       status: "ready",
       checks: { database: "up" },
     });
+  });
+
+  it("GET /ready 数据库不可达时返回 503 与 checks", async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(HealthService)
+      .useValue({
+        checks: async () => ({ database: "down", redis: "skipped" }),
+      })
+      .compile();
+    const downApp = moduleRef.createNestApplication();
+    await downApp.init();
+    try {
+      const res = await request(downApp.getHttpServer())
+        .get("/ready")
+        .expect(503);
+      expect(res.body).toMatchObject({
+        status: 503,
+        checks: { database: "down", redis: "skipped" },
+      });
+    } finally {
+      await downApp.close();
+    }
   });
 });

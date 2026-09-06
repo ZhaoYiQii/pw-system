@@ -15,7 +15,11 @@ describe("AppModule (health endpoint)", () => {
       const response = await request(app.getHttpServer())
         .get("/health")
         .expect(200);
-      expect(response.body).toEqual({ status: "ok", service: "api" });
+      expect(response.body).toMatchObject({
+        status: "ok",
+        service: "api",
+        checks: { database: "up", redis: "skipped" },
+      });
     } finally {
       await app.close();
     }

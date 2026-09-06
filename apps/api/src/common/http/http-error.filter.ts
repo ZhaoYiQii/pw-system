@@ -67,6 +67,14 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof ApiValidationError
         ? exception.fieldErrors
         : undefined;
+    const extras: Record<string, unknown> = {};
+    if (rawBody && typeof rawBody === "object") {
+      for (const [key, value] of Object.entries(rawBody)) {
+        if (key !== "message" && key !== "error" && key !== "statusCode") {
+          extras[key] = value;
+        }
+      }
+    }
 
     res.status(status).json({
       type:
@@ -83,6 +91,7 @@ export class HttpErrorFilter implements ExceptionFilter {
           : "INTERNAL_ERROR",
       message,
       requestId,
+      ...extras,
       ...(fieldErrors ? { fieldErrors } : {}),
     });
   }
