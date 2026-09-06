@@ -52,6 +52,8 @@ export default function CandidatesPage() {
   const [newDuration, setNewDuration] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [selfEnabled, setSelfEnabled] = useState(true);
+  const [disputeOrderId, setDisputeOrderId] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState("");
 
   const loadOrders = async (t: string) => {
     try {
@@ -220,6 +222,29 @@ export default function CandidatesPage() {
     }
   };
 
+  const openDispute = async (orderId: string) => {
+    if (!token || !disputeReason.trim()) {
+      setMsg("请填写投诉原因");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request(`/api/v1/tenant/orders/${orderId}/disputes`, {
+        method: "POST",
+        token,
+        body: { reason: disputeReason.trim() },
+      });
+      setMsg("投诉已提交，门店/平台将处理。");
+      setDisputeOrderId(null);
+      setDisputeReason("");
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <View className="page">
       <Text className="title">选择陪玩</Text>
@@ -365,6 +390,38 @@ export default function CandidatesPage() {
                   >
                     确认完成
                   </Button>
+                </View>
+              ) : null}
+              {o.status === "COMPLETED" ||
+              o.status === "PENDING_CONFIRMATION" ? (
+                <View className="row">
+                  {disputeOrderId === o.id ? (
+                    <>
+                      <Input
+                        className="input"
+                        value={disputeReason}
+                        onInput={(e) => setDisputeReason(e.detail.value)}
+                        placeholder="投诉原因"
+                      />
+                      <Button
+                        size="mini"
+                        disabled={busy}
+                        onClick={() => void openDispute(o.id)}
+                      >
+                        提交
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="mini"
+                      onClick={() => {
+                        setDisputeOrderId(o.id);
+                        setDisputeReason("");
+                      }}
+                    >
+                      投诉
+                    </Button>
+                  )}
                 </View>
               ) : null}
             </View>
