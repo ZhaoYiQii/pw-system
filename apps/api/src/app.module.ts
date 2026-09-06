@@ -7,6 +7,7 @@ import { EntitlementsModule } from "./modules/entitlements/entitlements.module.j
 import { CustomersModule } from "./modules/customers/customers.module.js";
 import { PlayersModule } from "./modules/players/players.module.js";
 import { CatalogModule } from "./modules/catalog/catalog.module.js";
+import { OrdersModule } from "./modules/orders/orders.module.js";
 
 @Module({
   controllers: [HealthController],
@@ -17,7 +18,8 @@ import { CatalogModule } from "./modules/catalog/catalog.module.js";
     EntitlementsModule,
     CustomersModule,
     PlayersModule,
-    CatalogModule
+    CatalogModule,
+    OrdersModule
   ]
 })
 export class AppModule {}
