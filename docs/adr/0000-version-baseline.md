@@ -74,3 +74,6 @@
 - 决定：`apps/mobile` 锁定 `react@18.3.1`、`react-dom@18.3.1`、`@types/react@18.3.31`；`apps/admin-web`（Next.js 16）保持 `react@19.2.8` 满足主规格第 160 行。
 - 影响：移动端 React 大版本与规格顶层（第 7 行 React 19）不一致，属已记录偏差。待 Taro 官方发布支持 React 19 的版本后，作为独立升级任务回归主规格，不得夹带在业务切片中。
 - 恢复：修改 `apps/mobile/package.json` 的 react/react-dom/@types/react 版本并重新生成 lockfile。
+## ADR-0000 增补 2（2026-09-06，docker compose pull 后证据）
+
+本地开发容器镜像（compose，已拉取）：`postgres:18`（image id 4ef4dbc939d6）、`redis:7`（image id 71da9275c5f3）、`minio/minio:latest`（image id 14cea493d9a3）。精确 patch 由镜像 digest 锁定于本地；生产镜像 tag 策略需在部署切片单独批准。
