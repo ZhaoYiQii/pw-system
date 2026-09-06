@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import type { AccessPrincipal } from "../../modules/identity-access/domain/principal.js";
@@ -12,20 +12,18 @@ export interface AuthenticatedRequest extends Request {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(
-    private readonly reflector: Reflector | undefined,
-    private readonly auth: AuthService
-  ) {}
+  private readonly reflector = new Reflector();
+
+  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const reflector = this.reflector ?? new Reflector();
-    const isPublic = reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass()
     ]);
     if (isPublic) return true;
 
-    const requiredScope = reflector.getAllAndOverride<"platform" | "tenant" | undefined>(
+    const requiredScope = this.reflector.getAllAndOverride<"platform" | "tenant" | undefined>(
       REQUIRED_SCOPE_KEY,
       [context.getHandler(), context.getClass()]
     );
@@ -41,7 +39,12 @@ export class AuthGuard implements CanActivate {
           ? [AUD_TENANT]
           : [AUD_PLATFORM, AUD_TENANT];
 
-    const principal = await this.auth.verifyAccess(token, allowedAudiences);
+    let principal;
+    try {
+      principal = await this.auth.verifyAccess(token, allowedAudiences);
+    } catch {
+      throw new UnauthorizedException("invalid or expired access token");
+    }
     if (requiredScope === "tenant" && principal.tenantId === undefined) {
       throw new UnauthorizedException("tenant scope required");
     }

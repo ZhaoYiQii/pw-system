@@ -45,3 +45,7 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 
 - 完成：迁移 auth_rbac 应用；scrypt 密码；jose access/refresh 旋转会话；AuthGuard(@Public/@PlatformScope/@TenantScope)；auth 端点；admin 登录页(/login、/store/login)；mobile identity-adapter。unit 7/7、integration 15/15、tenant-isolation 9/9、typecheck/lint/build/双端全绿。
 - 未完成：HTTP 级权限矩阵、H5 登录 E2E、HttpOnly cookie+CSRF/Origin、限流、初始管理员 seed。
+## Slice 2 收尾（2026-09-06）
+
+- 完成 HTTP 级权限矩阵、HttpOnly cookie+Origin 校验、登录限流、seed；HTTP E2E 5 用例；test:integration 20/20、unit 7/7、isolation 9/9、全量构建/双端绿。
+- 剩余（记录）：H5 浏览器登录 E2E 待 mobile H5 登录 UI（业务切片）；多实例限流 Redis（Slice 9）。

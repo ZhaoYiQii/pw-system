@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Param, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import type { Request } from "express";
 import { TenancyService } from "../application/tenancy.service.js";
 import { DuplicateTenantCodeError, InvalidTenantCodeError, TenantNotFoundError } from "../domain/errors.js";
-import { PlatformScope, Public } from "../../../common/auth/decorators.js";
+import { PlatformScope, Permissions, Public } from "../../../common/auth/decorators.js";
+import { PermissionsGuard } from "../../../common/auth/permissions.guard.js";
 
 interface CreateTenantBody {
   code?: unknown;
@@ -20,9 +21,11 @@ function asString(value: unknown, field: string): string {
 
 // 平台运营接口：Slice 1 尚未接入认证（Slice 2 增加 guard）；路由路径与 OpenAPI 契约在后续切片固化。
 @Controller("api/v1")
+@UseGuards(PermissionsGuard)
 export class TenancyController {
-  constructor(private readonly tenancy: TenancyService) {}
+  constructor(@Inject(TenancyService) private readonly tenancy: TenancyService) {}
 
+  @Permissions("tenant.manage")
   @PlatformScope()
   @Post("platform/tenants")
   async createTenant(@Body() body: CreateTenantBody) {
@@ -46,11 +49,13 @@ export class TenancyController {
   }
 
   @PlatformScope()
+  @Permissions("tenant.view")
   @Get("platform/tenants")
   async listTenants() {
     return { data: await this.tenancy.listTenants() };
   }
 
+  @Permissions("tenant.manage")
   @PlatformScope()
   @Post("platform/tenants/:id/deactivate")
   @HttpCode(200)

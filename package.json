@@ -22,7 +22,8 @@
     "openapi:generate": "node scripts/not-implemented.mjs openapi:generate \"Slice 1+（随 API 契约建立）\"",
     "openapi:check": "node scripts/not-implemented.mjs openapi:check \"Slice 1+\"",
     "db:migrate:check": "node scripts/not-implemented.mjs db:migrate:check \"Slice 1（packages/database）\"",
-    "db:seed:test": "node scripts/not-implemented.mjs db:seed:test \"Slice 1\""
+    "db:seed:test": "node scripts/not-implemented.mjs db:seed:test \"Slice 1\"",
+    "db:seed:dev": "node scripts/seed-dev.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
@@ -34,6 +35,10 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.69.0",
     "vitest": "3.2.7",
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "reflect-metadata": "0.2.2",
+    "@nestjs/testing": "12.0.1",
+    "supertest": "7.2.2",
+    "@types/supertest": "7.2.1"
   }
 }

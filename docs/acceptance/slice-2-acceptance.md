@@ -26,3 +26,11 @@
 ## 结论
 
 Slice 2 认证/会话/audience 与账号级隔离已 locally-verified；剩余项继续在 Slice 2 内或随认证完善补齐，不进入 Slice 3 自动推进。
+
+## 第三轮（Slice 2 收尾，2026-09-06）
+
+- 完成：@Permissions 装饰器 + PermissionsGuard（角色→PermissionKey 矩阵，后端强制）；tenancy 平台端点接 tenant.view/tenant.manage；AuthController 支持 HttpOnly refresh cookie（Path=/api/v1/auth）+ Origin 校验（cookie 状态修改跨站拒绝）+ 登录失败限流（5 次/15 分钟，内存版）；`scripts/seed-dev.mjs`（平台超管 + demo 门店 owner/service/player/customer，`pnpm db:seed:dev`）。
+- HTTP 层 E2E（tests/integration/http-auth.spec.ts，5 用例）：登录签发 cookie 且 HttpOnly/SameSite=Lax；权限矩阵（admin 可建/support 403/门店 token 访问平台端点 401/门店 me 正常）；cookie refresh 旋转旧 token 失效；跨站 Origin 403；连续 5 次失败后 429。
+- 全量：test:integration 20/20、unit 7/7、tenant-isolation 9/9、typecheck 6/6、lint、build 4/4、build:h5、build:weapp 全绿。
+- 备注：Nest 控制器/守卫构造注入加显式 @Inject 以兼容 vitest/esbuild（无 design:paramtypes）。
+- 剩余：H5 浏览器登录 E2E（需 mobile H5 登录 UI 出现后执行，随业务切片）；多实例限流需 Redis（Slice 9 引入）。

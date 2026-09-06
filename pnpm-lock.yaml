@@ -11,6 +11,9 @@ importers:
       '@eslint/js':
         specifier: 9.39.5
         version: 9.39.5
+      '@nestjs/testing':
+        specifier: 12.0.1
+        version: 12.0.1(@nestjs/common@12.0.1(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.0.1)(@nestjs/platform-express@12.0.1)
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -20,12 +23,21 @@ importers:
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
+      '@types/supertest':
+        specifier: 7.2.1
+        version: 7.2.1
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)
       prettier:
         specifier: 3.9.6
         version: 3.9.6
+      reflect-metadata:
+        specifier: 0.2.2
+        version: 0.2.2
+      supertest:
+        specifier: 7.2.2
+        version: 7.2.2
       turbo:
         specifier: 2.10.12
         version: 2.10.12

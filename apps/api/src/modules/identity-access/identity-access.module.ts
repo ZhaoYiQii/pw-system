@@ -7,6 +7,7 @@ import { PrismaAuthRepository } from "./infrastructure/auth.repository.js";
 import { TokenService } from "./infrastructure/tokens.js";
 import { AuthController } from "./interface/auth.controller.js";
 import { MeController } from "./interface/me.controller.js";
+import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 
 export const AUTH_DB_CLIENT = "AUTH_DB_CLIENT";
 
@@ -42,8 +43,9 @@ export const AUTH_DB_CLIENT = "AUTH_DB_CLIENT";
     {
       provide: APP_GUARD,
       useClass: AuthGuard
-    }
+    },
+    RateLimitService
   ],
-  exports: [AuthService]
+  exports: [AuthService, RateLimitService]
 })
 export class IdentityAccessModule {}
