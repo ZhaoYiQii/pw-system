@@ -536,3 +536,90 @@ model Assignment {
   @@index([tenantId, playerId])
   @@map("assignments")
 }
+// ===== Slice 7：服务场次与证据（主规格 10.3/11.3/14.1）=====
+// 服务器权威时钟核算；session_events/adjustments/evidence 只追加（无 updated_at 或复核不覆盖原始）。
+
+enum SessionStatus {
+  SCHEDULED
+  STARTED
+  ENDED
+  CONFIRMED
+  ADJUSTMENT_PENDING
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ServiceSession {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  orderId            String        @map("order_id") @db.Uuid
+  playerId           String        @map("player_id") @db.Uuid
+  assignmentId       String?       @map("assignment_id") @db.Uuid
+  scheduledStartAt   DateTime?     @map("scheduled_start_at") @db.Timestamptz
+  startedAt          DateTime?     @map("started_at") @db.Timestamptz
+  endedAt            DateTime?     @map("ended_at") @db.Timestamptz
+  durationSeconds    Int?          @map("duration_seconds")
+  status             SessionStatus @default(SCHEDULED)
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, playerId, status])
+  @@map("service_sessions")
+}
+
+model SessionEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  sessionId  String   @map("session_id") @db.Uuid
+  eventType  String   @map("event_type")
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  actorType  String?  @map("actor_type")
+  actorId    String?  @map("actor_id") @db.Uuid
+  payload    Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([tenantId, sessionId, occurredAt])
+  @@map("session_events")
+}
+
+model SessionAdjustment {
+  id                        String           @id @default(uuid()) @db.Uuid
+  tenantId                  String           @map("tenant_id") @db.Uuid
+  sessionId                 String           @map("session_id") @db.Uuid
+  originalDurationSeconds   Int              @map("original_duration_seconds")
+  requestedDurationSeconds  Int              @map("requested_duration_seconds")
+  reason                    String
+  status                    AdjustmentStatus @default(PENDING)
+  requestedBy               String?          @map("requested_by") @db.Uuid
+  reviewedBy                String?          @map("reviewed_by") @db.Uuid
+  reviewComment             String?          @map("review_comment")
+  createdAt                 DateTime         @default(now()) @map("created_at")
+  updatedAt                 DateTime         @updatedAt @map("updated_at")
+
+  @@index([tenantId, sessionId, status])
+  @@map("session_adjustments")
+}
+
+/// 证据文件元数据（对象本体存放于对象存储/本地文件，bucket 不公开；内容验证+授权下载）。
+model EvidenceAsset {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  sessionId    String   @map("session_id") @db.Uuid
+  objectKey    String   @unique @map("object_key")
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  sha256       String
+  uploadedBy   String?  @map("uploaded_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, sessionId])
+  @@map("evidence_assets")
+}
