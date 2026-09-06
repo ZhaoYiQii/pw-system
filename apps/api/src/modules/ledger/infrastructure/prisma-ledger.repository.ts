@@ -38,6 +38,7 @@ export class PrismaLedgerRepository {
     tenantId: string,
     orderId: string,
     actorId: string,
+    actorType = "tenant_account",
   ): Promise<{ earningId: string; playerShareFen: string } | null> {
     const existing = await this.client.earning.findFirst({
       where: { tenantId, orderId },
@@ -174,7 +175,7 @@ export class PrismaLedgerRepository {
             eventType: "SESSION_CONFIRMED",
             fromStatus: session.status,
             toStatus: "CONFIRMED",
-            actorType: "tenant_account",
+            actorType,
             actorId,
             payload: {},
           },
@@ -191,7 +192,7 @@ export class PrismaLedgerRepository {
           eventType: "ORDER_ACCOUNTED",
           fromStatus: order.status,
           toStatus: "COMPLETED",
-          actorType: "tenant_account",
+          actorType,
           actorId,
           payload: {
             earningId: earning.id,
