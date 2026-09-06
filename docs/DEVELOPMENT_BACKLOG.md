@@ -52,9 +52,10 @@
 
 ### A5 手机号加密 + 租户内查询哈希
 
-- [ ] 描述：mobile 字段加密存储，另存租户内不可逆查询哈希；迁移保持向前兼容。
+- [x] 描述：mobile 字段加密存储，另存租户内不可逆查询哈希；迁移保持向前兼容。
 - [ ] 来源：规格 16.4；审查数据模型偏差
 - [ ] 依赖：数据库迁移与 schema 修改需单独授权
+- ✅ A5（2026-09-07）| mobile_enc（AES-256-GCM）+ mobile_hash（租户内 HMAC，唯一约束 tenant+mobile_hash）；customers/players repository 边界加密写/解密读，列表搜索仅完整号码精确哈希；集成 pii-mobile 4 用例；unit 27/integration 25/86/isolation 25/contract 6/critical 24 + coverage 门禁全绿。生产 PII_MASTER_KEY 配置挂起等用户提供。
 
 ---
 
