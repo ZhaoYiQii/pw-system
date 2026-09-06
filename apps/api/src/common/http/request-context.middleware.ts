@@ -1,4 +1,9 @@
-import { Injectable, NestMiddleware } from "@nestjs/common";
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NestMiddleware,
+} from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import type { AuthenticatedRequest } from "../auth/auth.guard.js";
@@ -16,6 +21,47 @@ export class RequestContextMiddleware implements NestMiddleware {
       (req.headers["x-request-id"] as string | undefined) || randomUUID();
     authenticated.requestId = requestId;
     res.setHeader("x-request-id", requestId);
+    const method = req.method.toUpperCase();
+    const hasCookieSession = /pw_refresh=/.test(req.headers.cookie ?? "");
+    if (
+      hasCookieSession &&
+      method !== "GET" &&
+      method !== "HEAD" &&
+      method !== "OPTIONS"
+    ) {
+      const fetchSite = req.headers["sec-fetch-site"];
+      if (
+        typeof fetchSite === "string" &&
+        fetchSite !== "same-origin" &&
+        fetchSite !== "same-site" &&
+        fetchSite !== "none"
+      ) {
+        next(
+          new HttpException(
+            "cross-site cookie request rejected",
+            HttpStatus.FORBIDDEN,
+          ),
+        );
+        return;
+      }
+      const origin = req.headers.origin;
+      if (typeof origin === "string" && origin.length > 0) {
+        const hostOrigin = req.protocol + "://" + (req.headers.host ?? "");
+        const allowed = new Set<string>([hostOrigin]);
+        if (process.env.ADMIN_WEB_ORIGIN)
+          allowed.add(process.env.ADMIN_WEB_ORIGIN);
+        if (process.env.H5_ORIGIN) allowed.add(process.env.H5_ORIGIN);
+        if (!allowed.has(origin)) {
+          next(
+            new HttpException(
+              "cross-origin cookie request rejected",
+              HttpStatus.FORBIDDEN,
+            ),
+          );
+          return;
+        }
+      }
+    }
     const startedAt = Date.now();
 
     res.on("finish", () => {

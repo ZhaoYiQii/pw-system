@@ -1,6 +1,7 @@
 export interface IdentitySession {
   accessToken: string;
   refreshToken?: string;
+  csrfToken?: string;
   principal: {
     sub: string;
     scope: string;

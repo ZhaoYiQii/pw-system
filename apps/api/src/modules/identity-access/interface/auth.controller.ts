@@ -10,6 +10,7 @@ import {
   Res,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
+import { randomBytes } from "node:crypto";
 import { AuthService } from "../application/auth.service.js";
 import { Public } from "../../../common/auth/decorators.js";
 import { RateLimitService } from "../../../common/auth/rate-limit.service.js";
@@ -24,6 +25,7 @@ import type { Scope } from "../domain/principal.js";
 import { REFRESH_TOKEN_TTL_SECONDS } from "../infrastructure/tokens.js";
 
 const REFRESH_COOKIE = "pw_refresh";
+const CSRF_COOKIE = "pw_csrf";
 const REFRESH_COOKIE_PATH = "/api/v1/auth";
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 5;
@@ -67,6 +69,30 @@ function setRefreshCookie(res: Response, token: string): void {
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
   });
+}
+
+function setCsrfCookie(res: Response): string {
+  const token = randomBytes(24).toString("base64url");
+  res.cookie(CSRF_COOKIE, token, {
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
+  });
+  return token;
+}
+
+function requireCsrf(req: Request): void {
+  const cookieToken = readCookie(req, CSRF_COOKIE);
+  const headerToken = req.headers["x-csrf-token"];
+  if (
+    !cookieToken ||
+    typeof headerToken !== "string" ||
+    cookieToken !== headerToken
+  ) {
+    throw new HttpException("CSRF token mismatch", HttpStatus.FORBIDDEN);
+  }
 }
 
 function clearRefreshCookie(res: Response): void {
@@ -131,11 +157,13 @@ export class AuthController {
             );
       this.rateLimit.reset(rateKey);
       setRefreshCookie(res, bundle.refreshToken);
+      const csrfToken = setCsrfCookie(res);
       return {
         data: {
           accessToken: bundle.accessToken,
           principal: bundle.principal,
           expiresInSeconds: bundle.expiresInSeconds,
+          csrfToken,
         },
       };
     } catch (error) {
@@ -185,14 +213,17 @@ export class AuthController {
         HttpStatus.FORBIDDEN,
       );
     }
+    requireCsrf(req);
     try {
       const bundle = await this.auth.refresh(cookieToken, scope);
       setRefreshCookie(res, bundle.refreshToken);
+      const csrfToken = setCsrfCookie(res);
       return {
         data: {
           accessToken: bundle.accessToken,
           principal: bundle.principal,
           expiresInSeconds: bundle.expiresInSeconds,
+          csrfToken,
         },
       };
     } catch (error) {
@@ -220,6 +251,7 @@ export class AuthController {
         HttpStatus.FORBIDDEN,
       );
     }
+    requireCsrf(req);
     await this.auth.logout(cookieToken);
     clearRefreshCookie(res);
     return { data: { ok: true } };

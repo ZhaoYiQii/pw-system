@@ -2,6 +2,8 @@ export interface SessionHandle {
   getToken(): string | null;
   setToken(token: string): void;
   clearToken(): void;
+  getCsrf(): string | null;
+  setCsrf(token: string): void;
 }
 
 /** H5：token 存 localStorage（仅平台目录允许访问）。 */
@@ -26,6 +28,22 @@ export const session: SessionHandle = {
     try {
       if (typeof localStorage === "undefined") return;
       localStorage.removeItem("pw_access_token");
+    } catch {
+      /* ignore */
+    }
+  },
+  getCsrf() {
+    try {
+      if (typeof localStorage === "undefined") return null;
+      return localStorage.getItem("pw_csrf_token");
+    } catch {
+      return null;
+    }
+  },
+  setCsrf(token: string) {
+    try {
+      if (typeof localStorage === "undefined") return;
+      localStorage.setItem("pw_csrf_token", token);
     } catch {
       /* ignore */
     }

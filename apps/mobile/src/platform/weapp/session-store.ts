@@ -11,4 +11,10 @@ export const session: SessionHandle = {
   clearToken() {
     /* noop */
   },
+  getCsrf() {
+    return null;
+  },
+  setCsrf() {
+    /* noop */
+  },
 };

@@ -18,6 +18,15 @@ function envOrThrow(name: string): string {
   return v;
 }
 
+function csrfFrom(cookies: string[]): string {
+  const csrf = cookies
+    .find((c) => c.startsWith("pw_csrf="))
+    ?.split(";")[0]
+    ?.replace("pw_csrf=", "");
+  if (!csrf) throw new Error("missing pw_csrf cookie");
+  return csrf;
+}
+
 describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate limit)", () => {
   let app: INestApplication;
   let client: PrismaClient;
@@ -130,6 +139,7 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
     expect(res.body.data.refreshToken).toBeUndefined();
     const setCookie = (res.headers["set-cookie"] ?? []).join(";");
     expect(setCookie).toContain("pw_refresh=");
+    expect(setCookie).toContain("pw_csrf=");
     expect(setCookie).toContain("HttpOnly");
     expect(setCookie).toContain("SameSite=Lax");
   });
@@ -190,9 +200,11 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
       .find((c: string) => c.startsWith("pw_refresh="))
       ?.split(";")[0]
       ?.replace("pw_refresh=", "");
+    const csrf = csrfFrom(cookieHeader);
     expect(oldRefresh).toBeTruthy();
     const second = await agent
       .post("/api/v1/auth/refresh")
+      .set("x-csrf-token", csrf)
       .send({ scope: "platform" })
       .expect(201);
     expect(second.body.data.refreshToken).toBeUndefined();
@@ -200,6 +212,7 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
       .find((c: string) => c.startsWith("pw_refresh="))
       ?.split(";")[0]
       ?.replace("pw_refresh=", "");
+    const csrf2 = csrfFrom((second.headers["set-cookie"] ?? []) as string[]);
     expect(newCookie).toBeTruthy();
     expect(newCookie).not.toBe(oldRefresh);
 
@@ -211,7 +224,8 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
     // 携带旧 token 的 cookie 也被拒绝
     await request(app.getHttpServer())
       .post("/api/v1/auth/refresh")
-      .set("Cookie", `pw_refresh=${oldRefresh}`)
+      .set("Cookie", `pw_refresh=${oldRefresh}; pw_csrf=${csrf2}`)
+      .set("x-csrf-token", csrf2)
       .send({ scope: "platform" })
       .expect(401);
   });

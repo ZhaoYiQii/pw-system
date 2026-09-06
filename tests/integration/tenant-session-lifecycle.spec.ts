@@ -85,6 +85,15 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
       .send({ kind: "tenant", tenantCode, username: "boss", password: PW });
   }
 
+  function csrfFrom(cookies: string[]): string {
+    const token = cookies
+      .find((c) => c.startsWith("pw_csrf="))
+      ?.split(";")[0]
+      ?.replace("pw_csrf=", "");
+    if (!token) throw new Error("missing pw_csrf cookie");
+    return token;
+  }
+
   it("停用租户后：登录 401、refresh 401、refresh session 全部吊销；重新激活后可登录", async () => {
     const agent = request.agent(app.getHttpServer());
     const first = await agent
@@ -94,10 +103,13 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
     expect(
       (first.body as { data: { refreshToken?: string } }).data.refreshToken,
     ).toBeUndefined();
-    await agent
+    let csrf = csrfFrom((first.headers["set-cookie"] ?? []) as string[]);
+    const refreshed = await agent
       .post("/api/v1/auth/refresh")
+      .set("x-csrf-token", csrf)
       .send({ scope: "tenant" })
       .expect(201);
+    csrf = csrfFrom((refreshed.headers["set-cookie"] ?? []) as string[]);
 
     await request(app.getHttpServer())
       .post(`/api/v1/platform/tenants/${tenantId}/deactivate`)
@@ -112,6 +124,7 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
     await tenantLogin().expect(401);
     await agent
       .post("/api/v1/auth/refresh")
+      .set("x-csrf-token", csrf)
       .send({ scope: "tenant" })
       .expect(401);
 
