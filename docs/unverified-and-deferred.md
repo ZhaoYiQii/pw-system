@@ -92,3 +92,6 @@
 ## T. Slice 9 Phase A（2026-09-06）
 - 迁移 `20260906001200_disputes_audit_notify`：disputes/dispute_events(OPEN/RESOLVED)、audit_logs(只追加)、notification_deliveries(重试)；RLS；isolation 24/24。
 - 待办（Phase B/C）：争议状态机 + 结算 hold（开放争议 earning 不可结算，冻结用）、审计写入脱敏/查询权限（审计不可更新删除由只追加表+无 update API 保障）、Outbox relay/通知重试（BullMQ + worker + 短信/微信 degraded）、站内通知。UI 后置。
+## U. Slice 9 Phase B（2026-09-06）
+- 完成：争议开/结 + 事件 + 审计（disputes 模块）；结算冻结（开放争议 earning 不可入批/不可支付，resolve 后恢复）；审计查询 GET /tenant/audit。integration 55/55。
+- 待办（Phase C/后续）：审计字段脱敏细化与权限强化、Outbox relay/通知重试（BullMQ+worker+短信/微信 degraded）、站内通知、争议/审计 UI（后置）。
