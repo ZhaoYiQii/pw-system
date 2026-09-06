@@ -101,3 +101,6 @@
 ## W. Slice 10 Phase A（2026-09-06）
 - 迁移 `20260906001400_ai`：ai_runs（provider/model/prompt 版本）、ai_suggestions（结构化 payload+confidence_bp+人工采纳 status）；RLS；isolation 25/25。
 - 待办（Phase B/C）：AiProviderPort + 超时/重试/熔断；确定性 Fake（生产无授权→unavailable，不伪装）；需求解析缺失检查；候选过滤（AI 仅在合法集合内排序，不虚构价格/低置信→NEEDS_REVIEW）；人工采纳与 audit；外部 LLM provider 需授权（台账 A）。
+## X. Slice 10 Phase B（2026-09-06）
+- 完成：AiProviderPort + Deterministic（capabilities.supported=false 不伪装）；parse-requirement 缺失检查（SUGGESTED/NEEDS_REVIEW，持久化 ai_run/suggestion）；合法候选过滤（技能/接单/时间）。integration 57/57。
+- 待办/挂账：外部 LLM provider（需授权/API key）、超时重试熔断、AI 采纳写入人工结果与审计、AI UI（后置）。
