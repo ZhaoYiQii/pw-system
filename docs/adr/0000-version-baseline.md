@@ -87,3 +87,9 @@
 
 - mobile React 18.3.1 由用户确认为当前接受基线（React 19 升版挂起，待 Taro 上游支持后独立处理）；admin-web 保持 React 19.2.8。
 - 微信小程序开发/真机/审核/发布暂缓；`pnpm build:weapp` 保留为兼容性编译门禁。
+## ADR-0000 增补 5（2026-09-06，Slice 1 数据库与端口事实）
+
+- 宿主机 5432 被原生 Windows PostgreSQL（PID 7348）占用；本地容器端口重映射为 postgres 5433、redis 6380、minio 9002/9003。所有本地连接串使用 127.0.0.1:5433。
+- Prisma 7.10.0：使用 prisma-client generator（输出 src/generated/prisma，已 gitignore，改动 schema 后需 `prisma generate`）+ @prisma/adapter-pg 驱动适配器；CLI 配置 prisma7.config.ts 读取 DATABASE_URL。
+- RLS 运行时角色 pw_runtime（NOBYPASSRLS）策略基于事务 GUC `app.tenant_id`；迁移/owner 角色 pw 有显式平台策略（FORCE RLS 生效）。
+- 密码均为本地开发默认值（pw_dev_only / pw_runtime_dev_only），仅限本地容器，生产必须 secret 注入。

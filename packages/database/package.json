@@ -1,0 +1,32 @@
+{
+  "name": "@pw/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "db:migrate:check": "prisma migrate status",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@prisma/client": "7.10.0",
+    "@prisma/adapter-pg": "7.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "prisma": "7.10.0",
+    "typescript": "5.9.3",
+    "dotenv": "17.4.2"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  }
+}
