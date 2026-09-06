@@ -30,8 +30,10 @@ model Tenant {
   updatedAt DateTime     @updatedAt @map("updated_at")
   version   Int          @default(1)
 
-  domains     TenantDomain[]
-  appBindings TenantAppBinding[]
+  domains      TenantDomain[]
+  appBindings  TenantAppBinding[]
+  accounts     TenantAccount[]
+  accountRoles TenantAccountRole[]
 
   @@map("tenants")
 }
@@ -68,4 +70,87 @@ model TenantAppBinding {
   @@unique([appId])
   @@index([tenantId])
   @@map("tenant_app_bindings")
+}
+
+// ===== Slice 2：身份、会话与 RBAC（主规格 7/11.2/11.4/16.1）=====
+
+enum AccountStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum RoleKey {
+  PLATFORM_SUPER_ADMIN
+  PLATFORM_SUPPORT
+  TENANT_OWNER
+  TENANT_ADMIN
+  CUSTOMER_SERVICE
+  FINANCE
+  PLAYER
+  CUSTOMER
+}
+
+/// 平台账号（SaaS 运营方）。平台级，不启用租户 RLS；运行时角色无权限读取（迁移2 显式 revoke）。
+model PlatformAccount {
+  id           String        @id @default(uuid()) @db.Uuid
+  username     String        @unique
+  passwordHash String        @map("password_hash")
+  status       AccountStatus @default(ACTIVE)
+  role         RoleKey
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  version      Int           @default(1)
+
+  @@map("platform_accounts")
+}
+
+/// 门店账号（店员/陪玩/客户）。租户级资源，启用 RLS（按 tenant_id）。
+model TenantAccount {
+  id           String        @id @default(uuid()) @db.Uuid
+  tenantId     String        @map("tenant_id") @db.Uuid
+  username     String
+  passwordHash String        @map("password_hash")
+  status       AccountStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  version      Int           @default(1)
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  roles  TenantAccountRole[]
+
+  @@unique([tenantId, username])
+  @@index([tenantId])
+  @@map("tenant_accounts")
+}
+
+/// 门店账号-角色。租户级资源，启用 RLS。
+model TenantAccountRole {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  tenantAccountId String       @map("tenant_account_id") @db.Uuid
+  role            RoleKey
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenantAccount TenantAccount  @relation(fields: [tenantAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, tenantAccountId, role])
+  @@index([tenantAccountId])
+  @@map("tenant_account_roles")
+}
+
+/// 刷新会话（旋转式）。非租户业务表：含哈希令牌，不启用 RLS；运行时角色可读写（登录/刷新流程）。
+model RefreshSession {
+  id          String    @id @default(uuid()) @db.Uuid
+  subjectType String    @map("subject_type")
+  accountId   String    @map("account_id") @db.Uuid
+  tenantId    String?   @map("tenant_id") @db.Uuid
+  tokenHash   String    @map("token_hash") @unique
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  @@index([subjectType, accountId])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
 }

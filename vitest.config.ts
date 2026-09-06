@@ -8,6 +8,8 @@ export default defineConfig({
       "apps/worker/src/**/*.spec.ts"
     ],
     env: {
+      SESSION_SECRET:
+        process.env.SESSION_SECRET ?? "test-secret-0123456789-0123456789-0123456789",
       DATABASE_URL:
         process.env.DATABASE_URL ??
         "postgresql://pw_runtime:pw_runtime_dev_only@127.0.0.1:5433/pw_saas?schema=public",

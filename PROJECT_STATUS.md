@@ -41,3 +41,7 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 - 完成剩余项：API tenancy 模块 + 拒绝客户端 tenantId；平台后台 /tenants 页；mobile tenant-locator（h5/weapp）+ 停用不可用页。Slice 1 代码层面完成。
 - 证据：typecheck 6/6、lint、unit 3/3、build 4/4、test:integration 8/8、test:tenant-isolation 6/6、build:h5、build:weapp 全绿（本地）。CI（GitHub Actions）跑 lint/typecheck/test/build/双端。
 - 遗留（非阻塞）：平台接口认证属 Slice 2；admin/mobile 运行态 E2E 需运行中的 API+真实域名，按验收命令范围以构建级为准。
+## Slice 2 进度（2026-09-06，partial）
+
+- 完成：迁移 auth_rbac 应用；scrypt 密码；jose access/refresh 旋转会话；AuthGuard(@Public/@PlatformScope/@TenantScope)；auth 端点；admin 登录页(/login、/store/login)；mobile identity-adapter。unit 7/7、integration 15/15、tenant-isolation 9/9、typecheck/lint/build/双端全绿。
+- 未完成：HTTP 级权限矩阵、H5 登录 E2E、HttpOnly cookie+CSRF/Origin、限流、初始管理员 seed。

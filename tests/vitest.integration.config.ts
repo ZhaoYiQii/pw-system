@@ -14,6 +14,8 @@ export default defineConfig({
     environment: "node",
     include: ["tests/integration/**/*.spec.ts"],
     env: {
+      SESSION_SECRET:
+        process.env.SESSION_SECRET ?? "test-secret-0123456789-0123456789-0123456789",
       PW_TEST_MIGRATION_URL:
         process.env.PW_TEST_MIGRATION_URL ??
         "postgresql://pw:pw_dev_only@127.0.0.1:5433/pw_saas_test?schema=public",

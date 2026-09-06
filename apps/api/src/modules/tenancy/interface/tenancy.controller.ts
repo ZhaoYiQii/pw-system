@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Param, Post
 import type { Request } from "express";
 import { TenancyService } from "../application/tenancy.service.js";
 import { DuplicateTenantCodeError, InvalidTenantCodeError, TenantNotFoundError } from "../domain/errors.js";
+import { PlatformScope, Public } from "../../../common/auth/decorators.js";
 
 interface CreateTenantBody {
   code?: unknown;
@@ -22,6 +23,7 @@ function asString(value: unknown, field: string): string {
 export class TenancyController {
   constructor(private readonly tenancy: TenancyService) {}
 
+  @PlatformScope()
   @Post("platform/tenants")
   async createTenant(@Body() body: CreateTenantBody) {
     this.tenancy.assertNoClientTenantId(body);
@@ -43,11 +45,13 @@ export class TenancyController {
     }
   }
 
+  @PlatformScope()
   @Get("platform/tenants")
   async listTenants() {
     return { data: await this.tenancy.listTenants() };
   }
 
+  @PlatformScope()
   @Post("platform/tenants/:id/deactivate")
   @HttpCode(200)
   async deactivateTenant(@Param("id") id: string) {
@@ -62,6 +66,7 @@ export class TenancyController {
   }
 
   // 公开解析（预认证）：H5 依据已验证域名/短码加载门店（主规格 8.1）。
+  @Public()
   @Get("public/tenant-resolve")
   async resolveTenant(@Req() req: Request, @Query("host") hostQuery?: unknown) {
     const host =
