@@ -71,3 +71,6 @@
 ## N. Slice 7 Phase B/C（2026-09-06）
 - 完成：场次状态机（服务器时钟/幂等 start/end）+ 调整申请与复核（integration session-idempotency 3）；证据上传（magic bytes JPEG/PNG/WebP、≤10MiB、SHA-256、对象键、授权下载；本地 EVIDENCE_ROOT，生产对象存储待台账 A）→ integration 49/49。
 - 剩余：H5/weapp media-adapter + 陪玩场次页（开始/结束/截图/调时长）+ admin /sessions 页（UI 后续统一重做）。
+## O. Slice 8 Phase A（2026-09-06）
+- 迁移 `20260906001000_ledger_settlements`：ledger_accounts/transactions/entries（只追加）、earnings、settlement_batches/items、manual_payment_records + 枚举/CHECK/RLS；isolation ledger.spec 1 → 23/23。
+- 待办（Phase B）：订单核算生成 earning；平衡 ledger（借=贷拒绝不平衡）；结算批次 DRAFT→REVIEWED→APPROVED→PAID（线下记录/冲正/职责分离/并发唯一/开放争议阻止/已支付不可编辑）。UI（finance/admin、player earnings）后置。
