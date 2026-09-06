@@ -2567,6 +2567,17 @@ export type EvidenceDownloadResponses = {
     200: unknown;
 };
 
+export type DisputesListAllData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/disputes';
+};
+
+export type DisputesListAllResponses = {
+    200: unknown;
+};
+
 export type DisputesListData = {
     body?: never;
     path: {

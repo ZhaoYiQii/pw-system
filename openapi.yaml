@@ -2902,6 +2902,15 @@ paths:
         "200":
           description: ""
       tags: *a19
+  /api/v1/tenant/disputes:
+    get:
+      operationId: disputes_listAll
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a20
+        - Disputes
   /api/v1/tenant/orders/{orderId}/disputes:
     get:
       operationId: disputes_list
@@ -2914,8 +2923,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a20
-        - Disputes
+      tags: *a20
     post:
       operationId: disputes_open
       parameters:

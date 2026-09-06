@@ -54,6 +54,16 @@ export class DisputesController {
     @Inject(OrdersService) private readonly orders: OrdersService,
   ) {}
 
+  /** 客服/店主端租户级争议列表（客户只能按订单维度查看自己的争议）。 */
+  @TenantScope()
+  @Permissions("dispute.manage")
+  @Get("disputes")
+  async listAll(@Req() req: AuthenticatedRequest) {
+    if (req.principal?.role === "CUSTOMER")
+      throw new ForbiddenException("客户请按订单查看争议");
+    return { data: await this.disputes.list(tenantIdOf(req)) };
+  }
+
   @TenantScope()
   @Permissions("dispute.manage")
   @Get("orders/:orderId/disputes")

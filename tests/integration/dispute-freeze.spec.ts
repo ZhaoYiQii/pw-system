@@ -136,6 +136,13 @@ describe("Slice 9 dispute freeze & audit", () => {
         .expect(201)
     ).body.data as { id: string };
 
+    // 客服/店主可经租户级列表看到全部争议（客户不可使用该全局端点）。
+    const allDisputes = (
+      await req(ownerToken).get("/api/v1/tenant/disputes").expect(200)
+    ).body.data as Array<{ id: string; orderId: string }>;
+    expect(allDisputes.map((x) => x.id)).toContain(d.id);
+    expect(allDisputes[0]?.orderId).toBe(orderA);
+
     // 开争议后不能入批
     const b1 = (
       await req(ownerToken).post("/api/v1/tenant/settlements").expect(201)
