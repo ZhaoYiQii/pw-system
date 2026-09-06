@@ -299,6 +299,19 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
         .post(`/api/v1/tenant/orders/${created.id}/session/start`)
         .expect(201)
     ).body.data as { id: string };
+    // 主规格 10.3：结束前上传真实图片证据。
+    await request(app.getHttpServer())
+      .post(`/api/v1/tenant/sessions/${start.id}/evidence`)
+      .set("authorization", `Bearer ${playerToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "shot.png")
+      .send(
+        Buffer.from([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0,
+          0,
+        ]),
+      )
+      .expect(201);
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 1100));
     const ended = (
       await req(playerToken)

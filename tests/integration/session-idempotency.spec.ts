@@ -242,6 +242,23 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
     ).body.data as { id: string };
     expect(start2.id).toBe(start.id);
 
+    // 主规格 10.3：结束场次前必须有真实图片证据。
+    await req(pToken)
+      .post(`/api/v1/tenant/orders/${orderId}/session/end`)
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(`/api/v1/tenant/sessions/${start.id}/evidence`)
+      .set("authorization", `Bearer ${pToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "shot.png")
+      .send(
+        Buffer.from([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0,
+          0,
+        ]),
+      )
+      .expect(201);
+
     const end = (
       await req(pToken)
         .post(`/api/v1/tenant/orders/${orderId}/session/end`)

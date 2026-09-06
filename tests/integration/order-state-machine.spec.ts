@@ -121,6 +121,9 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
         await client.sessionAdjustment.deleteMany({
           where: { sessionId: s.id },
         });
+        await client.evidenceAsset.deleteMany({
+          where: { sessionId: s.id },
+        });
         await client.sessionEvent.deleteMany({ where: { sessionId: s.id } });
       }
       await client.serviceSession.deleteMany({ where: { tenantId } });
@@ -251,9 +254,11 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
     ).body.data as { status: string };
     expect(view.status).toBe("ASSIGNED");
 
-    await req(playerToken)
-      .post(`/api/v1/tenant/orders/${order.id}/session/start`)
-      .expect(201);
+    const started = (
+      await req(playerToken)
+        .post(`/api/v1/tenant/orders/${order.id}/session/start`)
+        .expect(201)
+    ).body.data as { id: string };
     view = (
       await req(ownerToken).get(`/api/v1/tenant/orders/${order.id}`).expect(200)
     ).body.data as { status: string; timeline: Array<{ eventType: string }> };
@@ -261,6 +266,20 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
     expect(view.timeline.map((e) => e.eventType)).toEqual(
       expect.arrayContaining(["ORDER_READY", "ORDER_STARTED"]),
     );
+
+    // 主规格 10.3：结束前上传真实图片证据。
+    await request(app.getHttpServer())
+      .post(`/api/v1/tenant/sessions/${started.id}/evidence`)
+      .set("authorization", `Bearer ${playerToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "shot.png")
+      .send(
+        Buffer.from([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0,
+          0,
+        ]),
+      )
+      .expect(201);
 
     await new Promise((r) => setTimeout(r, 1100));
     await req(playerToken)

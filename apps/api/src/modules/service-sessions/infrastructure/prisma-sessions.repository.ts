@@ -239,6 +239,13 @@ export class PrismaSessionsRepository {
       if (s.status !== "STARTED")
         throw new SessionStateConflictError(s.id, s.status, "END");
       if (!s.startedAt) throw new InvalidSessionInputError("缺少 startedAt");
+      const evidenceCount = await tx.evidenceAsset.count({
+        where: { tenantId, sessionId: s.id },
+      });
+      if (evidenceCount < 1)
+        throw new InvalidSessionInputError(
+          "场次结束前至少需上传 1 张真实图片证据（主规格 10.3/10.5）",
+        );
       const now = new Date();
       const duration = Math.max(
         0,
