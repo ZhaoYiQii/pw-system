@@ -77,3 +77,9 @@
 ## ADR-0000 增补 2（2026-09-06，docker compose pull 后证据）
 
 本地开发容器镜像（compose，已拉取）：`postgres:18`（image id 4ef4dbc939d6）、`redis:7`（image id 71da9275c5f3）、`minio/minio:latest`（image id 14cea493d9a3）。精确 patch 由镜像 digest 锁定于本地；生产镜像 tag 策略需在部署切片单独批准。
+## ADR-0000 增补 3（2026-09-06，降级项处理证据）
+
+- 本机 Node 已由用户批准升级：`winget upgrade OpenJS.NodeJS.LTS` 退出码 0，本机 Node 24.14.0 → 24.19.0。原“本地偏差”中 Node 低于 24.15 一项**已解决**（24.19.0 ≥ 24.15 且为 LTS）；CI 目标仍为 `.nvmrc` 的 24.20.0，两端同属 24.x。
+- 本地开发容器已启动：`docker compose up -d` 退出码 0；postgres:18 卷挂载路径按官方 18+ 要求修正为 `/var/lib/postgresql`（原 `/var/lib/postgresql/data` 会触发镜像启动保护）。
+- 新增根 devDependency：`@playwright/test@1.63.0`（用于 H5 渲染验证；E2E 套件仍按规格属 Slice 5+，本项仅安装浏览器与依赖，未创建测试套件）。
+- React 大版本偏差（mobile React 18.3.1）仍有效：Taro 全系最新 4.2.1 peer 仅 `react@^18`（registry 实证），等待上游支持后作为独立升级任务回归主规格。

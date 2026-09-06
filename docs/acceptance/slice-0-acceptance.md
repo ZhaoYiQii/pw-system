@@ -32,3 +32,10 @@
 ## 结论
 
 Slice 0 六条验收命令全部退出 0，状态为 **code-changed + locally-verified**。不代表已部署、已提交小程序或已生产验证。
+
+## 第二轮补充验证（2026-09-06，用户批准全部降级项处理）
+
+- Node 升级：`winget upgrade OpenJS.NodeJS.LTS` 退出码 0，本机 Node 24.14.0 → **24.19.0**（≥24.15，满足基线；winget LTS 清单当前为 24.19.0）。六条验收命令在 24.19.0 下重跑全部退出 0，engine 警告消失。
+- Docker 容器：`docker compose up -d` 退出码 0；修正 postgres:18 卷挂载为 `/var/lib/postgresql` 后，postgres/redis/minio 均运行中，postgres、redis 为 healthy。
+- H5 真实渲染验证：Playwright Chromium（@playwright/test 1.63.0，加入根 devDependencies）。headless Chromium 打开 H5 产物，页面文本 = `runtime=h5adapter=H5_ADAPTER`；断言 `runtime=h5`=true、`H5_ADAPTER`=true、`WECHAT_ADAPTER`=false、控制台错误=[]，退出码 0。
+- 原“未验证项”中：Node 偏差（已解决）、H5 浏览器渲染（已解决）、容器未启动（已解决）。
