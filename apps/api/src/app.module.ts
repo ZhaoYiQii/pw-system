@@ -11,6 +11,8 @@ import { OrdersModule } from "./modules/orders/orders.module.js";
 import { DispatchModule } from "./modules/dispatch/dispatch.module.js";
 import { ServiceSessionsModule } from "./modules/service-sessions/service-sessions.module.js";
 import { LedgerModule } from "./modules/ledger/ledger.module.js";
+import { AuditModule } from "./modules/audit/audit.module.js";
+import { DisputesModule } from "./modules/disputes/disputes.module.js";
 
 @Module({
   controllers: [HealthController],
@@ -25,7 +27,9 @@ import { LedgerModule } from "./modules/ledger/ledger.module.js";
     OrdersModule,
     DispatchModule,
     ServiceSessionsModule,
-    LedgerModule
+    LedgerModule,
+    AuditModule,
+    DisputesModule
   ]
 })
 export class AppModule {}

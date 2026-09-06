@@ -54,6 +54,8 @@ export class PrismaSettlementsRepository {
         if (lock.length === 0) throw new Error("earning 不存在");
         const e = lock[0] as { id: string; status: string };
         if (e.status !== "PENDING") throw new Error("该 earning 已被结算或不可用");
+        const openD = await tx.dispute.findFirst({ where: { tenantId, earningId, status: "OPEN" }, select: { id: true } });
+        if (openD) throw new Error("存在开放争议，不能结算");
         const earning = await tx.earning.findFirst({ where: { tenantId, id: earningId }, select: { amountFen: true, playerId: true } });
         await tx.settlementItem.create({ data: { tenantId, batchId, earningId, amountFen: earning?.amountFen ?? BigInt(0) } });
         await tx.earning.update({ where: { id: earningId }, data: { status: "BATCHED" } });
@@ -83,6 +85,8 @@ export class PrismaSettlementsRepository {
     await this.guardStatus(tenantId, id, ["APPROVED"], "PAID", actorId);
     await this.client.$transaction(async (tx) => {
       const items = await tx.settlementItem.findMany({ where: { tenantId, batchId: id } });
+      const openD = await tx.dispute.findFirst({ where: { tenantId, earningId: { in: items.map((i) => i.earningId) }, status: "OPEN" }, select: { id: true } });
+      if (openD) throw new Error("批次含开放争议 earning，不能结算");
       const total = items.reduce((a, i) => a + i.amountFen, 0n);
       await tx.manualPaymentRecord.create({
         data: { tenantId, batchId: id, amountFen: total, channel: "OFFLINE", operatorId: actorId }
