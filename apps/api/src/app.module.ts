@@ -15,6 +15,7 @@ import { AuditModule } from "./modules/audit/audit.module.js";
 import { DisputesModule } from "./modules/disputes/disputes.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { AiAssistantModule } from "./modules/ai-assistant/ai.module.js";
+import { PlatformBillingModule } from "./modules/platform-billing/platform-billing.module.js";
 
 @Module({
   controllers: [HealthController],
@@ -33,7 +34,8 @@ import { AiAssistantModule } from "./modules/ai-assistant/ai.module.js";
     AuditModule,
     DisputesModule,
     NotificationsModule,
-    AiAssistantModule
+    AiAssistantModule,
+    PlatformBillingModule
   ]
 })
 export class AppModule {}

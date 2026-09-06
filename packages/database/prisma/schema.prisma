@@ -876,3 +876,18 @@ model AiSuggestion {
   @@index([tenantId, runId])
   @@map("ai_suggestions")
 }
+// ===== Slice 11：SaaS 运营、套餐与门店开通（主规格 11.1/ADR-005）=====
+model TenantSubscription {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  packageCode String   @map("package_code")
+  status      String   @default("ACTIVE")
+  startsAt    DateTime @default(now()) @map("starts_at") @db.Timestamptz
+  endsAt      DateTime? @map("ends_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  version     Int      @default(1)
+
+  @@index([tenantId, status])
+  @@map("tenant_subscriptions")
+}
