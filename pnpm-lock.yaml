@@ -17,6 +17,9 @@ importers:
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
+      '@pw/database':
+        specifier: workspace:*
+        version: link:packages/database
       '@pw/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config

@@ -7,14 +7,32 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
+      PLATFORM_DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
+      PW_TEST_MIGRATION_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
+      PW_TEST_RUNTIME_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
+      SESSION_SECRET: ci-secret-0123456789-0123456789-0123456789
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v4
         with:
           version: 10.34.5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: ".nvmrc"
           cache: pnpm
@@ -24,10 +42,22 @@ jobs:
       # packages/database 使用 prisma-client generator（输出已 gitignore），需先 generate
       - run: pnpm --filter @pw/database exec prisma generate
 
-      # Slice 0 门禁；后续切片在此基础上追加对应验收命令。
+      - name: Init Postgres roles & database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE ROLE pw LOGIN SUPERUSER PASSWORD 'pw_ci';"
+          PGPASSWORD=postgres createdb -h localhost -U postgres -O pw pw_ci
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
+        run: pnpm --filter @pw/database exec prisma migrate deploy
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm test:integration
+      - run: pnpm test:tenant-isolation
+      - run: pnpm test:contract
       - run: pnpm build
       - run: pnpm build:h5
       - run: pnpm build:weapp

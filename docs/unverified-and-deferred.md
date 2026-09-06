@@ -41,3 +41,6 @@
   | Taro dev watch 缺 @pmmmwh/react-refresh-webpack-plugin | 2026-09-06 | 需要 watch 开发时补 devDependency（build:h5/weapp 不受影响） |
   | H5/品牌运行态需“已验证域名 + 同源反代/公网”拓扑 | 2026-09-06 | 提供真实域名并部署；本地已用静态+反代(:10086→:3100)验证 |
   | CI 不跑 integration/tenant-isolation（无 PostgreSQL service） | 2026-09-06 | GitHub Actions 增加 postgres service 或外部库 |
+## F. 台账项闭环（2026-09-06，Slice 4 启动时核验）
+- 完成（条件已满足，证据见下/CI）：`pnpm db:seed:dev` 修复（root package.json 增加 @pw/database workspace:*，pnpm install 后 `db:seed:dev` 退出 0：`seed ok`）；CI 增加 PostgreSQL service + migrate deploy + test:integration/test:tenant-isolation/test:contract（push 后由 GitHub Actions 验证）；actions/checkout@v5、actions/setup-node@v5。
+- Slice 4 Phase A（数据模型）：迁移 `20260906000400_customers_catalog` 应用到 pw_saas/pw_saas_test（prisma migrate deploy 退出 0）；customer_profiles/player_profiles/games/game_regions/service_products/pricing_rules/player_skills/player_availability + RLS（FORCE）+ DB CHECK（price>0、cost>=0、duration>0、ends>starts）；tenant-isolation 13/13（新增 catalog.spec 4 项：SELECT 不可见/INSERT tenant_id=B 拒绝/UPDATE/DELETE 拒绝/本店合法写入可见）；typecheck 8/8、integration 32/32。

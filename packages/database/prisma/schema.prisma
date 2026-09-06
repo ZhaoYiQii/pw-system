@@ -198,3 +198,142 @@ model TenantEntitlement {
   @@index([tenantId])
   @@map("tenant_entitlements")
 }
+
+// ===== Slice 4：客户、陪玩与服务目录（主规格 11.2/10.5/8.2）=====
+// 金额一律 bigint 分（MoneyFen）；时长整数秒（DurationSeconds）。租户业务表带 tenant_id，启用 RLS。
+// 注：外键由迁移 SQL 建立（含 DB CHECK/RLS）；此处仅声明列，不声明 Prisma 关系字段，避免反向数组噪音。
+
+enum ActiveStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model CustomerProfile {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  name      String
+  mobile    String?
+  remark    String?
+  status    ActiveStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  version   Int          @default(1)
+
+  @@unique([tenantId, mobile])
+  @@index([tenantId])
+  @@map("customer_profiles")
+}
+
+model PlayerProfile {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  name            String
+  mobile          String?
+  intro           String?
+  status          ActiveStatus @default(ACTIVE)
+  acceptingOrders Boolean      @default(true) @map("accepting_orders")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  version         Int          @default(1)
+
+  @@unique([tenantId, mobile])
+  @@index([tenantId])
+  @@map("player_profiles")
+}
+
+model Game {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  name      String
+  enabled   Boolean      @default(true)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  version   Int          @default(1)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("games")
+}
+
+model GameRegion {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  gameId    String   @map("game_id") @db.Uuid
+  name      String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  @@unique([tenantId, gameId, name])
+  @@index([tenantId, gameId])
+  @@map("game_regions")
+}
+
+model ServiceProduct {
+  id            String       @id @default(uuid()) @db.Uuid
+  tenantId      String       @map("tenant_id") @db.Uuid
+  gameId        String       @map("game_id") @db.Uuid
+  gameRegionId  String?      @map("game_region_id") @db.Uuid
+  name          String
+  description   String?
+  enabled       Boolean      @default(true)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  version       Int          @default(1)
+
+  @@unique([tenantId, gameId, name])
+  @@index([tenantId, gameId])
+  @@index([tenantId, gameRegionId])
+  @@map("service_products")
+}
+
+model PricingRule {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  serviceProductId  String    @map("service_product_id") @db.Uuid
+  durationSeconds   Int       @map("duration_seconds")
+  priceFen          BigInt    @map("price_fen") @db.BigInt
+  playerCostFen     BigInt    @default(0) @map("player_cost_fen") @db.BigInt
+  enabled           Boolean   @default(true)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  version           Int       @default(1)
+
+  @@unique([tenantId, serviceProductId, durationSeconds])
+  @@index([tenantId, serviceProductId])
+  @@map("pricing_rules")
+}
+
+model PlayerSkill {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  playerId     String   @map("player_id") @db.Uuid
+  gameId       String   @map("game_id") @db.Uuid
+  gameRegionId String?  @map("game_region_id") @db.Uuid
+  title        String?
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  version      Int      @default(1)
+
+  @@unique([tenantId, playerId, gameId])
+  @@index([tenantId, playerId])
+  @@index([tenantId, gameId])
+  @@map("player_skills")
+}
+
+model PlayerAvailability {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  playerId  String   @map("player_id") @db.Uuid
+  startsAt  DateTime @map("starts_at") @db.Timestamptz
+  endsAt    DateTime @map("ends_at") @db.Timestamptz
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  @@index([tenantId, playerId, startsAt])
+  @@map("player_availability")
+}
