@@ -52,7 +52,7 @@ export class DispatchPlayerController {
     const ctx = this.ctx(req);
     try {
       const player = await this.players.getByAccount(ctx.tenantId, ctx.accountId);
-      await this.dispatch.apply(ctx.tenantId, orderId, player.id, ctx.accountId, typeof body.note === "string" ? body.note : null);
+      await this.dispatch.apply(ctx.tenantId, orderId, player.id, ctx.accountId, body && typeof body.note === "string" ? body.note : null);
       return { data: { ok: true } };
     } catch (error) {
       this.mapError(error);
