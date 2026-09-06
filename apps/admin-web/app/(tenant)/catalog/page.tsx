@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
 import { TenantNav } from "../../_lib/tenant-nav";
+import { formatFenYuan as yuan } from "../../_lib/money";
 
 interface Game { id: string; name: string; enabled: boolean }
 interface Region { id: string; name: string; enabled: boolean }
@@ -20,8 +21,8 @@ interface PricingRule {
   id: string;
   serviceProductId: string;
   durationSeconds: number;
-  priceFen: number;
-  playerCostFen: number;
+  priceFen: string;
+  playerCostFen: string;
   enabled: boolean;
 }
 
@@ -30,10 +31,6 @@ type PageState =
   | { phase: "unauthenticated" }
   | { phase: "error"; message: string }
   | { phase: "ready" };
-
-function yuan(fen: number): string {
-  return `¥${(fen / 100).toFixed(2)}`;
-}
 
 export default function CatalogPage() {
   const [page, setPage] = useState<PageState>({ phase: "loading" });
@@ -218,8 +215,8 @@ export default function CatalogPage() {
         method: "POST",
         body: JSON.stringify({
           durationSeconds: Number(ruleDuration),
-          priceFen: Number(rulePrice),
-          ...(ruleCost.trim() !== "" ? { playerCostFen: Number(ruleCost) } : {})
+          priceFen: rulePrice.trim(),
+          ...(ruleCost.trim() !== "" ? { playerCostFen: ruleCost.trim() } : {})
         })
       });
       setRuleDuration("");

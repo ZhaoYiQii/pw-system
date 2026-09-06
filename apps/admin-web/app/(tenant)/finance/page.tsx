@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
 import { TenantNav } from "../../_lib/tenant-nav";
+import { formatFenYuan, sumFen } from "../../_lib/money";
 
 interface Rules {
   platformFeeBp: number;
   storeCutBp: number;
 }
 interface Split {
-  platformFeeFen: number;
-  storeCutFen: number;
-  playerShareFen: number;
+  platformFeeFen: string;
+  storeCutFen: string;
+  playerShareFen: string;
 }
 
 function pct(bp: number): string {
@@ -64,7 +65,7 @@ export default function FinancePage() {
     try {
       setSplit(await apiFetch<Split>("/api/v1/tenant/finance-rules/split-preview", {
         method: "POST",
-        body: JSON.stringify({ amountFen: Number(amount) })
+        body: JSON.stringify({ amountFen: amount })
       }));
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -130,10 +131,10 @@ export default function FinancePage() {
           {split ? (
             <table className="data-table" style={{ marginTop: 12 }}>
               <tbody>
-                <tr><td>平台服务费</td><td>¥{(split.platformFeeFen / 100).toFixed(2)}</td></tr>
-                <tr><td>门店抽成</td><td>¥{(split.storeCutFen / 100).toFixed(2)}</td></tr>
-                <tr><td>陪玩到手（可提现口径）</td><td>¥{(split.playerShareFen / 100).toFixed(2)}</td></tr>
-                <tr><td>合计</td><td>¥{((split.platformFeeFen + split.storeCutFen + split.playerShareFen) / 100).toFixed(2)}</td></tr>
+                <tr><td>平台服务费</td><td>{formatFenYuan(split.platformFeeFen)}</td></tr>
+                <tr><td>门店抽成</td><td>{formatFenYuan(split.storeCutFen)}</td></tr>
+                <tr><td>陪玩到手（可提现口径）</td><td>{formatFenYuan(split.playerShareFen)}</td></tr>
+                <tr><td>合计</td><td>{formatFenYuan(sumFen([split.platformFeeFen, split.storeCutFen, split.playerShareFen]))}</td></tr>
               </tbody>
             </table>
           ) : null}

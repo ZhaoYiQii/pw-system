@@ -72,7 +72,8 @@
 - [~] 描述：repository 边界输出十进制字符串或 BigInt 值对象；API JSON 金额字段为字符串；domain 校验统一 Money 类型。
 - [ ] 来源：审查 P1-6、ADR-008
 - ✅ B3-Part1（2026-09-07）| split 引擎 bigint；核算/试算/批次合计/陪玩余额输出十进制字符串分；integration 22/72、unit 21、tsc/eslint 绿。
-- [ ] 剩余（Part2+）：orders/catalog/dispatch 快照与读出的金额字段字符串化；OpenAPI schema；admin/mobile 展示适配与金额 helper。
+- ✅ B3-Part2（2026-09-07）| orders/catalog/dispatch 金额改十进制字符串分（MoneyFen 统一校验 + repository 读/写边界 + 快照/需求/订单大厅字符串化 + Outbox payload）；catalog/orders/dispatch/finance 金额测试同步并新增 number 金额拒绝红测试；admin/mobile 金额 helper（formatFenYuan/sumFen）+ 页面展示适配；typecheck、lint、unit 25、integration 22/74、build、build:h5、build:weapp 全绿。
+- [ ] 剩余（后续）：OpenAPI schema 与生成客户端（E1）；AI 模块 RequirementFields 等其余金额输入口径统一复查（超出本 Slice 范围）。
 
 ### B4 结算与场次并发幂等加固
 - [x] 描述：settlement pay 批次行锁/条件更新防双付；session start/end 并发幂等（行锁/唯一约束+P2002 处理）。

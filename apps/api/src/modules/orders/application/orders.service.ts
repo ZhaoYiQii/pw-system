@@ -1,4 +1,6 @@
 import type { OrderView } from "../domain/order.js";
+import type { MoneyFen } from "../../../common/money.js";
+import { parseFenString } from "../../../common/money.js";
 import {
   CustomerNotInTenantError,
   GameNotInTenantError,
@@ -15,8 +17,8 @@ export interface RequirementInput {
   gender?: string | null;
   desiredStartAt?: string | null;
   durationSeconds?: number | null;
-  minBudgetFen?: number | null;
-  maxBudgetFen?: number | null;
+  minBudgetFen?: MoneyFen | null;
+  maxBudgetFen?: MoneyFen | null;
   note?: string | null;
 }
 
@@ -89,8 +91,8 @@ export class OrdersService {
     }
     for (const key of ["minBudgetFen", "maxBudgetFen"] as const) {
       const v = r[key];
-      if (v !== undefined && v !== null && (typeof v !== "number" || !Number.isInteger(v) || v < 0)) {
-        throw new InvalidOrderInputError(`${key} 必须为非负整数（分）`);
+      if (v !== undefined && v !== null && parseFenString(v, true) === null) {
+        throw new InvalidOrderInputError(`${key} 必须为非负整数十进制字符串（分）`);
       }
     }
     if (requireProduct && (r.serviceProductId === undefined || r.serviceProductId === null || r.durationSeconds === undefined || r.durationSeconds === null)) {

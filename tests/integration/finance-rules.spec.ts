@@ -66,12 +66,12 @@ describe("Slice 8 finance rules (默认 3%/20%，可后台调整，split preview
     const def = (await req(ownerToken).get("/api/v1/tenant/finance-rules").expect(200)).body.data as { platformFeeBp: number; storeCutBp: number };
     expect(def).toEqual({ platformFeeBp: 300, storeCutBp: 2000 });
 
-    const preview = (await req(ownerToken).post("/api/v1/tenant/finance-rules/split-preview", { amountFen: 10000 }).expect(201)).body.data as {
-      platformFeeFen: number;
-      storeCutFen: number;
-      playerShareFen: number;
+    const preview = (await req(ownerToken).post("/api/v1/tenant/finance-rules/split-preview", { amountFen: "10000" }).expect(201)).body.data as {
+      platformFeeFen: string;
+      storeCutFen: string;
+      playerShareFen: string;
     };
-    expect(Number(preview.platformFeeFen) + Number(preview.storeCutFen) + Number(preview.playerShareFen)).toBe(10000);
+    expect(BigInt(preview.platformFeeFen) + BigInt(preview.storeCutFen) + BigInt(preview.playerShareFen)).toBe(10000n);
     expect(preview).toEqual({ platformFeeFen: "300", storeCutFen: "2000", playerShareFen: "7700" });
 
     const set = await request(app.getHttpServer()).post("/api/v1/tenant/finance-rules/store-cut").set("authorization", `Bearer ${ownerToken}`).send({ storeCutBp: 1500 }).expect(201);

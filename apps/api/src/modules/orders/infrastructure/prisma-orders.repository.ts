@@ -63,8 +63,8 @@ export class PrismaOrdersRepository implements OrdersRepository {
         productName: product?.name ?? null,
         desiredStartAt: reqRow.desiredStartAt,
         durationSeconds: reqRow.durationSeconds,
-        minBudgetFen: reqRow.minBudgetFen === null ? null : Number(reqRow.minBudgetFen),
-        maxBudgetFen: reqRow.maxBudgetFen === null ? null : Number(reqRow.maxBudgetFen),
+        minBudgetFen: reqRow.minBudgetFen === null ? null : reqRow.minBudgetFen.toString(),
+        maxBudgetFen: reqRow.maxBudgetFen === null ? null : reqRow.maxBudgetFen.toString(),
         note: reqRow.note
       };
     }
@@ -94,9 +94,9 @@ export class PrismaOrdersRepository implements OrdersRepository {
         productName: s.productName,
         regionName: s.regionName,
         durationSeconds: s.durationSeconds,
-        unitPriceFen: Number(s.unitPriceFen),
-        playerCostFen: Number(s.playerCostFen),
-        lineTotalFen: Number(s.lineTotalFen),
+        unitPriceFen: s.unitPriceFen.toString(),
+        playerCostFen: s.playerCostFen.toString(),
+        lineTotalFen: s.lineTotalFen.toString(),
         currency: s.currency
       })),
       timeline: events.map((e) => ({
@@ -301,7 +301,7 @@ export class PrismaOrdersRepository implements OrdersRepository {
           aggregateType: "order",
           aggregateId: orderId,
           eventType: "order.confirmed",
-          payload: { orderId, orderNo: current.order_no, status: "CONFIRMED", unitPriceFen: Number(unitPriceFen) }
+          payload: { orderId, orderNo: current.order_no, status: "CONFIRMED", unitPriceFen: unitPriceFen.toString() }
         }
       });
     });

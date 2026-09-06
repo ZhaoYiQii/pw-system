@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
 import { TenantNav } from "../../_lib/tenant-nav";
+import { formatFenYuan as yuan } from "../../_lib/money";
 
 interface Customer { id: string; name: string; mobile: string | null }
 interface GameProduct {
@@ -13,7 +14,7 @@ interface GameProduct {
   gameName: string;
   regionName: string | null;
 }
-interface Pricing { id: string; durationSeconds: number; priceFen: number; playerCostFen: number; enabled: boolean }
+interface Pricing { id: string; durationSeconds: number; priceFen: string; playerCostFen: string; enabled: boolean }
 interface OrderRow {
   id: string;
   orderNo: string;
@@ -30,7 +31,7 @@ interface OrderView extends OrderRow {
     durationSeconds: number | null;
     note: string | null;
   } | null;
-  snapshot: Array<{ productName: string; unitPriceFen: number; lineTotalFen: number; durationSeconds: number }> | null;
+  snapshot: Array<{ productName: string; unitPriceFen: string; lineTotalFen: string; durationSeconds: number }> | null;
   timeline: Array<{ eventType: string; fromStatus: string | null; toStatus: string | null; occurredAt: string }>;
 }
 
@@ -39,10 +40,6 @@ type PageState =
   | { phase: "unauthenticated" }
   | { phase: "error"; message: string }
   | { phase: "ready" };
-
-function yuan(fen: number): string {
-  return `¥${(fen / 100).toFixed(2)}`;
-}
 
 const STATUS: Record<string, { text: string; cls: string }> = {
   DRAFT: { text: "草稿", cls: "badge badge-inactive" },

@@ -4,9 +4,10 @@ import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
+import { formatFenYuan } from "../../../features/money/money";
 import "./index.css";
 
-interface HallItem { id: string; orderNo: string; productName: string; durationSeconds: number; unitPriceFen: number; desiredStartAt: string | null }
+interface HallItem { id: string; orderNo: string; productName: string; durationSeconds: number; unitPriceFen: string; desiredStartAt: string | null }
 interface MyApp { id: string; orderId: string; status: string; createdAt: string }
 
 function base(): string {
@@ -128,7 +129,7 @@ export default function OrderHallPage() {
           {hall.map((o) => (
             <View key={o.id} className="card">
               <Text className="strong">{o.productName} · {Math.floor(o.durationSeconds / 60)} 分钟</Text>
-              <Text className="muted">单号 {o.orderNo} · ¥{(o.unitPriceFen / 100).toFixed(2)}</Text>
+              <Text className="muted">单号 {o.orderNo} · {formatFenYuan(o.unitPriceFen)}</Text>
               {o.desiredStartAt ? <Text className="muted">期望开始：{new Date(o.desiredStartAt).toLocaleString()}</Text> : null}
               <Button className="btn primary" disabled={busy} onClick={() => void apply(o.id)}>报名</Button>
             </View>

@@ -93,7 +93,7 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
     const pname = `产品${Date.now().toString(36)}`;
     const product = await req(ownerToken).post("/api/v1/tenant/catalog/products").send({ gameId, name: pname }).expect(201);
     const productId = (product.body.data as { id: string }).id;
-    await req(ownerToken).post(`/api/v1/tenant/catalog/products/${productId}/pricing`).send({ durationSeconds: 3600, priceFen }).expect(201);
+    await req(ownerToken).post(`/api/v1/tenant/catalog/products/${productId}/pricing`).send({ durationSeconds: 3600, priceFen: String(priceFen) }).expect(201);
     return { gameId, productId };
   }
 
@@ -123,9 +123,9 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
     }).expect(201);
     const ok = okRes.body.data as { id: string; status: string };
     const confirmed = await req(ownerToken).post(`/api/v1/tenant/orders/${ok.id}/confirm`).expect(201);
-    const view = confirmed.body.data as { status: string; snapshot: Array<{ unitPriceFen: number }>; timeline: Array<{ eventType: string }> };
+    const view = confirmed.body.data as { status: string; snapshot: Array<{ unitPriceFen: string }>; timeline: Array<{ eventType: string }> };
     expect(view.status).toBe("CONFIRMED");
-    expect(view.snapshot[0]?.unitPriceFen).toBe(2100);
+    expect(view.snapshot[0]?.unitPriceFen).toBe("2100");
     const eventTypes = view.timeline.map((e) => e.eventType);
     expect(eventTypes).toContain("ORDER_CREATED");
     expect(eventTypes).toContain("SNAPSHOT_CREATED");
@@ -149,28 +149,46 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
     }).expect(201);
     const firstView = (await req(ownerToken).post(`/api/v1/tenant/orders/${(first.body.data as { id: string }).id}/confirm`).expect(201)).body.data as {
       id: string;
-      snapshot: Array<{ unitPriceFen: number }>;
+      snapshot: Array<{ unitPriceFen: string }>;
     };
-    expect(firstView.snapshot[0]?.unitPriceFen).toBe(5000);
+    expect(firstView.snapshot[0]?.unitPriceFen).toBe("5000");
 
     // 改价 7000
     const rules = await req(ownerToken).get(`/api/v1/tenant/catalog/products/${productId}/pricing`).expect(200);
     const ruleId = (rules.body.data as Array<{ id: string }>)[0]?.id as string;
-    await req(ownerToken).patch(`/api/v1/tenant/catalog/pricing/${ruleId}`).send({ priceFen: 7000 }).expect(200);
+    await req(ownerToken).patch(`/api/v1/tenant/catalog/pricing/${ruleId}`).send({ priceFen: "7000" }).expect(200);
 
     const second = await req(ownerToken).post("/api/v1/tenant/orders").send({
       customerProfileId: customerId,
       requirement: { description: "第二单", serviceProductId: productId, durationSeconds: 3600 }
     }).expect(201);
     const secondView = (await req(ownerToken).post(`/api/v1/tenant/orders/${(second.body.data as { id: string }).id}/confirm`).expect(201)).body.data as {
-      snapshot: Array<{ unitPriceFen: number }>;
+      snapshot: Array<{ unitPriceFen: string }>;
     };
-    expect(secondView.snapshot[0]?.unitPriceFen).toBe(7000);
+    expect(secondView.snapshot[0]?.unitPriceFen).toBe("7000");
 
     const oldView = (await req(ownerToken).get(`/api/v1/tenant/orders/${firstView.id}`).expect(200)).body.data as {
-      snapshot: Array<{ unitPriceFen: number }>;
+      snapshot: Array<{ unitPriceFen: string }>;
     };
-    expect(oldView.snapshot[0]?.unitPriceFen).toBe(5000);
+    expect(oldView.snapshot[0]?.unitPriceFen).toBe("5000");
+  });
+
+  it("金额预算字段必须为十进制字符串分；number 预算被拒", async () => {
+    const customers = await req(ownerToken).get("/api/v1/tenant/customers").expect(200);
+    const customerId = (customers.body.data as Array<{ id: string }>)[0]?.id as string;
+    await req(ownerToken).post("/api/v1/tenant/orders").send({
+      customerProfileId: customerId,
+      requirement: { description: "预算数字单", minBudgetFen: 100 }
+    }).expect(400);
+    const ok = await req(ownerToken).post("/api/v1/tenant/orders").send({
+      customerProfileId: customerId,
+      requirement: { description: "预算字符串单", minBudgetFen: "100", maxBudgetFen: "5000" }
+    }).expect(201);
+    const view = (await req(ownerToken).get(`/api/v1/tenant/orders/${(ok.body.data as { id: string }).id}`).expect(200)).body.data as {
+      requirement: { minBudgetFen: string | null; maxBudgetFen: string | null };
+    };
+    expect(view.requirement.minBudgetFen).toBe("100");
+    expect(view.requirement.maxBudgetFen).toBe("5000");
   });
 
   it("幂等：同 idempotencyKey 重复创建返回同一订单", async () => {

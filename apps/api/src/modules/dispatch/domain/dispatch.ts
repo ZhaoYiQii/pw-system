@@ -1,9 +1,11 @@
+import type { MoneyFen } from "../../../common/money.js";
+
 export interface HallOrderView {
   id: string;
   orderNo: string;
   productName: string;
   durationSeconds: number;
-  unitPriceFen: number;
+  unitPriceFen: MoneyFen;
   desiredStartAt: Date | null;
   createdAt: Date;
 }

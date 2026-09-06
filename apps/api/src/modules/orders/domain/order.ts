@@ -1,3 +1,5 @@
+import type { MoneyFen } from "../../../common/money.js";
+
 export type OrderStatusType =
   | "DRAFT"
   | "CONFIRMED"
@@ -17,8 +19,8 @@ export interface RequirementView {
   productName: string | null;
   desiredStartAt: Date | null;
   durationSeconds: number | null;
-  minBudgetFen: number | null;
-  maxBudgetFen: number | null;
+  minBudgetFen: MoneyFen | null;
+  maxBudgetFen: MoneyFen | null;
   note: string | null;
 }
 
@@ -27,9 +29,9 @@ export interface SnapshotLineView {
   productName: string;
   regionName: string | null;
   durationSeconds: number;
-  unitPriceFen: number;
-  playerCostFen: number;
-  lineTotalFen: number;
+  unitPriceFen: MoneyFen;
+  playerCostFen: MoneyFen;
+  lineTotalFen: MoneyFen;
   currency: string;
 }
 

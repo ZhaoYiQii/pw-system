@@ -116,6 +116,9 @@ describe("Slice 6 dispatch (publish/apply/shortlist/assign 并发与冲突)", ()
   it("发布→双人报名→短名单→并发选人仅一人成功且其余过期", async () => {
     const orderId = await makeConfirmedOrder();
     await req(ownerToken).post(`/api/v1/tenant/orders/${orderId}/publish`).expect(201);
+    const hall = (await req(p1Token).get("/api/v1/tenant/player/order-hall").expect(200)).body.data as Array<{ id: string; unitPriceFen: string }>;
+    const hallOrder = hall.find((h) => h.id === orderId);
+    expect(hallOrder?.unitPriceFen).toBe("3000");
     await req(p1Token).post(`/api/v1/tenant/player/orders/${orderId}/applications`).expect(201);
     await req(p2Token).post(`/api/v1/tenant/player/orders/${orderId}/applications`).expect(201);
 

@@ -2,6 +2,7 @@ import type { PrismaClient } from "@pw/database";
 import type { GameView, PricingRuleView, ProductView, RegionView } from "../domain/catalog.js";
 import { CatalogInUseError, DuplicateCatalogEntryError } from "../domain/errors.js";
 import type { CatalogRepository } from "../application/catalog.service.js";
+import type { MoneyFen } from "../../../common/money.js";
 
 function isP2002(error: unknown): boolean {
   return error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002";
@@ -66,8 +67,8 @@ function mapRule(row: {
     tenantId: row.tenantId,
     serviceProductId: row.serviceProductId,
     durationSeconds: row.durationSeconds,
-    priceFen: Number(row.priceFen),
-    playerCostFen: Number(row.playerCostFen),
+    priceFen: row.priceFen.toString(),
+    playerCostFen: row.playerCostFen.toString(),
     enabled: row.enabled,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
@@ -276,7 +277,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
     return rows.map(mapRule);
   }
 
-  async createRule(tenantId: string, productId: string, input: { durationSeconds: number; priceFen: number; playerCostFen: number; enabled: boolean }): Promise<PricingRuleView> {
+  async createRule(tenantId: string, productId: string, input: { durationSeconds: number; priceFen: MoneyFen; playerCostFen: MoneyFen; enabled: boolean }): Promise<PricingRuleView> {
     try {
       const row = await this.client.pricingRule.create({
         data: {
@@ -296,7 +297,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
     }
   }
 
-  async updateRule(tenantId: string, id: string, input: { durationSeconds?: number; priceFen?: number; playerCostFen?: number; enabled?: boolean }): Promise<PricingRuleView | null> {
+  async updateRule(tenantId: string, id: string, input: { durationSeconds?: number; priceFen?: MoneyFen; playerCostFen?: MoneyFen; enabled?: boolean }): Promise<PricingRuleView | null> {
     try {
       const res = await this.client.pricingRule.updateMany({
         where: { tenantId, id },

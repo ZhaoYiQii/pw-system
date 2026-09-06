@@ -99,7 +99,7 @@ describe("Slice 4 catalog/customers/players HTTP (权限/价格边界/跨租户/
     await req(serviceToken).post("/api/v1/tenant/players").send({ name: "越权陪玩" }).expect(403);
   });
 
-  it("catalog：owner 建游戏/区服/产品/价格，价格读取为整数分", async () => {
+  it("catalog：owner 建游戏/区服/产品/价格，价格读取为十进制字符串分", async () => {
     const gameRes = await req(ownerToken).post("/api/v1/tenant/catalog/games").send({ name: "王者荣耀" }).expect(201);
     const gameId = (gameRes.body.data as { id: string }).id;
     const regionRes = await req(ownerToken)
@@ -114,14 +114,15 @@ describe("Slice 4 catalog/customers/players HTTP (权限/价格边界/跨租户/
     const productId = (productRes.body.data as { id: string }).id;
     const ruleRes = await req(ownerToken)
       .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
-      .send({ durationSeconds: 3600, priceFen: 1500, playerCostFen: 800 })
+      .send({ durationSeconds: 3600, priceFen: "1500", playerCostFen: "800" })
       .expect(201);
-    expect((ruleRes.body.data as { priceFen: number }).priceFen).toBe(1500);
+    expect((ruleRes.body.data as { priceFen: string; playerCostFen: string }).priceFen).toBe("1500");
+    expect((ruleRes.body.data as { playerCostFen: string }).playerCostFen).toBe("800");
     const list = await req(ownerToken).get(`/api/v1/tenant/catalog/products/${productId}/pricing`).expect(200);
-    expect((list.body.data as Array<{ priceFen: number }>)[0]?.priceFen).toBe(1500);
+    expect((list.body.data as Array<{ priceFen: string }>)[0]?.priceFen).toBe("1500");
   });
 
-  it("价格边界：负价/浮点/非正时长被拒；重复时长 409", async () => {
+  it("价格边界：数字/负价/浮点/非正时长被拒；重复时长 409", async () => {
     const games = await req(ownerToken).get("/api/v1/tenant/catalog/games").expect(200);
     const gameId = (games.body.data as Array<{ id: string }>)[0]?.id as string;
     const productRes = await req(ownerToken)
@@ -137,17 +138,22 @@ describe("Slice 4 catalog/customers/players HTTP (权限/价格边界/跨租户/
       .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
       .send({ durationSeconds: 1800, priceFen: 12.5 })
       .expect(400);
-    await req(ownerToken)
-      .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
-      .send({ durationSeconds: 0, priceFen: 500 })
-      .expect(400);
+    // JSON 金额必须为十进制字符串（number 分被拒）
     await req(ownerToken)
       .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
       .send({ durationSeconds: 1800, priceFen: 500 })
+      .expect(400);
+    await req(ownerToken)
+      .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
+      .send({ durationSeconds: 0, priceFen: "500" })
+      .expect(400);
+    await req(ownerToken)
+      .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
+      .send({ durationSeconds: 1800, priceFen: "500" })
       .expect(201);
     await req(ownerToken)
       .post(`/api/v1/tenant/catalog/products/${productId}/pricing`)
-      .send({ durationSeconds: 1800, priceFen: 600 })
+      .send({ durationSeconds: 1800, priceFen: "600" })
       .expect(409);
   });
 

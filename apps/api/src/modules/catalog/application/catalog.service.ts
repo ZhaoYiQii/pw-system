@@ -1,5 +1,7 @@
 import type { GameView, PricingRuleView, ProductView, RegionView } from "../domain/catalog.js";
 import { CatalogNotFoundError, DuplicateCatalogEntryError, InvalidCatalogInputError } from "../domain/errors.js";
+import type { MoneyFen } from "../../../common/money.js";
+import { parseFenString } from "../../../common/money.js";
 
 export interface CatalogRepository {
   listGames(tenantId: string, enabled?: boolean): Promise<GameView[]>;
@@ -20,8 +22,8 @@ export interface CatalogRepository {
   removeProduct(tenantId: string, id: string): Promise<boolean>;
 
   listRules(tenantId: string, productId?: string): Promise<PricingRuleView[]>;
-  createRule(tenantId: string, productId: string, input: { durationSeconds: number; priceFen: number; playerCostFen: number; enabled?: boolean }): Promise<PricingRuleView>;
-  updateRule(tenantId: string, id: string, input: { durationSeconds?: number; priceFen?: number; playerCostFen?: number; enabled?: boolean }): Promise<PricingRuleView | null>;
+  createRule(tenantId: string, productId: string, input: { durationSeconds: number; priceFen: MoneyFen; playerCostFen: MoneyFen; enabled?: boolean }): Promise<PricingRuleView>;
+  updateRule(tenantId: string, id: string, input: { durationSeconds?: number; priceFen?: MoneyFen; playerCostFen?: MoneyFen; enabled?: boolean }): Promise<PricingRuleView | null>;
   removeRule(tenantId: string, id: string): Promise<boolean>;
 }
 
@@ -32,12 +34,13 @@ function assertName(value: unknown, label: string, max = 60): string {
   return value.trim();
 }
 
-/** MoneyFen：整数分且 > 0；禁止浮点/字符串金额（主规格 10.5/红测试）。 */
-function assertMoneyFen(value: unknown, label: string): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    throw new InvalidCatalogInputError(`${label} 必须为正整数（分）`);
+/** MoneyFen：十进制字符串分；禁止 number/浮点/负数（主规格 10.5/12.1 红测试）。 */
+function assertMoneyFen(value: unknown, label: string, allowZero: boolean): MoneyFen {
+  const fen = parseFenString(value, allowZero);
+  if (fen === null) {
+    throw new InvalidCatalogInputError(`${label} 必须为${allowZero ? "非负" : "正"}整数十进制字符串（分）`);
   }
-  return value;
+  return fen;
 }
 
 /** DurationSeconds：整数秒 > 0。 */
@@ -186,14 +189,11 @@ export class CatalogService {
   ): Promise<PricingRuleView> {
     const product = await this.repository.findProduct(tenantId, productId);
     if (!product) throw new CatalogNotFoundError("product", productId);
-    const cost = input.playerCostFen === undefined ? 0 : input.playerCostFen;
-    if (typeof cost !== "number" || !Number.isInteger(cost) || cost < 0) {
-      throw new InvalidCatalogInputError("playerCostFen 必须为非负整数（分）");
-    }
+    const cost = input.playerCostFen === undefined ? "0" : assertMoneyFen(input.playerCostFen, "playerCostFen", true);
     try {
       return await this.repository.createRule(tenantId, productId, {
         durationSeconds: assertDurationSeconds(input.durationSeconds),
-        priceFen: assertMoneyFen(input.priceFen, "priceFen"),
+        priceFen: assertMoneyFen(input.priceFen, "priceFen", false),
         playerCostFen: cost,
         enabled: input.enabled === undefined ? true : input.enabled === true
       });
@@ -208,16 +208,10 @@ export class CatalogService {
     id: string,
     input: { durationSeconds?: unknown; priceFen?: unknown; playerCostFen?: unknown; enabled?: unknown }
   ): Promise<PricingRuleView> {
-    const clean: { durationSeconds?: number; priceFen?: number; playerCostFen?: number; enabled?: boolean } = {};
+    const clean: { durationSeconds?: number; priceFen?: MoneyFen; playerCostFen?: MoneyFen; enabled?: boolean } = {};
     if (input.durationSeconds !== undefined) clean.durationSeconds = assertDurationSeconds(input.durationSeconds);
-    if (input.priceFen !== undefined) clean.priceFen = assertMoneyFen(input.priceFen, "priceFen");
-    if (input.playerCostFen !== undefined) {
-      const cost = input.playerCostFen;
-      if (typeof cost !== "number" || !Number.isInteger(cost) || cost < 0) {
-        throw new InvalidCatalogInputError("playerCostFen 必须为非负整数（分）");
-      }
-      clean.playerCostFen = cost;
-    }
+    if (input.priceFen !== undefined) clean.priceFen = assertMoneyFen(input.priceFen, "priceFen", false);
+    if (input.playerCostFen !== undefined) clean.playerCostFen = assertMoneyFen(input.playerCostFen, "playerCostFen", true);
     if (input.enabled !== undefined) {
       if (typeof input.enabled !== "boolean") throw new InvalidCatalogInputError("enabled 需为布尔");
       clean.enabled = input.enabled;

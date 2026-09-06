@@ -119,7 +119,7 @@ export class PrismaDispatchRepository implements DispatchRepository {
         orderNo: order.orderNo,
         productName,
         durationSeconds: req?.durationSeconds ?? snapshot?.durationSeconds ?? 0,
-        unitPriceFen: snapshot ? Number(snapshot.unitPriceFen) : 0,
+        unitPriceFen: snapshot ? snapshot.unitPriceFen.toString() : "0",
         desiredStartAt: req?.desiredStartAt ?? null,
         createdAt: order.createdAt
       });
