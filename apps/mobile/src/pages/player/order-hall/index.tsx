@@ -23,6 +23,14 @@ interface MyApp {
   createdAt: string;
 }
 
+interface SessionView {
+  id: string;
+  status: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationSeconds: number | null;
+}
+
 export default function OrderHallPage() {
   const [token, setToken] = useState<string | null>(session.getToken());
   const [tenantCode, setTenantCode] = useState("");
@@ -32,6 +40,7 @@ export default function OrderHallPage() {
   const [busy, setBusy] = useState(false);
   const [hall, setHall] = useState<HallItem[]>([]);
   const [mine, setMine] = useState<MyApp[]>([]);
+  const [sessions, setSessions] = useState<Record<string, SessionView>>({});
 
   const load = async (t: string) => {
     try {
@@ -45,6 +54,20 @@ export default function OrderHallPage() {
       );
       setHall(h);
       setMine(m);
+      const next: Record<string, SessionView> = {};
+      for (const app of m) {
+        if (app.status !== "SELECTED") continue;
+        try {
+          const view = await apiAdapter.request<SessionView>(
+            `/api/v1/tenant/orders/${app.orderId}/session`,
+            { token: t },
+          );
+          if (view) next[app.orderId] = view;
+        } catch {
+          // 未生成场次时跳过，不阻塞大厅加载。
+        }
+      }
+      setSessions(next);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
       if (session.getToken()) {
@@ -96,6 +119,32 @@ export default function OrderHallPage() {
         { method: "POST", token, body: {} },
       );
       setMsg("报名成功");
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleSession = async (orderId: string) => {
+    if (!token) return;
+    const view = sessions[orderId];
+    if (!view) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const action = view.status === "STARTED" ? "end" : "start";
+      await apiAdapter.request(
+        `/api/v1/tenant/orders/${orderId}/session/${action}`,
+        {
+          method: "POST",
+          token,
+        },
+      );
+      setMsg(
+        action === "start" ? "场次已开始。" : "场次已结束，等待门店核算。",
+      );
       await load(token);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -180,9 +229,29 @@ export default function OrderHallPage() {
             <Text className="strong">我的报名</Text>
             {mine.length === 0 ? <Text className="muted">暂无报名</Text> : null}
             {mine.map((m) => (
-              <Text key={m.id} className="muted">
-                单 {m.orderId.slice(0, 8)}… · 状态：{m.status}
-              </Text>
+              <View key={m.id} className="row">
+                <View>
+                  <Text className="muted">
+                    单 {m.orderId.slice(0, 8)}… · 状态：{m.status}
+                  </Text>
+                  {sessions[m.orderId] ? (
+                    <Text className="muted">
+                      · 场次：{sessions[m.orderId]?.status}
+                    </Text>
+                  ) : null}
+                </View>
+                {m.status === "SELECTED" && sessions[m.orderId] ? (
+                  <Button
+                    size="mini"
+                    disabled={busy}
+                    onClick={() => void toggleSession(m.orderId)}
+                  >
+                    {sessions[m.orderId]?.status === "STARTED"
+                      ? "结束场次"
+                      : "开始场次"}
+                  </Button>
+                ) : null}
+              </View>
             ))}
           </View>
         </>
