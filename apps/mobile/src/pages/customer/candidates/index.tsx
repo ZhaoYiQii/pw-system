@@ -115,6 +115,24 @@ export default function CandidatesPage() {
     }
   };
 
+  const confirmComplete = async (orderId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request(
+        `/api/v1/tenant/customer/orders/${orderId}/complete`,
+        { method: "POST", token },
+      );
+      setMsg("已确认完成，收入已核算。");
+      await loadOrders(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <View className="page">
       <Text className="title">选择陪玩</Text>
@@ -195,6 +213,20 @@ export default function CandidatesPage() {
                     </Button>
                   ) : null}
                 </>
+              ) : null}
+              {o.status === "PENDING_CONFIRMATION" ? (
+                <View className="row">
+                  <Text className="muted">
+                    服务已结束，请确认完成（超时将由门店自动确认）。
+                  </Text>
+                  <Button
+                    className="btn primary"
+                    disabled={busy}
+                    onClick={() => void confirmComplete(o.id)}
+                  >
+                    确认完成
+                  </Button>
+                </View>
               ) : null}
             </View>
           ))}
