@@ -61,3 +61,7 @@
 ## K. Slice 6 Phase B（2026-09-06）
 - 完成：派单 API publish/apply/shortlist/assign（原子指派行锁+唯一；并发仅一成功；指派后其余 EXPIRED、发布 CLOSED、订单 ASSIGNED）；陪玩 order-hall/apply/my applications；integration 45/45。
 - 剩余（UI/登录批次）：admin /dispatch 页（发布/候选/指派 UI）；mobile order-hall/application-detail/candidates；派单撤回报名 WITHDRAWN 状态未做（记入待办）。
+## L. Slice 6 Phase C/D + 四端 H5 登录（2026-09-06）
+- 完成：老板（客户）自助候选/选人（dispatch customer controller + 归属校验，dispatch-concurrency 3 项）；mobile H5 登录接线（identity guard + session-store localStorage；weapp typed unsupported）；陪玩端 order-hall 报名、老板端 candidates 选 TA（build:h5/weapp 绿）。
+- 台账 B “H5 浏览器登录 E2E”：本机 Playwright 真实跑通 商家→陪玩报名→老板选人→订单 ASSIGNED（s6-01..06 截图）；公网域名 E2E 仍挂账。
+- 剩余：admin /dispatch 页（发布/候选/指派 UI 仍走 API/订单页）、派单撤回 WITHDRAWN、商家端订单页状态中文（ASSIGNED=已选定 待美化）。
