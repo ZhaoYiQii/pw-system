@@ -31,23 +31,32 @@ export default function CustomersPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ name: string; mobile: string; remark: string }>({
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    mobile: string;
+    remark: string;
+  }>({
     name: "",
     mobile: "",
-    remark: ""
+    remark: "",
   });
 
   const load = useCallback(async (query?: string) => {
     setPage({ phase: "loading" });
     try {
       const list = await apiFetch<Customer[]>(
-        `/api/v1/tenant/customers${query ? `?q=${encodeURIComponent(query)}` : ""}`
+        `/api/v1/tenant/customers${query ? `?q=${encodeURIComponent(query)}` : ""}`,
       );
       setRows(list);
       setPage({ phase: "ready" });
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) setPage({ phase: "unauthenticated" });
-      else setPage({ phase: "error", message: error instanceof Error ? error.message : String(error) });
+      if (error instanceof ApiError && error.status === 401)
+        setPage({ phase: "unauthenticated" });
+      else
+        setPage({
+          phase: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
     }
   }, []);
 
@@ -62,7 +71,11 @@ export default function CustomersPage() {
     try {
       await apiFetch<Customer>("/api/v1/tenant/customers", {
         method: "POST",
-        body: JSON.stringify({ name: newName, mobile: newMobile || undefined, remark: newRemark || undefined })
+        body: JSON.stringify({
+          name: newName,
+          mobile: newMobile || undefined,
+          remark: newRemark || undefined,
+        }),
       });
       setNewName("");
       setNewMobile("");
@@ -83,7 +96,9 @@ export default function CustomersPage() {
     try {
       await apiFetch<Customer>(`/api/v1/tenant/customers/${c.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: c.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" })
+        body: JSON.stringify({
+          status: c.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+        }),
       });
       setOkMsg(`已${c.status === "ACTIVE" ? "停用" : "恢复"} ${c.name}。`);
       await load(q);
@@ -100,7 +115,9 @@ export default function CustomersPage() {
     setMsg(null);
     setOkMsg(null);
     try {
-      await apiFetch<unknown>(`/api/v1/tenant/customers/${c.id}`, { method: "DELETE" });
+      await apiFetch<unknown>(`/api/v1/tenant/customers/${c.id}`, {
+        method: "DELETE",
+      });
       setOkMsg(`已删除 ${c.name}。`);
       await load(q);
     } catch (error) {
@@ -112,7 +129,11 @@ export default function CustomersPage() {
 
   const startEdit = (c: Customer) => {
     setEditingId(c.id);
-    setEditForm({ name: c.name, mobile: c.mobile ?? "", remark: c.remark ?? "" });
+    setEditForm({
+      name: c.name,
+      mobile: c.mobile ?? "",
+      remark: c.remark ?? "",
+    });
   };
 
   const saveEdit = async (c: Customer) => {
@@ -122,7 +143,11 @@ export default function CustomersPage() {
     try {
       await apiFetch<Customer>(`/api/v1/tenant/customers/${c.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: editForm.name, mobile: editForm.mobile || null, remark: editForm.remark || null })
+        body: JSON.stringify({
+          name: editForm.name,
+          mobile: editForm.mobile || null,
+          remark: editForm.remark || null,
+        }),
       });
       setEditingId(null);
       setOkMsg("已保存修改。");
@@ -139,7 +164,9 @@ export default function CustomersPage() {
       <TenantNav />
       <div className="page">
         <h1 className="page-title">客户</h1>
-        <p className="page-desc">门店客户档案：新增、搜索、编辑、停用/启用与删除。</p>
+        <p className="page-desc">
+          门店客户档案：新增、搜索、编辑、停用/启用与删除。
+        </p>
         {msg ? <p className="banner banner-error">{msg}</p> : null}
         {okMsg ? <p className="banner banner-success">{okMsg}</p> : null}
 
@@ -165,18 +192,38 @@ export default function CustomersPage() {
               >
                 <div className="field">
                   <label htmlFor="name">姓名</label>
-                  <input id="name" className="input" value={newName} onChange={(e) => setNewName(e.target.value)} required />
+                  <input
+                    id="name"
+                    className="input"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="mobile">手机（可选）</label>
-                  <input id="mobile" className="input" value={newMobile} onChange={(e) => setNewMobile(e.target.value)} />
+                  <input
+                    id="mobile"
+                    className="input"
+                    value={newMobile}
+                    onChange={(e) => setNewMobile(e.target.value)}
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="remark">备注</label>
-                  <input id="remark" className="input" value={newRemark} onChange={(e) => setNewRemark(e.target.value)} />
+                  <input
+                    id="remark"
+                    className="input"
+                    value={newRemark}
+                    onChange={(e) => setNewRemark(e.target.value)}
+                  />
                 </div>
                 <div className="field" style={{ justifyContent: "flex-end" }}>
-                  <button className="btn btn-primary" type="submit" disabled={busy}>
+                  <button
+                    className="btn btn-primary"
+                    type="submit"
+                    disabled={busy}
+                  >
                     {busy ? "处理中…" : "新建"}
                   </button>
                 </div>
@@ -184,7 +231,13 @@ export default function CustomersPage() {
             </div>
 
             <div className="card">
-              <div className="row-actions" style={{ justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                className="row-actions"
+                style={{
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <h2 className="card-title" style={{ margin: 0 }}>
                   客户列表（{rows.length}）
                 </h2>
@@ -222,27 +275,60 @@ export default function CustomersPage() {
                         <tr key={c.id}>
                           <td>
                             {editing ? (
-                              <input className="input" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+                              <input
+                                className="input"
+                                value={editForm.name}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    name: e.target.value,
+                                  })
+                                }
+                              />
                             ) : (
                               c.name
                             )}
                           </td>
                           <td>
                             {editing ? (
-                              <input className="input" value={editForm.mobile} onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })} />
+                              <input
+                                className="input"
+                                value={editForm.mobile}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    mobile: e.target.value,
+                                  })
+                                }
+                              />
                             ) : (
-                              c.mobile ?? <span className="muted">-</span>
+                              (c.mobile ?? <span className="muted">-</span>)
                             )}
                           </td>
                           <td>
                             {editing ? (
-                              <input className="input" value={editForm.remark} onChange={(e) => setEditForm({ ...editForm, remark: e.target.value })} />
+                              <input
+                                className="input"
+                                value={editForm.remark}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    remark: e.target.value,
+                                  })
+                                }
+                              />
                             ) : (
-                              c.remark ?? <span className="muted">-</span>
+                              (c.remark ?? <span className="muted">-</span>)
                             )}
                           </td>
                           <td>
-                            <span className={c.status === "ACTIVE" ? "badge badge-active" : "badge badge-inactive"}>
+                            <span
+                              className={
+                                c.status === "ACTIVE"
+                                  ? "badge badge-active"
+                                  : "badge badge-inactive"
+                              }
+                            >
                               {c.status === "ACTIVE" ? "正常" : "已停用"}
                             </span>
                           </td>
@@ -250,22 +336,41 @@ export default function CustomersPage() {
                             <div className="row-actions">
                               {editing ? (
                                 <>
-                                  <button className="btn btn-primary" disabled={busy} onClick={() => void saveEdit(c)}>
+                                  <button
+                                    className="btn btn-primary"
+                                    disabled={busy}
+                                    onClick={() => void saveEdit(c)}
+                                  >
                                     保存
                                   </button>
-                                  <button className="btn" onClick={() => setEditingId(null)}>
+                                  <button
+                                    className="btn"
+                                    onClick={() => setEditingId(null)}
+                                  >
                                     取消
                                   </button>
                                 </>
                               ) : (
                                 <>
-                                  <button className="btn" disabled={busy} onClick={() => startEdit(c)}>
+                                  <button
+                                    className="btn"
+                                    disabled={busy}
+                                    onClick={() => startEdit(c)}
+                                  >
                                     编辑
                                   </button>
-                                  <button className="btn" disabled={busy} onClick={() => void toggleStatus(c)}>
+                                  <button
+                                    className="btn"
+                                    disabled={busy}
+                                    onClick={() => void toggleStatus(c)}
+                                  >
                                     {c.status === "ACTIVE" ? "停用" : "启用"}
                                   </button>
-                                  <button className="btn btn-danger" disabled={busy} onClick={() => void remove(c)}>
+                                  <button
+                                    className="btn btn-danger"
+                                    disabled={busy}
+                                    onClick={() => void remove(c)}
+                                  >
                                     删除
                                   </button>
                                 </>
@@ -281,7 +386,9 @@ export default function CustomersPage() {
             </div>
           </>
         ) : null}
-        {page.phase === "error" ? <p className="banner banner-error">加载失败：{page.message}</p> : null}
+        {page.phase === "error" ? (
+          <p className="banner banner-error">加载失败：{page.message}</p>
+        ) : null}
       </div>
     </main>
   );

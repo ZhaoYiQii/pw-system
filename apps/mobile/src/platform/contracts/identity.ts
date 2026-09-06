@@ -1,7 +1,13 @@
 export interface IdentitySession {
   accessToken: string;
   refreshToken?: string;
-  principal: { sub: string; scope: string; role: string; username: string; tenantId?: string };
+  principal: {
+    sub: string;
+    scope: string;
+    role: string;
+    username: string;
+    tenantId?: string;
+  };
   expiresInSeconds: number;
 }
 
@@ -13,6 +19,9 @@ export interface IdentityAdapter {
     username: string;
     password: string;
   }): Promise<IdentitySession>;
-  refresh(refreshToken: string, scope: "platform" | "tenant"): Promise<IdentitySession>;
+  refresh(
+    refreshToken: string,
+    scope: "platform" | "tenant",
+  ): Promise<IdentitySession>;
   logout(refreshToken: string): Promise<void>;
 }

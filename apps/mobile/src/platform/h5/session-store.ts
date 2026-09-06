@@ -29,5 +29,5 @@ export const session: SessionHandle = {
     } catch {
       /* ignore */
     }
-  }
+  },
 };

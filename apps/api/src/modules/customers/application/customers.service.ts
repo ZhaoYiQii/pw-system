@@ -2,7 +2,7 @@ import type { CustomerView } from "../domain/customer.js";
 import {
   CustomerNotFoundError,
   DuplicateCustomerError,
-  InvalidCustomerInputError
+  InvalidCustomerInputError,
 } from "../domain/errors.js";
 
 export interface CustomerInput {
@@ -16,22 +16,46 @@ export interface CustomerRepository {
   list(tenantId: string, query?: string): Promise<CustomerView[]>;
   find(tenantId: string, id: string): Promise<CustomerView | null>;
   create(tenantId: string, input: CustomerInput): Promise<CustomerView>;
-  update(tenantId: string, id: string, input: Partial<CustomerInput>): Promise<CustomerView | null>;
+  update(
+    tenantId: string,
+    id: string,
+    input: Partial<CustomerInput>,
+  ): Promise<CustomerView | null>;
   remove(tenantId: string, id: string): Promise<boolean>;
-  bind(tenantId: string, customerId: string, accountId: string): Promise<CustomerView>;
-  findByAccount(tenantId: string, accountId: string): Promise<CustomerView | null>;
+  bind(
+    tenantId: string,
+    customerId: string,
+    accountId: string,
+  ): Promise<CustomerView>;
+  findByAccount(
+    tenantId: string,
+    accountId: string,
+  ): Promise<CustomerView | null>;
 }
 
 function assertValid(input: CustomerInput | Partial<CustomerInput>): void {
-  if (input.name !== undefined && (typeof input.name !== "string" || input.name.trim().length < 1 || input.name.length > 80)) {
+  if (
+    input.name !== undefined &&
+    (typeof input.name !== "string" ||
+      input.name.trim().length < 1 ||
+      input.name.length > 80)
+  ) {
     throw new InvalidCustomerInputError("name 需为 1-80 字符");
   }
   if (input.mobile !== undefined && input.mobile !== null) {
-    if (typeof input.mobile !== "string" || !/^[0-9+\- ]{5,20}$/.test(input.mobile.trim())) {
+    if (
+      typeof input.mobile !== "string" ||
+      !/^[0-9+\- ]{5,20}$/.test(input.mobile.trim())
+    ) {
       throw new InvalidCustomerInputError("mobile 格式非法");
     }
   }
-  if (input.remark !== undefined && input.remark !== null && typeof input.remark === "string" && input.remark.length > 200) {
+  if (
+    input.remark !== undefined &&
+    input.remark !== null &&
+    typeof input.remark === "string" &&
+    input.remark.length > 200
+  ) {
     throw new InvalidCustomerInputError("remark 超出 200 字符");
   }
 }
@@ -56,7 +80,7 @@ export class CustomersService {
         name: input.name.trim(),
         mobile: input.mobile?.trim() || null,
         remark: input.remark?.trim() || null,
-        status: input.status ?? "ACTIVE"
+        status: input.status ?? "ACTIVE",
       });
     } catch (error) {
       if (error instanceof DuplicateCustomerError) throw error;
@@ -64,7 +88,11 @@ export class CustomersService {
     }
   }
 
-  async update(tenantId: string, id: string, input: Partial<CustomerInput>): Promise<CustomerView> {
+  async update(
+    tenantId: string,
+    id: string,
+    input: Partial<CustomerInput>,
+  ): Promise<CustomerView> {
     assertValid(input);
     const clean: Partial<CustomerInput> = {};
     if (input.name !== undefined) clean.name = input.name.trim();
@@ -81,13 +109,20 @@ export class CustomersService {
     if (!removed) throw new CustomerNotFoundError(id);
   }
 
-  async bind(tenantId: string, customerId: string, accountId: string): Promise<CustomerView> {
+  async bind(
+    tenantId: string,
+    customerId: string,
+    accountId: string,
+  ): Promise<CustomerView> {
     const customer = await this.repository.find(tenantId, customerId);
     if (!customer) throw new CustomerNotFoundError(customerId);
     return this.repository.bind(tenantId, customerId, accountId);
   }
 
-  async getByAccount(tenantId: string, accountId: string): Promise<CustomerView> {
+  async getByAccount(
+    tenantId: string,
+    accountId: string,
+  ): Promise<CustomerView> {
     const customer = await this.repository.findByAccount(tenantId, accountId);
     if (!customer) throw new CustomerNotFoundError(accountId);
     return customer;

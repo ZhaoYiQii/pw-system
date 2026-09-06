@@ -5,6 +5,8 @@ dist/
 lib/
 coverage/
 packages/api-client/src
+openapi.json
+packages/database/src/generated/
 .pnpm-store/
 .pnpm-cache/
 pnpm-lock.yaml

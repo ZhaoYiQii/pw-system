@@ -11,12 +11,12 @@ export const tenantConfigV1Schema = z
       primaryColor: z.string().regex(HEX_COLOR, "invalid hex color"),
       accentColor: z.string().regex(HEX_COLOR, "invalid hex color"),
       logoText: z.string().min(1).max(40),
-      borderRadius: z.number().int().min(0).max(24)
+      borderRadius: z.number().int().min(0).max(24),
     }),
     storefront: z.object({
       allowCustomerSelection: z.boolean(),
-      showServiceDuration: z.boolean()
-    })
+      showServiceDuration: z.boolean(),
+    }),
   })
   .strict(); // 未知字段拒绝（Slice 3 红测试）
 
@@ -29,12 +29,12 @@ export const DEFAULT_TENANT_CONFIG: TenantConfigV1 = {
     primaryColor: "#2f54eb",
     accentColor: "#fa8c16",
     logoText: "PW",
-    borderRadius: 8
+    borderRadius: 8,
   },
   storefront: {
     allowCustomerSelection: true,
-    showServiceDuration: true
-  }
+    showServiceDuration: true,
+  },
 };
 
 export function parseTenantConfig(input: unknown): TenantConfigV1 {
@@ -46,11 +46,14 @@ export function safeParseTenantConfig(input: unknown) {
 }
 
 /** 浅层分层合并：brand/storefront 整体覆盖（门店不维护平台未开放字段），随后整体校验。 */
-export function mergeTenantConfig(base: TenantConfigV1, override: TenantConfigV1): TenantConfigV1 {
+export function mergeTenantConfig(
+  base: TenantConfigV1,
+  override: TenantConfigV1,
+): TenantConfigV1 {
   const merged = {
     schemaVersion: "v1" as const,
     brand: { ...base.brand, ...override.brand },
-    storefront: { ...base.storefront, ...override.storefront }
+    storefront: { ...base.storefront, ...override.storefront },
   };
   return parseTenantConfig(merged);
 }

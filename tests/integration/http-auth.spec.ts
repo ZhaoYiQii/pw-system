@@ -33,23 +33,39 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
     adminUsername = `e2e_admin_${suffix}`;
     supportUsername = `e2e_support_${suffix}`;
     await client.platformAccount.create({
-      data: { username: adminUsername, passwordHash: hash, role: "PLATFORM_SUPER_ADMIN" }
+      data: {
+        username: adminUsername,
+        passwordHash: hash,
+        role: "PLATFORM_SUPER_ADMIN",
+      },
     });
     await client.platformAccount.create({
-      data: { username: supportUsername, passwordHash: hash, role: "PLATFORM_SUPPORT" }
+      data: {
+        username: supportUsername,
+        passwordHash: hash,
+        role: "PLATFORM_SUPPORT",
+      },
     });
 
     tenantCode = `e2e_${suffix}`;
-    const tenant = await client.tenant.create({ data: { code: tenantCode, name: "E2E 店" } });
+    const tenant = await client.tenant.create({
+      data: { code: tenantCode, name: "E2E 店" },
+    });
     tenantCodes.push(tenantCode);
     const owner = await client.tenantAccount.create({
-      data: { tenantId: tenant.id, username: "boss", passwordHash: hash }
+      data: { tenantId: tenant.id, username: "boss", passwordHash: hash },
     });
     await client.tenantAccountRole.create({
-      data: { tenantId: tenant.id, tenantAccountId: owner.id, role: "TENANT_OWNER" }
+      data: {
+        tenantId: tenant.id,
+        tenantAccountId: owner.id,
+        role: "TENANT_OWNER",
+      },
     });
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
     rl = app.get(RateLimitService);
@@ -61,14 +77,29 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
 
   afterAll(async () => {
     if (client) {
-      await client.tenantAccountRole.deleteMany({ where: { tenantId: { in: tenantCodes.map(() => "") } } }).catch(() => undefined);
-      await client.platformAccount.deleteMany({ where: { username: { in: [adminUsername, supportUsername] } } });
+      await client.tenantAccountRole
+        .deleteMany({ where: { tenantId: { in: tenantCodes.map(() => "") } } })
+        .catch(() => undefined);
+      await client.platformAccount.deleteMany({
+        where: { username: { in: [adminUsername, supportUsername] } },
+      });
       if (tenantCode) {
-        await client.tenantAccountRole.deleteMany({ where: { tenantAccount: { tenant: { code: tenantCode } } } });
-        await client.tenantAccount.deleteMany({ where: { tenant: { code: tenantCode } } });
-        await client.tenantDomain.deleteMany({ where: { tenant: { code: tenantCode } } });
-        const httpTenant = await client.tenant.findUnique({ where: { code: tenantCode } });
-        if (httpTenant) await client.auditLog.deleteMany({ where: { tenantId: httpTenant.id } });
+        await client.tenantAccountRole.deleteMany({
+          where: { tenantAccount: { tenant: { code: tenantCode } } },
+        });
+        await client.tenantAccount.deleteMany({
+          where: { tenant: { code: tenantCode } },
+        });
+        await client.tenantDomain.deleteMany({
+          where: { tenant: { code: tenantCode } },
+        });
+        const httpTenant = await client.tenant.findUnique({
+          where: { code: tenantCode },
+        });
+        if (httpTenant)
+          await client.auditLog.deleteMany({
+            where: { tenantId: httpTenant.id },
+          });
         await client.tenant.deleteMany({ where: { code: tenantCode } });
       }
       await client.$disconnect();
@@ -76,10 +107,20 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
     if (app) await app.close();
   });
 
-  async function login(kind: "platform" | "tenant", username: string, password: string, tenant?: string) {
+  async function login(
+    kind: "platform" | "tenant",
+    username: string,
+    password: string,
+    tenant?: string,
+  ) {
     return request(app.getHttpServer())
       .post("/api/v1/auth/login")
-      .send({ kind, username, password, ...(tenant ? { tenantCode: tenant } : {}) })
+      .send({
+        kind,
+        username,
+        password,
+        ...(tenant ? { tenantCode: tenant } : {}),
+      })
       .expect(201);
   }
 
@@ -140,14 +181,20 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
 
   it("refresh 经 HttpOnly cookie 旋转，旧 token 立即失效", async () => {
     const agent = request.agent(app.getHttpServer());
-    const first = await agent.post("/api/v1/auth/login").send({ kind: "platform", username: adminUsername, password: PW }).expect(201);
+    const first = await agent
+      .post("/api/v1/auth/login")
+      .send({ kind: "platform", username: adminUsername, password: PW })
+      .expect(201);
     const cookieHeader = (first.headers["set-cookie"] ?? []) as string[];
     const oldRefresh = cookieHeader
       .find((c: string) => c.startsWith("pw_refresh="))
       ?.split(";")[0]
       ?.replace("pw_refresh=", "");
     expect(oldRefresh).toBeTruthy();
-    const second = await agent.post("/api/v1/auth/refresh").send({ scope: "platform" }).expect(201);
+    const second = await agent
+      .post("/api/v1/auth/refresh")
+      .send({ scope: "platform" })
+      .expect(201);
     expect(second.body.data.refreshToken).toBeUndefined();
     const newCookie = ((second.headers["set-cookie"] ?? []) as string[])
       .find((c: string) => c.startsWith("pw_refresh="))
@@ -171,7 +218,10 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
 
   it("跨站 Origin 的 cookie refresh 被拒绝", async () => {
     const agent = request.agent(app.getHttpServer());
-    await agent.post("/api/v1/auth/login").send({ kind: "platform", username: adminUsername, password: PW }).expect(201);
+    await agent
+      .post("/api/v1/auth/login")
+      .send({ kind: "platform", username: adminUsername, password: PW })
+      .expect(201);
     await agent
       .post("/api/v1/auth/refresh")
       .set("Origin", "https://evil.example")

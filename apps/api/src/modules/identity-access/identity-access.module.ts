@@ -19,20 +19,49 @@ export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
   imports: [EntitlementsModule],
   controllers: [AuthController, MeController],
   providers: [
-    { provide: AUTH_PLATFORM_CLIENT, useFactory: () => { const url = process.env.PLATFORM_DATABASE_URL; if (!url) throw new Error("PLATFORM_DATABASE_URL is not configured"); return createDatabaseClient(url); } },
-    { provide: AUTH_RUNTIME_CLIENT, useFactory: () => { const url = process.env.DATABASE_URL; if (!url) throw new Error("DATABASE_URL (runtime) is not configured"); return createDatabaseClient(url); } },
-    { provide: TokenService, useFactory: () => { const secret = process.env.SESSION_SECRET; if (!secret) throw new Error("SESSION_SECRET is not configured"); return new TokenService(secret); } },
+    {
+      provide: AUTH_PLATFORM_CLIENT,
+      useFactory: () => {
+        const url = process.env.PLATFORM_DATABASE_URL;
+        if (!url) throw new Error("PLATFORM_DATABASE_URL is not configured");
+        return createDatabaseClient(url);
+      },
+    },
+    {
+      provide: AUTH_RUNTIME_CLIENT,
+      useFactory: () => {
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
+        return createDatabaseClient(url);
+      },
+    },
+    {
+      provide: TokenService,
+      useFactory: () => {
+        const secret = process.env.SESSION_SECRET;
+        if (!secret) throw new Error("SESSION_SECRET is not configured");
+        return new TokenService(secret);
+      },
+    },
     {
       provide: PrismaAuthRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>, runtimeClient: ReturnType<typeof createDatabaseClient>) => new PrismaAuthRepository(client, runtimeClient),
-      inject: [AUTH_PLATFORM_CLIENT, AUTH_RUNTIME_CLIENT]
+      useFactory: (
+        client: ReturnType<typeof createDatabaseClient>,
+        runtimeClient: ReturnType<typeof createDatabaseClient>,
+      ) => new PrismaAuthRepository(client, runtimeClient),
+      inject: [AUTH_PLATFORM_CLIENT, AUTH_RUNTIME_CLIENT],
     },
-    { provide: AuthService, useFactory: (repo: PrismaAuthRepository, tokens: TokenService) => new AuthService(repo, tokens), inject: [PrismaAuthRepository, TokenService] },
+    {
+      provide: AuthService,
+      useFactory: (repo: PrismaAuthRepository, tokens: TokenService) =>
+        new AuthService(repo, tokens),
+      inject: [PrismaAuthRepository, TokenService],
+    },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: EntitlementGuard },
-    RateLimitService
+    RateLimitService,
   ],
-  exports: [AuthService, RateLimitService]
+  exports: [AuthService, RateLimitService],
 })
 export class IdentityAccessModule {}

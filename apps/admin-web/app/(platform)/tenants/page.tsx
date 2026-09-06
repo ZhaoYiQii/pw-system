@@ -25,7 +25,7 @@ type LoadState =
 const statusLabel: Record<TenantStatus, { text: string; className: string }> = {
   ACTIVE: { text: "正常", className: "badge badge-active" },
   INACTIVE: { text: "已停用", className: "badge badge-inactive" },
-  CONFIG_ERROR: { text: "配置错误", className: "badge badge-error" }
+  CONFIG_ERROR: { text: "配置错误", className: "badge badge-error" },
 };
 
 export default function PlatformTenantsPage() {
@@ -47,7 +47,10 @@ export default function PlatformTenantsPage() {
       if (error instanceof ApiError && error.status === 401) {
         setState({ phase: "unauthenticated" });
       } else {
-        setState({ phase: "error", message: error instanceof Error ? error.message : String(error) });
+        setState({
+          phase: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   }, []);
@@ -66,8 +69,8 @@ export default function PlatformTenantsPage() {
         body: JSON.stringify({
           code,
           name,
-          ...(host.trim() !== "" ? { primaryHost: host.trim() } : {})
-        })
+          ...(host.trim() !== "" ? { primaryHost: host.trim() } : {}),
+        }),
       });
       setCode("");
       setName("");
@@ -82,12 +85,15 @@ export default function PlatformTenantsPage() {
   };
 
   const deactivateTenant = async (id: string, label: string) => {
-    if (!window.confirm(`确认停用门店「${label}」？停用后其 H5 前台将不可用。`)) return;
+    if (!window.confirm(`确认停用门店「${label}」？停用后其 H5 前台将不可用。`))
+      return;
     setBusy(true);
     setFormError(null);
     setNotice(null);
     try {
-      await apiFetch<unknown>(`/api/v1/platform/tenants/${id}/deactivate`, { method: "POST" });
+      await apiFetch<unknown>(`/api/v1/platform/tenants/${id}/deactivate`, {
+        method: "POST",
+      });
       setNotice(`已停用门店「${label}」。`);
       await reload();
     } catch (error) {
@@ -117,12 +123,16 @@ export default function PlatformTenantsPage() {
       </nav>
       <div className="page">
         <h1 className="page-title">平台租户</h1>
-        <p className="page-desc">创建门店、停用门店，或进入门店开通增值功能。</p>
+        <p className="page-desc">
+          创建门店、停用门店，或进入门店开通增值功能。
+        </p>
         {notice ? <p className="banner banner-success">{notice}</p> : null}
         {formError ? <p className="banner banner-error">{formError}</p> : null}
 
         {state.phase === "error" ? (
-          <p className="banner banner-error">加载失败：{state.message}（请确认 API 已启动）</p>
+          <p className="banner banner-error">
+            加载失败：{state.message}（请确认 API 已启动）
+          </p>
         ) : null}
         {state.phase === "unauthenticated" ? (
           <div className="card">
@@ -137,7 +147,9 @@ export default function PlatformTenantsPage() {
           <>
             <div className="card">
               <h2 className="card-title">新建门店</h2>
-              <p className="card-desc">填写后平台自动创建租户；主域名可选，用于 H5 前台解析。</p>
+              <p className="card-desc">
+                填写后平台自动创建租户；主域名可选，用于 H5 前台解析。
+              </p>
               <form
                 className="field-row"
                 onSubmit={(event) => {
@@ -176,7 +188,11 @@ export default function PlatformTenantsPage() {
                   />
                 </div>
                 <div className="field" style={{ justifyContent: "flex-end" }}>
-                  <button className="btn btn-primary" type="submit" disabled={busy}>
+                  <button
+                    className="btn btn-primary"
+                    type="submit"
+                    disabled={busy}
+                  >
                     {busy ? "处理中…" : "创建"}
                   </button>
                 </div>
@@ -200,25 +216,36 @@ export default function PlatformTenantsPage() {
                   </thead>
                   <tbody>
                     {state.tenants.map((tenant) => {
-                      const badge = statusLabel[tenant.status] ?? statusLabel.INACTIVE;
+                      const badge =
+                        statusLabel[tenant.status] ?? statusLabel.INACTIVE;
                       return (
                         <tr key={tenant.id}>
                           <td>{tenant.code}</td>
                           <td>{tenant.name}</td>
                           <td>
-                            <span className={badge.className}>{badge.text}</span>
+                            <span className={badge.className}>
+                              {badge.text}
+                            </span>
                           </td>
                           <td className="muted">{tenant.timezone}</td>
                           <td>
                             <div className="row-actions">
-                              <Link className="btn" href={`/packages?tenantId=${tenant.id}`}>
+                              <Link
+                                className="btn"
+                                href={`/packages?tenantId=${tenant.id}`}
+                              >
                                 套餐/功能
                               </Link>
                               {tenant.status === "ACTIVE" ? (
                                 <button
                                   className="btn btn-danger"
                                   disabled={busy}
-                                  onClick={() => void deactivateTenant(tenant.id, tenant.name)}
+                                  onClick={() =>
+                                    void deactivateTenant(
+                                      tenant.id,
+                                      tenant.name,
+                                    )
+                                  }
                                 >
                                   停用
                                 </button>
@@ -238,4 +265,3 @@ export default function PlatformTenantsPage() {
     </main>
   );
 }
-

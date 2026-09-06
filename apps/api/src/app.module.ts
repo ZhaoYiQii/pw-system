@@ -37,13 +37,13 @@ import { PlatformBillingModule } from "./modules/platform-billing/platform-billi
     DisputesModule,
     NotificationsModule,
     AiAssistantModule,
-    PlatformBillingModule
+    PlatformBillingModule,
   ],
   providers: [
     {
       provide: APP_INTERCEPTOR,
-      useClass: TenantContextInterceptor
-    }
-  ]
+      useClass: TenantContextInterceptor,
+    },
+  ],
 })
 export class AppModule {}

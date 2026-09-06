@@ -11,7 +11,7 @@
     "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
     "test": "vitest run --config vitest.config.ts",
-    "test:critical": "node scripts/not-implemented.mjs test:critical \"Slice 5+（订单/场次/结算状态机切片引入）\"",
+    "test:critical": "vitest run --config tests/vitest.critical.config.ts",
     "test:integration": "vitest run --config tests/vitest.integration.config.ts",
     "test:tenant-isolation": "vitest run --config tests/vitest.tenant-isolation.config.ts",
     "test:contract": "vitest run --config tests/vitest.contract.config.ts",
@@ -21,8 +21,8 @@
     "build:weapp": "turbo run build:weapp",
     "openapi:generate": "pnpm --filter @pw/api openapi:document && openapi-ts -f openapi-ts.config.ts && pnpm --filter @pw/api-client typecheck",
     "openapi:check": "pnpm openapi:generate && git diff --exit-code -- openapi.yaml openapi.json packages/api-client/src",
-    "db:migrate:check": "node scripts/not-implemented.mjs db:migrate:check \"Slice 1（packages/database）\"",
-    "db:seed:test": "node scripts/not-implemented.mjs db:seed:test \"Slice 1\"",
+    "db:migrate:check": "pnpm --filter @pw/database db:migrate:check",
+    "db:seed:test": "node scripts/seed-test.mjs",
     "db:seed:dev": "node scripts/seed-dev.mjs"
   },
   "devDependencies": {

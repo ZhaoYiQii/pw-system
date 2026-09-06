@@ -17,19 +17,20 @@ export const PLAYERS_DB_CLIENT = "PLAYERS_DB_CLIENT";
         const url = process.env.DATABASE_URL;
         if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: PrismaPlayerRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaPlayerRepository(client)),
-      inject: [PLAYERS_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaPlayerRepository(client)),
+      inject: [PLAYERS_DB_CLIENT],
     },
     {
       provide: PlayersService,
       useFactory: (repo: PrismaPlayerRepository) => new PlayersService(repo),
-      inject: [PrismaPlayerRepository]
-    }
+      inject: [PrismaPlayerRepository],
+    },
   ],
-  exports: [PlayersService]
+  exports: [PlayersService],
 })
 export class PlayersModule {}

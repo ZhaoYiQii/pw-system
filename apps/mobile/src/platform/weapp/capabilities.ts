@@ -8,5 +8,5 @@ export const capabilities: PlatformCapabilities = {
   media: { supported: false, reason: unsupportedReason },
   share: { supported: false, reason: unsupportedReason },
   notificationPermission: { supported: false, reason: unsupportedReason },
-  payment: { supported: false, reason: unsupportedReason }
+  payment: { supported: false, reason: unsupportedReason },
 };

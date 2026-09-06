@@ -49,5 +49,11 @@ export interface OrderView {
   updatedAt: Date;
   requirement: RequirementView | null;
   snapshot: SnapshotLineView[] | null;
-  timeline: Array<{ id: string; eventType: string; fromStatus: string | null; toStatus: string | null; occurredAt: Date }>;
+  timeline: Array<{
+    id: string;
+    eventType: string;
+    fromStatus: string | null;
+    toStatus: string | null;
+    occurredAt: Date;
+  }>;
 }

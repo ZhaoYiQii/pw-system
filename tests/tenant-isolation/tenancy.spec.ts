@@ -25,15 +25,19 @@ describe("tenant isolation (RLS, five operation classes)", () => {
     owner = createDatabaseClient(migrationUrl);
     runtime = createDatabaseClient(runtimeUrl);
     const a = await owner.tenant.create({
-      data: { code: `it_a_${hostSuffix}`, name: "A 店" }
+      data: { code: `it_a_${hostSuffix}`, name: "A 店" },
     });
     const b = await owner.tenant.create({
-      data: { code: `it_b_${hostSuffix}`, name: "B 店" }
+      data: { code: `it_b_${hostSuffix}`, name: "B 店" },
     });
     tenantAId = a.id;
     tenantBId = b.id;
     const db = await owner.tenantDomain.create({
-      data: { tenantId: b.id, host: `b-${hostSuffix}.example.com`, isPrimary: true }
+      data: {
+        tenantId: b.id,
+        host: `b-${hostSuffix}.example.com`,
+        isPrimary: true,
+      },
     });
     domainBId = db.id;
   });
@@ -41,13 +45,15 @@ describe("tenant isolation (RLS, five operation classes)", () => {
   afterAll(async () => {
     if (owner) {
       for (const id of createdIds) {
-        await owner.tenantDomain.delete({ where: { id } }).catch(() => undefined);
+        await owner.tenantDomain
+          .delete({ where: { id } })
+          .catch(() => undefined);
       }
       await owner.tenantDomain.deleteMany({
-        where: { tenantId: { in: [tenantAId, tenantBId] } }
+        where: { tenantId: { in: [tenantAId, tenantBId] } },
       });
       await owner.tenant.deleteMany({
-        where: { id: { in: [tenantAId, tenantBId] } }
+        where: { id: { in: [tenantAId, tenantBId] } },
       });
       await owner.$disconnect();
     }
@@ -66,10 +72,12 @@ describe("tenant isolation (RLS, five operation classes)", () => {
     const host = `a-own-${hostSuffix}.example.com`;
     await withTenantContext(runtime, tenantAId, async (tx) => {
       const created = await tx.tenantDomain.create({
-        data: { tenantId: tenantAId, host }
+        data: { tenantId: tenantAId, host },
       });
       createdIds.push(created.id);
-      const found = await tx.tenantDomain.findUnique({ where: { id: created.id } });
+      const found = await tx.tenantDomain.findUnique({
+        where: { id: created.id },
+      });
       expect(found?.tenantId).toBe(tenantAId);
     });
   });
@@ -78,8 +86,8 @@ describe("tenant isolation (RLS, five operation classes)", () => {
     await withTenantContext(runtime, tenantAId, async (tx) => {
       await expect(
         tx.tenantDomain.create({
-          data: { tenantId: tenantBId, host: `x-${hostSuffix}.example.com` }
-        })
+          data: { tenantId: tenantBId, host: `x-${hostSuffix}.example.com` },
+        }),
       ).rejects.toThrow();
     });
   });
@@ -89,15 +97,17 @@ describe("tenant isolation (RLS, five operation classes)", () => {
       await expect(
         tx.tenantDomain.update({
           where: { id: domainBId },
-          data: { isPrimary: false }
-        })
+          data: { isPrimary: false },
+        }),
       ).rejects.toThrow();
     });
   });
 
   it("DELETE: A 店上下文删除 B 店域名失败（不可见）", async () => {
     await withTenantContext(runtime, tenantAId, async (tx) => {
-      await expect(tx.tenantDomain.delete({ where: { id: domainBId } })).rejects.toThrow();
+      await expect(
+        tx.tenantDomain.delete({ where: { id: domainBId } }),
+      ).rejects.toThrow();
     });
   });
 
@@ -106,9 +116,9 @@ describe("tenant isolation (RLS, five operation classes)", () => {
       owner.tenantDomain.create({
         data: {
           tenantId: "00000000-0000-4000-8000-000000000000",
-          host: `fk-${hostSuffix}.example.com`
-        }
-      })
+          host: `fk-${hostSuffix}.example.com`,
+        },
+      }),
     ).rejects.toThrow();
   });
 });

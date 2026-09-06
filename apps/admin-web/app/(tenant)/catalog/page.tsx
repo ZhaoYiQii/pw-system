@@ -6,8 +6,16 @@ import { ApiError, apiFetch } from "../../_lib/api";
 import { TenantNav } from "../../_lib/tenant-nav";
 import { formatFenYuan as yuan } from "../../_lib/money";
 
-interface Game { id: string; name: string; enabled: boolean }
-interface Region { id: string; name: string; enabled: boolean }
+interface Game {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
+interface Region {
+  id: string;
+  name: string;
+  enabled: boolean;
+}
 interface Product {
   id: string;
   gameId: string;
@@ -59,8 +67,13 @@ export default function CatalogPage() {
       setGames(list);
       setPage({ phase: "ready" });
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) setPage({ phase: "unauthenticated" });
-      else setPage({ phase: "error", message: error instanceof Error ? error.message : String(error) });
+      if (error instanceof ApiError && error.status === 401)
+        setPage({ phase: "unauthenticated" });
+      else
+        setPage({
+          phase: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
     }
   }, []);
 
@@ -78,7 +91,7 @@ export default function CatalogPage() {
     try {
       const [regionList, productList] = await Promise.all([
         apiFetch<Region[]>(`/api/v1/tenant/catalog/regions?gameId=${id}`),
-        apiFetch<Product[]>(`/api/v1/tenant/catalog/products?gameId=${id}`)
+        apiFetch<Product[]>(`/api/v1/tenant/catalog/products?gameId=${id}`),
       ]);
       setRegions(regionList);
       setProducts(productList);
@@ -92,7 +105,11 @@ export default function CatalogPage() {
     setRules([]);
     if (!id) return;
     try {
-      setRules(await apiFetch<PricingRule[]>(`/api/v1/tenant/catalog/products/${id}/pricing`));
+      setRules(
+        await apiFetch<PricingRule[]>(
+          `/api/v1/tenant/catalog/products/${id}/pricing`,
+        ),
+      );
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     }
@@ -102,7 +119,10 @@ export default function CatalogPage() {
     setBusy(true);
     setMsg(null);
     try {
-      await apiFetch<Game>("/api/v1/tenant/catalog/games", { method: "POST", body: JSON.stringify({ name: newGame }) });
+      await apiFetch<Game>("/api/v1/tenant/catalog/games", {
+        method: "POST",
+        body: JSON.stringify({ name: newGame }),
+      });
       setNewGame("");
       setOkMsg("已创建游戏。");
       await loadGames();
@@ -119,7 +139,7 @@ export default function CatalogPage() {
     try {
       await apiFetch<Game>(`/api/v1/tenant/catalog/games/${g.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ enabled: !g.enabled })
+        body: JSON.stringify({ enabled: !g.enabled }),
       });
       setOkMsg(`已${g.enabled ? "停用" : "启用"}游戏 ${g.name}。`);
       await loadGames();
@@ -137,7 +157,7 @@ export default function CatalogPage() {
     try {
       await apiFetch<Region>(`/api/v1/tenant/catalog/games/${gameId}/regions`, {
         method: "POST",
-        body: JSON.stringify({ name: newRegion })
+        body: JSON.stringify({ name: newRegion }),
       });
       setNewRegion("");
       await selectGame(gameId);
@@ -155,7 +175,7 @@ export default function CatalogPage() {
     try {
       await apiFetch<Region>(`/api/v1/tenant/catalog/regions/${r.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ enabled: !r.enabled })
+        body: JSON.stringify({ enabled: !r.enabled }),
       });
       await selectGame(gameId);
     } catch (error) {
@@ -175,8 +195,8 @@ export default function CatalogPage() {
         body: JSON.stringify({
           gameId,
           ...(newProductRegion ? { gameRegionId: newProductRegion } : {}),
-          name: newProduct
-        })
+          name: newProduct,
+        }),
       });
       setNewProduct("");
       setNewProductRegion("");
@@ -196,7 +216,7 @@ export default function CatalogPage() {
     try {
       await apiFetch<Product>(`/api/v1/tenant/catalog/products/${p.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ enabled: !p.enabled })
+        body: JSON.stringify({ enabled: !p.enabled }),
       });
       await selectGame(gameId);
     } catch (error) {
@@ -211,14 +231,19 @@ export default function CatalogPage() {
     setBusy(true);
     setMsg(null);
     try {
-      await apiFetch<PricingRule>(`/api/v1/tenant/catalog/products/${productId}/pricing`, {
-        method: "POST",
-        body: JSON.stringify({
-          durationSeconds: Number(ruleDuration),
-          priceFen: rulePrice.trim(),
-          ...(ruleCost.trim() !== "" ? { playerCostFen: ruleCost.trim() } : {})
-        })
-      });
+      await apiFetch<PricingRule>(
+        `/api/v1/tenant/catalog/products/${productId}/pricing`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            durationSeconds: Number(ruleDuration),
+            priceFen: rulePrice.trim(),
+            ...(ruleCost.trim() !== ""
+              ? { playerCostFen: ruleCost.trim() }
+              : {}),
+          }),
+        },
+      );
       setRuleDuration("");
       setRulePrice("");
       setRuleCost("");
@@ -236,7 +261,7 @@ export default function CatalogPage() {
     try {
       await apiFetch<PricingRule>(`/api/v1/tenant/catalog/pricing/${r.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ enabled: !r.enabled })
+        body: JSON.stringify({ enabled: !r.enabled }),
       });
       if (productId) await selectProduct(productId);
     } catch (error) {
@@ -250,7 +275,9 @@ export default function CatalogPage() {
     setBusy(true);
     setMsg(null);
     try {
-      await apiFetch<unknown>(`/api/v1/tenant/catalog/pricing/${r.id}`, { method: "DELETE" });
+      await apiFetch<unknown>(`/api/v1/tenant/catalog/pricing/${r.id}`, {
+        method: "DELETE",
+      });
       if (productId) await selectProduct(productId);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -267,46 +294,86 @@ export default function CatalogPage() {
       <TenantNav />
       <div className="page">
         <h1 className="page-title">服务目录</h1>
-        <p className="page-desc">游戏 → 区服 → 服务产品 → 价格（金额以“分”存储，禁止浮点/负价）。</p>
+        <p className="page-desc">
+          游戏 → 区服 → 服务产品 → 价格（金额以“分”存储，禁止浮点/负价）。
+        </p>
         {msg ? <p className="banner banner-error">{msg}</p> : null}
         {okMsg ? <p className="banner banner-success">{okMsg}</p> : null}
 
         {page.phase === "unauthenticated" ? (
           <div className="card">
             <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">去登录</Link>
+            <Link className="btn btn-primary" href="/store/login">
+              去登录
+            </Link>
           </div>
         ) : null}
-        {page.phase === "error" ? <p className="banner banner-error">加载失败：{page.message}</p> : null}
+        {page.phase === "error" ? (
+          <p className="banner banner-error">加载失败：{page.message}</p>
+        ) : null}
 
         {page.phase === "ready" ? (
           <>
             <div className="card">
               <h2 className="card-title">游戏</h2>
               <div className="row-actions" style={{ marginBottom: 12 }}>
-                <input className="input" placeholder="游戏名" value={newGame} onChange={(e) => setNewGame(e.target.value)} style={{ maxWidth: 220 }} />
-                <button className="btn btn-primary" disabled={busy} onClick={() => void createGame()}>新建游戏</button>
+                <input
+                  className="input"
+                  placeholder="游戏名"
+                  value={newGame}
+                  onChange={(e) => setNewGame(e.target.value)}
+                  style={{ maxWidth: 220 }}
+                />
+                <button
+                  className="btn btn-primary"
+                  disabled={busy}
+                  onClick={() => void createGame()}
+                >
+                  新建游戏
+                </button>
               </div>
               {games.length === 0 ? (
                 <p className="muted">暂无游戏，先新建一个。</p>
               ) : (
                 <table className="data-table">
                   <thead>
-                    <tr><th>名称</th><th>状态</th><th>操作</th></tr>
+                    <tr>
+                      <th>名称</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {games.map((g) => (
-                      <tr key={g.id} className={gameId === g.id ? "row-selected" : ""}>
+                      <tr
+                        key={g.id}
+                        className={gameId === g.id ? "row-selected" : ""}
+                      >
                         <td>{g.name}</td>
                         <td>
-                          <span className={g.enabled ? "badge badge-active" : "badge badge-inactive"}>
+                          <span
+                            className={
+                              g.enabled
+                                ? "badge badge-active"
+                                : "badge badge-inactive"
+                            }
+                          >
                             {g.enabled ? "上架" : "停用"}
                           </span>
                         </td>
                         <td>
                           <div className="row-actions">
-                            <button className="btn" onClick={() => void selectGame(g.id)}>区服/产品</button>
-                            <button className="btn" disabled={busy} onClick={() => void toggleGame(g)}>
+                            <button
+                              className="btn"
+                              onClick={() => void selectGame(g.id)}
+                            >
+                              区服/产品
+                            </button>
+                            <button
+                              className="btn"
+                              disabled={busy}
+                              onClick={() => void toggleGame(g)}
+                            >
                               {g.enabled ? "停用" : "启用"}
                             </button>
                           </div>
@@ -321,13 +388,33 @@ export default function CatalogPage() {
             {selectedGame ? (
               <>
                 <div className="card">
-                  <div className="row-actions" style={{ justifyContent: "space-between" }}>
+                  <div
+                    className="row-actions"
+                    style={{ justifyContent: "space-between" }}
+                  >
                     <h2 className="card-title">{selectedGame.name} · 区服</h2>
-                    <button className="btn" onClick={() => void selectGame(null)}>收起</button>
+                    <button
+                      className="btn"
+                      onClick={() => void selectGame(null)}
+                    >
+                      收起
+                    </button>
                   </div>
                   <div className="row-actions" style={{ marginBottom: 12 }}>
-                    <input className="input" placeholder="区服名" value={newRegion} onChange={(e) => setNewRegion(e.target.value)} style={{ maxWidth: 220 }} />
-                    <button className="btn btn-primary" disabled={busy} onClick={() => void createRegion()}>新建区服</button>
+                    <input
+                      className="input"
+                      placeholder="区服名"
+                      value={newRegion}
+                      onChange={(e) => setNewRegion(e.target.value)}
+                      style={{ maxWidth: 220 }}
+                    />
+                    <button
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() => void createRegion()}
+                    >
+                      新建区服
+                    </button>
                   </div>
                   {regions.length === 0 ? (
                     <p className="muted">暂无区服（可选）。</p>
@@ -338,12 +425,22 @@ export default function CatalogPage() {
                           <tr key={r.id}>
                             <td>{r.name}</td>
                             <td>
-                              <span className={r.enabled ? "badge badge-active" : "badge badge-inactive"}>
+                              <span
+                                className={
+                                  r.enabled
+                                    ? "badge badge-active"
+                                    : "badge badge-inactive"
+                                }
+                              >
                                 {r.enabled ? "启用" : "停用"}
                               </span>
                             </td>
                             <td>
-                              <button className="btn" disabled={busy} onClick={() => void toggleRegion(r)}>
+                              <button
+                                className="btn"
+                                disabled={busy}
+                                onClick={() => void toggleRegion(r)}
+                              >
                                 {r.enabled ? "停用" : "启用"}
                               </button>
                             </td>
@@ -357,14 +454,35 @@ export default function CatalogPage() {
                 <div className="card">
                   <h2 className="card-title">服务产品与价格</h2>
                   <div className="row-actions" style={{ marginBottom: 12 }}>
-                    <input className="input" placeholder="产品名（如 王者1小时）" value={newProduct} onChange={(e) => setNewProduct(e.target.value)} style={{ maxWidth: 240 }} />
-                    <select className="input" value={newProductRegion} onChange={(e) => setNewProductRegion(e.target.value)} style={{ maxWidth: 180 }}>
+                    <input
+                      className="input"
+                      placeholder="产品名（如 王者1小时）"
+                      value={newProduct}
+                      onChange={(e) => setNewProduct(e.target.value)}
+                      style={{ maxWidth: 240 }}
+                    />
+                    <select
+                      className="input"
+                      value={newProductRegion}
+                      onChange={(e) => setNewProductRegion(e.target.value)}
+                      style={{ maxWidth: 180 }}
+                    >
                       <option value="">不限区服</option>
-                      {regions.filter((r) => r.enabled).map((r) => (
-                        <option key={r.id} value={r.id}>{r.name}</option>
-                      ))}
+                      {regions
+                        .filter((r) => r.enabled)
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name}
+                          </option>
+                        ))}
                     </select>
-                    <button className="btn btn-primary" disabled={busy} onClick={() => void createProduct()}>新建产品</button>
+                    <button
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() => void createProduct()}
+                    >
+                      新建产品
+                    </button>
                   </div>
                   {products.length === 0 ? (
                     <p className="muted">暂无服务产品。</p>
@@ -372,18 +490,38 @@ export default function CatalogPage() {
                     <table className="data-table">
                       <tbody>
                         {products.map((p) => (
-                          <tr key={p.id} className={productId === p.id ? "row-selected" : ""}>
+                          <tr
+                            key={p.id}
+                            className={productId === p.id ? "row-selected" : ""}
+                          >
                             <td>{p.name}</td>
-                            <td className="muted">{p.regionName ?? "不限区服"}</td>
+                            <td className="muted">
+                              {p.regionName ?? "不限区服"}
+                            </td>
                             <td>
-                              <span className={p.enabled ? "badge badge-active" : "badge badge-inactive"}>
+                              <span
+                                className={
+                                  p.enabled
+                                    ? "badge badge-active"
+                                    : "badge badge-inactive"
+                                }
+                              >
                                 {p.enabled ? "上架" : "停用"}
                               </span>
                             </td>
                             <td>
                               <div className="row-actions">
-                                <button className="btn" onClick={() => void selectProduct(p.id)}>价格</button>
-                                <button className="btn" disabled={busy} onClick={() => void toggleProduct(p)}>
+                                <button
+                                  className="btn"
+                                  onClick={() => void selectProduct(p.id)}
+                                >
+                                  价格
+                                </button>
+                                <button
+                                  className="btn"
+                                  disabled={busy}
+                                  onClick={() => void toggleProduct(p)}
+                                >
                                   {p.enabled ? "停用" : "启用"}
                                 </button>
                               </div>
@@ -399,40 +537,101 @@ export default function CatalogPage() {
 
             {selectedProduct ? (
               <div className="card">
-                <div className="row-actions" style={{ justifyContent: "space-between" }}>
-                  <h2 className="card-title">{selectedProduct.name} · 价格（分）</h2>
-                  <button className="btn" onClick={() => void selectProduct(null)}>收起</button>
+                <div
+                  className="row-actions"
+                  style={{ justifyContent: "space-between" }}
+                >
+                  <h2 className="card-title">
+                    {selectedProduct.name} · 价格（分）
+                  </h2>
+                  <button
+                    className="btn"
+                    onClick={() => void selectProduct(null)}
+                  >
+                    收起
+                  </button>
                 </div>
                 <div className="row-actions" style={{ marginBottom: 12 }}>
-                  <input className="input" type="number" placeholder="时长(秒)" value={ruleDuration} onChange={(e) => setRuleDuration(e.target.value)} style={{ maxWidth: 140 }} />
-                  <input className="input" type="number" placeholder="售价(分)" value={rulePrice} onChange={(e) => setRulePrice(e.target.value)} style={{ maxWidth: 140 }} />
-                  <input className="input" type="number" placeholder="成本(分,可选)" value={ruleCost} onChange={(e) => setRuleCost(e.target.value)} style={{ maxWidth: 140 }} />
-                  <button className="btn btn-primary" disabled={busy} onClick={() => void createRule()}>新增价格</button>
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="时长(秒)"
+                    value={ruleDuration}
+                    onChange={(e) => setRuleDuration(e.target.value)}
+                    style={{ maxWidth: 140 }}
+                  />
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="售价(分)"
+                    value={rulePrice}
+                    onChange={(e) => setRulePrice(e.target.value)}
+                    style={{ maxWidth: 140 }}
+                  />
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder="成本(分,可选)"
+                    value={ruleCost}
+                    onChange={(e) => setRuleCost(e.target.value)}
+                    style={{ maxWidth: 140 }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    disabled={busy}
+                    onClick={() => void createRule()}
+                  >
+                    新增价格
+                  </button>
                 </div>
                 {rules.length === 0 ? (
                   <p className="muted">暂无价格规则。</p>
                 ) : (
                   <table className="data-table">
                     <thead>
-                      <tr><th>时长</th><th>售价</th><th>成本</th><th>状态</th><th>操作</th></tr>
+                      <tr>
+                        <th>时长</th>
+                        <th>售价</th>
+                        <th>成本</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                      </tr>
                     </thead>
                     <tbody>
                       {rules.map((r) => (
                         <tr key={r.id}>
                           <td>{Math.floor(r.durationSeconds / 60)} 分钟</td>
-                          <td>{yuan(r.priceFen)}（{r.priceFen}分）</td>
+                          <td>
+                            {yuan(r.priceFen)}（{r.priceFen}分）
+                          </td>
                           <td className="muted">{yuan(r.playerCostFen)}</td>
                           <td>
-                            <span className={r.enabled ? "badge badge-active" : "badge badge-inactive"}>
+                            <span
+                              className={
+                                r.enabled
+                                  ? "badge badge-active"
+                                  : "badge badge-inactive"
+                              }
+                            >
                               {r.enabled ? "启用" : "停用"}
                             </span>
                           </td>
                           <td>
                             <div className="row-actions">
-                              <button className="btn" disabled={busy} onClick={() => void toggleRule(r)}>
+                              <button
+                                className="btn"
+                                disabled={busy}
+                                onClick={() => void toggleRule(r)}
+                              >
                                 {r.enabled ? "停用" : "启用"}
                               </button>
-                              <button className="btn btn-danger" disabled={busy} onClick={() => void removeRule(r)}>删除</button>
+                              <button
+                                className="btn btn-danger"
+                                disabled={busy}
+                                onClick={() => void removeRule(r)}
+                              >
+                                删除
+                              </button>
                             </div>
                           </td>
                         </tr>

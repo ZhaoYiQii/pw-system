@@ -9,7 +9,10 @@ const NON_NEGATIVE_FEN = /^(?:0|[1-9][0-9]*)$/;
  * - allowZero=false 用于售价类（>0）；allowZero=true 用于成本/预算类（>=0）。
  * 返回 null 表示非法；成功返回原串（无空白）。
  */
-export function parseFenString(value: unknown, allowZero: boolean): string | null {
+export function parseFenString(
+  value: unknown,
+  allowZero: boolean,
+): string | null {
   if (typeof value !== "string") return null;
   if (value.trim() !== value || !NON_NEGATIVE_FEN.test(value)) return null;
   if (!allowZero && value === "0") return null;

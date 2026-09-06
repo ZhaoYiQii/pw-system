@@ -7,7 +7,7 @@ export const ROLE_KEYS = [
   "CUSTOMER_SERVICE",
   "FINANCE",
   "PLAYER",
-  "CUSTOMER"
+  "CUSTOMER",
 ] as const;
 
 export type RoleKey = (typeof ROLE_KEYS)[number];
@@ -28,7 +28,7 @@ export const PERMISSION_KEYS = [
   "dispute.manage",
   "audit.view",
   "report.view",
-  "ai.view"
+  "ai.view",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -40,7 +40,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
     "platform.support",
     "tenant.manage",
     "tenant.view",
-    "audit.view"
+    "audit.view",
   ],
   PLATFORM_SUPPORT: ["platform.support", "tenant.view", "audit.view"],
   TENANT_OWNER: [
@@ -56,19 +56,31 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
     "settlement.manage",
     "dispute.manage",
     "report.view",
-    "audit.view"
+    "audit.view",
   ],
   TENANT_ADMIN: [
     "tenant.view",
     "catalog.manage",
     "customer.manage",
     "player.manage",
-    "report.view"
+    "report.view",
   ],
-  CUSTOMER_SERVICE: ["tenant.view", "customer.manage", "order.manage", "dispatch.manage", "session.manage", "dispute.manage"],
-  FINANCE: ["tenant.view", "finance.manage", "settlement.manage", "report.view"],
+  CUSTOMER_SERVICE: [
+    "tenant.view",
+    "customer.manage",
+    "order.manage",
+    "dispatch.manage",
+    "session.manage",
+    "dispute.manage",
+  ],
+  FINANCE: [
+    "tenant.view",
+    "finance.manage",
+    "settlement.manage",
+    "report.view",
+  ],
   PLAYER: ["tenant.view", "session.manage", "dispatch.manage"],
-  CUSTOMER: ["tenant.view", "order.manage", "dispute.manage"]
+  CUSTOMER: ["tenant.view", "order.manage", "dispute.manage"],
 };
 
 export function permissionsFor(role: RoleKey): readonly PermissionKey[] {

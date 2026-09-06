@@ -16,7 +16,10 @@ const BP = 10000n;
  * platform + store ≤ 10000；陪玩到手 = 剩余（尾差归陪玩），保证总和 = amount。
  * 金额一律 bigint 分（ADR-008 / 主规格 10.5）。
  */
-export function splitSettlement(amountFen: bigint, rates: SplitBps): SplitResult {
+export function splitSettlement(
+  amountFen: bigint,
+  rates: SplitBps,
+): SplitResult {
   if (amountFen <= 0n) throw new Error("amountFen 必须为正整数（分）");
   if (
     !Number.isInteger(rates.platformFeeBp) ||

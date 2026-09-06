@@ -21,7 +21,9 @@ export class TenantNotFoundError extends Error {
 
 export class ClientSuppliedTenantIdError extends Error {
   constructor() {
-    super("client-supplied tenantId is not trusted; tenant context is derived server-side");
+    super(
+      "client-supplied tenantId is not trusted; tenant context is derived server-side",
+    );
     this.name = "ClientSuppliedTenantIdError";
   }
 }

@@ -1,4 +1,12 @@
-import { Controller, Get, HttpException, HttpStatus, Inject, Query, Req } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Query,
+  Req,
+} from "@nestjs/common";
 import { AuditService } from "./audit.service.js";
 import { Permissions, TenantScope } from "../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
@@ -10,9 +18,21 @@ export class AuditController {
   @TenantScope()
   @Permissions("audit.view")
   @Get()
-  async list(@Req() req: AuthenticatedRequest, @Query("limit") limit?: unknown) {
+  async list(
+    @Req() req: AuthenticatedRequest,
+    @Query("limit") limit?: unknown,
+  ) {
     const tenantId = req.principal?.tenantId;
-    if (!tenantId) throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
-    return { data: await this.audit.list(tenantId, typeof limit === "string" ? Number(limit) : 50) };
+    if (!tenantId)
+      throw new HttpException(
+        "tenant context missing",
+        HttpStatus.UNAUTHORIZED,
+      );
+    return {
+      data: await this.audit.list(
+        tenantId,
+        typeof limit === "string" ? Number(limit) : 50,
+      ),
+    };
   }
 }

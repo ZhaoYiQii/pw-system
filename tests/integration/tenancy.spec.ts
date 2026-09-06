@@ -23,7 +23,9 @@ describe("tenancy: create + resolve tenant (integration)", () => {
     if (owner) {
       if (tenantId) {
         await owner.tenantDomain.deleteMany({ where: { tenantId } });
-        await owner.tenant.delete({ where: { id: tenantId } }).catch(() => undefined);
+        await owner.tenant
+          .delete({ where: { id: tenantId } })
+          .catch(() => undefined);
       }
       await owner.$disconnect();
     }
@@ -32,15 +34,15 @@ describe("tenancy: create + resolve tenant (integration)", () => {
   it("平台创建租户并通过域名解析回租户", async () => {
     const host = `resolve-${suffix}.example.com`;
     const tenant = await owner.tenant.create({
-      data: { code: `res_${suffix}`, name: "解析测试店" }
+      data: { code: `res_${suffix}`, name: "解析测试店" },
     });
     tenantId = tenant.id;
     await owner.tenantDomain.create({
-      data: { tenantId: tenant.id, host, isPrimary: true }
+      data: { tenantId: tenant.id, host, isPrimary: true },
     });
     const resolved = await owner.tenantDomain.findFirst({
       where: { host },
-      include: { tenant: true }
+      include: { tenant: true },
     });
     expect(resolved?.tenant.id).toBe(tenant.id);
     expect(resolved?.tenant.status).toBe("ACTIVE");
@@ -50,7 +52,7 @@ describe("tenancy: create + resolve tenant (integration)", () => {
     const code = `dup_${suffix}`;
     await owner.tenant.create({ data: { code, name: "首次" } });
     await expect(
-      owner.tenant.create({ data: { code, name: "重复" } })
+      owner.tenant.create({ data: { code, name: "重复" } }),
     ).rejects.toThrow();
     await owner.tenant.deleteMany({ where: { code } });
   });

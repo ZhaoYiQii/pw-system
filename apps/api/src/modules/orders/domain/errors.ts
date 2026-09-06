@@ -42,7 +42,9 @@ export class ProductNotInTenantError extends Error {
 
 export class PricingRuleMissingError extends Error {
   constructor(productId: string, durationSeconds: number) {
-    super(`no enabled pricing rule for product ${productId} @ ${durationSeconds}s`);
+    super(
+      `no enabled pricing rule for product ${productId} @ ${durationSeconds}s`,
+    );
     this.name = "PricingRuleMissingError";
   }
 }

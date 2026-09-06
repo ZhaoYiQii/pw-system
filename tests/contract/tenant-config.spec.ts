@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TENANT_CONFIG, safeParseTenantConfig } from "../../packages/config-schema/src/index.js";
-import { ADDON_FEATURES, CORE_FEATURES, FEATURE_KEYS, isCoreFeature } from "../../apps/api/src/modules/entitlements/domain/features.js";
+import {
+  DEFAULT_TENANT_CONFIG,
+  safeParseTenantConfig,
+} from "../../packages/config-schema/src/index.js";
+import {
+  ADDON_FEATURES,
+  CORE_FEATURES,
+  FEATURE_KEYS,
+  isCoreFeature,
+} from "../../apps/api/src/modules/entitlements/domain/features.js";
 
 describe("contract: tenant-config v1 + feature catalog", () => {
   it("默认配置通过契约 schema", () => {

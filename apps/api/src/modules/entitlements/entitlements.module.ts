@@ -17,19 +17,21 @@ export const ENTITLEMENT_DB_CLIENT = "ENTITLEMENT_DB_CLIENT";
         const url = process.env.DATABASE_URL;
         if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: PrismaEntitlementRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaEntitlementRepository(client)),
-      inject: [ENTITLEMENT_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaEntitlementRepository(client)),
+      inject: [ENTITLEMENT_DB_CLIENT],
     },
     {
       provide: EntitlementsService,
-      useFactory: (repo: PrismaEntitlementRepository) => new EntitlementsService(repo),
-      inject: [PrismaEntitlementRepository]
-    }
+      useFactory: (repo: PrismaEntitlementRepository) =>
+        new EntitlementsService(repo),
+      inject: [PrismaEntitlementRepository],
+    },
   ],
-  exports: [EntitlementsService]
+  exports: [EntitlementsService],
 })
 export class EntitlementsModule {}

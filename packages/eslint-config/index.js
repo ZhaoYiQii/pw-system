@@ -13,14 +13,14 @@ export default tseslint.config(
       "packages/api-client/src/**",
       ".pnpm-store/**",
       ".pnpm-cache/**",
-      "pnpm-lock.yaml"
-    ]
+      "pnpm-lock.yaml",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     rules: {
-      "no-undef": "off"
-    }
-  }
+      "no-undef": "off",
+    },
+  },
 );

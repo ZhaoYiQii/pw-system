@@ -27,41 +27,59 @@ const positiveFen = (label: string): SchemaProperty => ({
   type: "string",
   pattern: "^[1-9][0-9]*$",
   example: "1500",
-  description: `${label}（十进制字符串分，>0）`
+  description: `${label}（十进制字符串分，>0）`,
 });
 
 const nonNegativeFen = (label: string): SchemaProperty => ({
   type: "string",
   pattern: "^(?:0|[1-9][0-9]*)$",
   example: "800",
-  description: `${label}（十进制字符串分，>=0）`
+  description: `${label}（十进制字符串分，>=0）`,
 });
 
-const optionalString = (description: string, nullable = false): SchemaProperty => ({
+const optionalString = (
+  description: string,
+  nullable = false,
+): SchemaProperty => ({
   type: "string",
   nullable,
-  description
+  description,
 });
 
 const dateTime = (description: string, nullable = false): SchemaProperty => ({
   type: "string",
   format: "date-time",
   nullable,
-  description
+  description,
 });
 
 const integer = (description: string, minimum = 0): SchemaProperty => ({
   type: "integer",
   minimum,
-  description
+  description,
 });
 
-const bool = (description: string): SchemaProperty => ({ type: "boolean", description });
+const bool = (description: string): SchemaProperty => ({
+  type: "boolean",
+  description,
+});
 
-const stringField = (description: string): SchemaProperty => ({ type: "string", description });
+const stringField = (description: string): SchemaProperty => ({
+  type: "string",
+  description,
+});
 
-function object(required: string[], properties: Record<string, unknown>, description?: string): OpenApiSchema {
-  return { type: "object", required, properties, ...(description ? { description } : {}) };
+function object(
+  required: string[],
+  properties: Record<string, unknown>,
+  description?: string,
+): OpenApiSchema {
+  return {
+    type: "object",
+    required,
+    properties,
+    ...(description ? { description } : {}),
+  };
 }
 
 export function dataSchema(item: OpenApiSchema): OpenApiSchema {
@@ -78,9 +96,9 @@ export const pricingRuleBodySchema: OpenApiSchema = object(
     durationSeconds: integer("时长（秒）", 1),
     priceFen: positiveFen("售价"),
     playerCostFen: nonNegativeFen("陪玩成本"),
-    enabled: bool("是否启用")
+    enabled: bool("是否启用"),
   },
-  "创建价格规则"
+  "创建价格规则",
 );
 
 export const updatePricingRuleBodySchema: OpenApiSchema = object(
@@ -89,13 +107,23 @@ export const updatePricingRuleBodySchema: OpenApiSchema = object(
     durationSeconds: integer("时长（秒）", 1),
     priceFen: positiveFen("售价"),
     playerCostFen: nonNegativeFen("陪玩成本"),
-    enabled: bool("是否启用")
+    enabled: bool("是否启用"),
   },
-  "更新价格规则"
+  "更新价格规则",
 );
 
 export const pricingRuleSchema: OpenApiSchema = object(
-  ["id", "tenantId", "serviceProductId", "durationSeconds", "priceFen", "playerCostFen", "enabled", "createdAt", "updatedAt"],
+  [
+    "id",
+    "tenantId",
+    "serviceProductId",
+    "durationSeconds",
+    "priceFen",
+    "playerCostFen",
+    "enabled",
+    "createdAt",
+    "updatedAt",
+  ],
   {
     id: stringField("价格规则 id"),
     tenantId: stringField("租户 id"),
@@ -105,9 +133,9 @@ export const pricingRuleSchema: OpenApiSchema = object(
     playerCostFen: nonNegativeFen("陪玩成本"),
     enabled: bool("是否启用"),
     createdAt: dateTime("创建时间"),
-    updatedAt: dateTime("更新时间")
+    updatedAt: dateTime("更新时间"),
   },
-  "价格规则（金额字段为十进制字符串分）"
+  "价格规则（金额字段为十进制字符串分）",
 );
 
 export const orderRequirementSchema: OpenApiSchema = object(
@@ -122,13 +150,22 @@ export const orderRequirementSchema: OpenApiSchema = object(
     durationSeconds: integer("时长（秒）", 1),
     minBudgetFen: nonNegativeFen("最低预算"),
     maxBudgetFen: nonNegativeFen("最高预算"),
-    note: optionalString("备注", true)
+    note: optionalString("备注", true),
   },
-  "订单需求"
+  "订单需求",
 );
 
 export const orderSnapshotLineSchema: OpenApiSchema = object(
-  ["serviceProductId", "productName", "regionName", "durationSeconds", "unitPriceFen", "playerCostFen", "lineTotalFen", "currency"],
+  [
+    "serviceProductId",
+    "productName",
+    "regionName",
+    "durationSeconds",
+    "unitPriceFen",
+    "playerCostFen",
+    "lineTotalFen",
+    "currency",
+  ],
   {
     serviceProductId: optionalString("服务产品 id", true),
     productName: stringField("产品名"),
@@ -137,9 +174,9 @@ export const orderSnapshotLineSchema: OpenApiSchema = object(
     unitPriceFen: positiveFen("单价"),
     playerCostFen: nonNegativeFen("陪玩成本"),
     lineTotalFen: positiveFen("行小计"),
-    currency: stringField("币种")
+    currency: stringField("币种"),
   },
-  "订单价格快照行"
+  "订单价格快照行",
 );
 
 const orderTimelineEventSchema: OpenApiSchema = object(
@@ -149,8 +186,8 @@ const orderTimelineEventSchema: OpenApiSchema = object(
     eventType: stringField("事件类型"),
     fromStatus: optionalString("原状态", true),
     toStatus: optionalString("目标状态", true),
-    occurredAt: dateTime("发生时间")
-  }
+    occurredAt: dateTime("发生时间"),
+  },
 );
 
 export const orderSchema: OpenApiSchema = object(
@@ -168,7 +205,7 @@ export const orderSchema: OpenApiSchema = object(
     "updatedAt",
     "requirement",
     "snapshot",
-    "timeline"
+    "timeline",
   ],
   {
     id: stringField("订单 id"),
@@ -182,15 +219,28 @@ export const orderSchema: OpenApiSchema = object(
     version: integer("乐观锁版本"),
     createdAt: dateTime("创建时间"),
     updatedAt: dateTime("更新时间"),
-    requirement: { type: "object", nullable: true, properties: orderRequirementSchema.properties, required: orderRequirementSchema.required },
+    requirement: {
+      type: "object",
+      nullable: true,
+      properties: orderRequirementSchema.properties,
+      required: orderRequirementSchema.required,
+    },
     snapshot: { type: "array", items: orderSnapshotLineSchema, nullable: true },
-    timeline: { type: "array", items: orderTimelineEventSchema }
+    timeline: { type: "array", items: orderTimelineEventSchema },
   },
-  "订单视图（金额字段为十进制字符串分）"
+  "订单视图（金额字段为十进制字符串分）",
 );
 
 export const hallOrderSchema: OpenApiSchema = object(
-  ["id", "orderNo", "productName", "durationSeconds", "unitPriceFen", "desiredStartAt", "createdAt"],
+  [
+    "id",
+    "orderNo",
+    "productName",
+    "durationSeconds",
+    "unitPriceFen",
+    "desiredStartAt",
+    "createdAt",
+  ],
   {
     id: stringField("订单 id"),
     orderNo: stringField("订单号"),
@@ -198,18 +248,18 @@ export const hallOrderSchema: OpenApiSchema = object(
     durationSeconds: integer("时长（秒）"),
     unitPriceFen: positiveFen("单价"),
     desiredStartAt: dateTime("期望开始", true),
-    createdAt: dateTime("创建时间")
+    createdAt: dateTime("创建时间"),
   },
-  "接单大厅订单"
+  "接单大厅订单",
 );
 
 export const accountingResultSchema: OpenApiSchema = object(
   ["earningId", "playerShareFen"],
   {
     earningId: stringField("earning id"),
-    playerShareFen: nonNegativeFen("陪玩分成")
+    playerShareFen: nonNegativeFen("陪玩分成"),
   },
-  "订单核算结果"
+  "订单核算结果",
 );
 
 export const playerFinanceSchema: OpenApiSchema = object(
@@ -217,23 +267,23 @@ export const playerFinanceSchema: OpenApiSchema = object(
   {
     pendingFen: nonNegativeFen("待入账金额"),
     batchedFen: nonNegativeFen("已入批金额"),
-    paidFen: nonNegativeFen("已支付金额")
+    paidFen: nonNegativeFen("已支付金额"),
   },
-  "陪玩财务汇总"
+  "陪玩财务汇总",
 );
 
 export const financeRulesSchema: OpenApiSchema = object(
   ["platformFeeBp", "storeCutBp"],
   {
     platformFeeBp: integer("平台费率 bp"),
-    storeCutBp: integer("门店抽成 bp")
-  }
+    storeCutBp: integer("门店抽成 bp"),
+  },
 );
 
 export const splitPreviewBodySchema: OpenApiSchema = object(
   ["amountFen"],
   { amountFen: positiveFen("老板应付金额") },
-  "分账试算入参（十进制字符串分）"
+  "分账试算入参（十进制字符串分）",
 );
 
 export const splitPreviewSchema: OpenApiSchema = object(
@@ -241,7 +291,7 @@ export const splitPreviewSchema: OpenApiSchema = object(
   {
     platformFeeFen: nonNegativeFen("平台服务费"),
     storeCutFen: nonNegativeFen("门店抽成"),
-    playerShareFen: nonNegativeFen("陪玩到手")
+    playerShareFen: nonNegativeFen("陪玩到手"),
   },
-  "分账试算结果"
+  "分账试算结果",
 );

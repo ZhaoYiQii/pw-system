@@ -1,8 +1,28 @@
-import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Inject, Param, Post, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Req,
+} from "@nestjs/common";
 import type { Request } from "express";
 import { TenancyService } from "../application/tenancy.service.js";
-import { DuplicateTenantCodeError, InvalidTenantCodeError, TenantNotFoundError } from "../domain/errors.js";
-import { PlatformScope, Permissions, Public } from "../../../common/auth/decorators.js";
+import {
+  DuplicateTenantCodeError,
+  InvalidTenantCodeError,
+  TenantNotFoundError,
+} from "../domain/errors.js";
+import {
+  PlatformScope,
+  Permissions,
+  Public,
+} from "../../../common/auth/decorators.js";
 
 interface CreateTenantBody {
   code?: unknown;
@@ -13,7 +33,10 @@ interface CreateTenantBody {
 
 function asString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) {
-    throw new HttpException(`${field} must be a non-empty string`, HttpStatus.BAD_REQUEST);
+    throw new HttpException(
+      `${field} must be a non-empty string`,
+      HttpStatus.BAD_REQUEST,
+    );
   }
   return value;
 }
@@ -21,7 +44,9 @@ function asString(value: unknown, field: string): string {
 // 平台运营接口；权限由全局 PermissionsGuard（@Permissions）统一强制。
 @Controller("api/v1")
 export class TenancyController {
-  constructor(@Inject(TenancyService) private readonly tenancy: TenancyService) {}
+  constructor(
+    @Inject(TenancyService) private readonly tenancy: TenancyService,
+  ) {}
 
   @Permissions("tenant.manage")
   @PlatformScope()
@@ -29,17 +54,26 @@ export class TenancyController {
   async createTenant(@Body() body: CreateTenantBody) {
     this.tenancy.assertNoClientTenantId(body);
     try {
-      const timezone = body.timezone === undefined ? undefined : asString(body.timezone, "timezone");
-      const primaryHost = body.primaryHost === undefined ? undefined : asString(body.primaryHost, "primaryHost");
+      const timezone =
+        body.timezone === undefined
+          ? undefined
+          : asString(body.timezone, "timezone");
+      const primaryHost =
+        body.primaryHost === undefined
+          ? undefined
+          : asString(body.primaryHost, "primaryHost");
       const tenant = await this.tenancy.createTenant({
         code: asString(body.code, "code"),
         name: asString(body.name, "name"),
         ...(timezone !== undefined ? { timezone } : {}),
-        ...(primaryHost !== undefined ? { primaryHost } : {})
+        ...(primaryHost !== undefined ? { primaryHost } : {}),
       });
       return { data: tenant };
     } catch (error) {
-      if (error instanceof InvalidTenantCodeError || error instanceof DuplicateTenantCodeError) {
+      if (
+        error instanceof InvalidTenantCodeError ||
+        error instanceof DuplicateTenantCodeError
+      ) {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
       }
       throw error;
@@ -86,5 +120,3 @@ export class TenancyController {
     }
   }
 }
-
-

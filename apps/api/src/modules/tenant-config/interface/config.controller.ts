@@ -1,13 +1,26 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Inject, Post, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Post,
+  Req,
+} from "@nestjs/common";
 import { TenantConfigService } from "../application/config.service.js";
-import { InvalidTenantConfigError, NoVersionToRollbackError } from "../domain/errors.js";
+import {
+  InvalidTenantConfigError,
+  NoVersionToRollbackError,
+} from "../domain/errors.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
-  if (!id) throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
+  if (!id)
+    throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
   return id;
 }
 
@@ -15,7 +28,7 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 export class TenantConfigController {
   constructor(
     @Inject(TenantConfigService) private readonly config: TenantConfigService,
-    @Inject(AuditService) private readonly audit: AuditService
+    @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
   @TenantScope()
@@ -28,9 +41,16 @@ export class TenantConfigController {
   @TenantScope()
   @Permissions("tenant.manage")
   @Post()
-  async save(@Req() req: AuthenticatedRequest, @Body() body: { config?: unknown }) {
+  async save(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { config?: unknown },
+  ) {
     try {
-      const saved = await this.config.save(tenantIdOf(req), body.config, req.principal?.sub);
+      const saved = await this.config.save(
+        tenantIdOf(req),
+        body.config,
+        req.principal?.sub,
+      );
       await this.audit.record({
         tenantId: tenantIdOf(req),
         actorType: req.principal?.role,
@@ -38,7 +58,7 @@ export class TenantConfigController {
         action: "tenant-config.save",
         resourceType: "tenant_config_version",
         resourceId: String(saved.version),
-        summary: `保存门店配置 v${saved.version}`
+        summary: `保存门店配置 v${saved.version}`,
       });
       return { data: saved };
     } catch (error) {
@@ -62,7 +82,7 @@ export class TenantConfigController {
         action: "tenant-config.rollback",
         resourceType: "tenant_config_version",
         resourceId: String(version),
-        summary: `回滚门店配置至 v${version}`
+        summary: `回滚门店配置至 v${version}`,
       });
       return { data: version };
     } catch (error) {

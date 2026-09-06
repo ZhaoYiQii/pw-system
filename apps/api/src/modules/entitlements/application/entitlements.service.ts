@@ -1,4 +1,8 @@
-import { isCoreFeature, isFeatureKey, type FeatureKey } from "../domain/features.js";
+import {
+  isCoreFeature,
+  isFeatureKey,
+  type FeatureKey,
+} from "../domain/features.js";
 import { FeatureDisabledError, UnknownFeatureError } from "../domain/errors.js";
 
 export interface FeatureRow {
@@ -20,15 +24,48 @@ export class EntitlementsService {
 
   async listFeatures(tenantId: string): Promise<FeatureState[]> {
     const rows = await this.repository.list(tenantId);
-    const enabledAddons = new Set(rows.filter((r) => r.enabled).map((r) => r.featureKey));
+    const enabledAddons = new Set(
+      rows.filter((r) => r.enabled).map((r) => r.featureKey),
+    );
     const all: FeatureState[] = [];
-    for (const key of ["core.tenancy", "core.identity", "core.audit", "core.customers", "core.players", "core.catalog", "core.orders", "core.dispatch", "core.sessions", "core.settlements", "addon.customer_self_service", "addon.player_order_hall", "addon.ai_requirement_parser", "addon.ai_match_recommendation", "addon.ai_anomaly_detection", "addon.advanced_reports", "addon.custom_domain", "addon.independent_miniprogram", "addon.online_payment", "addon.enterprise_wechat_notifications", "addon.chain_stores", "addon.open_api"]) {
-      all.push({ featureKey: key, core: isCoreFeature(key), enabled: isCoreFeature(key) ? true : enabledAddons.has(key) });
+    for (const key of [
+      "core.tenancy",
+      "core.identity",
+      "core.audit",
+      "core.customers",
+      "core.players",
+      "core.catalog",
+      "core.orders",
+      "core.dispatch",
+      "core.sessions",
+      "core.settlements",
+      "addon.customer_self_service",
+      "addon.player_order_hall",
+      "addon.ai_requirement_parser",
+      "addon.ai_match_recommendation",
+      "addon.ai_anomaly_detection",
+      "addon.advanced_reports",
+      "addon.custom_domain",
+      "addon.independent_miniprogram",
+      "addon.online_payment",
+      "addon.enterprise_wechat_notifications",
+      "addon.chain_stores",
+      "addon.open_api",
+    ]) {
+      all.push({
+        featureKey: key,
+        core: isCoreFeature(key),
+        enabled: isCoreFeature(key) ? true : enabledAddons.has(key),
+      });
     }
     return all;
   }
 
-  async setFeature(tenantId: string, key: string, enabled: boolean): Promise<void> {
+  async setFeature(
+    tenantId: string,
+    key: string,
+    enabled: boolean,
+  ): Promise<void> {
     if (!isFeatureKey(key)) throw new UnknownFeatureError(key);
     if (isCoreFeature(key)) {
       // core 常开；平台开关仅允许管理 addon

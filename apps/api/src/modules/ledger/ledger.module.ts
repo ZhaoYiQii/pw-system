@@ -8,7 +8,10 @@ import { PrismaSettlementsRepository } from "./infrastructure/prisma-settlements
 import { LedgerService } from "./application/ledger.service.js";
 import { PlatformFinanceController } from "./interface/platform-finance.controller.js";
 import { TenantFinanceController } from "./interface/tenant-finance.controller.js";
-import { AccountingController, PlayerFinanceController } from "./interface/ledger.controller.js";
+import {
+  AccountingController,
+  PlayerFinanceController,
+} from "./interface/ledger.controller.js";
 import { SettlementsController } from "./interface/settlements.controller.js";
 import { PlayersModule } from "../players/players.module.js";
 
@@ -21,7 +24,7 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
     TenantFinanceController,
     AccountingController,
     PlayerFinanceController,
-    SettlementsController
+    SettlementsController,
   ],
   providers: [
     {
@@ -30,34 +33,37 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
         const url = process.env.DATABASE_URL;
         if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: LedgerRulesRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new LedgerRulesRepository(client)),
-      inject: [LEDGER_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new LedgerRulesRepository(client)),
+      inject: [LEDGER_DB_CLIENT],
     },
     {
       provide: LedgerRulesService,
       useFactory: (repo: LedgerRulesRepository) => new LedgerRulesService(repo),
-      inject: [LedgerRulesRepository]
+      inject: [LedgerRulesRepository],
     },
     {
       provide: PrismaLedgerRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaLedgerRepository(client)),
-      inject: [LEDGER_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaLedgerRepository(client)),
+      inject: [LEDGER_DB_CLIENT],
     },
     {
       provide: LedgerService,
       useFactory: (repo: PrismaLedgerRepository) => new LedgerService(repo),
-      inject: [PrismaLedgerRepository]
+      inject: [PrismaLedgerRepository],
     },
     {
       provide: PrismaSettlementsRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaSettlementsRepository(client)),
-      inject: [LEDGER_DB_CLIENT]
-    }
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaSettlementsRepository(client)),
+      inject: [LEDGER_DB_CLIENT],
+    },
   ],
-  exports: [LedgerService, LedgerRulesService]
+  exports: [LedgerService, LedgerRulesService],
 })
 export class LedgerModule {}

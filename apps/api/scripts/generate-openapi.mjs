@@ -5,9 +5,12 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { stringify } from "yaml";
 
-process.env.DATABASE_URL ??= "postgresql://pw_runtime:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
-process.env.PLATFORM_DATABASE_URL ??= "postgresql://pw:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
-process.env.DATABASE_MIGRATION_URL ??= "postgresql://pw:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
+process.env.DATABASE_URL ??=
+  "postgresql://pw_runtime:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
+process.env.PLATFORM_DATABASE_URL ??=
+  "postgresql://pw:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
+process.env.DATABASE_MIGRATION_URL ??=
+  "postgresql://pw:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
 process.env.SESSION_SECRET ??= "openapi-generate-only-secret-not-for-auth";
 
 const { buildApiDocument } = await import("../dist/openapi/contract.js");

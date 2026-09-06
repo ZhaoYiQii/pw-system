@@ -35,18 +35,38 @@ export class PlatformBillingService {
 
   async onboard(input: OnboardInput, actorId: string) {
     const pkg = packageByCode(input.packageCode ?? "BASIC");
-    if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(input.code)) throw new Error("门店 code 非法");
-    if (!input.host || !input.ownerUsername || input.ownerPassword.length < 8) throw new Error("host/owner 凭据不完整");
-    if (!input.brandPrimary || !/^#[0-9a-fA-F]{6}$/.test(input.brandPrimary)) throw new Error("缺少合法品牌主色（开通不完整）");
+    if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(input.code))
+      throw new Error("门店 code 非法");
+    if (!input.host || !input.ownerUsername || input.ownerPassword.length < 8)
+      throw new Error("host/owner 凭据不完整");
+    if (!input.brandPrimary || !/^#[0-9a-fA-F]{6}$/.test(input.brandPrimary))
+      throw new Error("缺少合法品牌主色（开通不完整）");
     const storeCutBp = input.storeCutBp ?? 2000;
-    if (storeCutBp < 0 || storeCutBp + 300 > 10000) throw new Error("门店抽成非法");
+    if (storeCutBp < 0 || storeCutBp + 300 > 10000)
+      throw new Error("门店抽成非法");
 
     const created = await this.client.$transaction(async (tx) => {
-      const tenant = await tx.tenant.create({ data: { code: input.code, name: input.name, status: "ACTIVE" } });
-      await tx.tenantDomain.create({ data: { tenantId: tenant.id, host: input.host, isPrimary: true } });
+      const tenant = await tx.tenant.create({
+        data: { code: input.code, name: input.name, status: "ACTIVE" },
+      });
+      await tx.tenantDomain.create({
+        data: { tenantId: tenant.id, host: input.host, isPrimary: true },
+      });
       const passHash = await hashPassword(input.ownerPassword);
-      const account = await tx.tenantAccount.create({ data: { tenantId: tenant.id, username: input.ownerUsername, passwordHash: passHash } });
-      await tx.tenantAccountRole.create({ data: { tenantId: tenant.id, tenantAccountId: account.id, role: "TENANT_OWNER" } });
+      const account = await tx.tenantAccount.create({
+        data: {
+          tenantId: tenant.id,
+          username: input.ownerUsername,
+          passwordHash: passHash,
+        },
+      });
+      await tx.tenantAccountRole.create({
+        data: {
+          tenantId: tenant.id,
+          tenantAccountId: account.id,
+          role: "TENANT_OWNER",
+        },
+      });
       await tx.tenantConfigVersion.create({
         data: {
           tenantId: tenant.id,
@@ -58,15 +78,26 @@ export class PlatformBillingService {
               primaryColor: input.brandPrimary,
               accentColor: input.brandAccent ?? "#fa8c16",
               logoText: (input.logoText ?? input.name).slice(0, 40),
-              borderRadius: 8
+              borderRadius: 8,
             },
-            storefront: { allowCustomerSelection: true, showServiceDuration: true }
+            storefront: {
+              allowCustomerSelection: true,
+              showServiceDuration: true,
+            },
           },
-          createdBy: actorId
-        }
+          createdBy: actorId,
+        },
       });
-      await tx.financeRateRule.create({ data: { tenantId: tenant.id, platformFeeBp: 300, storeCutBp } });
-      await tx.tenantSubscription.create({ data: { tenantId: tenant.id, packageCode: pkg?.code ?? "BASIC", status: "ACTIVE" } });
+      await tx.financeRateRule.create({
+        data: { tenantId: tenant.id, platformFeeBp: 300, storeCutBp },
+      });
+      await tx.tenantSubscription.create({
+        data: {
+          tenantId: tenant.id,
+          packageCode: pkg?.code ?? "BASIC",
+          status: "ACTIVE",
+        },
+      });
       return tenant;
     });
     await this.client.auditLog.create({
@@ -77,8 +108,8 @@ export class PlatformBillingService {
         action: "tenant.onboard",
         resourceType: "tenant",
         resourceId: created.id,
-        summary: `平台开通门店 ${created.code}`
-      }
+        summary: `平台开通门店 ${created.code}`,
+      },
     });
     if (pkg) await this.assignPackage(created.id, pkg.code, actorId);
     return { tenantId: created.id, tenantCode: created.code };
@@ -90,13 +121,32 @@ export class PlatformBillingService {
     await this.client.$transaction(async (tx) => {
       const t = await tx.tenant.findFirst({ where: { id: tenantId } });
       if (!t) throw new Error("租户不存在");
-      await tx.tenantSubscription.create({ data: { tenantId, packageCode: pkg.code, status: "ACTIVE" } });
-      await tx.tenantEntitlement.deleteMany({ where: { tenantId, featureKey: { startsWith: "addon." } } });
+      await tx.tenantSubscription.create({
+        data: { tenantId, packageCode: pkg.code, status: "ACTIVE" },
+      });
+      await tx.tenantEntitlement.deleteMany({
+        where: { tenantId, featureKey: { startsWith: "addon." } },
+      });
       for (const addon of pkg.addons) {
-        await tx.tenantEntitlement.create({ data: { tenantId, featureKey: addon, enabled: true, source: `package:${pkg.code}` } });
+        await tx.tenantEntitlement.create({
+          data: {
+            tenantId,
+            featureKey: addon,
+            enabled: true,
+            source: `package:${pkg.code}`,
+          },
+        });
       }
       await tx.auditLog.create({
-        data: { tenantId, actorType: "platform_account", actorId, action: "tenant.package.assign", resourceType: "tenant", resourceId: tenantId, summary: `指派套餐 ${pkg.code}` }
+        data: {
+          tenantId,
+          actorType: "platform_account",
+          actorId,
+          action: "tenant.package.assign",
+          resourceType: "tenant",
+          resourceId: tenantId,
+          summary: `指派套餐 ${pkg.code}`,
+        },
       });
     });
     return { tenantId, packageCode: pkg.code, addons: pkg.addons };
@@ -105,7 +155,10 @@ export class PlatformBillingService {
   async activate(tenantId: string, actorId: string) {
     const t = await this.client.tenant.findFirst({ where: { id: tenantId } });
     if (!t) throw new Error("租户不存在");
-    await this.client.tenant.update({ where: { id: tenantId }, data: { status: "ACTIVE" } });
+    await this.client.tenant.update({
+      where: { id: tenantId },
+      data: { status: "ACTIVE" },
+    });
     await this.client.auditLog.create({
       data: {
         tenantId,
@@ -114,8 +167,8 @@ export class PlatformBillingService {
         action: "tenant.activate",
         resourceType: "tenant",
         resourceId: tenantId,
-        summary: "激活门店"
-      }
+        summary: "激活门店",
+      },
     });
     return { id: tenantId, status: "ACTIVE" };
   }

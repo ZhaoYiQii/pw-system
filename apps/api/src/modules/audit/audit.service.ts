@@ -22,12 +22,16 @@ export class AuditService {
         action: input.action,
         resourceType: input.resourceType ?? null,
         resourceId: input.resourceId ?? null,
-        summary: input.summary ? input.summary.slice(0, 500) : null
-      }
+        summary: input.summary ? input.summary.slice(0, 500) : null,
+      },
     });
   }
 
   async list(tenantId: string, limit: number): Promise<unknown[]> {
-    return this.client.auditLog.findMany({ where: { tenantId }, orderBy: { createdAt: "desc" }, take: Math.min(limit || 50, 200) });
+    return this.client.auditLog.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(limit || 50, 200),
+    });
   }
 }

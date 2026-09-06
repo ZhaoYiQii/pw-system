@@ -2,31 +2,17 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "lib/**",
-        "build/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "lib/**", "build/**"]
     },
     "typecheck": {
-      "dependsOn": [
-        "^build",
-        "^typecheck"
-      ]
+      "dependsOn": ["^build", "^typecheck"]
     },
     "build:h5": {
-      "outputs": [
-        "dist/**"
-      ]
+      "outputs": ["dist/**"]
     },
     "build:weapp": {
-      "outputs": [
-        "dist/**"
-      ]
+      "outputs": ["dist/**"]
     }
   }
 }

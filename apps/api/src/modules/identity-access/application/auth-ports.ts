@@ -45,15 +45,22 @@ export interface AuthAuditEntry {
 }
 
 export interface AuthRepository {
-  findPlatformAccountByUsername(username: string): Promise<PlatformAccountRecord | null>;
+  findPlatformAccountByUsername(
+    username: string,
+  ): Promise<PlatformAccountRecord | null>;
   findPlatformAccountById(id: string): Promise<PlatformAccountRecord | null>;
   findTenantAccountByCodeAndUsername(
     tenantCode: string,
-    username: string
+    username: string,
   ): Promise<TenantAccountRecord | null>;
-  findTenantAccountById(accountId: string, tenantId?: string | null): Promise<TenantAccountRecord | null>;
+  findTenantAccountById(
+    accountId: string,
+    tenantId?: string | null,
+  ): Promise<TenantAccountRecord | null>;
   createRefreshSession(session: NewRefreshSession): Promise<void>;
-  findRefreshSessionByTokenHash(tokenHash: string): Promise<RefreshSessionRecord | null>;
+  findRefreshSessionByTokenHash(
+    tokenHash: string,
+  ): Promise<RefreshSessionRecord | null>;
   revokeRefreshSession(id: string): Promise<void>;
   recordAudit(entry: AuthAuditEntry): Promise<void>;
 }

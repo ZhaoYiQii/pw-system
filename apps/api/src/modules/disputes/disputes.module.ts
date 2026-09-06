@@ -13,9 +13,23 @@ export const DISPUTES_DB_CLIENT = "DISPUTES_DB_CLIENT";
   imports: [AuditModule, CustomersModule, OrdersModule],
   controllers: [DisputesController],
   providers: [
-    { provide: DISPUTES_DB_CLIENT, useFactory: () => { const url = process.env.DATABASE_URL; if (!url) throw new Error("db url missing"); return createDatabaseClient(url); } },
-    { provide: DisputesService, useFactory: (c: ReturnType<typeof createDatabaseClient>, a: AuditService) => new DisputesService(c, a), inject: [DISPUTES_DB_CLIENT, AuditService] }
+    {
+      provide: DISPUTES_DB_CLIENT,
+      useFactory: () => {
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("db url missing");
+        return createDatabaseClient(url);
+      },
+    },
+    {
+      provide: DisputesService,
+      useFactory: (
+        c: ReturnType<typeof createDatabaseClient>,
+        a: AuditService,
+      ) => new DisputesService(c, a),
+      inject: [DISPUTES_DB_CLIENT, AuditService],
+    },
   ],
-  exports: [DisputesService]
+  exports: [DisputesService],
 })
 export class DisputesModule {}

@@ -12,7 +12,16 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/integration/**/*.spec.ts"],
+    include: [
+      "tests/integration/orders.spec.ts",
+      "tests/integration/order-state-machine.spec.ts",
+      "tests/integration/dispatch-concurrency.spec.ts",
+      "tests/integration/session-idempotency.spec.ts",
+      "tests/integration/finance-rules.spec.ts",
+      "tests/integration/ledger-invariants.spec.ts",
+      "tests/integration/settlement-concurrency.spec.ts",
+      "tests/integration/audit-coverage.spec.ts",
+    ],
     env: {
       DATABASE_URL:
         process.env.DATABASE_URL ??

@@ -10,5 +10,5 @@ export const identityAdapter: IdentityAdapter = {
   },
   async logout() {
     throw new Error("WECHAT_IDENTITY_NOT_CONFIGURED");
-  }
+  },
 };

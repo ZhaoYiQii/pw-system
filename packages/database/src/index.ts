@@ -23,7 +23,7 @@ export function createDatabaseClient(connectionString: string): PrismaClient {
 export async function withTenantContext<T>(
   client: PrismaClient,
   tenantId: string,
-  fn: (tx: DbTransaction) => Promise<T>
+  fn: (tx: DbTransaction) => Promise<T>,
 ): Promise<T> {
   return client.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;

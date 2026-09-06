@@ -14,6 +14,6 @@ export interface WorkerRuntime {
  */
 export function inspectRuntime(): WorkerRuntime {
   return {
-    queue: { ready: false, reason: "QUEUE_NOT_CONFIGURED_IN_SLICE_0" }
+    queue: { ready: false, reason: "QUEUE_NOT_CONFIGURED_IN_SLICE_0" },
   };
 }

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Inject, Param, Patch, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Param,
+  Patch,
+  Req,
+} from "@nestjs/common";
 import { LedgerRulesService } from "../application/ledger-rules.service.js";
 import { PlatformScope, Permissions } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
@@ -8,7 +18,7 @@ import { AuditService } from "../../audit/audit.service.js";
 export class PlatformFinanceController {
   constructor(
     @Inject(LedgerRulesService) private readonly rules: LedgerRulesService,
-    @Inject(AuditService) private readonly audit: AuditService
+    @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
   @PlatformScope()
@@ -21,9 +31,16 @@ export class PlatformFinanceController {
   @PlatformScope()
   @Permissions("platform.manage")
   @Patch()
-  async set(@Req() req: AuthenticatedRequest, @Param("tenantId") tenantId: string, @Body() body: { platformFeeBp?: unknown }) {
+  async set(
+    @Req() req: AuthenticatedRequest,
+    @Param("tenantId") tenantId: string,
+    @Body() body: { platformFeeBp?: unknown },
+  ) {
     try {
-      const updated = await this.rules.setPlatformFee(tenantId, body.platformFeeBp);
+      const updated = await this.rules.setPlatformFee(
+        tenantId,
+        body.platformFeeBp,
+      );
       await this.audit.record({
         tenantId,
         actorType: req.principal?.role,
@@ -31,11 +48,14 @@ export class PlatformFinanceController {
         action: "finance-rules.platform-fee",
         resourceType: "finance_rate_rule",
         resourceId: tenantId,
-        summary: `平台调整平台费率至 ${updated.platformFeeBp}bp`
+        summary: `平台调整平台费率至 ${updated.platformFeeBp}bp`,
       });
       return { data: updated };
     } catch (error) {
-      throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        error instanceof Error ? error.message : String(error),
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 }

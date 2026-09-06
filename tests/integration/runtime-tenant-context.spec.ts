@@ -30,9 +30,19 @@ describe("A4 runtime RLS acceptance (HTTP path + pw_runtime)", () => {
     runtime = createDatabaseClient(envOrThrow("PW_TEST_RUNTIME_URL"));
     const hash = await hashPassword(PW);
     async function make(code: string, username: string) {
-      const tenant = await migration.tenant.create({ data: { code, name: code } });
-      const account = await migration.tenantAccount.create({ data: { tenantId: tenant.id, username, passwordHash: hash } });
-      await migration.tenantAccountRole.create({ data: { tenantId: tenant.id, tenantAccountId: account.id, role: "TENANT_OWNER" } });
+      const tenant = await migration.tenant.create({
+        data: { code, name: code },
+      });
+      const account = await migration.tenantAccount.create({
+        data: { tenantId: tenant.id, username, passwordHash: hash },
+      });
+      await migration.tenantAccountRole.create({
+        data: {
+          tenantId: tenant.id,
+          tenantAccountId: account.id,
+          role: "TENANT_OWNER",
+        },
+      });
       return { tenant, account };
     }
     const a = await make(`ra_${suffix}`, "boss_a");
@@ -40,11 +50,16 @@ describe("A4 runtime RLS acceptance (HTTP path + pw_runtime)", () => {
     tenantA = { id: a.tenant.id, code: a.tenant.code };
     tenantB = { id: b.tenant.id, code: b.tenant.code };
 
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
     async function login(code: string, username: string) {
-      const res = await request(app.getHttpServer()).post("/api/v1/auth/login").send({ kind: "tenant", tenantCode: code, username, password: PW }).expect(201);
+      const res = await request(app.getHttpServer())
+        .post("/api/v1/auth/login")
+        .send({ kind: "tenant", tenantCode: code, username, password: PW })
+        .expect(201);
       return (res.body as { data: { accessToken: string } }).data.accessToken;
     }
     ownerAToken = await login(tenantA.code, "boss_a");
@@ -55,9 +70,13 @@ describe("A4 runtime RLS acceptance (HTTP path + pw_runtime)", () => {
     if (migration) {
       for (const t of [tenantA, tenantB]) {
         if (!t) continue;
-        await migration.customerProfile.deleteMany({ where: { tenantId: t.id } });
+        await migration.customerProfile.deleteMany({
+          where: { tenantId: t.id },
+        });
         await migration.auditLog.deleteMany({ where: { tenantId: t.id } });
-        await migration.tenantAccountRole.deleteMany({ where: { tenantId: t.id } });
+        await migration.tenantAccountRole.deleteMany({
+          where: { tenantId: t.id },
+        });
         await migration.tenantAccount.deleteMany({ where: { tenantId: t.id } });
         await migration.tenant.deleteMany({ where: { id: t.id } });
       }
@@ -68,16 +87,20 @@ describe("A4 runtime RLS acceptance (HTTP path + pw_runtime)", () => {
   });
 
   it("pw_runtime 无 GUC 时读不到任意租户账号（RLS 默认拒绝）", async () => {
-    const count = await runtime.tenantAccount.count({ where: { tenantId: { in: [tenantA.id, tenantB.id] } } });
+    const count = await runtime.tenantAccount.count({
+      where: { tenantId: { in: [tenantA.id, tenantB.id] } },
+    });
     expect(count).toBe(0);
   });
 
   it("A 店 token 不能读/改 B 店资源（HTTP 404），不匹配 tenantId 被全局拒绝", async () => {
-    const createdA = (await request(app.getHttpServer())
-      .post("/api/v1/tenant/customers")
-      .set("authorization", `Bearer ${ownerAToken}`)
-      .send({ name: "A 店客户" })
-      .expect(201)).body.data as { id: string };
+    const createdA = (
+      await request(app.getHttpServer())
+        .post("/api/v1/tenant/customers")
+        .set("authorization", `Bearer ${ownerAToken}`)
+        .send({ name: "A 店客户" })
+        .expect(201)
+    ).body.data as { id: string };
 
     await request(app.getHttpServer())
       .get(`/api/v1/tenant/customers/${createdA.id}`)

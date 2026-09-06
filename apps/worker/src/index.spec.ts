@@ -4,7 +4,7 @@ import { inspectRuntime } from "./index.js";
 describe("worker runtime (Slice 0 skeleton)", () => {
   it("reports queue as typed unsupported until a later slice", () => {
     expect(inspectRuntime()).toEqual({
-      queue: { ready: false, reason: "QUEUE_NOT_CONFIGURED_IN_SLICE_0" }
+      queue: { ready: false, reason: "QUEUE_NOT_CONFIGURED_IN_SLICE_0" },
     });
   });
 });

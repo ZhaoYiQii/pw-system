@@ -27,7 +27,10 @@ export function clearAccessToken(): void {
 }
 
 /** 统一请求：自动附加 Bearer access token，解包 { data }，401 清 token。 */
-export async function apiFetch<T = unknown>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T = unknown>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const token = getAccessToken();
   const headers = new Headers(init?.headers);
   headers.set("content-type", "application/json");

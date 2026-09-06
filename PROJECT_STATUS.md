@@ -30,29 +30,35 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 1. **小程序开发暂缓**：第一期推进期间不做微信小程序“开发/真机/审核/发布”；保留 `pnpm build:weapp` 作为兼容性编译门禁（防止移动端源码破坏双端可移植性），该门禁已全绿。Slice 13 与 weapp 增值服务相关工作整体后移，需另行授权。
 2. **mobile React 大版本**：接受 mobile 使用 React 18.3.1 作为当前基线（Taro 4.2.1 上游仅支持 react@^18），React 19 升版挂起，待 Taro 上游支持后作为独立任务；admin-web 保持 React 19.2.8。详见 ADR-0000。
 3. **远程仓库**：未提供远程地址与鉴权前，不执行任何 push/上传源码；CI workflow 仅在本地等价命令维度验证。- 2026-09-06 | 远程：`git push -u origin master` 退出码 0（gh 鉴权补充 workflow 权限后成功）；GitHub Actions CI 运行 34025773595 通过（1m7s，lint/typecheck/test/build/build:h5/build:weapp 全 ✓）。
+
 ## Slice 1 进度（2026-09-06，partial）
 
 - 完成：packages/database（Prisma 7 + tenancy 表 + FORCE RLS + pw_runtime 角色）；迁移已应用到 pw_saas 与 pw_saas_test；test:tenant-isolation 6/6、test:integration 2/2；回归全绿。
 - 未完成：API tenancy 模块/tenant-context、平台后台租户页、移动端 tenant-locator、停用不可用页。
 - 容器端口因宿主机原生服务占用改为 5433/6380/9002/9003。
 - 证据：prisma migrate deploy exit 0；vitest 输出见 docs/acceptance/slice-1-acceptance.md。
+
 ## Slice 1 收尾（2026-09-06）
 
 - 完成剩余项：API tenancy 模块 + 拒绝客户端 tenantId；平台后台 /tenants 页；mobile tenant-locator（h5/weapp）+ 停用不可用页。Slice 1 代码层面完成。
 - 证据：typecheck 6/6、lint、unit 3/3、build 4/4、test:integration 8/8、test:tenant-isolation 6/6、build:h5、build:weapp 全绿（本地）。CI（GitHub Actions）跑 lint/typecheck/test/build/双端。
 - 遗留（非阻塞）：平台接口认证属 Slice 2；admin/mobile 运行态 E2E 需运行中的 API+真实域名，按验收命令范围以构建级为准。
+
 ## Slice 2 进度（2026-09-06，partial）
 
 - 完成：迁移 auth_rbac 应用；scrypt 密码；jose access/refresh 旋转会话；AuthGuard(@Public/@PlatformScope/@TenantScope)；auth 端点；admin 登录页(/login、/store/login)；mobile identity-adapter。unit 7/7、integration 15/15、tenant-isolation 9/9、typecheck/lint/build/双端全绿。
 - 未完成：HTTP 级权限矩阵、H5 登录 E2E、HttpOnly cookie+CSRF/Origin、限流、初始管理员 seed。
+
 ## Slice 2 收尾（2026-09-06）
 
 - 完成 HTTP 级权限矩阵、HttpOnly cookie+Origin 校验、登录限流、seed；HTTP E2E 5 用例；test:integration 20/20、unit 7/7、isolation 9/9、全量构建/双端绿。
 - 剩余（记录）：H5 浏览器登录 E2E 待 mobile H5 登录 UI（业务切片）；多实例限流 Redis（Slice 9）。
+
 ## Slice 3 进度（2026-09-06，Phase A partial）
 
 - 完成 @pw/config-schema（Zod4 配置 schema/默认值/合并/测试 5 项），unit 12/12。
 - 剩余：config/entitlements 表与 API、admin/mobile 主题应用、契约测试（见台账 D）。
+
 ## Slice 3 Phase B（2026-09-06）
 
 - 完成迁移3（config_versions/entitlements+RLS）、tenant-config/entitlements API、契约测试；test:integration 25/25、contract 3/3、unit 12/12、typecheck 8/8、build/双端绿。

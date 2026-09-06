@@ -22,7 +22,9 @@ try {
   if (rows.length > 0) {
     console.error(`ledger unbalanced: ${rows.length} transaction(s)`);
     for (const r of rows.slice(0, 20)) {
-      console.error(`tenant=${r.tenant_id} tx=${r.transaction_id} debit=${r.debit ?? 0n} credit=${r.credit ?? 0n}`);
+      console.error(
+        `tenant=${r.tenant_id} tx=${r.transaction_id} debit=${r.debit ?? 0n} credit=${r.credit ?? 0n}`,
+      );
     }
     process.exit(1);
   }

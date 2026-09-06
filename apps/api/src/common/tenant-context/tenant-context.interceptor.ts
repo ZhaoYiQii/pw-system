@@ -3,7 +3,7 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
-  NestInterceptor
+  NestInterceptor,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -38,12 +38,21 @@ export class TenantContextInterceptor implements NestInterceptor {
     const body: unknown = (req as { body?: unknown }).body;
     if (body !== null && typeof body === "object") {
       const record = body as Record<string, unknown>;
-      if (record.tenantId !== undefined && record.tenantId !== principal.tenantId) {
-        throw new BadRequestException("client-supplied tenantId does not match session tenant");
+      if (
+        record.tenantId !== undefined &&
+        record.tenantId !== principal.tenantId
+      ) {
+        throw new BadRequestException(
+          "client-supplied tenantId does not match session tenant",
+        );
       }
     }
 
-    const requestId = (req.headers["x-request-id"] as string | undefined) || randomUUID();
-    return store.run({ tenantId: principal.tenantId, source: "session", requestId }, () => next.handle());
+    const requestId =
+      (req.headers["x-request-id"] as string | undefined) || randomUUID();
+    return store.run(
+      { tenantId: principal.tenantId, source: "session", requestId },
+      () => next.handle(),
+    );
   }
 }

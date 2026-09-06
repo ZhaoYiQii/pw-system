@@ -17,7 +17,7 @@ export const identityAdapter: IdentityAdapter = {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(input)
+      body: JSON.stringify(input),
     });
     const body = (await res.json()) as { data?: IdentitySession };
     if (!res.ok || !body.data) throw new Error(`login failed: ${res.status}`);
@@ -30,7 +30,7 @@ export const identityAdapter: IdentityAdapter = {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ scope })
+      body: JSON.stringify({ scope }),
     });
     const body = (await res.json()) as { data?: IdentitySession };
     if (!res.ok || !body.data) throw new Error(`refresh failed: ${res.status}`);
@@ -42,8 +42,8 @@ export const identityAdapter: IdentityAdapter = {
       await fetch(`${base}/api/v1/auth/logout`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        credentials: "include"
+        credentials: "include",
       });
     }
-  }
+  },
 };

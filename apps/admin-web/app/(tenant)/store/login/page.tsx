@@ -24,7 +24,12 @@ export default function TenantLoginPage() {
     try {
       const data = await apiFetch<LoginResult>("/api/v1/auth/login", {
         method: "POST",
-        body: JSON.stringify({ kind: "tenant", tenantCode, username, password })
+        body: JSON.stringify({
+          kind: "tenant",
+          tenantCode,
+          username,
+          password,
+        }),
       });
       setAccessToken(data.accessToken);
       router.push("/settings");
@@ -92,4 +97,3 @@ export default function TenantLoginPage() {
     </main>
   );
 }
-

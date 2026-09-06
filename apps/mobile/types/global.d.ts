@@ -14,7 +14,17 @@ declare module "*.styl";
 declare namespace NodeJS {
   interface ProcessEnv {
     NODE_ENV: "development" | "production";
-    TARO_ENV: "weapp" | "swan" | "alipay" | "h5" | "rn" | "tt" | "qq" | "jd" | "harmony" | "jdrn";
+    TARO_ENV:
+      | "weapp"
+      | "swan"
+      | "alipay"
+      | "h5"
+      | "rn"
+      | "tt"
+      | "qq"
+      | "jd"
+      | "harmony"
+      | "jdrn";
     TARO_APP_ID: string;
   }
 }

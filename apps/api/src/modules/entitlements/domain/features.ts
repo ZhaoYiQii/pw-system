@@ -9,7 +9,7 @@ export const CORE_FEATURES = [
   "core.orders",
   "core.dispatch",
   "core.sessions",
-  "core.settlements"
+  "core.settlements",
 ] as const;
 
 export const ADDON_FEATURES = [
@@ -24,7 +24,7 @@ export const ADDON_FEATURES = [
   "addon.online_payment",
   "addon.enterprise_wechat_notifications",
   "addon.chain_stores",
-  "addon.open_api"
+  "addon.open_api",
 ] as const;
 
 export const FEATURE_KEYS = [...CORE_FEATURES, ...ADDON_FEATURES] as const;

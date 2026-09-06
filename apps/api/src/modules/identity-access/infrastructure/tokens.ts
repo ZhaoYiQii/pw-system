@@ -39,7 +39,9 @@ export class TokenService {
       scope: principal.scope,
       role: principal.role,
       username: principal.username,
-      ...(principal.tenantId !== undefined ? { tenantId: principal.tenantId } : {})
+      ...(principal.tenantId !== undefined
+        ? { tenantId: principal.tenantId }
+        : {}),
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setSubject(principal.sub)
@@ -52,12 +54,15 @@ export class TokenService {
   }
 
   /** 校验签名/issuer/audience/expiration（主规格 16.1）；audience 必须在允许列表内。 */
-  async verifyAccess(token: string, allowedAudiences: readonly string[]): Promise<AccessPrincipal> {
+  async verifyAccess(
+    token: string,
+    allowedAudiences: readonly string[],
+  ): Promise<AccessPrincipal> {
     let payload: TokenClaims;
     try {
       const { payload: p } = await jwtVerify(token, this.key, {
         issuer: ISSUER,
-        audience: allowedAudiences as unknown as string
+        audience: allowedAudiences as unknown as string,
       });
       payload = p as unknown as TokenClaims;
     } catch {
@@ -71,7 +76,7 @@ export class TokenService {
       scope: payload.scope,
       role: payload.role as AccessPrincipal["role"],
       username: payload.username,
-      ...(payload.tenantId !== undefined ? { tenantId: payload.tenantId } : {})
+      ...(payload.tenantId !== undefined ? { tenantId: payload.tenantId } : {}),
     };
   }
 

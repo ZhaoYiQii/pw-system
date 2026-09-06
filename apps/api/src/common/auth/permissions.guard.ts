@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { permissionsFor } from "../../modules/identity-access/domain/roles.js";
 import { REQUIRED_PERMISSIONS_KEY } from "./decorators.js";
@@ -13,10 +18,10 @@ import type { AuthenticatedRequest } from "./auth.guard.js";
 export class PermissionsGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const reflector = new Reflector();
-    const required = reflector.getAllAndOverride<string[] | undefined>(REQUIRED_PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass()
-    ]);
+    const required = reflector.getAllAndOverride<string[] | undefined>(
+      REQUIRED_PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!required || required.length === 0) return true;
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -24,7 +29,8 @@ export class PermissionsGuard implements CanActivate {
     if (!principal) return true;
     const granted = permissionsFor(principal.role);
     const missing = required.filter((key) => !granted.includes(key as never));
-    if (missing.length > 0) throw new ForbiddenException(`missing permissions: ${missing.join(",")}`);
+    if (missing.length > 0)
+      throw new ForbiddenException(`missing permissions: ${missing.join(",")}`);
     return true;
   }
 }

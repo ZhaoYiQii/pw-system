@@ -24,8 +24,14 @@ describe("ledger split (金额不变量/舍入/bigint)", () => {
   });
 
   it("非法输入/费率被拒", () => {
-    expect(() => splitSettlement(-1n, { platformFeeBp: 300, storeCutBp: 2000 })).toThrow();
-    expect(() => splitSettlement(100n, { platformFeeBp: 6000, storeCutBp: 6000 })).toThrow();
-    expect(() => splitSettlement(100n, { platformFeeBp: 10.5, storeCutBp: 2000 })).toThrow();
+    expect(() =>
+      splitSettlement(-1n, { platformFeeBp: 300, storeCutBp: 2000 }),
+    ).toThrow();
+    expect(() =>
+      splitSettlement(100n, { platformFeeBp: 6000, storeCutBp: 6000 }),
+    ).toThrow();
+    expect(() =>
+      splitSettlement(100n, { platformFeeBp: 10.5, storeCutBp: 2000 }),
+    ).toThrow();
   });
 });

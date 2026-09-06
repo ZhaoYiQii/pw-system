@@ -4,6 +4,9 @@ import { HealthController } from "./health.controller.js";
 
 describe("HealthController", () => {
   it("reports ok for the api service", () => {
-    expect(new HealthController().getHealth()).toEqual({ status: "ok", service: "api" });
+    expect(new HealthController().getHealth()).toEqual({
+      status: "ok",
+      service: "api",
+    });
   });
 });

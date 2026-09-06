@@ -4,12 +4,12 @@ export default defineAppConfig({
     "pages/player/profile/index",
     "pages/player/availability/index",
     "pages/player/order-hall/index",
-    "pages/customer/candidates/index"
+    "pages/customer/candidates/index",
   ],
   window: {
     backgroundTextStyle: "light",
     navigationBarBackgroundColor: "#fff",
     navigationBarTitleText: "PW",
-    navigationBarTextStyle: "black"
-  }
+    navigationBarTextStyle: "black",
+  },
 });

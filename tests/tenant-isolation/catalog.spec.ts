@@ -21,29 +21,47 @@ describe("tenant isolation for Slice 4 tables (games/customers/players)", () => 
   beforeAll(async () => {
     owner = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
     runtime = createDatabaseClient(envOrThrow("PW_TEST_RUNTIME_URL"));
-    const a = await owner.tenant.create({ data: { code: `c4_a_${suffix}`, name: "A 店" } });
-    const b = await owner.tenant.create({ data: { code: `c4_b_${suffix}`, name: "B 店" } });
+    const a = await owner.tenant.create({
+      data: { code: `c4_a_${suffix}`, name: "A 店" },
+    });
+    const b = await owner.tenant.create({
+      data: { code: `c4_b_${suffix}`, name: "B 店" },
+    });
     tenantAId = a.id;
     tenantBId = b.id;
-    const gameB = await owner.game.create({ data: { tenantId: b.id, name: "B服王者" } });
+    const gameB = await owner.game.create({
+      data: { tenantId: b.id, name: "B服王者" },
+    });
     gameBId = gameB.id;
-    const customerB = await owner.customerProfile.create({ data: { tenantId: b.id, name: "B客户" } });
+    const customerB = await owner.customerProfile.create({
+      data: { tenantId: b.id, name: "B客户" },
+    });
     customerBId = customerB.id;
-    const playerB = await owner.playerProfile.create({ data: { tenantId: b.id, name: "B陪玩" } });
+    const playerB = await owner.playerProfile.create({
+      data: { tenantId: b.id, name: "B陪玩" },
+    });
     playerBId = playerB.id;
   });
 
   afterAll(async () => {
     if (owner) {
       const tids = [tenantAId, tenantBId];
-      await owner.playerAvailability.deleteMany({ where: { tenantId: { in: tids } } });
+      await owner.playerAvailability.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
       await owner.playerSkill.deleteMany({ where: { tenantId: { in: tids } } });
       await owner.pricingRule.deleteMany({ where: { tenantId: { in: tids } } });
-      await owner.serviceProduct.deleteMany({ where: { tenantId: { in: tids } } });
+      await owner.serviceProduct.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
       await owner.gameRegion.deleteMany({ where: { tenantId: { in: tids } } });
       await owner.game.deleteMany({ where: { tenantId: { in: tids } } });
-      await owner.customerProfile.deleteMany({ where: { tenantId: { in: tids } } });
-      await owner.playerProfile.deleteMany({ where: { tenantId: { in: tids } } });
+      await owner.customerProfile.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
+      await owner.playerProfile.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
       await owner.tenant.deleteMany({ where: { id: { in: tids } } });
       await owner.$disconnect();
     }
@@ -64,7 +82,7 @@ describe("tenant isolation for Slice 4 tables (games/customers/players)", () => 
   it("INSERT: A 店上下文写入 tenant_id=B 的游戏被 RLS 拒绝", async () => {
     await withTenantContext(runtime, tenantAId, async (tx) => {
       await expect(
-        tx.game.create({ data: { tenantId: tenantBId, name: "越权游戏" } })
+        tx.game.create({ data: { tenantId: tenantBId, name: "越权游戏" } }),
       ).rejects.toThrow();
     });
   });
@@ -72,15 +90,19 @@ describe("tenant isolation for Slice 4 tables (games/customers/players)", () => 
   it("UPDATE/DELETE: A 店上下文无法改/删 B 店游戏", async () => {
     await withTenantContext(runtime, tenantAId, async (tx) => {
       await expect(
-        tx.game.update({ where: { id: gameBId }, data: { name: "hacked" } })
+        tx.game.update({ where: { id: gameBId }, data: { name: "hacked" } }),
       ).rejects.toThrow();
-      await expect(tx.game.delete({ where: { id: gameBId } })).rejects.toThrow();
+      await expect(
+        tx.game.delete({ where: { id: gameBId } }),
+      ).rejects.toThrow();
     });
   });
 
   it("合法写入：A 店上下文可在本店创建游戏并可见", async () => {
     await withTenantContext(runtime, tenantAId, async (tx) => {
-      const created = await tx.game.create({ data: { tenantId: tenantAId, name: "A服LOL" } });
+      const created = await tx.game.create({
+        data: { tenantId: tenantAId, name: "A服LOL" },
+      });
       expect(created.tenantId).toBe(tenantAId);
       const rows = await tx.game.findMany({ where: { tenantId: tenantAId } });
       expect(rows.some((g) => g.id === created.id)).toBe(true);

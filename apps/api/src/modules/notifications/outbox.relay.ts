@@ -9,7 +9,7 @@ const TITLE_BY_EVENT: Record<string, string> = {
   "order.assigned": "已为您选定陪玩",
   "order.accounted": "订单已完成核算",
   "order.cancelled": "订单已取消",
-  "session.ended": "场次已结束"
+  "session.ended": "场次已结束",
 };
 
 /**
@@ -18,20 +18,29 @@ const TITLE_BY_EVENT: Record<string, string> = {
  * - claim 时写入 PROCESSING 租约到期时间（available_at = now + lease），
  *   下次 drain 回收已过期 PROCESSING（worker 崩溃后不会永久卡死）。
  */
-export async function drainOutbox(client: PrismaClient, batchSize = 20, tenantId?: string): Promise<number> {
+export async function drainOutbox(
+  client: PrismaClient,
+  batchSize = 20,
+  tenantId?: string,
+): Promise<number> {
   const scope = tenantId ? { tenantId } : {};
   const now = new Date();
   const leaseCutoff = new Date(now.getTime() - PROCESSING_LEASE_MS);
   await client.outboxEvent.updateMany({
     where: { ...scope, status: "PROCESSING", availableAt: { lt: leaseCutoff } },
-    data: { status: "PENDING", availableAt: now, lastError: null }
+    data: { status: "PENDING", availableAt: now, lastError: null },
   });
   // 被回收的 PENDING 会随下面的批次重新消费（不单独计数，避免返回数语义混乱）。
   const pending = await client.outboxEvent.findMany({
-    where: { ...scope, status: "PENDING", availableAt: { lte: now }, attempts: { lt: MAX_ATTEMPTS } },
+    where: {
+      ...scope,
+      status: "PENDING",
+      availableAt: { lte: now },
+      attempts: { lt: MAX_ATTEMPTS },
+    },
     orderBy: { createdAt: "asc" },
     take: batchSize,
-    select: { id: true }
+    select: { id: true },
   });
   if (pending.length === 0) return 0;
   const ids = pending.map((p) => p.id);
@@ -40,11 +49,13 @@ export async function drainOutbox(client: PrismaClient, batchSize = 20, tenantId
     data: {
       status: "PROCESSING",
       attempts: { increment: 1 },
-      availableAt: new Date(now.getTime() + PROCESSING_LEASE_MS)
-    }
+      availableAt: new Date(now.getTime() + PROCESSING_LEASE_MS),
+    },
   });
   if (claimed.count === 0) return 0;
-  const rows = await client.outboxEvent.findMany({ where: { id: { in: ids }, status: "PROCESSING" } });
+  const rows = await client.outboxEvent.findMany({
+    where: { id: { in: ids }, status: "PROCESSING" },
+  });
   let done = 0;
   for (const row of rows) {
     try {
@@ -60,16 +71,25 @@ export async function drainOutbox(client: PrismaClient, batchSize = 20, tenantId
           title,
           content,
           recipientType: "order",
-          recipientId: row.aggregateId
+          recipientId: row.aggregateId,
         },
-        update: {}
+        update: {},
       });
-      await client.outboxEvent.update({ where: { id: row.id }, data: { status: "PROCESSED", processedAt: new Date() } });
+      await client.outboxEvent.update({
+        where: { id: row.id },
+        data: { status: "PROCESSED", processedAt: new Date() },
+      });
       done += 1;
     } catch (error) {
       await client.outboxEvent.update({
         where: { id: row.id },
-        data: { status: "FAILED", lastError: error instanceof Error ? error.message.slice(0, 500) : String(error) }
+        data: {
+          status: "FAILED",
+          lastError:
+            error instanceof Error
+              ? error.message.slice(0, 500)
+              : String(error),
+        },
       });
     }
   }
@@ -80,10 +100,18 @@ export async function drainOutbox(client: PrismaClient, batchSize = 20, tenantId
  * 人工重放 FAILED 事件：重置为 PENDING（attempts 清零），由下一次 drain 重新消费。
  * 只接受 FAILED，避免误重置正在处理的事件。
  */
-export async function requeueFailedOutboxEvent(client: PrismaClient, eventId: string): Promise<boolean> {
+export async function requeueFailedOutboxEvent(
+  client: PrismaClient,
+  eventId: string,
+): Promise<boolean> {
   const res = await client.outboxEvent.updateMany({
     where: { id: eventId, status: "FAILED" },
-    data: { status: "PENDING", attempts: 0, lastError: null, availableAt: new Date() }
+    data: {
+      status: "PENDING",
+      attempts: 0,
+      lastError: null,
+      availableAt: new Date(),
+    },
   });
   return res.count > 0;
 }

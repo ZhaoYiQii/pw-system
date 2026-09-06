@@ -14,7 +14,11 @@ export const DISPATCH_DB_CLIENT = "DISPATCH_DB_CLIENT";
 
 @Module({
   imports: [PlayersModule, CustomersModule, OrdersModule],
-  controllers: [DispatchAdminController, DispatchPlayerController, DispatchCustomerController],
+  controllers: [
+    DispatchAdminController,
+    DispatchPlayerController,
+    DispatchCustomerController,
+  ],
   providers: [
     {
       provide: DISPATCH_DB_CLIENT,
@@ -22,19 +26,20 @@ export const DISPATCH_DB_CLIENT = "DISPATCH_DB_CLIENT";
         const url = process.env.DATABASE_URL;
         if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: PrismaDispatchRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaDispatchRepository(client)),
-      inject: [DISPATCH_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaDispatchRepository(client)),
+      inject: [DISPATCH_DB_CLIENT],
     },
     {
       provide: DispatchService,
       useFactory: (repo: PrismaDispatchRepository) => new DispatchService(repo),
-      inject: [PrismaDispatchRepository]
-    }
+      inject: [PrismaDispatchRepository],
+    },
   ],
-  exports: [DispatchService]
+  exports: [DispatchService],
 })
 export class DispatchModule {}

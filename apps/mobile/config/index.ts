@@ -13,23 +13,23 @@ function applyRuntimeAlias(chain: {
 }): void {
   chain.resolve.alias.set(
     "@platform-runtime",
-    path.join(process.cwd(), runtimeDir, "runtime")
+    path.join(process.cwd(), runtimeDir, "runtime"),
   );
   chain.resolve.alias.set(
     "@platform-locator",
-    path.join(process.cwd(), runtimeDir, "tenant-locator")
+    path.join(process.cwd(), runtimeDir, "tenant-locator"),
   );
   chain.resolve.alias.set(
     "@platform-runtime-config",
-    path.join(process.cwd(), runtimeDir, "runtime-config")
+    path.join(process.cwd(), runtimeDir, "runtime-config"),
   );
   chain.resolve.alias.set(
     "@platform-identity",
-    path.join(process.cwd(), runtimeDir, "identity-adapter")
+    path.join(process.cwd(), runtimeDir, "identity-adapter"),
   );
   chain.resolve.alias.set(
     "@platform-session",
-    path.join(process.cwd(), runtimeDir, "session-store")
+    path.join(process.cwd(), runtimeDir, "session-store"),
   );
 }
 
@@ -42,7 +42,7 @@ export default defineConfig<"webpack5">(async (merge) => {
       640: 2.34 / 2,
       750: 1,
       375: 2,
-      828: 1.81 / 2
+      828: 1.81 / 2,
     },
     sourceRoot: "src",
     outputRoot: "dist",
@@ -51,25 +51,25 @@ export default defineConfig<"webpack5">(async (merge) => {
     framework: "react",
     compiler: "webpack5",
     cache: {
-      enable: false
+      enable: false,
     },
     mini: {
       postcss: {
         pxtransform: {
           enable: true,
-          config: {}
+          config: {},
         },
         cssModules: {
           enable: false,
           config: {
             namingPattern: "module",
-            generateScopedName: "[name]__[local]___[hash:base64:5]"
-          }
-        }
+            generateScopedName: "[name]__[local]___[hash:base64:5]",
+          },
+        },
       },
       webpackChain(chain) {
         applyRuntimeAlias(chain);
-      }
+      },
     },
     h5: {
       publicPath: "/",
@@ -77,25 +77,25 @@ export default defineConfig<"webpack5">(async (merge) => {
       miniCssExtractPluginOption: {
         ignoreOrder: true,
         filename: "css/[name].[hash].css",
-        chunkFilename: "css/[name].[chunkhash].css"
+        chunkFilename: "css/[name].[chunkhash].css",
       },
       postcss: {
         autoprefixer: {
           enable: true,
-          config: {}
+          config: {},
         },
         cssModules: {
           enable: false,
           config: {
             namingPattern: "module",
-            generateScopedName: "[name]__[local]___[hash:base64:5]"
-          }
-        }
+            generateScopedName: "[name]__[local]___[hash:base64:5]",
+          },
+        },
       },
       webpackChain(chain) {
         applyRuntimeAlias(chain);
-      }
-    }
+      },
+    },
   };
 
   if (process.env.NODE_ENV === "development") {

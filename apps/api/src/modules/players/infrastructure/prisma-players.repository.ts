@@ -1,18 +1,32 @@
 import type { PrismaClient } from "@pw/database";
-import type { PlayerDetailView, PlayerSkillView, PlayerView } from "../domain/player.js";
+import type {
+  PlayerDetailView,
+  PlayerSkillView,
+  PlayerView,
+} from "../domain/player.js";
 import {
   AccountNotPlayerError,
   DuplicatePlayerError,
   OverlappingAvailabilityError,
   PlayerAccountBoundError,
   PlayerNotFoundError,
-  SkillAlreadyExistsError
+  SkillAlreadyExistsError,
 } from "../domain/errors.js";
 
 function isP2002(error: unknown): boolean {
-  return error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002";
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
 }
-import type { AvailabilityInput, PlayerInput, PlayerRepository, SkillInput } from "../application/players.service.js";
+import type {
+  AvailabilityInput,
+  PlayerInput,
+  PlayerRepository,
+  SkillInput,
+} from "../application/players.service.js";
 
 function mapPlayer(row: {
   id: string;
@@ -34,7 +48,7 @@ function mapPlayer(row: {
     status: row.status as PlayerView["status"],
     acceptingOrders: row.acceptingOrders,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -50,19 +64,30 @@ interface SkillRow {
 
 async function enrichSkills(
   client: PrismaClient,
-  rows: SkillRow[]
+  rows: SkillRow[],
 ): Promise<PlayerSkillView[]> {
   if (rows.length === 0) return [];
   const gameIds = Array.from(new Set(rows.map((r) => r.gameId)));
   const regionIds = Array.from(
-    new Set(rows.filter((r) => r.gameRegionId !== null).map((r) => r.gameRegionId as string))
+    new Set(
+      rows
+        .filter((r) => r.gameRegionId !== null)
+        .map((r) => r.gameRegionId as string),
+    ),
   );
-  const games = regionIds.length > 0 || gameIds.length > 0
-    ? await client.game.findMany({ where: { id: { in: gameIds } }, select: { id: true, name: true } })
-    : [];
+  const games =
+    regionIds.length > 0 || gameIds.length > 0
+      ? await client.game.findMany({
+          where: { id: { in: gameIds } },
+          select: { id: true, name: true },
+        })
+      : [];
   const regions =
     regionIds.length > 0
-      ? await client.gameRegion.findMany({ where: { id: { in: regionIds } }, select: { id: true, name: true } })
+      ? await client.gameRegion.findMany({
+          where: { id: { in: regionIds } },
+          select: { id: true, name: true },
+        })
       : [];
   const gameName = new Map(games.map((g) => [g.id, g.name]));
   const regionName = new Map(regions.map((r) => [r.id, r.name]));
@@ -73,25 +98,39 @@ async function enrichSkills(
     gameId: r.gameId,
     gameRegionId: r.gameRegionId,
     gameName: gameName.get(r.gameId) ?? "",
-    regionName: r.gameRegionId ? (regionName.get(r.gameRegionId) ?? null) : null,
+    regionName: r.gameRegionId
+      ? (regionName.get(r.gameRegionId) ?? null)
+      : null,
     title: r.title,
-    note: r.note
+    note: r.note,
   }));
 }
 
 export class PrismaPlayerRepository implements PlayerRepository {
   constructor(private readonly client: PrismaClient) {}
 
-  async list(tenantId: string, opts: { q?: string; status?: "ACTIVE" | "INACTIVE" }): Promise<PlayerView[]> {
+  async list(
+    tenantId: string,
+    opts: { q?: string; status?: "ACTIVE" | "INACTIVE" },
+  ): Promise<PlayerView[]> {
     const where: Record<string, unknown> = { tenantId };
     if (opts.status) where.status = opts.status;
-    if (opts.q) where.OR = [{ name: { contains: opts.q, mode: "insensitive" } }, { mobile: { contains: opts.q } }];
-    const rows = await this.client.playerProfile.findMany({ where, orderBy: { createdAt: "desc" } });
+    if (opts.q)
+      where.OR = [
+        { name: { contains: opts.q, mode: "insensitive" } },
+        { mobile: { contains: opts.q } },
+      ];
+    const rows = await this.client.playerProfile.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
     return rows.map(mapPlayer);
   }
 
   async find(tenantId: string, id: string): Promise<PlayerView | null> {
-    const row = await this.client.playerProfile.findFirst({ where: { tenantId, id } });
+    const row = await this.client.playerProfile.findFirst({
+      where: { tenantId, id },
+    });
     return row ? mapPlayer(row) : null;
   }
 
@@ -100,11 +139,11 @@ export class PrismaPlayerRepository implements PlayerRepository {
     if (!player) return null;
     const skillRows = await this.client.playerSkill.findMany({
       where: { tenantId, playerId: id },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "asc" },
     });
     const availability = await this.client.playerAvailability.findMany({
       where: { tenantId, playerId: id },
-      orderBy: { startsAt: "asc" }
+      orderBy: { startsAt: "asc" },
     });
     return {
       ...player,
@@ -115,8 +154,8 @@ export class PrismaPlayerRepository implements PlayerRepository {
         playerId: a.playerId,
         startsAt: a.startsAt,
         endsAt: a.endsAt,
-        reason: a.reason
-      }))
+        reason: a.reason,
+      })),
     };
   }
 
@@ -129,19 +168,28 @@ export class PrismaPlayerRepository implements PlayerRepository {
           ...(input.mobile ? { mobile: input.mobile } : {}),
           ...(input.intro ? { intro: input.intro } : {}),
           status: input.status ?? "ACTIVE",
-          acceptingOrders: input.acceptingOrders ?? true
-        }
+          acceptingOrders: input.acceptingOrders ?? true,
+        },
       });
       return mapPlayer(row);
     } catch (error) {
-      if (error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002") {
+      if (
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002"
+      ) {
         throw new DuplicatePlayerError(input.mobile ?? undefined);
       }
       throw error;
     }
   }
 
-  async update(tenantId: string, id: string, input: Partial<PlayerInput>): Promise<PlayerView | null> {
+  async update(
+    tenantId: string,
+    id: string,
+    input: Partial<PlayerInput>,
+  ): Promise<PlayerView | null> {
     try {
       const res = await this.client.playerProfile.updateMany({
         where: { tenantId, id },
@@ -150,13 +198,20 @@ export class PrismaPlayerRepository implements PlayerRepository {
           ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
           ...(input.intro !== undefined ? { intro: input.intro } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
-          ...(input.acceptingOrders !== undefined ? { acceptingOrders: input.acceptingOrders } : {})
-        }
+          ...(input.acceptingOrders !== undefined
+            ? { acceptingOrders: input.acceptingOrders }
+            : {}),
+        },
       });
       if (res.count === 0) return null;
       return this.find(tenantId, id);
     } catch (error) {
-      if (error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002") {
+      if (
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002"
+      ) {
         throw new DuplicatePlayerError(input.mobile ?? undefined);
       }
       throw error;
@@ -165,28 +220,48 @@ export class PrismaPlayerRepository implements PlayerRepository {
 
   async remove(tenantId: string, id: string): Promise<boolean> {
     // 由 tenantGuarded 在事务内调用：this.client 已是带租户 GUC 的 tx
-    const player = await this.client.playerProfile.findFirst({ where: { tenantId, id }, select: { id: true } });
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, id },
+      select: { id: true },
+    });
     if (!player) return false;
-    await this.client.playerAvailability.deleteMany({ where: { tenantId, playerId: id } });
-    await this.client.playerSkill.deleteMany({ where: { tenantId, playerId: id } });
-    const res = await this.client.playerProfile.deleteMany({ where: { tenantId, id } });
+    await this.client.playerAvailability.deleteMany({
+      where: { tenantId, playerId: id },
+    });
+    await this.client.playerSkill.deleteMany({
+      where: { tenantId, playerId: id },
+    });
+    const res = await this.client.playerProfile.deleteMany({
+      where: { tenantId, id },
+    });
     return res.count > 0;
   }
 
   async gameInTenant(tenantId: string, gameId: string): Promise<boolean> {
-    const row = await this.client.game.findFirst({ where: { tenantId, id: gameId }, select: { id: true } });
-    return row !== null;
-  }
-
-  async regionInTenant(tenantId: string, regionId: string, gameId: string): Promise<boolean> {
-    const row = await this.client.gameRegion.findFirst({
-      where: { tenantId, id: regionId, gameId },
-      select: { id: true }
+    const row = await this.client.game.findFirst({
+      where: { tenantId, id: gameId },
+      select: { id: true },
     });
     return row !== null;
   }
 
-  async addSkill(tenantId: string, playerId: string, input: SkillInput): Promise<PlayerSkillView> {
+  async regionInTenant(
+    tenantId: string,
+    regionId: string,
+    gameId: string,
+  ): Promise<boolean> {
+    const row = await this.client.gameRegion.findFirst({
+      where: { tenantId, id: regionId, gameId },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
+  async addSkill(
+    tenantId: string,
+    playerId: string,
+    input: SkillInput,
+  ): Promise<PlayerSkillView> {
     try {
       const created = await this.client.playerSkill.create({
         data: {
@@ -195,25 +270,40 @@ export class PrismaPlayerRepository implements PlayerRepository {
           gameId: input.gameId,
           ...(input.gameRegionId ? { gameRegionId: input.gameRegionId } : {}),
           ...(input.title ? { title: input.title } : {}),
-          ...(input.note ? { note: input.note } : {})
-        }
+          ...(input.note ? { note: input.note } : {}),
+        },
       });
       const enriched = await enrichSkills(this.client, [created]);
       return enriched[0] as PlayerSkillView;
     } catch (error) {
-      if (error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002") {
+      if (
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002"
+      ) {
         throw new SkillAlreadyExistsError();
       }
       throw error;
     }
   }
 
-  async removeSkill(tenantId: string, playerId: string, skillId: string): Promise<boolean> {
-    const res = await this.client.playerSkill.deleteMany({ where: { tenantId, playerId, id: skillId } });
+  async removeSkill(
+    tenantId: string,
+    playerId: string,
+    skillId: string,
+  ): Promise<boolean> {
+    const res = await this.client.playerSkill.deleteMany({
+      where: { tenantId, playerId, id: skillId },
+    });
     return res.count > 0;
   }
 
-  async addAvailability(tenantId: string, playerId: string, input: AvailabilityInput): Promise<{ id: string }> {
+  async addAvailability(
+    tenantId: string,
+    playerId: string,
+    input: AvailabilityInput,
+  ): Promise<{ id: string }> {
     // 由 tenantGuarded 在事务内调用：this.client 已是带租户 GUC 的 tx，行锁在事务提交时释放
     const lock = await this.client.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM player_profiles
@@ -225,9 +315,9 @@ export class PrismaPlayerRepository implements PlayerRepository {
         tenantId,
         playerId,
         endsAt: { gt: input.startsAt },
-        startsAt: { lt: input.endsAt }
+        startsAt: { lt: input.endsAt },
       },
-      select: { id: true }
+      select: { id: true },
     });
     if (overlap) throw new OverlappingAvailabilityError();
     const created = await this.client.playerAvailability.create({
@@ -236,30 +326,38 @@ export class PrismaPlayerRepository implements PlayerRepository {
         playerId,
         startsAt: input.startsAt,
         endsAt: input.endsAt,
-        ...(input.reason ? { reason: input.reason } : {})
+        ...(input.reason ? { reason: input.reason } : {}),
       },
-      select: { id: true }
+      select: { id: true },
     });
     return { id: created.id };
   }
 
-  async removeAvailability(tenantId: string, playerId: string, availabilityId: string): Promise<boolean> {
+  async removeAvailability(
+    tenantId: string,
+    playerId: string,
+    availabilityId: string,
+  ): Promise<boolean> {
     const res = await this.client.playerAvailability.deleteMany({
-      where: { tenantId, playerId, id: availabilityId }
+      where: { tenantId, playerId, id: availabilityId },
     });
     return res.count > 0;
   }
 
-  async bind(tenantId: string, playerId: string, accountId: string): Promise<PlayerView> {
+  async bind(
+    tenantId: string,
+    playerId: string,
+    accountId: string,
+  ): Promise<PlayerView> {
     const account = await this.client.tenantAccount.findFirst({
       where: { tenantId, id: accountId, roles: { some: { role: "PLAYER" } } },
-      select: { id: true }
+      select: { id: true },
     });
     if (!account) throw new AccountNotPlayerError(accountId);
     try {
       const res = await this.client.playerProfile.updateMany({
         where: { tenantId, id: playerId },
-        data: { tenantAccountId: accountId }
+        data: { tenantAccountId: accountId },
       });
       if (res.count === 0) throw new PlayerNotFoundError(playerId);
       const row = await this.find(tenantId, playerId);
@@ -270,12 +368,21 @@ export class PrismaPlayerRepository implements PlayerRepository {
     }
   }
 
-  async findByAccount(tenantId: string, accountId: string): Promise<PlayerView | null> {
-    const row = await this.client.playerProfile.findFirst({ where: { tenantId, tenantAccountId: accountId } });
+  async findByAccount(
+    tenantId: string,
+    accountId: string,
+  ): Promise<PlayerView | null> {
+    const row = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: accountId },
+    });
     return row ? mapPlayer(row) : null;
   }
 
-  async updateByAccount(tenantId: string, accountId: string, input: Partial<PlayerInput>): Promise<PlayerView | null> {
+  async updateByAccount(
+    tenantId: string,
+    accountId: string,
+    input: Partial<PlayerInput>,
+  ): Promise<PlayerView | null> {
     const res = await this.client.playerProfile.updateMany({
       where: { tenantId, tenantAccountId: accountId },
       data: {
@@ -283,8 +390,10 @@ export class PrismaPlayerRepository implements PlayerRepository {
         ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
         ...(input.intro !== undefined ? { intro: input.intro } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
-        ...(input.acceptingOrders !== undefined ? { acceptingOrders: input.acceptingOrders } : {})
-      }
+        ...(input.acceptingOrders !== undefined
+          ? { acceptingOrders: input.acceptingOrders }
+          : {}),
+      },
     });
     if (res.count === 0) return null;
     return this.findByAccount(tenantId, accountId);

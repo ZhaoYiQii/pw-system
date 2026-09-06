@@ -10,5 +10,5 @@ export const session: SessionHandle = {
   },
   clearToken() {
     /* noop */
-  }
+  },
 };

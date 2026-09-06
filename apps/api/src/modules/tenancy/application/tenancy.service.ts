@@ -1,5 +1,10 @@
 import type { ResolvedTenant, TenantView } from "../domain/tenant.js";
-import { ClientSuppliedTenantIdError, DuplicateTenantCodeError, InvalidTenantCodeError, TenantNotFoundError } from "../domain/errors.js";
+import {
+  ClientSuppliedTenantIdError,
+  DuplicateTenantCodeError,
+  InvalidTenantCodeError,
+  TenantNotFoundError,
+} from "../domain/errors.js";
 import type { CreateTenantInput } from "../domain/tenant.js";
 import type { TenantRepository } from "./tenancy-ports.js";
 
@@ -19,7 +24,9 @@ export class TenancyService {
         code,
         name: input.name.trim(),
         ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
-        ...(primaryHost !== undefined && primaryHost !== "" ? { primaryHost } : {})
+        ...(primaryHost !== undefined && primaryHost !== ""
+          ? { primaryHost }
+          : {}),
       });
     } catch (error) {
       if (error instanceof DuplicateTenantCodeError) throw error;
@@ -48,7 +55,11 @@ export class TenancyService {
    * 服务端必须根据可信来源（host/短码/会话）生成 TenantContext。
    */
   assertNoClientTenantId(payload: unknown): void {
-    if (payload !== null && typeof payload === "object" && "tenantId" in payload) {
+    if (
+      payload !== null &&
+      typeof payload === "object" &&
+      "tenantId" in payload
+    ) {
       throw new ClientSuppliedTenantIdError();
     }
   }

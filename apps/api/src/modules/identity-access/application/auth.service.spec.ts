@@ -24,7 +24,7 @@ describe("TokenService", () => {
     sub: "11111111-1111-4111-8111-111111111111",
     scope: "platform",
     role: "PLATFORM_SUPER_ADMIN",
-    username: "admin"
+    username: "admin",
   } as const;
 
   it("signs and verifies with matching audience", async () => {
@@ -41,6 +41,8 @@ describe("TokenService", () => {
   it("rejects tampered token", async () => {
     const token = await tokens.signAccess(principal);
     const tampered = token.slice(0, -2) + (token.endsWith("aa") ? "bb" : "aa");
-    await expect(tokens.verifyAccess(tampered, ["pw-platform"])).rejects.toThrow();
+    await expect(
+      tokens.verifyAccess(tampered, ["pw-platform"]),
+    ).rejects.toThrow();
   });
 });

@@ -68,4 +68,3 @@
 - 禁止业务代码包含 Windows 绝对路径。
 - 本地 PostgreSQL、Redis 和对象存储最终通过 Docker Desktop 的 Linux 容器运行。
 - 没有完成 Linux 容器验证时不得声称可部署到 Linux。
-

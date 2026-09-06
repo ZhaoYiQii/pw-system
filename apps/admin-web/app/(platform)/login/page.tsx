@@ -23,7 +23,7 @@ export default function PlatformLoginPage() {
     try {
       const data = await apiFetch<LoginResult>("/api/v1/auth/login", {
         method: "POST",
-        body: JSON.stringify({ kind: "platform", username, password })
+        body: JSON.stringify({ kind: "platform", username, password }),
       });
       setAccessToken(data.accessToken);
       router.push("/tenants");
@@ -80,4 +80,3 @@ export default function PlatformLoginPage() {
     </main>
   );
 }
-

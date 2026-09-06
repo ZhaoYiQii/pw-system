@@ -19,20 +19,21 @@ export const CONFIG_DB_CLIENT = "CONFIG_DB_CLIENT";
         const url = process.env.DATABASE_URL;
         if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: PrismaConfigRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaConfigRepository(client)),
-      inject: [CONFIG_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaConfigRepository(client)),
+      inject: [CONFIG_DB_CLIENT],
     },
     {
       provide: TenantConfigService,
-      useFactory: (repo: PrismaConfigRepository) => new TenantConfigService(repo),
-      inject: [PrismaConfigRepository]
-    }
+      useFactory: (repo: PrismaConfigRepository) =>
+        new TenantConfigService(repo),
+      inject: [PrismaConfigRepository],
+    },
   ],
-  exports: [TenantConfigService]
+  exports: [TenantConfigService],
 })
 export class TenantConfigModule {}
-

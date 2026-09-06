@@ -172,7 +172,6 @@ export default function TenantSettingsPage() {
     }
   };
 
-
   const configError = effective?.status === "CONFIG_ERROR";
   const canRollback = versions.length > 1;
 

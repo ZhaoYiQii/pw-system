@@ -7,7 +7,9 @@ describe("mobile formatFenYuan（十进制字符串分 → 元展示）", () => 
     expect(formatFenYuan("5")).toBe("¥0.05");
     expect(formatFenYuan("50")).toBe("¥0.50");
     expect(formatFenYuan("500")).toBe("¥5.00");
-    expect(formatFenYuan("1234567890123456789012")).toBe("¥12345678901234567890.12");
+    expect(formatFenYuan("1234567890123456789012")).toBe(
+      "¥12345678901234567890.12",
+    );
   });
 
   it("非法/浮点/负数不猜测，回退 ¥0.00", () => {

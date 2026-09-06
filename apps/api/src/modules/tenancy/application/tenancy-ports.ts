@@ -1,4 +1,8 @@
-import type { CreateTenantInput, ResolvedTenant, TenantView } from "../domain/tenant.js";
+import type {
+  CreateTenantInput,
+  ResolvedTenant,
+  TenantView,
+} from "../domain/tenant.js";
 
 export interface TenantRepository {
   createTenant(input: CreateTenantInput): Promise<TenantView>;

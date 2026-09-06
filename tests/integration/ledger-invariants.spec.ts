@@ -10,8 +10,14 @@ import type { PrismaClient } from "@pw/database";
 
 const PW = "Ledger-Password-1";
 const suffix = Date.now().toString(36);
-function envOrThrow(name: string): string { const v = process.env[name]; if (!v) throw new Error(`missing env ${name}`); return v; }
-interface Data { accessToken?: string }
+function envOrThrow(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`missing env ${name}`);
+  return v;
+}
+interface Data {
+  accessToken?: string;
+}
 
 describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
   let app: INestApplication;
@@ -23,20 +29,45 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
   beforeAll(async () => {
     client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
     const hash = await hashPassword(PW);
-    const t = await client.tenant.create({ data: { code: `ld_${suffix}`, name: "账本店" } });
+    const t = await client.tenant.create({
+      data: { code: `ld_${suffix}`, name: "账本店" },
+    });
     tenantId = t.id;
-    const owner = await client.tenantAccount.create({ data: { tenantId, username: "boss", passwordHash: hash } });
-    await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" } });
-    const cust = await client.customerProfile.create({ data: { tenantId, name: "账本客" } });
-    const player = await client.playerProfile.create({ data: { tenantId, name: "账本玩" } });
+    const owner = await client.tenantAccount.create({
+      data: { tenantId, username: "boss", passwordHash: hash },
+    });
+    await client.tenantAccountRole.create({
+      data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" },
+    });
+    const cust = await client.customerProfile.create({
+      data: { tenantId, name: "账本客" },
+    });
+    const player = await client.playerProfile.create({
+      data: { tenantId, name: "账本玩" },
+    });
     const order = await client.order.create({
-      data: { tenantId, orderNo: `ldo-${suffix}`, customerProfileId: cust.id, status: "PENDING_CONFIRMATION" }
+      data: {
+        tenantId,
+        orderNo: `ldo-${suffix}`,
+        customerProfileId: cust.id,
+        status: "PENDING_CONFIRMATION",
+      },
     });
     orderId = order.id;
-    await client.assignment.create({ data: { tenantId, orderId: order.id, playerId: player.id } });
+    await client.assignment.create({
+      data: { tenantId, orderId: order.id, playerId: player.id },
+    });
     const now = new Date();
     await client.serviceSession.create({
-      data: { tenantId, orderId: order.id, playerId: player.id, startedAt: new Date(now.getTime() - 3600 * 1000), endedAt: now, durationSeconds: 3600, status: "ENDED" }
+      data: {
+        tenantId,
+        orderId: order.id,
+        playerId: player.id,
+        startedAt: new Date(now.getTime() - 3600 * 1000),
+        endedAt: now,
+        durationSeconds: 3600,
+        status: "ENDED",
+      },
     });
     await client.orderPriceSnapshot.create({
       data: {
@@ -46,13 +77,23 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
         productName: "双排1小时",
         durationSeconds: 3600,
         unitPriceFen: BigInt(10000),
-        lineTotalFen: BigInt(10000)
-      }
+        lineTotalFen: BigInt(10000),
+      },
     });
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
-    const login = await request(app.getHttpServer()).post("/api/v1/auth/login").send({ kind: "tenant", tenantCode: t.code, username: "boss", password: PW }).expect(201);
+    const login = await request(app.getHttpServer())
+      .post("/api/v1/auth/login")
+      .send({
+        kind: "tenant",
+        tenantCode: t.code,
+        username: "boss",
+        password: PW,
+      })
+      .expect(201);
     ownerToken = (login.body as { data: Data }).data.accessToken as string;
   });
 
@@ -64,13 +105,17 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
       await client.ledgerTransaction.deleteMany({ where: { tenantId } });
       await client.ledgerAccount.deleteMany({ where: { tenantId } });
       await client.earning.deleteMany({ where: { tenantId } });
-      const sessions = await client.serviceSession.findMany({ where: { tenantId } });
-      for (const s of sessions) await client.sessionEvent.deleteMany({ where: { sessionId: s.id } });
+      const sessions = await client.serviceSession.findMany({
+        where: { tenantId },
+      });
+      for (const s of sessions)
+        await client.sessionEvent.deleteMany({ where: { sessionId: s.id } });
       await client.serviceSession.deleteMany({ where: { tenantId } });
       await client.assignment.deleteMany({ where: { tenantId } });
       await client.orderPriceSnapshot.deleteMany({ where: { tenantId } });
       const orders = await client.order.findMany({ where: { tenantId } });
-      for (const o of orders) await client.orderEvent.deleteMany({ where: { orderId: o.id } });
+      for (const o of orders)
+        await client.orderEvent.deleteMany({ where: { orderId: o.id } });
       await client.order.deleteMany({ where: { tenantId } });
       await client.playerProfile.deleteMany({ where: { tenantId } });
       await client.customerProfile.deleteMany({ where: { tenantId } });
@@ -87,20 +132,35 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
       .post(`/api/v1/tenant/orders/${orderId}/accounting`)
       .set("authorization", `Bearer ${ownerToken}`)
       .expect(201);
-    const first = res.body.data as { earningId: string; playerShareFen: number };
+    const first = res.body.data as {
+      earningId: string;
+      playerShareFen: number;
+    };
     expect(first.playerShareFen).toBe("7700");
-    const earning = await client.earning.findFirst({ where: { tenantId, orderId } });
+    const earning = await client.earning.findFirst({
+      where: { tenantId, orderId },
+    });
     expect(earning?.amountFen).toBe(BigInt(7700));
 
-    const entries = await client.ledgerEntry.findMany({
-      where: { tenantId, transaction: { order: { id: orderId } } }
-    }).catch(async () => {
-      const txRows = await client.ledgerTransaction.findMany({ where: { tenantId } });
-      const ids = txRows.map((t) => t.id);
-      return client.ledgerEntry.findMany({ where: { tenantId, transactionId: { in: ids } } });
-    });
-    const debit = entries.filter((e) => e.direction === "DEBIT").reduce((a, e) => a + Number(e.amountFen), 0);
-    const credit = entries.filter((e) => e.direction === "CREDIT").reduce((a, e) => a + Number(e.amountFen), 0);
+    const entries = await client.ledgerEntry
+      .findMany({
+        where: { tenantId, transaction: { order: { id: orderId } } },
+      })
+      .catch(async () => {
+        const txRows = await client.ledgerTransaction.findMany({
+          where: { tenantId },
+        });
+        const ids = txRows.map((t) => t.id);
+        return client.ledgerEntry.findMany({
+          where: { tenantId, transactionId: { in: ids } },
+        });
+      });
+    const debit = entries
+      .filter((e) => e.direction === "DEBIT")
+      .reduce((a, e) => a + Number(e.amountFen), 0);
+    const credit = entries
+      .filter((e) => e.direction === "CREDIT")
+      .reduce((a, e) => a + Number(e.amountFen), 0);
     expect(debit).toBe(credit);
     expect(debit).toBe(10000);
 
@@ -109,7 +169,11 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
       .post(`/api/v1/tenant/orders/${orderId}/accounting`)
       .set("authorization", `Bearer ${ownerToken}`)
       .expect(201);
-    expect((res2.body.data as { earningId: string }).earningId).toBe(first.earningId);
-    expect(await client.earning.count({ where: { tenantId, orderId } })).toBe(1);
+    expect((res2.body.data as { earningId: string }).earningId).toBe(
+      first.earningId,
+    );
+    expect(await client.earning.count({ where: { tenantId, orderId } })).toBe(
+      1,
+    );
   });
 });

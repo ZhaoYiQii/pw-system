@@ -16,19 +16,20 @@ export const DATABASE_CLIENT = "DATABASE_CLIENT";
         const url = process.env.PLATFORM_DATABASE_URL;
         if (!url) throw new Error("PLATFORM_DATABASE_URL is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: PrismaTenantRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaTenantRepository(client),
-      inject: [DATABASE_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        new PrismaTenantRepository(client),
+      inject: [DATABASE_CLIENT],
     },
     {
       provide: TenancyService,
       useFactory: (repo: PrismaTenantRepository) => new TenancyService(repo),
-      inject: [PrismaTenantRepository]
-    }
+      inject: [PrismaTenantRepository],
+    },
   ],
-  exports: [TenancyService]
+  exports: [TenancyService],
 })
 export class TenancyModule {}

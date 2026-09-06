@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@pw/database";
 import { DuplicateTenantCodeError } from "../domain/errors.js";
-import type { CreateTenantInput, ResolvedTenant, TenantView } from "../domain/tenant.js";
+import type {
+  CreateTenantInput,
+  ResolvedTenant,
+  TenantView,
+} from "../domain/tenant.js";
 import type { TenantRepository } from "../application/tenancy-ports.js";
 
 function mapTenant(row: {
@@ -21,7 +25,7 @@ function mapTenant(row: {
     timezone: row.timezone,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    version: row.version
+    version: row.version,
   };
 }
 
@@ -34,12 +38,16 @@ export class PrismaTenantRepository implements TenantRepository {
         data: {
           code: input.code,
           name: input.name,
-          timezone: input.timezone ?? "Asia/Shanghai"
-        }
+          timezone: input.timezone ?? "Asia/Shanghai",
+        },
       });
       if (input.primaryHost) {
         await this.client.tenantDomain.create({
-          data: { tenantId: tenant.id, host: input.primaryHost, isPrimary: true }
+          data: {
+            tenantId: tenant.id,
+            host: input.primaryHost,
+            isPrimary: true,
+          },
         });
       }
       return mapTenant(tenant);
@@ -57,7 +65,9 @@ export class PrismaTenantRepository implements TenantRepository {
   }
 
   async listTenants(): Promise<TenantView[]> {
-    const rows = await this.client.tenant.findMany({ orderBy: { createdAt: "asc" } });
+    const rows = await this.client.tenant.findMany({
+      orderBy: { createdAt: "asc" },
+    });
     return rows.map(mapTenant);
   }
 
@@ -69,14 +79,14 @@ export class PrismaTenantRepository implements TenantRepository {
   async findByHost(host: string): Promise<ResolvedTenant | null> {
     const row = await this.client.tenantDomain.findFirst({
       where: { host },
-      include: { tenant: true }
+      include: { tenant: true },
     });
     if (!row) return null;
     return {
       id: row.tenant.id,
       code: row.tenant.code,
       name: row.tenant.name,
-      status: row.tenant.status as ResolvedTenant["status"]
+      status: row.tenant.status as ResolvedTenant["status"],
     };
   }
 
@@ -84,11 +94,11 @@ export class PrismaTenantRepository implements TenantRepository {
     return this.client.$transaction(async (tx) => {
       const row = await tx.tenant.update({
         where: { id },
-        data: { status: "INACTIVE" }
+        data: { status: "INACTIVE" },
       });
       await tx.refreshSession.updateMany({
         where: { tenantId: id, revokedAt: null },
-        data: { revokedAt: new Date() }
+        data: { revokedAt: new Date() },
       });
       return mapTenant(row);
     });

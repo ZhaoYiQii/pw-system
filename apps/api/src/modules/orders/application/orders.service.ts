@@ -7,7 +7,7 @@ import {
   InvalidOrderInputError,
   OrderNotFoundError,
   OrderStateConflictError,
-  ProductNotInTenantError
+  ProductNotInTenantError,
 } from "../domain/errors.js";
 
 export interface RequirementInput {
@@ -40,7 +40,10 @@ export interface ProductLookup {
 export interface OrdersRepository {
   loadFull(tenantId: string, orderId: string): Promise<OrderView | null>;
   list(tenantId: string, opts: { status?: string }): Promise<OrderView[]>;
-  listByCustomer(tenantId: string, customerProfileId: string): Promise<OrderView[]>;
+  listByCustomer(
+    tenantId: string,
+    customerProfileId: string,
+  ): Promise<OrderView[]>;
   customerInTenant(tenantId: string, id: string): Promise<boolean>;
   gameInTenant(tenantId: string, id: string): Promise<boolean>;
   productInTenant(tenantId: string, id: string): Promise<ProductLookup | null>;
@@ -54,7 +57,12 @@ export interface OrdersRepository {
     idempotencyKey?: string;
   }): Promise<{ orderId: string; duplicate: boolean }>;
   confirm(tenantId: string, orderId: string, actorId: string): Promise<void>;
-  cancel(tenantId: string, orderId: string, actorId: string, reason: string | null): Promise<void>;
+  cancel(
+    tenantId: string,
+    orderId: string,
+    actorId: string,
+    reason: string | null,
+  ): Promise<void>;
 }
 
 const ORDER_NO_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
@@ -62,63 +70,122 @@ const ORDER_NO_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
 function randomToken(length: number): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let out = "";
-  for (let i = 0; i < length; i += 1) out += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < length; i += 1)
+    out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
 export class OrdersService {
   constructor(private readonly repository: OrdersRepository) {}
 
-  private validateRequirement(r: RequirementInput, requireProduct: boolean): void {
-    if (typeof r.description !== "string" || r.description.trim().length < 2 || r.description.length > 1000) {
+  private validateRequirement(
+    r: RequirementInput,
+    requireProduct: boolean,
+  ): void {
+    if (
+      typeof r.description !== "string" ||
+      r.description.trim().length < 2 ||
+      r.description.length > 1000
+    ) {
       throw new InvalidOrderInputError("description 需为 2-1000 字符");
     }
-    if (r.gameId !== undefined && r.gameId !== null && typeof r.gameId !== "string") {
+    if (
+      r.gameId !== undefined &&
+      r.gameId !== null &&
+      typeof r.gameId !== "string"
+    ) {
       throw new InvalidOrderInputError("gameId 非法");
     }
-    if (r.serviceProductId !== undefined && r.serviceProductId !== null && typeof r.serviceProductId !== "string") {
+    if (
+      r.serviceProductId !== undefined &&
+      r.serviceProductId !== null &&
+      typeof r.serviceProductId !== "string"
+    ) {
       throw new InvalidOrderInputError("serviceProductId 非法");
     }
-    if (r.gender !== undefined && r.gender !== null && typeof r.gender !== "string") {
+    if (
+      r.gender !== undefined &&
+      r.gender !== null &&
+      typeof r.gender !== "string"
+    ) {
       throw new InvalidOrderInputError("gender 非法");
     }
     if (r.desiredStartAt !== undefined && r.desiredStartAt !== null) {
       const d = new Date(r.desiredStartAt);
-      if (Number.isNaN(d.getTime())) throw new InvalidOrderInputError("desiredStartAt 需为合法时间");
+      if (Number.isNaN(d.getTime()))
+        throw new InvalidOrderInputError("desiredStartAt 需为合法时间");
     }
-    if (r.durationSeconds !== undefined && r.durationSeconds !== null && (!Number.isInteger(r.durationSeconds) || r.durationSeconds <= 0)) {
+    if (
+      r.durationSeconds !== undefined &&
+      r.durationSeconds !== null &&
+      (!Number.isInteger(r.durationSeconds) || r.durationSeconds <= 0)
+    ) {
       throw new InvalidOrderInputError("durationSeconds 必须为正整数（秒）");
     }
     for (const key of ["minBudgetFen", "maxBudgetFen"] as const) {
       const v = r[key];
       if (v !== undefined && v !== null && parseFenString(v, true) === null) {
-        throw new InvalidOrderInputError(`${key} 必须为非负整数十进制字符串（分）`);
+        throw new InvalidOrderInputError(
+          `${key} 必须为非负整数十进制字符串（分）`,
+        );
       }
     }
-    if (requireProduct && (r.serviceProductId === undefined || r.serviceProductId === null || r.durationSeconds === undefined || r.durationSeconds === null)) {
-      throw new InvalidOrderInputError("确认订单需要 serviceProductId 与 durationSeconds");
+    if (
+      requireProduct &&
+      (r.serviceProductId === undefined ||
+        r.serviceProductId === null ||
+        r.durationSeconds === undefined ||
+        r.durationSeconds === null)
+    ) {
+      throw new InvalidOrderInputError(
+        "确认订单需要 serviceProductId 与 durationSeconds",
+      );
     }
   }
 
-  async create(tenantId: string, actorId: string, input: CreateOrderInput): Promise<OrderView> {
+  async create(
+    tenantId: string,
+    actorId: string,
+    input: CreateOrderInput,
+  ): Promise<OrderView> {
     this.validateRequirement(input.requirement, false);
-    if (input.idempotencyKey !== undefined && (typeof input.idempotencyKey !== "string" || input.idempotencyKey.length < 8 || input.idempotencyKey.length > 100)) {
+    if (
+      input.idempotencyKey !== undefined &&
+      (typeof input.idempotencyKey !== "string" ||
+        input.idempotencyKey.length < 8 ||
+        input.idempotencyKey.length > 100)
+    ) {
       throw new InvalidOrderInputError("idempotencyKey 需为 8-100 字符");
     }
-    if (!(await this.repository.customerInTenant(tenantId, input.customerProfileId))) {
+    if (
+      !(await this.repository.customerInTenant(
+        tenantId,
+        input.customerProfileId,
+      ))
+    ) {
       throw new CustomerNotInTenantError(input.customerProfileId);
     }
-    if (input.requirement.gameId && !(await this.repository.gameInTenant(tenantId, input.requirement.gameId))) {
+    if (
+      input.requirement.gameId &&
+      !(await this.repository.gameInTenant(tenantId, input.requirement.gameId))
+    ) {
       throw new GameNotInTenantError(input.requirement.gameId);
     }
-    if (input.requirement.serviceProductId && !(await this.repository.productInTenant(tenantId, input.requirement.serviceProductId))) {
+    if (
+      input.requirement.serviceProductId &&
+      !(await this.repository.productInTenant(
+        tenantId,
+        input.requirement.serviceProductId,
+      ))
+    ) {
       throw new ProductNotInTenantError(input.requirement.serviceProductId);
     }
     let orderNo = input.orderNo?.trim() ?? "";
     if (orderNo === "") {
       orderNo = `R${Date.now().toString(36).toUpperCase()}${randomToken(5).toUpperCase()}`;
     }
-    if (!ORDER_NO_PATTERN.test(orderNo)) throw new InvalidOrderInputError("orderNo 需为 1-40 位字母数字_-");
+    if (!ORDER_NO_PATTERN.test(orderNo))
+      throw new InvalidOrderInputError("orderNo 需为 1-40 位字母数字_-");
     const result = await this.repository.createDraft({
       tenantId,
       actorId,
@@ -126,20 +193,27 @@ export class OrdersService {
       customerProfileId: input.customerProfileId,
       remark: input.remark?.trim() || null,
       requirement: input.requirement,
-      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {})
+      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
     });
     const view = await this.repository.loadFull(tenantId, result.orderId);
     if (!view) throw new OrderNotFoundError(result.orderId);
     return view;
   }
 
-  async confirm(tenantId: string, orderId: string, actorId: string): Promise<OrderView> {
+  async confirm(
+    tenantId: string,
+    orderId: string,
+    actorId: string,
+  ): Promise<OrderView> {
     const order = await this.repository.loadFull(tenantId, orderId);
     if (!order) throw new OrderNotFoundError(orderId);
-    if (order.status !== "DRAFT") throw new OrderStateConflictError(orderId, order.status, "CONFIRMED");
+    if (order.status !== "DRAFT")
+      throw new OrderStateConflictError(orderId, order.status, "CONFIRMED");
     const req = order.requirement;
     if (!req || !req.serviceProductId || !req.durationSeconds) {
-      throw new InvalidOrderInputError("确认订单需要 serviceProductId 与 durationSeconds");
+      throw new InvalidOrderInputError(
+        "确认订单需要 serviceProductId 与 durationSeconds",
+      );
     }
     await this.repository.confirm(tenantId, orderId, actorId);
     const view = await this.repository.loadFull(tenantId, orderId);
@@ -147,10 +221,19 @@ export class OrdersService {
     return view;
   }
 
-  async cancel(tenantId: string, orderId: string, actorId: string, reason: string | null): Promise<OrderView> {
+  async cancel(
+    tenantId: string,
+    orderId: string,
+    actorId: string,
+    reason: string | null,
+  ): Promise<OrderView> {
     const order = await this.repository.loadFull(tenantId, orderId);
     if (!order) throw new OrderNotFoundError(orderId);
-    if (!["DRAFT", "CONFIRMED", "DISPATCHING", "ASSIGNED", "READY"].includes(order.status)) {
+    if (
+      !["DRAFT", "CONFIRMED", "DISPATCHING", "ASSIGNED", "READY"].includes(
+        order.status,
+      )
+    ) {
       throw new OrderStateConflictError(orderId, order.status, "CANCELLED");
     }
     await this.repository.cancel(tenantId, orderId, actorId, reason);
@@ -169,7 +252,10 @@ export class OrdersService {
     return this.repository.list(tenantId, { ...(status ? { status } : {}) });
   }
 
-  async listByCustomer(tenantId: string, customerProfileId: string): Promise<OrderView[]> {
+  async listByCustomer(
+    tenantId: string,
+    customerProfileId: string,
+  ): Promise<OrderView[]> {
     return this.repository.listByCustomer(tenantId, customerProfileId);
   }
 }

@@ -16,19 +16,20 @@ export const CATALOG_DB_CLIENT = "CATALOG_DB_CLIENT";
         const url = process.env.DATABASE_URL;
         if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
-      }
+      },
     },
     {
       provide: PrismaCatalogRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaCatalogRepository(client)),
-      inject: [CATALOG_DB_CLIENT]
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaCatalogRepository(client)),
+      inject: [CATALOG_DB_CLIENT],
     },
     {
       provide: CatalogService,
       useFactory: (repo: PrismaCatalogRepository) => new CatalogService(repo),
-      inject: [PrismaCatalogRepository]
-    }
+      inject: [PrismaCatalogRepository],
+    },
   ],
-  exports: [CatalogService]
+  exports: [CatalogService],
 })
 export class CatalogModule {}

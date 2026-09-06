@@ -4,7 +4,10 @@ import { PrismaConfigRepository } from "../../apps/api/src/modules/tenant-config
 import { InvalidTenantConfigError } from "../../apps/api/src/modules/tenant-config/domain/errors.js";
 import { EntitlementsService } from "../../apps/api/src/modules/entitlements/application/entitlements.service.js";
 import { PrismaEntitlementRepository } from "../../apps/api/src/modules/entitlements/infrastructure/prisma-entitlement.repository.js";
-import { FeatureDisabledError, UnknownFeatureError } from "../../apps/api/src/modules/entitlements/domain/errors.js";
+import {
+  FeatureDisabledError,
+  UnknownFeatureError,
+} from "../../apps/api/src/modules/entitlements/domain/errors.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -25,10 +28,14 @@ describe("tenant-config + entitlements", () => {
 
   beforeAll(async () => {
     client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
-    const tenant = await client.tenant.create({ data: { code: tenantCode, name: "配置测试店" } });
+    const tenant = await client.tenant.create({
+      data: { code: tenantCode, name: "配置测试店" },
+    });
     tenantId = tenant.id;
     config = new TenantConfigService(new PrismaConfigRepository(client));
-    entitlements = new EntitlementsService(new PrismaEntitlementRepository(client));
+    entitlements = new EntitlementsService(
+      new PrismaEntitlementRepository(client),
+    );
   });
 
   afterAll(async () => {
@@ -48,14 +55,21 @@ describe("tenant-config + entitlements", () => {
   });
 
   it("非法配置（颜色）被拒绝", async () => {
-    await expect(config.save(tenantId, { config: { brand: { primaryColor: "red" } } })).rejects.toBeInstanceOf(InvalidTenantConfigError);
+    await expect(
+      config.save(tenantId, { config: { brand: { primaryColor: "red" } } }),
+    ).rejects.toBeInstanceOf(InvalidTenantConfigError);
   });
 
   it("保存合法配置并生效（版本+覆盖）", async () => {
     const eff = await config.save(tenantId, {
       schemaVersion: "v1",
-      brand: { primaryColor: "#111111", accentColor: "#fa8c16", logoText: "Demo", borderRadius: 8 },
-      storefront: { allowCustomerSelection: true, showServiceDuration: false }
+      brand: {
+        primaryColor: "#111111",
+        accentColor: "#fa8c16",
+        logoText: "Demo",
+        borderRadius: 8,
+      },
+      storefront: { allowCustomerSelection: true, showServiceDuration: false },
     });
     expect(eff.version).toBe(1);
     expect(eff.hasSaved).toBe(true);
@@ -68,8 +82,13 @@ describe("tenant-config + entitlements", () => {
   it("保存 v2 后可回滚到 v1", async () => {
     await config.save(tenantId, {
       schemaVersion: "v1",
-      brand: { primaryColor: "#222222", accentColor: "#fa8c16", logoText: "Demo", borderRadius: 8 },
-      storefront: { allowCustomerSelection: true, showServiceDuration: true }
+      brand: {
+        primaryColor: "#222222",
+        accentColor: "#fa8c16",
+        logoText: "Demo",
+        borderRadius: 8,
+      },
+      storefront: { allowCustomerSelection: true, showServiceDuration: true },
     });
     const eff = await config.rollback(tenantId);
     expect(eff.version).toBe(1);
@@ -78,17 +97,37 @@ describe("tenant-config + entitlements", () => {
 
   it("entitlements：core 常开，addon 默认关，平台可开并门禁生效", async () => {
     const before = await entitlements.listFeatures(tenantId);
-    expect(before.find((f) => f.featureKey === "core.tenancy")?.enabled).toBe(true);
-    expect(before.find((f) => f.featureKey === "addon.customer_self_service")?.enabled).toBe(false);
+    expect(before.find((f) => f.featureKey === "core.tenancy")?.enabled).toBe(
+      true,
+    );
+    expect(
+      before.find((f) => f.featureKey === "addon.customer_self_service")
+        ?.enabled,
+    ).toBe(false);
 
-    await expect(entitlements.ensureAddonEnabled(tenantId, "addon.player_order_hall")).rejects.toBeInstanceOf(FeatureDisabledError);
-    await expect(entitlements.setFeature(tenantId, "core.tenancy", false)).rejects.toBeInstanceOf(UnknownFeatureError);
-    await expect(entitlements.setFeature(tenantId, "no.such.addon", true)).rejects.toBeInstanceOf(UnknownFeatureError);
+    await expect(
+      entitlements.ensureAddonEnabled(tenantId, "addon.player_order_hall"),
+    ).rejects.toBeInstanceOf(FeatureDisabledError);
+    await expect(
+      entitlements.setFeature(tenantId, "core.tenancy", false),
+    ).rejects.toBeInstanceOf(UnknownFeatureError);
+    await expect(
+      entitlements.setFeature(tenantId, "no.such.addon", true),
+    ).rejects.toBeInstanceOf(UnknownFeatureError);
 
-    await entitlements.setFeature(tenantId, "addon.customer_self_service", true);
+    await entitlements.setFeature(
+      tenantId,
+      "addon.customer_self_service",
+      true,
+    );
     const after = await entitlements.listFeatures(tenantId);
-    expect(after.find((f) => f.featureKey === "addon.customer_self_service")?.enabled).toBe(true);
-    await expect(entitlements.ensureAddonEnabled(tenantId, "addon.customer_self_service")).resolves.toBe("addon.customer_self_service");
+    expect(
+      after.find((f) => f.featureKey === "addon.customer_self_service")
+        ?.enabled,
+    ).toBe(true);
+    await expect(
+      entitlements.ensureAddonEnabled(tenantId, "addon.customer_self_service"),
+    ).resolves.toBe("addon.customer_self_service");
   });
 });
 
@@ -100,18 +139,33 @@ describe("tenant-config CONFIG_ERROR 持久化与回滚", () => {
 
   beforeAll(async () => {
     client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
-    const tenant = await client.tenant.create({ data: { code: tenantCode, name: "错误回滚测试店" } });
+    const tenant = await client.tenant.create({
+      data: { code: tenantCode, name: "错误回滚测试店" },
+    });
     tenantId = tenant.id;
     config = new TenantConfigService(new PrismaConfigRepository(client));
     await config.save(tenantId, {
       schemaVersion: "v1",
-      brand: { primaryColor: "#333333", accentColor: "#fa8c16", logoText: "V1", borderRadius: 8 },
-      storefront: { allowCustomerSelection: true, showServiceDuration: true }
+      brand: {
+        primaryColor: "#333333",
+        accentColor: "#fa8c16",
+        logoText: "V1",
+        borderRadius: 8,
+      },
+      storefront: { allowCustomerSelection: true, showServiceDuration: true },
     });
     // 直接写入损坏的 v2 ACTIVE（模拟历史配置损坏）
-    await client.tenantConfigVersion.updateMany({ where: { tenantId }, data: { status: "SUPERSEDED" } });
+    await client.tenantConfigVersion.updateMany({
+      where: { tenantId },
+      data: { status: "SUPERSEDED" },
+    });
     await client.tenantConfigVersion.create({
-      data: { tenantId, version: 2, status: "ACTIVE", config: { brand: { primaryColor: "red" } } }
+      data: {
+        tenantId,
+        version: 2,
+        status: "ACTIVE",
+        config: { brand: { primaryColor: "red" } },
+      },
     });
   });
 

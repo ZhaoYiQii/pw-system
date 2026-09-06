@@ -10,7 +10,7 @@ const LINKS = [
   { href: "/players", label: "陪玩" },
   { href: "/catalog", label: "服务目录" },
   { href: "/settings", label: "门店设置" },
-  { href: "/finance", label: "财务" }
+  { href: "/finance", label: "财务" },
 ];
 
 export function TenantNav() {

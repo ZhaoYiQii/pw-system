@@ -4,14 +4,23 @@ import {
   InvalidOrderInputError,
   OrderStateConflictError,
   PricingRuleMissingError,
-  ProductDisabledError
+  ProductDisabledError,
 } from "../domain/errors.js";
-import type { OrdersRepository, ProductLookup, RequirementInput } from "../application/orders.service.js";
+import type {
+  OrdersRepository,
+  ProductLookup,
+  RequirementInput,
+} from "../application/orders.service.js";
 
 const IDEM_OP_CREATE = "createOrder";
 
 function isP2002(error: unknown): boolean {
-  return error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002";
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
 }
 
 function asDate(v: string | null | undefined): Date | null {
@@ -24,36 +33,69 @@ export class PrismaOrdersRepository implements OrdersRepository {
   constructor(private readonly client: PrismaClient) {}
 
   async customerInTenant(tenantId: string, id: string): Promise<boolean> {
-    const row = await this.client.customerProfile.findFirst({ where: { tenantId, id }, select: { id: true } });
+    const row = await this.client.customerProfile.findFirst({
+      where: { tenantId, id },
+      select: { id: true },
+    });
     return row !== null;
   }
 
   async gameInTenant(tenantId: string, id: string): Promise<boolean> {
-    const row = await this.client.game.findFirst({ where: { tenantId, id }, select: { id: true } });
+    const row = await this.client.game.findFirst({
+      where: { tenantId, id },
+      select: { id: true },
+    });
     return row !== null;
   }
 
-  async productInTenant(tenantId: string, id: string): Promise<ProductLookup | null> {
-    const row = await this.client.serviceProduct.findFirst({ where: { tenantId, id }, select: { id: true, name: true, gameRegionId: true, enabled: true } });
+  async productInTenant(
+    tenantId: string,
+    id: string,
+  ): Promise<ProductLookup | null> {
+    const row = await this.client.serviceProduct.findFirst({
+      where: { tenantId, id },
+      select: { id: true, name: true, gameRegionId: true, enabled: true },
+    });
     if (!row) return null;
     let regionName: string | null = null;
     if (row.gameRegionId) {
-      const region = await this.client.gameRegion.findFirst({ where: { tenantId, id: row.gameRegionId }, select: { name: true } });
+      const region = await this.client.gameRegion.findFirst({
+        where: { tenantId, id: row.gameRegionId },
+        select: { name: true },
+      });
       regionName = region?.name ?? null;
     }
     return { id: row.id, name: row.name, regionName, enabled: row.enabled };
   }
 
   async loadFull(tenantId: string, orderId: string): Promise<OrderView | null> {
-    const order = await this.client.order.findFirst({ where: { tenantId, id: orderId } });
+    const order = await this.client.order.findFirst({
+      where: { tenantId, id: orderId },
+    });
     if (!order) return null;
-    const customer = await this.client.customerProfile.findFirst({ where: { tenantId, id: order.customerProfileId }, select: { name: true } });
-    const reqRow = await this.client.orderRequirement.findFirst({ where: { tenantId, orderId }, orderBy: { createdAt: "desc" } });
+    const customer = await this.client.customerProfile.findFirst({
+      where: { tenantId, id: order.customerProfileId },
+      select: { name: true },
+    });
+    const reqRow = await this.client.orderRequirement.findFirst({
+      where: { tenantId, orderId },
+      orderBy: { createdAt: "desc" },
+    });
     let requirement: OrderView["requirement"] = null;
     if (reqRow) {
       const [game, product] = await Promise.all([
-        reqRow.gameId ? this.client.game.findFirst({ where: { tenantId, id: reqRow.gameId }, select: { name: true } }) : null,
-        reqRow.serviceProductId ? this.client.serviceProduct.findFirst({ where: { tenantId, id: reqRow.serviceProductId }, select: { name: true } }) : null
+        reqRow.gameId
+          ? this.client.game.findFirst({
+              where: { tenantId, id: reqRow.gameId },
+              select: { name: true },
+            })
+          : null,
+        reqRow.serviceProductId
+          ? this.client.serviceProduct.findFirst({
+              where: { tenantId, id: reqRow.serviceProductId },
+              select: { name: true },
+            })
+          : null,
       ]);
       requirement = {
         description: reqRow.description,
@@ -63,18 +105,20 @@ export class PrismaOrdersRepository implements OrdersRepository {
         productName: product?.name ?? null,
         desiredStartAt: reqRow.desiredStartAt,
         durationSeconds: reqRow.durationSeconds,
-        minBudgetFen: reqRow.minBudgetFen === null ? null : reqRow.minBudgetFen.toString(),
-        maxBudgetFen: reqRow.maxBudgetFen === null ? null : reqRow.maxBudgetFen.toString(),
-        note: reqRow.note
+        minBudgetFen:
+          reqRow.minBudgetFen === null ? null : reqRow.minBudgetFen.toString(),
+        maxBudgetFen:
+          reqRow.maxBudgetFen === null ? null : reqRow.maxBudgetFen.toString(),
+        note: reqRow.note,
       };
     }
     const snapRows = await this.client.orderPriceSnapshot.findMany({
       where: { tenantId, orderId },
-      orderBy: [{ snapshotVersion: "asc" }, { id: "asc" }]
+      orderBy: [{ snapshotVersion: "asc" }, { id: "asc" }],
     });
     const events = await this.client.orderEvent.findMany({
       where: { tenantId, orderId },
-      orderBy: { occurredAt: "asc" }
+      orderBy: { occurredAt: "asc" },
     });
     return {
       id: order.id,
@@ -97,23 +141,29 @@ export class PrismaOrdersRepository implements OrdersRepository {
         unitPriceFen: s.unitPriceFen.toString(),
         playerCostFen: s.playerCostFen.toString(),
         lineTotalFen: s.lineTotalFen.toString(),
-        currency: s.currency
+        currency: s.currency,
       })),
       timeline: events.map((e) => ({
         id: e.id,
         eventType: e.eventType,
         fromStatus: e.fromStatus,
         toStatus: e.toStatus,
-        occurredAt: e.occurredAt
-      }))
+        occurredAt: e.occurredAt,
+      })),
     };
   }
 
-  async list(tenantId: string, opts: { status?: string }): Promise<OrderView[]> {
+  async list(
+    tenantId: string,
+    opts: { status?: string },
+  ): Promise<OrderView[]> {
     const rows = await this.client.order.findMany({
-      where: { tenantId, ...(opts.status ? { status: opts.status as never } : {}) },
+      where: {
+        tenantId,
+        ...(opts.status ? { status: opts.status as never } : {}),
+      },
       orderBy: { createdAt: "desc" },
-      take: 100
+      take: 100,
     });
     const out: OrderView[] = [];
     for (const row of rows) {
@@ -123,11 +173,14 @@ export class PrismaOrdersRepository implements OrdersRepository {
     return out;
   }
 
-  async listByCustomer(tenantId: string, customerProfileId: string): Promise<OrderView[]> {
+  async listByCustomer(
+    tenantId: string,
+    customerProfileId: string,
+  ): Promise<OrderView[]> {
     const rows = await this.client.order.findMany({
       where: { tenantId, customerProfileId },
       orderBy: { createdAt: "desc" },
-      take: 100
+      take: 100,
     });
     const out: OrderView[] = [];
     for (const row of rows) {
@@ -137,7 +190,10 @@ export class PrismaOrdersRepository implements OrdersRepository {
     return out;
   }
 
-  private async requirementData(tenantId: string, r: RequirementInput): Promise<Prisma.OrderRequirementCreateManyInput> {
+  private async requirementData(
+    tenantId: string,
+    r: RequirementInput,
+  ): Promise<Prisma.OrderRequirementCreateManyInput> {
     return {
       tenantId,
       orderId: "", // filled after order
@@ -147,9 +203,15 @@ export class PrismaOrdersRepository implements OrdersRepository {
       gender: r.gender?.trim() || null,
       desiredStartAt: asDate(r.desiredStartAt ?? null),
       durationSeconds: r.durationSeconds ?? null,
-      minBudgetFen: r.minBudgetFen === undefined || r.minBudgetFen === null ? null : BigInt(r.minBudgetFen),
-      maxBudgetFen: r.maxBudgetFen === undefined || r.maxBudgetFen === null ? null : BigInt(r.maxBudgetFen),
-      note: r.note?.trim() || null
+      minBudgetFen:
+        r.minBudgetFen === undefined || r.minBudgetFen === null
+          ? null
+          : BigInt(r.minBudgetFen),
+      maxBudgetFen:
+        r.maxBudgetFen === undefined || r.maxBudgetFen === null
+          ? null
+          : BigInt(r.maxBudgetFen),
+      note: r.note?.trim() || null,
     };
   }
 
@@ -166,20 +228,29 @@ export class PrismaOrdersRepository implements OrdersRepository {
       return await this.client.$transaction(async (tx) => {
         if (opts.idempotencyKey) {
           const existing = await tx.idempotencyRecord.findUnique({
-            where: { tenantId_idempotencyKey_operation: { tenantId: opts.tenantId, idempotencyKey: opts.idempotencyKey, operation: IDEM_OP_CREATE } }
+            where: {
+              tenantId_idempotencyKey_operation: {
+                tenantId: opts.tenantId,
+                idempotencyKey: opts.idempotencyKey,
+                operation: IDEM_OP_CREATE,
+              },
+            },
           });
-          if (existing?.entityId) return { orderId: existing.entityId, duplicate: true };
+          if (existing?.entityId)
+            return { orderId: existing.entityId, duplicate: true };
         }
         const order = await tx.order.create({
           data: {
             tenantId: opts.tenantId,
             orderNo: opts.orderNo,
             customerProfileId: opts.customerProfileId,
-            remark: opts.remark
-          }
+            remark: opts.remark,
+          },
         });
         const req = await this.requirementData(opts.tenantId, opts.requirement);
-        await tx.orderRequirement.create({ data: { ...req, orderId: order.id } });
+        await tx.orderRequirement.create({
+          data: { ...req, orderId: order.id },
+        });
         await tx.orderEvent.create({
           data: {
             tenantId: opts.tenantId,
@@ -189,8 +260,8 @@ export class PrismaOrdersRepository implements OrdersRepository {
             toStatus: "DRAFT",
             actorType: "tenant_account",
             actorId: opts.actorId,
-            payload: { orderNo: order.orderNo }
-          }
+            payload: { orderNo: order.orderNo },
+          },
         });
         await tx.outboxEvent.create({
           data: {
@@ -198,8 +269,12 @@ export class PrismaOrdersRepository implements OrdersRepository {
             aggregateType: "order",
             aggregateId: order.id,
             eventType: "order.created",
-            payload: { orderId: order.id, orderNo: order.orderNo, status: "DRAFT" }
-          }
+            payload: {
+              orderId: order.id,
+              orderNo: order.orderNo,
+              status: "DRAFT",
+            },
+          },
         });
         if (opts.idempotencyKey) {
           await tx.idempotencyRecord.create({
@@ -208,8 +283,8 @@ export class PrismaOrdersRepository implements OrdersRepository {
               idempotencyKey: opts.idempotencyKey,
               operation: IDEM_OP_CREATE,
               entityType: "order",
-              entityId: order.id
-            }
+              entityId: order.id,
+            },
           });
         }
         return { orderId: order.id, duplicate: false };
@@ -218,7 +293,13 @@ export class PrismaOrdersRepository implements OrdersRepository {
       if (isP2002(error)) {
         if (opts.idempotencyKey) {
           const rec = await this.client.idempotencyRecord.findUnique({
-            where: { tenantId_idempotencyKey_operation: { tenantId: opts.tenantId, idempotencyKey: opts.idempotencyKey, operation: IDEM_OP_CREATE } }
+            where: {
+              tenantId_idempotencyKey_operation: {
+                tenantId: opts.tenantId,
+                idempotencyKey: opts.idempotencyKey,
+                operation: IDEM_OP_CREATE,
+              },
+            },
           });
           if (rec?.entityId) return { orderId: rec.entityId, duplicate: true };
         }
@@ -228,28 +309,55 @@ export class PrismaOrdersRepository implements OrdersRepository {
     }
   }
 
-  async confirm(tenantId: string, orderId: string, actorId: string): Promise<void> {
+  async confirm(
+    tenantId: string,
+    orderId: string,
+    actorId: string,
+  ): Promise<void> {
     await this.client.$transaction(async (tx) => {
-      const lock = await tx.$queryRaw<Array<{ id: string; status: string; order_no: string }>>`
+      const lock = await tx.$queryRaw<
+        Array<{ id: string; status: string; order_no: string }>
+      >`
         SELECT id, status, order_no FROM orders
         WHERE id = ${orderId}::uuid AND tenant_id = ${tenantId}::uuid FOR UPDATE`;
       if (lock.length === 0) return;
-      const current = lock[0] as { id: string; status: string; order_no: string };
-      if (current.status !== "DRAFT") throw new OrderStateConflictError(orderId, current.status, "CONFIRMED");
-      const req = await tx.orderRequirement.findFirst({ where: { tenantId, orderId } });
+      const current = lock[0] as {
+        id: string;
+        status: string;
+        order_no: string;
+      };
+      if (current.status !== "DRAFT")
+        throw new OrderStateConflictError(orderId, current.status, "CONFIRMED");
+      const req = await tx.orderRequirement.findFirst({
+        where: { tenantId, orderId },
+      });
       if (!req || !req.serviceProductId || !req.durationSeconds) {
-        throw new InvalidOrderInputError("确认订单需要 serviceProductId 与 durationSeconds");
+        throw new InvalidOrderInputError(
+          "确认订单需要 serviceProductId 与 durationSeconds",
+        );
       }
-      const product = await tx.serviceProduct.findFirst({ where: { tenantId, id: req.serviceProductId }, select: { id: true, name: true, enabled: true, gameRegionId: true } });
+      const product = await tx.serviceProduct.findFirst({
+        where: { tenantId, id: req.serviceProductId },
+        select: { id: true, name: true, enabled: true, gameRegionId: true },
+      });
       if (!product) throw new InvalidOrderInputError("服务产品不存在");
       if (!product.enabled) throw new ProductDisabledError(product.id);
       const rule = await tx.pricingRule.findFirst({
-        where: { tenantId, serviceProductId: product.id, durationSeconds: req.durationSeconds, enabled: true }
+        where: {
+          tenantId,
+          serviceProductId: product.id,
+          durationSeconds: req.durationSeconds,
+          enabled: true,
+        },
       });
-      if (!rule) throw new PricingRuleMissingError(product.id, req.durationSeconds);
+      if (!rule)
+        throw new PricingRuleMissingError(product.id, req.durationSeconds);
       let regionName: string | null = null;
       if (product.gameRegionId) {
-        const region = await tx.gameRegion.findFirst({ where: { tenantId, id: product.gameRegionId }, select: { name: true } });
+        const region = await tx.gameRegion.findFirst({
+          where: { tenantId, id: product.gameRegionId },
+          select: { name: true },
+        });
         regionName = region?.name ?? null;
       }
       const unitPriceFen = rule.priceFen;
@@ -267,8 +375,8 @@ export class PrismaOrdersRepository implements OrdersRepository {
           unitPriceFen,
           playerCostFen,
           quantity,
-          lineTotalFen: unitPriceFen * BigInt(quantity)
-        }
+          lineTotalFen: unitPriceFen * BigInt(quantity),
+        },
       });
       await tx.orderEvent.create({
         data: {
@@ -279,8 +387,8 @@ export class PrismaOrdersRepository implements OrdersRepository {
           toStatus: null,
           actorType: "tenant_account",
           actorId,
-          payload: { version: 1 }
-        }
+          payload: { version: 1 },
+        },
       });
       await tx.orderEvent.create({
         data: {
@@ -291,33 +399,59 @@ export class PrismaOrdersRepository implements OrdersRepository {
           toStatus: "CONFIRMED",
           actorType: "tenant_account",
           actorId,
-          payload: { orderNo: current.order_no }
-        }
+          payload: { orderNo: current.order_no },
+        },
       });
-      await tx.order.update({ where: { id: orderId }, data: { status: "CONFIRMED" } });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "CONFIRMED" },
+      });
       await tx.outboxEvent.create({
         data: {
           tenantId,
           aggregateType: "order",
           aggregateId: orderId,
           eventType: "order.confirmed",
-          payload: { orderId, orderNo: current.order_no, status: "CONFIRMED", unitPriceFen: unitPriceFen.toString() }
-        }
+          payload: {
+            orderId,
+            orderNo: current.order_no,
+            status: "CONFIRMED",
+            unitPriceFen: unitPriceFen.toString(),
+          },
+        },
       });
     });
   }
 
-  async cancel(tenantId: string, orderId: string, actorId: string, reason: string | null): Promise<void> {
+  async cancel(
+    tenantId: string,
+    orderId: string,
+    actorId: string,
+    reason: string | null,
+  ): Promise<void> {
     await this.client.$transaction(async (tx) => {
-      const lock = await tx.$queryRaw<Array<{ id: string; status: string; order_no: string }>>`
+      const lock = await tx.$queryRaw<
+        Array<{ id: string; status: string; order_no: string }>
+      >`
         SELECT id, status, order_no FROM orders
         WHERE id = ${orderId}::uuid AND tenant_id = ${tenantId}::uuid FOR UPDATE`;
       if (lock.length === 0) return;
-      const current = lock[0] as { id: string; status: string; order_no: string };
-      if (!["DRAFT", "CONFIRMED", "DISPATCHING", "ASSIGNED", "READY"].includes(current.status)) {
+      const current = lock[0] as {
+        id: string;
+        status: string;
+        order_no: string;
+      };
+      if (
+        !["DRAFT", "CONFIRMED", "DISPATCHING", "ASSIGNED", "READY"].includes(
+          current.status,
+        )
+      ) {
         throw new OrderStateConflictError(orderId, current.status, "CANCELLED");
       }
-      await tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "CANCELLED" },
+      });
       await tx.orderEvent.create({
         data: {
           tenantId,
@@ -327,17 +461,21 @@ export class PrismaOrdersRepository implements OrdersRepository {
           toStatus: "CANCELLED",
           actorType: "tenant_account",
           actorId,
-          payload: { reason: reason ?? null, orderNo: current.order_no }
-        }
+          payload: { reason: reason ?? null, orderNo: current.order_no },
+        },
       });
       // 取消后的业务清理：关闭公开派单，过期仍未处理的报名
       await tx.dispatchPublication.updateMany({
         where: { tenantId, orderId, status: "OPEN" },
-        data: { status: "CLOSED", closedAt: new Date() }
+        data: { status: "CLOSED", closedAt: new Date() },
       });
       await tx.application.updateMany({
-        where: { tenantId, orderId, status: { in: ["APPLIED", "SHORTLISTED"] } },
-        data: { status: "EXPIRED" }
+        where: {
+          tenantId,
+          orderId,
+          status: { in: ["APPLIED", "SHORTLISTED"] },
+        },
+        data: { status: "EXPIRED" },
       });
       await tx.outboxEvent.create({
         data: {
@@ -345,8 +483,8 @@ export class PrismaOrdersRepository implements OrdersRepository {
           aggregateType: "order",
           aggregateId: orderId,
           eventType: "order.cancelled",
-          payload: { orderId, orderNo: current.order_no, status: "CANCELLED" }
-        }
+          payload: { orderId, orderNo: current.order_no, status: "CANCELLED" },
+        },
       });
     });
   }

@@ -1,9 +1,18 @@
-import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import type { AccessPrincipal } from "../../modules/identity-access/domain/principal.js";
 import { AuthService } from "../../modules/identity-access/application/auth.service.js";
-import { AUD_PLATFORM, AUD_TENANT } from "../../modules/identity-access/infrastructure/tokens.js";
+import {
+  AUD_PLATFORM,
+  AUD_TENANT,
+} from "../../modules/identity-access/infrastructure/tokens.js";
 import { IS_PUBLIC_KEY, REQUIRED_SCOPE_KEY } from "./decorators.js";
 
 export interface AuthenticatedRequest extends Request {
@@ -19,14 +28,13 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
-      context.getClass()
+      context.getClass(),
     ]);
     if (isPublic) return true;
 
-    const requiredScope = this.reflector.getAllAndOverride<"platform" | "tenant" | undefined>(
-      REQUIRED_SCOPE_KEY,
-      [context.getHandler(), context.getClass()]
-    );
+    const requiredScope = this.reflector.getAllAndOverride<
+      "platform" | "tenant" | undefined
+    >(REQUIRED_SCOPE_KEY, [context.getHandler(), context.getClass()]);
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractBearer(request);

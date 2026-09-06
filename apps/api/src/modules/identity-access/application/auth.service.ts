@@ -1,9 +1,22 @@
-import { AccountDisabledError, InvalidCredentialsError, InvalidRefreshTokenError, TenantInactiveError } from "../domain/errors.js";
+import {
+  AccountDisabledError,
+  InvalidCredentialsError,
+  InvalidRefreshTokenError,
+  TenantInactiveError,
+} from "../domain/errors.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
 import type { RoleKey } from "../domain/roles.js";
 import { verifyPassword } from "../infrastructure/password.js";
-import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_SECONDS, TokenService } from "../infrastructure/tokens.js";
-import type { AuthRepository, PlatformAccountRecord, TenantAccountRecord } from "./auth-ports.js";
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  REFRESH_TOKEN_TTL_SECONDS,
+  TokenService,
+} from "../infrastructure/tokens.js";
+import type {
+  AuthRepository,
+  PlatformAccountRecord,
+  TenantAccountRecord,
+} from "./auth-ports.js";
 
 export interface SessionBundle {
   accessToken: string;
@@ -15,7 +28,7 @@ export interface SessionBundle {
 export class AuthService {
   constructor(
     private readonly repository: AuthRepository,
-    private readonly tokens: TokenService
+    private readonly tokens: TokenService,
   ) {}
 
   private platformPrincipal(account: PlatformAccountRecord): AccessPrincipal {
@@ -23,7 +36,7 @@ export class AuthService {
       sub: account.id,
       scope: "platform",
       role: account.role as RoleKey,
-      username: account.username
+      username: account.username,
     };
   }
 
@@ -34,12 +47,16 @@ export class AuthService {
       scope: "tenant",
       role,
       username: account.username,
-      tenantId: account.tenantId
+      tenantId: account.tenantId,
     };
   }
 
-  async loginPlatform(username: string, password: string): Promise<SessionBundle> {
-    const account = await this.repository.findPlatformAccountByUsername(username);
+  async loginPlatform(
+    username: string,
+    password: string,
+  ): Promise<SessionBundle> {
+    const account =
+      await this.repository.findPlatformAccountByUsername(username);
     if (!account) throw new InvalidCredentialsError();
     if (account.status !== "ACTIVE") throw new AccountDisabledError();
     const ok = await verifyPassword(password, account.passwordHash);
@@ -47,8 +64,15 @@ export class AuthService {
     return this.issue(this.platformPrincipal(account));
   }
 
-  async loginTenant(tenantCode: string, username: string, password: string): Promise<SessionBundle> {
-    const account = await this.repository.findTenantAccountByCodeAndUsername(tenantCode, username);
+  async loginTenant(
+    tenantCode: string,
+    username: string,
+    password: string,
+  ): Promise<SessionBundle> {
+    const account = await this.repository.findTenantAccountByCodeAndUsername(
+      tenantCode,
+      username,
+    );
     if (!account) throw new InvalidCredentialsError();
     if (account.tenantStatus !== "ACTIVE") {
       await this.repository.recordAudit({
@@ -56,7 +80,7 @@ export class AuthService {
         actorType: "tenant_account",
         actorId: account.id,
         action: "auth.login_failed",
-        summary: "登录失败：门店已停用"
+        summary: "登录失败：门店已停用",
       });
       throw new TenantInactiveError();
     }
@@ -66,7 +90,7 @@ export class AuthService {
         actorType: "tenant_account",
         actorId: account.id,
         action: "auth.login_failed",
-        summary: "登录失败：账号停用"
+        summary: "登录失败：账号停用",
       });
       throw new AccountDisabledError();
     }
@@ -77,7 +101,7 @@ export class AuthService {
         actorType: "tenant_account",
         actorId: account.id,
         action: "auth.login_failed",
-        summary: "登录失败：密码错误"
+        summary: "登录失败：密码错误",
       });
       throw new InvalidCredentialsError();
     }
@@ -89,7 +113,7 @@ export class AuthService {
       action: "auth.login",
       resourceType: "tenant_account",
       resourceId: bundle.principal.sub,
-      summary: `门店登录成功：${username}`
+      summary: `门店登录成功：${username}`,
     });
     return bundle;
   }
@@ -100,23 +124,29 @@ export class AuthService {
     await this.repository.createRefreshSession({
       subjectType: principal.scope,
       accountId: principal.sub,
-      ...(principal.tenantId !== undefined ? { tenantId: principal.tenantId } : {}),
+      ...(principal.tenantId !== undefined
+        ? { tenantId: principal.tenantId }
+        : {}),
       tokenHash: this.tokens.hashRefreshToken(refreshToken),
-      expiresAt: new Date(now + REFRESH_TOKEN_TTL_SECONDS * 1000)
+      expiresAt: new Date(now + REFRESH_TOKEN_TTL_SECONDS * 1000),
     });
     return {
       accessToken: await this.tokens.signAccess(principal),
       refreshToken,
       principal,
-      expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS
+      expiresInSeconds: ACCESS_TOKEN_TTL_SECONDS,
     };
   }
 
   async refresh(refreshToken: string, scope: Scope): Promise<SessionBundle> {
     const session = await this.repository.findRefreshSessionByTokenHash(
-      this.tokens.hashRefreshToken(refreshToken)
+      this.tokens.hashRefreshToken(refreshToken),
     );
-    if (!session || session.revokedAt !== null || session.expiresAt.getTime() < Date.now()) {
+    if (
+      !session ||
+      session.revokedAt !== null ||
+      session.expiresAt.getTime() < Date.now()
+    ) {
       throw new InvalidRefreshTokenError();
     }
     if (session.subjectType !== scope) throw new InvalidRefreshTokenError();
@@ -124,7 +154,10 @@ export class AuthService {
     const account =
       scope === "platform"
         ? await this.repository.findPlatformAccountById(session.accountId)
-        : await this.repository.findTenantAccountById(session.accountId, session.tenantId);
+        : await this.repository.findTenantAccountById(
+            session.accountId,
+            session.tenantId,
+          );
 
     if (!account || account.status !== "ACTIVE") {
       await this.repository.revokeRefreshSession(session.id);
@@ -149,12 +182,15 @@ export class AuthService {
 
   async logout(refreshToken: string): Promise<void> {
     const session = await this.repository.findRefreshSessionByTokenHash(
-      this.tokens.hashRefreshToken(refreshToken)
+      this.tokens.hashRefreshToken(refreshToken),
     );
     if (session) await this.repository.revokeRefreshSession(session.id);
   }
 
-  verifyAccess(token: string, allowedAudiences: readonly string[]): Promise<AccessPrincipal> {
+  verifyAccess(
+    token: string,
+    allowedAudiences: readonly string[],
+  ): Promise<AccessPrincipal> {
     return this.tokens.verifyAccess(token, allowedAudiences);
   }
 }

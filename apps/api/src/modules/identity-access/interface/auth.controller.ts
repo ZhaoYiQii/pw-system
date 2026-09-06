@@ -1,10 +1,25 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Inject, Post, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Post,
+  Req,
+  Res,
+} from "@nestjs/common";
 import type { Request, Response } from "express";
 import { AuthService } from "../application/auth.service.js";
 import { Public } from "../../../common/auth/decorators.js";
 import { RateLimitService } from "../../../common/auth/rate-limit.service.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
-import { AccountDisabledError, InvalidCredentialsError, InvalidRefreshTokenError, TenantInactiveError } from "../domain/errors.js";
+import {
+  AccountDisabledError,
+  InvalidCredentialsError,
+  InvalidRefreshTokenError,
+  TenantInactiveError,
+} from "../domain/errors.js";
 import type { Scope } from "../domain/principal.js";
 import { REFRESH_TOKEN_TTL_SECONDS } from "../infrastructure/tokens.js";
 
@@ -50,7 +65,7 @@ function setRefreshCookie(res: Response, token: string): void {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: REFRESH_COOKIE_PATH,
-    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000
+    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
   });
 }
 
@@ -73,36 +88,62 @@ function originAllowed(req: Request): boolean {
 export class AuthController {
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
-    @Inject(RateLimitService) private readonly rateLimit: RateLimitService
+    @Inject(RateLimitService) private readonly rateLimit: RateLimitService,
   ) {}
 
   @Public()
   @Post("login")
-  async login(@Body() body: LoginBody, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
-    const kind = body.kind === "platform" ? "platform" : body.kind === "tenant" ? "tenant" : null;
-    if (!kind) throw new HttpException("kind must be platform|tenant", HttpStatus.BAD_REQUEST);
+  async login(
+    @Body() body: LoginBody,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const kind =
+      body.kind === "platform"
+        ? "platform"
+        : body.kind === "tenant"
+          ? "tenant"
+          : null;
+    if (!kind)
+      throw new HttpException(
+        "kind must be platform|tenant",
+        HttpStatus.BAD_REQUEST,
+      );
     const username = requiredString(body.username, "username");
     const password = requiredString(body.password, "password");
     const rateKey = (req.ip ?? "unknown") + ":" + kind + ":" + username;
-    if (this.rateLimit.isBlocked(rateKey, LOGIN_MAX_FAILURES, LOGIN_WINDOW_MS)) {
-      throw new HttpException("too many attempts", HttpStatus.TOO_MANY_REQUESTS);
+    if (
+      this.rateLimit.isBlocked(rateKey, LOGIN_MAX_FAILURES, LOGIN_WINDOW_MS)
+    ) {
+      throw new HttpException(
+        "too many attempts",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     try {
       const bundle =
         kind === "platform"
           ? await this.auth.loginPlatform(username, password)
-          : await this.auth.loginTenant(requiredString(body.tenantCode, "tenantCode"), username, password);
+          : await this.auth.loginTenant(
+              requiredString(body.tenantCode, "tenantCode"),
+              username,
+              password,
+            );
       this.rateLimit.reset(rateKey);
       setRefreshCookie(res, bundle.refreshToken);
       return {
         data: {
           accessToken: bundle.accessToken,
           principal: bundle.principal,
-          expiresInSeconds: bundle.expiresInSeconds
-        }
+          expiresInSeconds: bundle.expiresInSeconds,
+        },
       };
     } catch (error) {
-      if (error instanceof InvalidCredentialsError || error instanceof AccountDisabledError || error instanceof TenantInactiveError) {
+      if (
+        error instanceof InvalidCredentialsError ||
+        error instanceof AccountDisabledError ||
+        error instanceof TenantInactiveError
+      ) {
         this.rateLimit.recordFailure(rateKey, LOGIN_WINDOW_MS);
         throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);
       }
@@ -115,15 +156,34 @@ export class AuthController {
 
   @Public()
   @Post("refresh")
-  async refresh(@Body() body: TokenBody, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
-    const scope = body.scope === "tenant" ? ("tenant" as Scope) : body.scope === "platform" ? ("platform" as Scope) : null;
-    if (!scope) throw new HttpException("scope must be platform|tenant", HttpStatus.BAD_REQUEST);
+  async refresh(
+    @Body() body: TokenBody,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const scope =
+      body.scope === "tenant"
+        ? ("tenant" as Scope)
+        : body.scope === "platform"
+          ? ("platform" as Scope)
+          : null;
+    if (!scope)
+      throw new HttpException(
+        "scope must be platform|tenant",
+        HttpStatus.BAD_REQUEST,
+      );
     const cookieToken = readCookie(req, REFRESH_COOKIE);
     if (!cookieToken) {
-      throw new HttpException("refresh token cookie required", HttpStatus.UNAUTHORIZED);
+      throw new HttpException(
+        "refresh token cookie required",
+        HttpStatus.UNAUTHORIZED,
+      );
     }
     if (!originAllowed(req)) {
-      throw new HttpException("cross-site request rejected", HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        "cross-site request rejected",
+        HttpStatus.FORBIDDEN,
+      );
     }
     try {
       const bundle = await this.auth.refresh(cookieToken, scope);
@@ -132,8 +192,8 @@ export class AuthController {
         data: {
           accessToken: bundle.accessToken,
           principal: bundle.principal,
-          expiresInSeconds: bundle.expiresInSeconds
-        }
+          expiresInSeconds: bundle.expiresInSeconds,
+        },
       };
     } catch (error) {
       if (error instanceof InvalidRefreshTokenError) {
@@ -145,14 +205,20 @@ export class AuthController {
 
   @Public()
   @Post("logout")
-  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const cookieToken = readCookie(req, REFRESH_COOKIE);
     if (!cookieToken) {
       clearRefreshCookie(res);
       return { data: { ok: true } };
     }
     if (!originAllowed(req)) {
-      throw new HttpException("cross-site request rejected", HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        "cross-site request rejected",
+        HttpStatus.FORBIDDEN,
+      );
     }
     await this.auth.logout(cookieToken);
     clearRefreshCookie(res);

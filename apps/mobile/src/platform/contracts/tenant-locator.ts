@@ -1,4 +1,5 @@
-export type TenantResolveState = "ok" | "not_found" | "inactive" | "unconfigured" | "error";
+export type TenantResolveState =
+  "ok" | "not_found" | "inactive" | "unconfigured" | "error";
 
 export interface ResolvedTenantInfo {
   state: TenantResolveState;

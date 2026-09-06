@@ -8,5 +8,8 @@ export function formatFenYuan(fen: string): string {
 
 /** 分（十进制字符串）求和 → 十进制字符串；仅用于展示合计。 */
 export function sumFen(values: readonly string[]): string {
-  return values.reduce((acc, value) => (BigInt(acc) + BigInt(value)).toString(), "0");
+  return values.reduce(
+    (acc, value) => (BigInt(acc) + BigInt(value)).toString(),
+    "0",
+  );
 }

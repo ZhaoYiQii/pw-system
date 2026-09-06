@@ -1,4 +1,15 @@
-import { Body, Controller, ForbiddenException, Get, HttpException, HttpStatus, Inject, Param, Post, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Req,
+} from "@nestjs/common";
 import { AiAssistantService } from "./ai.service.js";
 import { EntitlementsService } from "../entitlements/application/entitlements.service.js";
 import { FeatureDisabledError } from "../entitlements/domain/errors.js";
@@ -15,12 +26,17 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 export class AiController {
   constructor(
     @Inject(AiAssistantService) private readonly ai: AiAssistantService,
-    @Inject(EntitlementsService) private readonly entitlements: EntitlementsService
+    @Inject(EntitlementsService)
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private mapError(error: unknown): never {
-    if (error instanceof FeatureDisabledError) throw new ForbiddenException(error.message);
-    throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
+    if (error instanceof FeatureDisabledError)
+      throw new ForbiddenException(error.message);
+    throw new HttpException(
+      error instanceof Error ? error.message : String(error),
+      HttpStatus.BAD_REQUEST,
+    );
   }
 
   @TenantScope()
@@ -32,9 +48,15 @@ export class AiController {
   @TenantScope()
   @Permissions("tenant.manage")
   @Post("parse-requirement")
-  async parse(@Req() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
+  async parse(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, unknown>,
+  ) {
     try {
-      await this.entitlements.ensureAddonEnabled(tenantIdOf(req), "addon.ai_requirement_parser");
+      await this.entitlements.ensureAddonEnabled(
+        tenantIdOf(req),
+        "addon.ai_requirement_parser",
+      );
       const fields: {
         description?: string;
         serviceProductId?: string | null;
@@ -44,14 +66,27 @@ export class AiController {
         minBudgetFen?: number | null;
         maxBudgetFen?: number | null;
       } = {};
-      if (body.description !== undefined) fields.description = body.description as string;
-      if (body.serviceProductId !== undefined) fields.serviceProductId = body.serviceProductId as string | null;
-      if (body.durationSeconds !== undefined) fields.durationSeconds = body.durationSeconds as number | null;
-      if (body.desiredStartAt !== undefined) fields.desiredStartAt = body.desiredStartAt as string | null;
-      if (body.gameId !== undefined) fields.gameId = body.gameId as string | null;
-      if (body.minBudgetFen !== undefined) fields.minBudgetFen = body.minBudgetFen as number | null;
-      if (body.maxBudgetFen !== undefined) fields.maxBudgetFen = body.maxBudgetFen as number | null;
-      return { data: await this.ai.parseRequirement(tenantIdOf(req), req.principal?.sub ?? "system", fields) };
+      if (body.description !== undefined)
+        fields.description = body.description as string;
+      if (body.serviceProductId !== undefined)
+        fields.serviceProductId = body.serviceProductId as string | null;
+      if (body.durationSeconds !== undefined)
+        fields.durationSeconds = body.durationSeconds as number | null;
+      if (body.desiredStartAt !== undefined)
+        fields.desiredStartAt = body.desiredStartAt as string | null;
+      if (body.gameId !== undefined)
+        fields.gameId = body.gameId as string | null;
+      if (body.minBudgetFen !== undefined)
+        fields.minBudgetFen = body.minBudgetFen as number | null;
+      if (body.maxBudgetFen !== undefined)
+        fields.maxBudgetFen = body.maxBudgetFen as number | null;
+      return {
+        data: await this.ai.parseRequirement(
+          tenantIdOf(req),
+          req.principal?.sub ?? "system",
+          fields,
+        ),
+      };
     } catch (error) {
       this.mapError(error);
     }
@@ -60,10 +95,22 @@ export class AiController {
   @TenantScope()
   @Permissions("tenant.manage")
   @Get("orders/:orderId/recommendations")
-  async recommend(@Req() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
+  async recommend(
+    @Req() req: AuthenticatedRequest,
+    @Param("orderId") orderId: string,
+  ) {
     try {
-      await this.entitlements.ensureAddonEnabled(tenantIdOf(req), "addon.ai_match_recommendation");
-      return { data: await this.ai.recommendPlayers(tenantIdOf(req), req.principal?.sub ?? "system", orderId) };
+      await this.entitlements.ensureAddonEnabled(
+        tenantIdOf(req),
+        "addon.ai_match_recommendation",
+      );
+      return {
+        data: await this.ai.recommendPlayers(
+          tenantIdOf(req),
+          req.principal?.sub ?? "system",
+          orderId,
+        ),
+      };
     } catch (error) {
       this.mapError(error);
     }
