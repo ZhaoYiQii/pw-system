@@ -1,11 +1,13 @@
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Inject, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { PlayersService } from "../application/players.service.js";
 import {
+  AccountNotPlayerError,
   AvailabilityNotFoundError,
   DuplicatePlayerError,
   GameNotInTenantError,
   InvalidPlayerInputError,
   OverlappingAvailabilityError,
+  PlayerAccountBoundError,
   PlayerNotFoundError,
   RegionNotInTenantError,
   SkillAlreadyExistsError,
@@ -28,6 +30,8 @@ export class PlayersController {
     if (error instanceof PlayerNotFoundError || error instanceof SkillNotFoundError || error instanceof AvailabilityNotFoundError) {
       throw new HttpException(error.message, HttpStatus.NOT_FOUND);
     }
+    if (error instanceof AccountNotPlayerError) throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    if (error instanceof PlayerAccountBoundError) throw new HttpException(error.message, HttpStatus.CONFLICT);
     if (error instanceof DuplicatePlayerError || error instanceof SkillAlreadyExistsError || error instanceof OverlappingAvailabilityError) {
       throw new HttpException(error.message, HttpStatus.CONFLICT);
     }
@@ -166,6 +170,19 @@ export class PlayersController {
       if (body.reason !== undefined) input.reason = body.reason as string | null;
       await this.players.addAvailability(tenantIdOf(req), playerId, input);
       return { data: await this.players.get(tenantIdOf(req), playerId) };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("player.manage")
+  @Post(":id/account")
+  async bind(@Req() req: AuthenticatedRequest, @Param("id") playerId: string, @Body() body: { accountId?: unknown }) {
+    try {
+      return {
+        data: await this.players.bind(tenantIdOf(req), playerId, body.accountId as string)
+      };
     } catch (error) {
       this.mapError(error);
     }

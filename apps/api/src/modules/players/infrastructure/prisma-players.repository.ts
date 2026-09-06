@@ -1,10 +1,17 @@
 import type { PrismaClient } from "@pw/database";
 import type { PlayerDetailView, PlayerSkillView, PlayerView } from "../domain/player.js";
 import {
+  AccountNotPlayerError,
   DuplicatePlayerError,
   OverlappingAvailabilityError,
+  PlayerAccountBoundError,
+  PlayerNotFoundError,
   SkillAlreadyExistsError
 } from "../domain/errors.js";
+
+function isP2002(error: unknown): boolean {
+  return error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002";
+}
 import type { AvailabilityInput, PlayerInput, PlayerRepository, SkillInput } from "../application/players.service.js";
 
 function mapPlayer(row: {
@@ -245,5 +252,45 @@ export class PrismaPlayerRepository implements PlayerRepository {
       where: { tenantId, playerId, id: availabilityId }
     });
     return res.count > 0;
+  }
+
+  async bind(tenantId: string, playerId: string, accountId: string): Promise<PlayerView> {
+    const account = await this.client.tenantAccount.findFirst({
+      where: { tenantId, id: accountId, roles: { some: { role: "PLAYER" } } },
+      select: { id: true }
+    });
+    if (!account) throw new AccountNotPlayerError(accountId);
+    try {
+      const res = await this.client.playerProfile.updateMany({
+        where: { tenantId, id: playerId },
+        data: { tenantAccountId: accountId }
+      });
+      if (res.count === 0) throw new PlayerNotFoundError(playerId);
+      const row = await this.find(tenantId, playerId);
+      return row as PlayerView;
+    } catch (error) {
+      if (isP2002(error)) throw new PlayerAccountBoundError();
+      throw error;
+    }
+  }
+
+  async findByAccount(tenantId: string, accountId: string): Promise<PlayerView | null> {
+    const row = await this.client.playerProfile.findFirst({ where: { tenantId, tenantAccountId: accountId } });
+    return row ? mapPlayer(row) : null;
+  }
+
+  async updateByAccount(tenantId: string, accountId: string, input: Partial<PlayerInput>): Promise<PlayerView | null> {
+    const res = await this.client.playerProfile.updateMany({
+      where: { tenantId, tenantAccountId: accountId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
+        ...(input.intro !== undefined ? { intro: input.intro } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.acceptingOrders !== undefined ? { acceptingOrders: input.acceptingOrders } : {})
+      }
+    });
+    if (res.count === 0) return null;
+    return this.findByAccount(tenantId, accountId);
   }
 }

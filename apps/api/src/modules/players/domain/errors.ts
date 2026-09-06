@@ -60,3 +60,16 @@ export class AvailabilityNotFoundError extends Error {
     this.name = "AvailabilityNotFoundError";
   }
 }
+export class AccountNotPlayerError extends Error {
+  constructor(accountId: string) {
+    super(`account is not a PLAYER role account: ${accountId}`);
+    this.name = "AccountNotPlayerError";
+  }
+}
+
+export class PlayerAccountBoundError extends Error {
+  constructor() {
+    super("account already bound to another player profile");
+    this.name = "PlayerAccountBoundError";
+  }
+}

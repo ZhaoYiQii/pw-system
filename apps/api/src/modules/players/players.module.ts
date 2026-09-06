@@ -3,11 +3,12 @@ import { createDatabaseClient } from "@pw/database";
 import { PlayersService } from "./application/players.service.js";
 import { PrismaPlayerRepository } from "./infrastructure/prisma-players.repository.js";
 import { PlayersController } from "./interface/players.controller.js";
+import { PlayerSelfController } from "./interface/self.controller.js";
 
 export const PLAYERS_DB_CLIENT = "PLAYERS_DB_CLIENT";
 
 @Module({
-  controllers: [PlayersController],
+  controllers: [PlayersController, PlayerSelfController],
   providers: [
     {
       provide: PLAYERS_DB_CLIENT,

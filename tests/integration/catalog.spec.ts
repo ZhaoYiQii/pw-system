@@ -183,4 +183,56 @@ describe("Slice 4 catalog/customers/players HTTP (权限/价格边界/跨租户/
     const after = await req(ownerToken).get(`/api/v1/tenant/players/${playerId}`).expect(200);
     expect((after.body.data as { acceptingOrders: boolean }).acceptingOrders).toBe(false);
   });
+  it("绑定 PLAYER 账号后陪玩自助 me/接单/排期可用；非 PLAYER 403", async () => {
+    // 建 PLAYER 账号
+    const playerUsername = `player_${suffix}`;
+    const ph = await hashPassword(PW);
+    const t1 = await client.tenant.findUnique({ where: { code: tenantCode } });
+    const tenantId = t1?.id as string;
+    const acc = await client.tenantAccount.create({
+      data: { tenantId, username: playerUsername, passwordHash: ph }
+    });
+    await client.tenantAccountRole.create({
+      data: { tenantId, tenantAccountId: acc.id, role: "PLAYER" }
+    });
+
+    // owner 创建陪玩并绑定到该账号
+    const playerRes = await req(ownerToken).post("/api/v1/tenant/players").send({ name: "自助陪玩" }).expect(201);
+    const playerId = (playerRes.body.data as { id: string }).id;
+    await req(ownerToken).post(`/api/v1/tenant/players/${playerId}/account`).send({ accountId: acc.id }).expect(201);
+
+    // 绑定到非 PLAYER 账号被拒
+    const serviceAcc = await client.tenantAccount.findFirst({ where: { tenantId, username: "service" } });
+    if (serviceAcc) {
+      await req(ownerToken).post(`/api/v1/tenant/players/${playerId}/account`).send({ accountId: serviceAcc.id }).expect(400);
+    }
+
+    const playerLogin = await request(app.getHttpServer())
+      .post("/api/v1/auth/login")
+      .send({ kind: "tenant", tenantCode, username: playerUsername, password: PW })
+      .expect(201);
+    const pToken = (playerLogin.body as { data: Data }).data.accessToken as string;
+
+    const me = await req(pToken).get("/api/v1/tenant/player/me").expect(200);
+    expect((me.body.data as { name: string }).name).toBe("自助陪玩");
+    expect((me.body.data as { acceptingOrders: boolean }).acceptingOrders).toBe(true);
+
+    await req(pToken).patch("/api/v1/tenant/player/me").send({ acceptingOrders: false }).expect(200);
+    const me2 = await req(pToken).get("/api/v1/tenant/player/me").expect(200);
+    expect((me2.body.data as { acceptingOrders: boolean }).acceptingOrders).toBe(false);
+
+    // 自助添加/移除不可用时间
+    await req(pToken)
+      .post("/api/v1/tenant/player/availability")
+      .send({ startsAt: "2030-02-01T10:00:00Z", endsAt: "2030-02-01T12:00:00Z", reason: "约了朋友" })
+      .expect(201);
+    const me3 = await req(pToken).get("/api/v1/tenant/player/me").expect(200);
+    const av = (me3.body.data as { availability: Array<{ id: string }> }).availability;
+    expect(av).toHaveLength(1);
+    await req(pToken).del(`/api/v1/tenant/player/availability/${av[0]?.id as string}`).expect(200);
+
+    // 客服/店主角色不能使用陪玩自助端点
+    await req(serviceToken).get("/api/v1/tenant/player/me").expect(403);
+    await req(ownerToken).get("/api/v1/tenant/player/me").expect(403);
+  });
 });

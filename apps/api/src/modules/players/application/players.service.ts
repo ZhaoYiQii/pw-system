@@ -45,6 +45,9 @@ export interface PlayerRepository {
   removeSkill(tenantId: string, playerId: string, skillId: string): Promise<boolean>;
   addAvailability(tenantId: string, playerId: string, input: AvailabilityInput): Promise<{ id: string }>;
   removeAvailability(tenantId: string, playerId: string, availabilityId: string): Promise<boolean>;
+  bind(tenantId: string, playerId: string, accountId: string): Promise<PlayerView>;
+  findByAccount(tenantId: string, accountId: string): Promise<PlayerView | null>;
+  updateByAccount(tenantId: string, accountId: string, input: Partial<PlayerInput>): Promise<PlayerView | null>;
 }
 
 function assertPlayerInput(input: Partial<PlayerInput>): void {
@@ -160,5 +163,37 @@ export class PlayersService {
   async removeAvailability(tenantId: string, playerId: string, availabilityId: string): Promise<void> {
     const ok = await this.repository.removeAvailability(tenantId, playerId, availabilityId);
     if (!ok) throw new AvailabilityNotFoundError(availabilityId);
+  }
+
+  async bind(tenantId: string, playerId: string, accountId: string): Promise<PlayerView> {
+    const player = await this.repository.find(tenantId, playerId);
+    if (!player) throw new PlayerNotFoundError(playerId);
+    return this.repository.bind(tenantId, playerId, accountId);
+  }
+
+  async getByAccount(tenantId: string, accountId: string): Promise<PlayerDetailView> {
+    const player = await this.repository.findByAccount(tenantId, accountId);
+    if (!player) throw new PlayerNotFoundError(accountId);
+    const row = await this.repository.detail(tenantId, player.id);
+    if (!row) throw new PlayerNotFoundError(player.id);
+    return row;
+  }
+
+  async setAcceptingByAccount(tenantId: string, accountId: string, acceptingOrders: boolean): Promise<PlayerView> {
+    const row = await this.repository.updateByAccount(tenantId, accountId, { acceptingOrders });
+    if (!row) throw new PlayerNotFoundError(accountId);
+    return row;
+  }
+
+  async addAvailabilityByAccount(tenantId: string, accountId: string, input: AvailabilityInput): Promise<void> {
+    const player = await this.repository.findByAccount(tenantId, accountId);
+    if (!player) throw new PlayerNotFoundError(accountId);
+    await this.addAvailability(tenantId, player.id, input);
+  }
+
+  async removeAvailabilityByAccount(tenantId: string, accountId: string, availabilityId: string): Promise<void> {
+    const player = await this.repository.findByAccount(tenantId, accountId);
+    if (!player) throw new PlayerNotFoundError(accountId);
+    await this.removeAvailability(tenantId, player.id, availabilityId);
   }
 }

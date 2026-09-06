@@ -227,6 +227,7 @@ model CustomerProfile {
 model PlayerProfile {
   id              String       @id @default(uuid()) @db.Uuid
   tenantId        String       @map("tenant_id") @db.Uuid
+  tenantAccountId String?      @map("tenant_account_id") @db.Uuid
   name            String
   mobile          String?
   intro           String?
@@ -237,6 +238,7 @@ model PlayerProfile {
   version         Int          @default(1)
 
   @@unique([tenantId, mobile])
+  @@unique([tenantId, tenantAccountId])
   @@index([tenantId])
   @@map("player_profiles")
 }
