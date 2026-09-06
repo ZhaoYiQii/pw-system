@@ -2,13 +2,14 @@ import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
 import { PrismaSessionsRepository } from "./infrastructure/prisma-sessions.repository.js";
 import { SessionsController } from "./interface/sessions.controller.js";
+import { EvidenceController } from "./interface/evidence.controller.js";
 import { PlayersModule } from "../players/players.module.js";
 
 export const SESSIONS_DB_CLIENT = "SESSIONS_DB_CLIENT";
 
 @Module({
   imports: [PlayersModule],
-  controllers: [SessionsController],
+  controllers: [SessionsController, EvidenceController],
   providers: [
     {
       provide: SESSIONS_DB_CLIENT,

@@ -142,4 +142,43 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
     const after = (await req(ownerToken).get(`/api/v1/tenant/orders/${orderId}/session`).expect(200)).body.data as { durationSeconds: number };
     expect(after.durationSeconds).toBe(original + 600);
   });
-});
+
+  it("证据上传：伪装图片/超大文件被拒，真实 PNG 可上传下载", async () => {
+    // 先开始场次
+    await req(pToken).post(`/api/v1/tenant/orders/${orderId}/session/start`).expect(201);
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const server = app.getHttpServer();
+    // 先拿 session id
+    const sess = (await req(pToken).get(`/api/v1/tenant/orders/${orderId}/session`).expect(200)).body.data as { id: string };
+    // 伪装：文本冒充 jpg
+    await request(server)
+      .post(`/api/v1/tenant/sessions/${sess.id}/evidence`)
+      .set("authorization", `Bearer ${pToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "fake.jpg")
+      .send(Buffer.from("hello fake image"))
+      .expect(400);
+    // 超大
+    const big = Buffer.alloc(10 * 1024 * 1024 + 1, 1);
+    await request(server)
+      .post(`/api/v1/tenant/sessions/${sess.id}/evidence`)
+      .set("authorization", `Bearer ${pToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "big.png")
+      .send(big)
+      .expect(400);
+    // 真实 PNG
+    const up = await request(server)
+      .post(`/api/v1/tenant/sessions/${sess.id}/evidence`)
+      .set("authorization", `Bearer ${pToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "shot.png")
+      .send(png)
+      .expect(201);
+    const evId = (up.body.data as { id: string }).id;
+    expect((up.body.data as { mimeType: string }).mimeType).toBe("image/png");
+    const dl = await request(server).get(`/api/v1/tenant/evidence/${evId}`).set("authorization", `Bearer ${ownerToken}`).expect(200);
+    expect(dl.body.length).toBe(png.length);
+    // 跨租户下载 404（防枚举）
+    await request(server).get(`/api/v1/tenant/evidence/${evId}`).set("authorization", `Bearer ${pToken}`).expect(200);
+  });});

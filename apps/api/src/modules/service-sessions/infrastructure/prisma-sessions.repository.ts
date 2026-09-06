@@ -143,4 +143,30 @@ export class PrismaSessionsRepository {
     });
     return (await this.detailById(tenantId, sessionId)) as SessionView;
   }
+
+  async sessionOf(tenantId: string, sessionId: string): Promise<{ id: string; playerId: string } | null> {
+    const s = await this.client.serviceSession.findFirst({ where: { tenantId, id: sessionId }, select: { id: true, playerId: true } });
+    return s ? { id: s.id, playerId: s.playerId } : null;
+  }
+
+  async createEvidence(tenantId: string, sessionId: string, input: { objectKey: string; originalName: string; mimeType: string; sizeBytes: number; sha256: string; uploadedBy: string | null }): Promise<{ id: string }> {
+    const row = await this.client.evidenceAsset.create({
+      data: {
+        tenantId,
+        sessionId,
+        objectKey: input.objectKey,
+        originalName: input.originalName,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+        sha256: input.sha256,
+        uploadedBy: input.uploadedBy
+      },
+      select: { id: true }
+    });
+    return { id: row.id };
+  }
+
+  async findEvidence(tenantId: string, id: string) {
+    return this.client.evidenceAsset.findFirst({ where: { tenantId, id } });
+  }
 }
