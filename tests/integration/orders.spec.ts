@@ -193,4 +193,37 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
     expect((cancelled.body.data as { status: string }).status).toBe("CANCELLED");
     await req(ownerToken).post(`/api/v1/tenant/orders/${(order.body.data as { id: string }).id}/cancel`).expect(409);
   });
-});
+
+  it("客户自助：CUSTOMER 绑定后 me/自助下单/我的订单", async () => {
+    const me = await req(ownerToken).post("/api/v1/tenant/customers").send({ name: "自助客户" }).expect(201);
+    const profileId = (me.body.data as { id: string }).id;
+    const { productId } = await setupProduct(3200);
+
+    const ph = await hashPassword(PW);
+    const t1 = await client.tenant.findUnique({ where: { code: tenantCode } });
+    const tenantId = t1?.id as string;
+    const acc = await client.tenantAccount.create({ data: { tenantId, username: `cust_${suffix}`, passwordHash: ph } });
+    await client.tenantAccountRole.create({ data: { tenantId, tenantAccountId: acc.id, role: "CUSTOMER" } });
+    await req(ownerToken).post(`/api/v1/tenant/customers/${profileId}/account`).send({ accountId: acc.id }).expect(201);
+
+    const login = await request(app.getHttpServer())
+      .post("/api/v1/auth/login")
+      .send({ kind: "tenant", tenantCode, username: `cust_${suffix}`, password: PW })
+      .expect(201);
+    const cToken = (login.body as { data: Data }).data.accessToken as string;
+
+    const myMe = await req(cToken).get("/api/v1/tenant/customer/me").expect(200);
+    expect((myMe.body.data as { id: string }).id).toBe(profileId);
+    expect((myMe.body.data as { name: string }).name).toBe("自助客户");
+
+    const created = await req(cToken).post("/api/v1/tenant/customer/orders").send({
+      requirement: { description: "客户自助下一单", serviceProductId: productId, durationSeconds: 3600 }
+    }).expect(201);
+    expect((created.body.data as { customerName: string }).customerName).toBe("自助客户");
+    expect((created.body.data as { customerProfileId: string }).customerProfileId).toBe(profileId);
+
+    const mine = await req(cToken).get("/api/v1/tenant/customer/orders").expect(200);
+    const list = mine.body.data as Array<{ id: string; customerProfileId: string }>;
+    expect(list.some((o) => o.id === (created.body.data as { id: string }).id)).toBe(true);
+    expect(list.every((o) => o.customerProfileId === profileId)).toBe(true);
+  });});

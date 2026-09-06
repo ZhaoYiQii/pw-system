@@ -19,6 +19,7 @@ export interface CustomerRepository {
   update(tenantId: string, id: string, input: Partial<CustomerInput>): Promise<CustomerView | null>;
   remove(tenantId: string, id: string): Promise<boolean>;
   bind(tenantId: string, customerId: string, accountId: string): Promise<CustomerView>;
+  findByAccount(tenantId: string, accountId: string): Promise<CustomerView | null>;
 }
 
 function assertValid(input: CustomerInput | Partial<CustomerInput>): void {
@@ -84,5 +85,11 @@ export class CustomersService {
     const customer = await this.repository.find(tenantId, customerId);
     if (!customer) throw new CustomerNotFoundError(customerId);
     return this.repository.bind(tenantId, customerId, accountId);
+  }
+
+  async getByAccount(tenantId: string, accountId: string): Promise<CustomerView> {
+    const customer = await this.repository.findByAccount(tenantId, accountId);
+    if (!customer) throw new CustomerNotFoundError(accountId);
+    return customer;
   }
 }

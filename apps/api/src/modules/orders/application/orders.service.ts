@@ -38,6 +38,7 @@ export interface ProductLookup {
 export interface OrdersRepository {
   loadFull(tenantId: string, orderId: string): Promise<OrderView | null>;
   list(tenantId: string, opts: { status?: string }): Promise<OrderView[]>;
+  listByCustomer(tenantId: string, customerProfileId: string): Promise<OrderView[]>;
   customerInTenant(tenantId: string, id: string): Promise<boolean>;
   gameInTenant(tenantId: string, id: string): Promise<boolean>;
   productInTenant(tenantId: string, id: string): Promise<ProductLookup | null>;
@@ -164,5 +165,9 @@ export class OrdersService {
 
   async list(tenantId: string, status?: string): Promise<OrderView[]> {
     return this.repository.list(tenantId, { ...(status ? { status } : {}) });
+  }
+
+  async listByCustomer(tenantId: string, customerProfileId: string): Promise<OrderView[]> {
+    return this.repository.listByCustomer(tenantId, customerProfileId);
   }
 }

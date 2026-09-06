@@ -3,11 +3,14 @@ import { createDatabaseClient } from "@pw/database";
 import { CustomersService } from "./application/customers.service.js";
 import { PrismaCustomerRepository } from "./infrastructure/prisma-customers.repository.js";
 import { CustomersController } from "./interface/customers.controller.js";
+import { CustomerSelfController } from "./interface/customer-self.controller.js";
+import { OrdersModule } from "../orders/orders.module.js";
 
 export const CUSTOMERS_DB_CLIENT = "CUSTOMERS_DB_CLIENT";
 
 @Module({
-  controllers: [CustomersController],
+  imports: [OrdersModule],
+  controllers: [CustomersController, CustomerSelfController],
   providers: [
     {
       provide: CUSTOMERS_DB_CLIENT,

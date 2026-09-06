@@ -123,6 +123,20 @@ export class PrismaOrdersRepository implements OrdersRepository {
     return out;
   }
 
+  async listByCustomer(tenantId: string, customerProfileId: string): Promise<OrderView[]> {
+    const rows = await this.client.order.findMany({
+      where: { tenantId, customerProfileId },
+      orderBy: { createdAt: "desc" },
+      take: 100
+    });
+    const out: OrderView[] = [];
+    for (const row of rows) {
+      const full = await this.loadFull(tenantId, row.id);
+      if (full) out.push(full);
+    }
+    return out;
+  }
+
   private async requirementData(tenantId: string, r: RequirementInput): Promise<Prisma.OrderRequirementCreateManyInput> {
     return {
       tenantId,

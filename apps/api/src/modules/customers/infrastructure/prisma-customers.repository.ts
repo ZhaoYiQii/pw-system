@@ -113,4 +113,9 @@ export class PrismaCustomerRepository implements CustomerRepository {
       throw error;
     }
   }
+
+  async findByAccount(tenantId: string, accountId: string): Promise<CustomerView | null> {
+    const row = await this.client.customerProfile.findFirst({ where: { tenantId, tenantAccountId: accountId } });
+    return row ? map(row) : null;
+  }
 }
