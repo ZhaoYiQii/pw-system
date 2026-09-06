@@ -27,6 +27,7 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
   let ownerToken: string;
   let pToken: string;
   let orderId = "";
+  let otherTenantCode: string | undefined;
 
   beforeAll(async () => {
     client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
@@ -179,6 +180,29 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
       await client.tenantAccount.deleteMany({ where: { tenantId } });
       await client.tenantEntitlement.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
+      if (otherTenantCode) {
+        const otherTenants = await client.tenant.findMany({
+          where: { code: otherTenantCode },
+        });
+        for (const ot of otherTenants) {
+          await client.auditLog.deleteMany({ where: { tenantId: ot.id } });
+          const accounts = await client.tenantAccount.findMany({
+            where: { tenantId: ot.id },
+          });
+          await client.refreshSession.deleteMany({
+            where: {
+              accountId: { in: accounts.map((a) => a.id) },
+            },
+          });
+          await client.tenantAccountRole.deleteMany({
+            where: { tenantId: ot.id },
+          });
+          await client.tenantAccount.deleteMany({
+            where: { tenantId: ot.id },
+          });
+          await client.tenant.deleteMany({ where: { id: ot.id } });
+        }
+      }
       await client.$disconnect();
     }
     if (app) await app.close();
@@ -336,9 +360,33 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
       .expect(200);
     expect(dl.body.length).toBe(png.length);
     // 跨租户下载 404（防枚举）
+    const t2 = await client.tenant.create({
+      data: { code: `s7b_${suffix}`, name: "隔壁店" },
+    });
+    otherTenantCode = t2.code;
+    const o2 = await client.tenantAccount.create({
+      data: {
+        tenantId: t2.id,
+        username: "boss2",
+        passwordHash: await hashPassword(PW),
+      },
+    });
+    await client.tenantAccountRole.create({
+      data: { tenantId: t2.id, tenantAccountId: o2.id, role: "TENANT_OWNER" },
+    });
+    const login2 = await request(server)
+      .post("/api/v1/auth/login")
+      .send({
+        kind: "tenant",
+        tenantCode: otherTenantCode,
+        username: "boss2",
+        password: PW,
+      })
+      .expect(201);
+    const token2 = (login2.body as { data: Data }).data.accessToken as string;
     await request(server)
       .get(`/api/v1/tenant/evidence/${evId}`)
-      .set("authorization", `Bearer ${pToken}`)
-      .expect(200);
+      .set("authorization", `Bearer ${token2}`)
+      .expect(404);
   });
 });
