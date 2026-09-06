@@ -3,10 +3,12 @@ import { createDatabaseClient } from "@pw/database";
 import { LedgerRulesRepository } from "./infrastructure/prisma-ledger-rules.repository.js";
 import { LedgerRulesService } from "./application/ledger-rules.service.js";
 import { PrismaLedgerRepository } from "./infrastructure/prisma-ledger.repository.js";
+import { PrismaSettlementsRepository } from "./infrastructure/prisma-settlements.repository.js";
 import { LedgerService } from "./application/ledger.service.js";
 import { PlatformFinanceController } from "./interface/platform-finance.controller.js";
 import { TenantFinanceController } from "./interface/tenant-finance.controller.js";
 import { AccountingController, PlayerFinanceController } from "./interface/ledger.controller.js";
+import { SettlementsController } from "./interface/settlements.controller.js";
 import { PlayersModule } from "../players/players.module.js";
 
 export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
@@ -17,7 +19,8 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
     PlatformFinanceController,
     TenantFinanceController,
     AccountingController,
-    PlayerFinanceController
+    PlayerFinanceController,
+    SettlementsController
   ],
   providers: [
     {
@@ -47,6 +50,11 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
       provide: LedgerService,
       useFactory: (repo: PrismaLedgerRepository) => new LedgerService(repo),
       inject: [PrismaLedgerRepository]
+    },
+    {
+      provide: PrismaSettlementsRepository,
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaSettlementsRepository(client),
+      inject: [LEDGER_DB_CLIENT]
     }
   ]
 })
