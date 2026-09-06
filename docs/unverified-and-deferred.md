@@ -95,3 +95,6 @@
 ## U. Slice 9 Phase B（2026-09-06）
 - 完成：争议开/结 + 事件 + 审计（disputes 模块）；结算冻结（开放争议 earning 不可入批/不可支付，resolve 后恢复）；审计查询 GET /tenant/audit。integration 55/55。
 - 待办（Phase C/后续）：审计字段脱敏细化与权限强化、Outbox relay/通知重试（BullMQ+worker+短信/微信 degraded）、站内通知、争议/审计 UI（后置）。
+## V. Slice 9 Phase C（2026-09-06）
+- 完成：Outbox relay（PENDING→PROCESSED、attempts/FAILED、outbox_event_id 去重）、站内通知写 INAPP + GET tenant/notifications。integration 56/56。
+- 待办/挂账：真正 Worker/BullMQ 调度与短信/微信 provider degraded（当前为拉取型 relay，可在 worker 集成；Redis/BullMQ 与容器化后置）、审计脱敏细化、争议/审计/通知 UI（后置）。
