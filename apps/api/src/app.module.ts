@@ -10,6 +10,7 @@ import { CatalogModule } from "./modules/catalog/catalog.module.js";
 import { OrdersModule } from "./modules/orders/orders.module.js";
 import { DispatchModule } from "./modules/dispatch/dispatch.module.js";
 import { ServiceSessionsModule } from "./modules/service-sessions/service-sessions.module.js";
+import { LedgerModule } from "./modules/ledger/ledger.module.js";
 
 @Module({
   controllers: [HealthController],
@@ -23,7 +24,8 @@ import { ServiceSessionsModule } from "./modules/service-sessions/service-sessio
     CatalogModule,
     OrdersModule,
     DispatchModule,
-    ServiceSessionsModule
+    ServiceSessionsModule,
+    LedgerModule
   ]
 })
 export class AppModule {}

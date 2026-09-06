@@ -754,3 +754,15 @@ model ManualPaymentRecord {
   @@index([tenantId, batchId])
   @@map("manual_payment_records")
 }
+// ===== Slice 8：分成费率规则（可后台调整，bp=基点 1/10000）=====
+model FinanceRateRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @unique @map("tenant_id") @db.Uuid
+  platformFeeBp  Int      @default(300) @map("platform_fee_bp")
+  storeCutBp     Int      @default(2000) @map("store_cut_bp")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  version        Int      @default(1)
+
+  @@map("finance_rate_rules")
+}
