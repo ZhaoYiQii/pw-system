@@ -16,6 +16,7 @@
     "test:tenant-isolation": "vitest run --config tests/vitest.tenant-isolation.config.ts",
     "test:contract": "vitest run --config tests/vitest.contract.config.ts",
     "test:coverage": "vitest run --config tests/vitest.integration.config.ts --coverage",
+    "test:coverage:critical": "vitest run --config tests/vitest.critical-domain.config.ts --coverage",
     "test:e2e": "node scripts/not-implemented.mjs test:e2e \"Slice 5+（Playwright E2E）\"",
     "build": "turbo run build",
     "build:h5": "turbo run build:h5",
