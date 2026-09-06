@@ -17,6 +17,7 @@ import { IS_PUBLIC_KEY, REQUIRED_SCOPE_KEY } from "./decorators.js";
 
 export interface AuthenticatedRequest extends Request {
   principal?: AccessPrincipal;
+  requestId?: string;
 }
 
 @Injectable()
