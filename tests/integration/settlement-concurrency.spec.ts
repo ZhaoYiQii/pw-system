@@ -50,6 +50,7 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
 
   afterAll(async () => {
     if (client) {
+      await client.auditLog.deleteMany({ where: { tenantId } });
       await client.manualPaymentRecord.deleteMany({ where: { tenantId } });
       await client.settlementItem.deleteMany({ where: { tenantId } });
       await client.settlementBatch.deleteMany({ where: { tenantId } });

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { PlayersService } from "./application/players.service.js";
 import { PrismaPlayerRepository } from "./infrastructure/prisma-players.repository.js";
 import { PlayersController } from "./interface/players.controller.js";
@@ -13,14 +14,14 @@ export const PLAYERS_DB_CLIENT = "PLAYERS_DB_CLIENT";
     {
       provide: PLAYERS_DB_CLIENT,
       useFactory: () => {
-        const url = process.env.PLATFORM_DATABASE_URL ?? process.env.DATABASE_URL;
-        if (!url) throw new Error("PLATFORM_DATABASE_URL/DATABASE_URL is not configured");
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
       }
     },
     {
       provide: PrismaPlayerRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaPlayerRepository(client),
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaPlayerRepository(client)),
       inject: [PLAYERS_DB_CLIENT]
     },
     {

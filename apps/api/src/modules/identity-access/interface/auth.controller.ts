@@ -4,7 +4,7 @@ import { AuthService } from "../application/auth.service.js";
 import { Public } from "../../../common/auth/decorators.js";
 import { RateLimitService } from "../../../common/auth/rate-limit.service.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
-import { AccountDisabledError, InvalidCredentialsError, InvalidRefreshTokenError } from "../domain/errors.js";
+import { AccountDisabledError, InvalidCredentialsError, InvalidRefreshTokenError, TenantInactiveError } from "../domain/errors.js";
 import type { Scope } from "../domain/principal.js";
 import { REFRESH_TOKEN_TTL_SECONDS } from "../infrastructure/tokens.js";
 
@@ -94,9 +94,15 @@ export class AuthController {
           : await this.auth.loginTenant(requiredString(body.tenantCode, "tenantCode"), username, password);
       this.rateLimit.reset(rateKey);
       setRefreshCookie(res, bundle.refreshToken);
-      return { data: bundle };
+      return {
+        data: {
+          accessToken: bundle.accessToken,
+          principal: bundle.principal,
+          expiresInSeconds: bundle.expiresInSeconds
+        }
+      };
     } catch (error) {
-      if (error instanceof InvalidCredentialsError || error instanceof AccountDisabledError) {
+      if (error instanceof InvalidCredentialsError || error instanceof AccountDisabledError || error instanceof TenantInactiveError) {
         this.rateLimit.recordFailure(rateKey, LOGIN_WINDOW_MS);
         throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);
       }
@@ -113,14 +119,22 @@ export class AuthController {
     const scope = body.scope === "tenant" ? ("tenant" as Scope) : body.scope === "platform" ? ("platform" as Scope) : null;
     if (!scope) throw new HttpException("scope must be platform|tenant", HttpStatus.BAD_REQUEST);
     const cookieToken = readCookie(req, REFRESH_COOKIE);
-    if (cookieToken && !originAllowed(req)) {
+    if (!cookieToken) {
+      throw new HttpException("refresh token cookie required", HttpStatus.UNAUTHORIZED);
+    }
+    if (!originAllowed(req)) {
       throw new HttpException("cross-site request rejected", HttpStatus.FORBIDDEN);
     }
-    const refreshToken = cookieToken ?? requiredString(body.refreshToken, "refreshToken");
     try {
-      const bundle = await this.auth.refresh(refreshToken, scope);
+      const bundle = await this.auth.refresh(cookieToken, scope);
       setRefreshCookie(res, bundle.refreshToken);
-      return { data: bundle };
+      return {
+        data: {
+          accessToken: bundle.accessToken,
+          principal: bundle.principal,
+          expiresInSeconds: bundle.expiresInSeconds
+        }
+      };
     } catch (error) {
       if (error instanceof InvalidRefreshTokenError) {
         throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);
@@ -131,13 +145,16 @@ export class AuthController {
 
   @Public()
   @Post("logout")
-  async logout(@Body() body: TokenBody, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     const cookieToken = readCookie(req, REFRESH_COOKIE);
-    if (cookieToken && !originAllowed(req)) {
+    if (!cookieToken) {
+      clearRefreshCookie(res);
+      return { data: { ok: true } };
+    }
+    if (!originAllowed(req)) {
       throw new HttpException("cross-site request rejected", HttpStatus.FORBIDDEN);
     }
-    const refreshToken = cookieToken ?? requiredString(body.refreshToken, "refreshToken");
-    await this.auth.logout(refreshToken);
+    await this.auth.logout(cookieToken);
     clearRefreshCookie(res);
     return { data: { ok: true } };
   }

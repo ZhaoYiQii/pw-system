@@ -64,6 +64,8 @@ describe("Slice 6 dispatch (publish/apply/shortlist/assign 并发与冲突)", ()
     if (client) {
       const ids = await client.tenant.findMany({ where: { id: tenantId } });
       if (ids.length > 0) {
+        await client.outboxEvent.deleteMany({ where: { tenantId } });
+        await client.auditLog.deleteMany({ where: { tenantId } });
         await client.assignment.deleteMany({ where: { tenantId } });
         await client.application.deleteMany({ where: { tenantId } });
         await client.dispatchPublication.deleteMany({ where: { tenantId } });

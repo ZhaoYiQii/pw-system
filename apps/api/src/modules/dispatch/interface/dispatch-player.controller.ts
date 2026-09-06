@@ -4,12 +4,14 @@ import { ApplicationConflictError, DispatchNotFoundError, OrderStateConflictErro
 import { PlayersService } from "../../players/application/players.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 @Controller("api/v1/tenant/player")
 export class DispatchPlayerController {
   constructor(
     @Inject(DispatchService) private readonly dispatch: DispatchService,
-    @Inject(PlayersService) private readonly players: PlayersService
+    @Inject(PlayersService) private readonly players: PlayersService,
+    @Inject(AuditService) private readonly audit: AuditService
   ) {}
 
   private ctx(req: AuthenticatedRequest): { tenantId: string; accountId: string } {
@@ -53,6 +55,15 @@ export class DispatchPlayerController {
     try {
       const player = await this.players.getByAccount(ctx.tenantId, ctx.accountId);
       await this.dispatch.apply(ctx.tenantId, orderId, player.id, ctx.accountId, body && typeof body.note === "string" ? body.note : null);
+      await this.audit.record({
+        tenantId: ctx.tenantId,
+        actorType: "PLAYER",
+        actorId: ctx.accountId,
+        action: "dispatch.apply",
+        resourceType: "order",
+        resourceId: orderId,
+        summary: "报名接单"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.mapError(error);

@@ -19,6 +19,7 @@ function envOrThrow(name: string): string {
 
 describe("identity-access (login / refresh / logout / audience)", () => {
   let client: PrismaClient;
+  let runtimeClient: PrismaClient;
   let repo: PrismaAuthRepository;
   let tokens: TokenService;
   let service: AuthService;
@@ -28,7 +29,8 @@ describe("identity-access (login / refresh / logout / audience)", () => {
 
   beforeAll(async () => {
     client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
-    repo = new PrismaAuthRepository(client);
+    runtimeClient = createDatabaseClient(envOrThrow("PW_TEST_RUNTIME_URL"));
+    repo = new PrismaAuthRepository(client, runtimeClient);
     tokens = new TokenService(SECRET);
     service = new AuthService(repo, tokens);
 
@@ -60,8 +62,11 @@ describe("identity-access (login / refresh / logout / audience)", () => {
       await client.platformAccount.deleteMany({ where: { username: { in: platformUsernames } } });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
+      const authTenants = await client.tenant.findMany({ where: { code: { in: tenantCodes } }, select: { id: true } });
+      for (const t of authTenants) await client.auditLog.deleteMany({ where: { tenantId: t.id } });
       await client.tenant.deleteMany({ where: { code: { in: tenantCodes } } });
       await client.$disconnect();
+      await runtimeClient.$disconnect();
     }
   });
 
@@ -75,7 +80,8 @@ describe("identity-access (login / refresh / logout / audience)", () => {
 
   it("错误密码/未知账号抛 InvalidCredentialsError", async () => {
     await expect(service.loginPlatform(`admin_${suffix}`, "wrong")).rejects.toBeInstanceOf(InvalidCredentialsError);
-    await expect(service.loginPlatform(`nobody_${suffix}`, PW)).rejects.toBeInstanceOf(InvalidCredentialsError);
+    await expect(service.loginPlatform(
+`nobody_${suffix}`, PW)).rejects.toBeInstanceOf(InvalidCredentialsError);
   });
 
   it("停用账号被拒绝", async () => {

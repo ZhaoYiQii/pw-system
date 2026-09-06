@@ -30,7 +30,7 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
     const cust = await client.customerProfile.create({ data: { tenantId, name: "账本客" } });
     const player = await client.playerProfile.create({ data: { tenantId, name: "账本玩" } });
     const order = await client.order.create({
-      data: { tenantId, orderNo: `ldo-${suffix}`, customerProfileId: cust.id, status: "ASSIGNED" }
+      data: { tenantId, orderNo: `ldo-${suffix}`, customerProfileId: cust.id, status: "PENDING_CONFIRMATION" }
     });
     orderId = order.id;
     await client.assignment.create({ data: { tenantId, orderId: order.id, playerId: player.id } });
@@ -58,6 +58,8 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
 
   afterAll(async () => {
     if (client) {
+      await client.outboxEvent.deleteMany({ where: { tenantId } });
+      await client.auditLog.deleteMany({ where: { tenantId } });
       await client.ledgerEntry.deleteMany({ where: { tenantId } });
       await client.ledgerTransaction.deleteMany({ where: { tenantId } });
       await client.ledgerAccount.deleteMany({ where: { tenantId } });

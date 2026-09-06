@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpException, HttpStatus, Inject, Post, Req } f
 import { LedgerRulesService } from "../application/ledger-rules.service.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -11,7 +12,10 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 
 @Controller("api/v1/tenant/finance-rules")
 export class TenantFinanceController {
-  constructor(@Inject(LedgerRulesService) private readonly rules: LedgerRulesService) {}
+  constructor(
+    @Inject(LedgerRulesService) private readonly rules: LedgerRulesService,
+    @Inject(AuditService) private readonly audit: AuditService
+  ) {}
 
   private bad(error: unknown): never {
     throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
@@ -28,7 +32,17 @@ export class TenantFinanceController {
   @Post("store-cut")
   async setStoreCut(@Req() req: AuthenticatedRequest, @Body() body: { storeCutBp?: unknown }) {
     try {
-      return { data: await this.rules.setStoreCut(tenantIdOf(req), body.storeCutBp) };
+      const updated = await this.rules.setStoreCut(tenantIdOf(req), body.storeCutBp);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "finance-rules.store-cut",
+        resourceType: "finance_rate_rule",
+        resourceId: tenantIdOf(req),
+        summary: `调整门店抽成至 ${updated.storeCutBp}bp`
+      });
+      return { data: updated };
     } catch (error) {
       this.bad(error);
     }

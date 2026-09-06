@@ -9,6 +9,7 @@ export interface PlatformAccountRecord {
 export interface TenantAccountRecord {
   id: string;
   tenantId: string;
+  tenantStatus: "ACTIVE" | "INACTIVE" | "CONFIG_ERROR";
   username: string;
   passwordHash: string;
   status: "ACTIVE" | "DISABLED";
@@ -33,6 +34,16 @@ export interface NewRefreshSession {
   expiresAt: Date;
 }
 
+export interface AuthAuditEntry {
+  tenantId: string;
+  actorType?: string;
+  actorId?: string;
+  action: string;
+  resourceType?: string;
+  resourceId?: string;
+  summary?: string;
+}
+
 export interface AuthRepository {
   findPlatformAccountByUsername(username: string): Promise<PlatformAccountRecord | null>;
   findPlatformAccountById(id: string): Promise<PlatformAccountRecord | null>;
@@ -40,8 +51,9 @@ export interface AuthRepository {
     tenantCode: string,
     username: string
   ): Promise<TenantAccountRecord | null>;
-  findTenantAccountById(accountId: string): Promise<TenantAccountRecord | null>;
+  findTenantAccountById(accountId: string, tenantId?: string | null): Promise<TenantAccountRecord | null>;
   createRefreshSession(session: NewRefreshSession): Promise<void>;
   findRefreshSessionByTokenHash(tokenHash: string): Promise<RefreshSessionRecord | null>;
   revokeRefreshSession(id: string): Promise<void>;
+  recordAudit(entry: AuthAuditEntry): Promise<void>;
 }

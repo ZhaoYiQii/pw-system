@@ -2,6 +2,7 @@ import { Body, Controller, ForbiddenException, Get, HttpException, HttpStatus, I
 import { PrismaSettlementsRepository } from "../infrastructure/prisma-settlements.repository.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -11,7 +12,10 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 
 @Controller("api/v1/tenant/settlements")
 export class SettlementsController {
-  constructor(@Inject(PrismaSettlementsRepository) private readonly repo: PrismaSettlementsRepository) {}
+  constructor(
+    @Inject(PrismaSettlementsRepository) private readonly repo: PrismaSettlementsRepository,
+    @Inject(AuditService) private readonly audit: AuditService
+  ) {}
 
   private guard(req: AuthenticatedRequest): void {
     const role = req.principal?.role;
@@ -35,7 +39,17 @@ export class SettlementsController {
   @Post()
   async create(@Req() req: AuthenticatedRequest) {
     this.guard(req);
-    return { data: { id: await this.repo.create(tenantIdOf(req), req.principal?.sub ?? "system") } };
+    const id = await this.repo.create(tenantIdOf(req), req.principal?.sub ?? "system");
+    await this.audit.record({
+      tenantId: tenantIdOf(req),
+      actorType: req.principal?.role,
+      actorId: req.principal?.sub ?? "system",
+      action: "settlement.create",
+      resourceType: "settlement_batch",
+      resourceId: id,
+      summary: "创建结算批次"
+    });
+    return { data: { id } };
   }
 
   @TenantScope()
@@ -46,6 +60,15 @@ export class SettlementsController {
     const ids = Array.isArray(body.earningIds) ? (body.earningIds as unknown[]).filter((x): x is string => typeof x === "string") : [];
     try {
       await this.repo.addItems(tenantIdOf(req), id, ids);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "settlement.add_items",
+        resourceType: "settlement_batch",
+        resourceId: id,
+        summary: `添加 ${ids.length} 条应收至批次`
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.bad(error);
@@ -59,6 +82,15 @@ export class SettlementsController {
     this.guard(req);
     try {
       await this.repo.review(tenantIdOf(req), id, req.principal?.sub ?? "system");
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "settlement.review",
+        resourceType: "settlement_batch",
+        resourceId: id,
+        summary: "复核结算批次"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.bad(error);
@@ -72,6 +104,15 @@ export class SettlementsController {
     this.guard(req);
     try {
       await this.repo.approve(tenantIdOf(req), id, req.principal?.sub ?? "system");
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "settlement.approve",
+        resourceType: "settlement_batch",
+        resourceId: id,
+        summary: "批准结算批次"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.bad(error);
@@ -85,6 +126,15 @@ export class SettlementsController {
     this.guard(req);
     try {
       await this.repo.pay(tenantIdOf(req), id, req.principal?.sub ?? "system");
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "settlement.pay",
+        resourceType: "settlement_batch",
+        resourceId: id,
+        summary: "线下支付登记"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.bad(error);
@@ -98,6 +148,15 @@ export class SettlementsController {
     this.guard(req);
     try {
       await this.repo.void(tenantIdOf(req), id);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "settlement.void",
+        resourceType: "settlement_batch",
+        resourceId: id,
+        summary: "作废结算批次"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.bad(error);

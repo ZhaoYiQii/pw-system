@@ -46,6 +46,7 @@ describe("Slice 8 finance rules (默认 3%/20%，可后台调整，split preview
 
   afterAll(async () => {
     if (client) {
+      await client.auditLog.deleteMany({ where: { tenantId } });
       await client.financeRateRule.deleteMany({ where: { tenantId } });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });

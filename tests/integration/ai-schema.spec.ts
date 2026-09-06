@@ -46,6 +46,7 @@ describe("Slice 10 AI (deterministic/不可用标记/合法候选)", () => {
 
   afterAll(async () => {
     if (client) {
+      await client.auditLog.deleteMany({ where: { tenantId } });
       await client.aiSuggestion.deleteMany({ where: { tenantId } });
       await client.aiRun.deleteMany({ where: { tenantId } });
       await client.orderRequirement.deleteMany({ where: { tenantId } });

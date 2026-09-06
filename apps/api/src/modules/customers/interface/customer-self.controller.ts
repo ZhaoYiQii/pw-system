@@ -1,15 +1,19 @@
-import { Body, Controller, ForbiddenException, Get, HttpException, HttpStatus, Inject, Post, Req } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, HttpException, HttpStatus, Inject, Param, Post, Req } from "@nestjs/common";
 import { CustomersService } from "../application/customers.service.js";
 import { CustomerNotFoundError } from "../domain/errors.js";
 import { OrdersService } from "../../orders/application/orders.service.js";
+import { LedgerService } from "../../ledger/application/ledger.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 @Controller("api/v1/tenant/customer")
 export class CustomerSelfController {
   constructor(
     @Inject(CustomersService) private readonly customers: CustomersService,
-    @Inject(OrdersService) private readonly orders: OrdersService
+    @Inject(OrdersService) private readonly orders: OrdersService,
+    @Inject(LedgerService) private readonly ledger: LedgerService,
+    @Inject(AuditService) private readonly audit: AuditService
   ) {}
 
   private requireCustomer(req: AuthenticatedRequest): { tenantId: string; accountId: string } {
@@ -53,11 +57,21 @@ export class CustomerSelfController {
     const ctx = this.requireCustomer(req);
     try {
       const profile = await this.customers.getByAccount(ctx.tenantId, ctx.accountId);
+      const created = await this.orders.create(ctx.tenantId, ctx.accountId, {
+        customerProfileId: profile.id,
+        requirement: ((body.requirement as Record<string, unknown> | undefined) ?? {}) as never
+      } as never);
+      await this.audit.record({
+        tenantId: ctx.tenantId,
+        actorType: "CUSTOMER",
+        actorId: ctx.accountId,
+        action: "order.create",
+        resourceType: "order",
+        resourceId: created.id,
+        summary: `客户自助创建订单 ${created.orderNo}`
+      });
       return {
-        data: await this.orders.create(ctx.tenantId, ctx.accountId, {
-          customerProfileId: profile.id,
-          requirement: ((body.requirement as Record<string, unknown> | undefined) ?? {}) as never
-        } as never)
+        data: created
       };
     } catch (error) {
       if (error instanceof CustomerNotFoundError) {
@@ -65,6 +79,33 @@ export class CustomerSelfController {
       }
       if (error instanceof HttpException) throw error;
       throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /** 老板确认完成：PENDING_CONFIRMATION → COMPLETED（并完成核算）。 */
+  @TenantScope()
+  @Post("orders/:orderId/complete")
+  async confirmComplete(@Req() req: AuthenticatedRequest, @Param("orderId") orderId: string) {
+    const ctx = this.requireCustomer(req);
+    try {
+      const profile = await this.customers.getByAccount(ctx.tenantId, ctx.accountId);
+      const order = await this.orders.get(ctx.tenantId, orderId);
+      if (order.customerProfileId !== profile.id) throw new ForbiddenException("只能确认自己的订单");
+      const result = await this.ledger.completeAccounting(ctx.tenantId, orderId, ctx.accountId);
+      if (!result) throw new HttpException("订单未处于待确认状态或场次未结束", HttpStatus.CONFLICT);
+      await this.audit.record({
+        tenantId: ctx.tenantId,
+        actorType: "CUSTOMER",
+        actorId: ctx.accountId,
+        action: "order.customer_confirm",
+        resourceType: "order",
+        resourceId: orderId,
+        summary: "客户确认完成订单"
+      });
+      return { data: result };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.CONFLICT);
     }
   }
 }

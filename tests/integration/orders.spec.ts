@@ -53,6 +53,8 @@ describe("Slice 5 orders (DRAFT->CONFIRMED / 快照稳定 / 幂等 / Outbox)", (
     if (client) {
       const tenants = await client.tenant.findMany({ where: { code: tenantCode } });
       for (const t of tenants) {
+        await client.auditLog.deleteMany({ where: { tenantId: t.id } });
+        await client.outboxEvent.deleteMany({ where: { tenantId: t.id } });
         const orders = await client.order.findMany({ where: { tenantId: t.id } });
         for (const o of orders) {
           await client.orderEvent.deleteMany({ where: { orderId: o.id } });

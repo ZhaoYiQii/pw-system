@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Inject, Param, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, HttpException, HttpStatus, Inject, Param, Post, Query, Req } from "@nestjs/common";
 import { OrdersService } from "../application/orders.service.js";
+import { LedgerService } from "../../ledger/application/ledger.service.js";
 import {
   CustomerNotInTenantError,
   GameNotInTenantError,
@@ -12,6 +13,7 @@ import {
 } from "../domain/errors.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -25,7 +27,11 @@ function actorIdOf(req: AuthenticatedRequest): string {
 
 @Controller("api/v1/tenant/orders")
 export class OrdersController {
-  constructor(@Inject(OrdersService) private readonly orders: OrdersService) {}
+  constructor(
+    @Inject(OrdersService) private readonly orders: OrdersService,
+    @Inject(LedgerService) private readonly ledger: LedgerService,
+    @Inject(AuditService) private readonly audit: AuditService
+  ) {}
 
   private mapError(error: unknown): never {
     if (error instanceof OrderNotFoundError) throw new HttpException(error.message, HttpStatus.NOT_FOUND);
@@ -56,15 +62,23 @@ export class OrdersController {
   @Post()
   async create(@Req() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
     try {
-      return {
-        data: await this.orders.create(tenantIdOf(req), actorIdOf(req), {
-          customerProfileId: body.customerProfileId as string,
-          ...(body.orderNo !== undefined ? { orderNo: body.orderNo as string } : {}),
-          ...(body.remark !== undefined ? { remark: body.remark as string | null } : {}),
-          ...(body.idempotencyKey !== undefined ? { idempotencyKey: body.idempotencyKey as string } : {}),
-          requirement: (body.requirement as Record<string, unknown> | undefined) ?? {}
-        } as never)
-      };
+      const created = await this.orders.create(tenantIdOf(req), actorIdOf(req), {
+        customerProfileId: body.customerProfileId as string,
+        ...(body.orderNo !== undefined ? { orderNo: body.orderNo as string } : {}),
+        ...(body.remark !== undefined ? { remark: body.remark as string | null } : {}),
+        ...(body.idempotencyKey !== undefined ? { idempotencyKey: body.idempotencyKey as string } : {}),
+        requirement: (body.requirement as Record<string, unknown> | undefined) ?? {}
+      } as never);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorIdOf(req),
+        action: "order.create",
+        resourceType: "order",
+        resourceId: created.id,
+        summary: `创建订单 ${created.orderNo}`
+      });
+      return { data: created };
     } catch (error) {
       this.mapError(error);
     }
@@ -86,7 +100,17 @@ export class OrdersController {
   @Post(":id/confirm")
   async confirm(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return { data: await this.orders.confirm(tenantIdOf(req), id, actorIdOf(req)) };
+      const updated = await this.orders.confirm(tenantIdOf(req), id, actorIdOf(req));
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorIdOf(req),
+        action: "order.confirm",
+        resourceType: "order",
+        resourceId: id,
+        summary: `确认订单 ${updated.orderNo}`
+      });
+      return { data: updated };
     } catch (error) {
       this.mapError(error);
     }
@@ -97,11 +121,45 @@ export class OrdersController {
   @Post(":id/cancel")
   async cancel(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body() body: { reason?: unknown }) {
     try {
-      return {
-        data: await this.orders.cancel(tenantIdOf(req), id, actorIdOf(req), body && typeof body.reason === "string" ? body.reason : null)
-      };
+      const updated = await this.orders.cancel(tenantIdOf(req), id, actorIdOf(req), body && typeof body.reason === "string" ? body.reason : null);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorIdOf(req),
+        action: "order.cancel",
+        resourceType: "order",
+        resourceId: id,
+        summary: `取消订单 ${updated.orderNo}`
+      });
+      return { data: updated };
     } catch (error) {
       this.mapError(error);
+    }
+  }
+
+  /** 客服/店主确认完成（含超时确认场景的人工入口）：PENDING_CONFIRMATION → COMPLETED。 */
+  @TenantScope()
+  @Permissions("order.manage")
+  @Post(":id/staff-confirm")
+  async staffConfirm(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    const role = req.principal?.role;
+    if (role !== "TENANT_OWNER" && role !== "CUSTOMER_SERVICE") throw new ForbiddenException("仅客服/店主可确认完成");
+    try {
+      const result = await this.ledger.completeAccounting(tenantIdOf(req), id, actorIdOf(req));
+      if (!result) throw new HttpException("订单未处于待确认状态或场次未结束", HttpStatus.CONFLICT);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: role,
+        actorId: actorIdOf(req),
+        action: "order.staff_confirm",
+        resourceType: "order",
+        resourceId: id,
+        summary: "客服/店主确认完成订单"
+      });
+      return { data: result };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.CONFLICT);
     }
   }
 }

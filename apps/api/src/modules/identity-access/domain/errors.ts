@@ -12,6 +12,13 @@ export class AccountDisabledError extends Error {
   }
 }
 
+export class TenantInactiveError extends Error {
+  constructor() {
+    super("门店已停用，无法登录");
+    this.name = "TenantInactiveError";
+  }
+}
+
 export class InvalidCredentialsError extends Error {
   constructor() {
     super("invalid username or password");

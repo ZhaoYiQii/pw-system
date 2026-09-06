@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { APP_INTERCEPTOR } from "@nestjs/core";
 import { HealthController } from "./health/health.controller.js";
+import { TenantContextInterceptor } from "./common/tenant-context/tenant-context.interceptor.js";
 import { TenancyModule } from "./modules/tenancy/tenancy.module.js";
 import { IdentityAccessModule } from "./modules/identity-access/identity-access.module.js";
 import { TenantConfigModule } from "./modules/tenant-config/tenant-config.module.js";
@@ -21,6 +23,7 @@ import { PlatformBillingModule } from "./modules/platform-billing/platform-billi
   controllers: [HealthController],
   imports: [
     TenancyModule,
+    AuditModule,
     IdentityAccessModule,
     TenantConfigModule,
     EntitlementsModule,
@@ -31,11 +34,16 @@ import { PlatformBillingModule } from "./modules/platform-billing/platform-billi
     DispatchModule,
     ServiceSessionsModule,
     LedgerModule,
-    AuditModule,
     DisputesModule,
     NotificationsModule,
     AiAssistantModule,
     PlatformBillingModule
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantContextInterceptor
+    }
   ]
 })
 export class AppModule {}

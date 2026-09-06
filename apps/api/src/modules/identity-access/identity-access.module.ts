@@ -10,16 +10,25 @@ import { AuthController } from "./interface/auth.controller.js";
 import { MeController } from "./interface/me.controller.js";
 import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 
-export const AUTH_DB_CLIENT = "AUTH_DB_CLIENT";
+export const AUTH_PLATFORM_CLIENT = "AUTH_PLATFORM_CLIENT";
+export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
 
 @Module({
   controllers: [AuthController, MeController],
   providers: [
     {
-      provide: AUTH_DB_CLIENT,
+      provide: AUTH_PLATFORM_CLIENT,
       useFactory: () => {
-        const url = process.env.PLATFORM_DATABASE_URL ?? process.env.DATABASE_URL;
-        if (!url) throw new Error("PLATFORM_DATABASE_URL/DATABASE_URL is not configured");
+        const url = process.env.PLATFORM_DATABASE_URL;
+        if (!url) throw new Error("PLATFORM_DATABASE_URL is not configured");
+        return createDatabaseClient(url);
+      }
+    },
+    {
+      provide: AUTH_RUNTIME_CLIENT,
+      useFactory: () => {
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
       }
     },
@@ -33,8 +42,11 @@ export const AUTH_DB_CLIENT = "AUTH_DB_CLIENT";
     },
     {
       provide: PrismaAuthRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaAuthRepository(client),
-      inject: [AUTH_DB_CLIENT]
+      useFactory: (
+        client: ReturnType<typeof createDatabaseClient>,
+        runtimeClient: ReturnType<typeof createDatabaseClient>
+      ) => new PrismaAuthRepository(client, runtimeClient),
+      inject: [AUTH_PLATFORM_CLIENT, AUTH_RUNTIME_CLIENT]
     },
     {
       provide: AuthService,
@@ -54,4 +66,3 @@ export const AUTH_DB_CLIENT = "AUTH_DB_CLIENT";
   exports: [AuthService, RateLimitService]
 })
 export class IdentityAccessModule {}
-

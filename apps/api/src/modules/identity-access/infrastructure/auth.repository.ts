@@ -1,5 +1,7 @@
-import type { PrismaClient } from "@pw/database";
+import type { DbTransaction, PrismaClient } from "@pw/database";
+import { withTenantContext } from "@pw/database";
 import type {
+  AuthAuditEntry,
   AuthRepository,
   NewRefreshSession,
   PlatformAccountRecord,
@@ -26,6 +28,7 @@ function mapPlatform(row: {
 function mapTenant(row: {
   id: string;
   tenantId: string;
+  tenantStatus: string;
   username: string;
   passwordHash: string;
   status: string;
@@ -34,6 +37,7 @@ function mapTenant(row: {
   return {
     id: row.id,
     tenantId: row.tenantId,
+    tenantStatus: row.tenantStatus as TenantAccountRecord["tenantStatus"],
     username: row.username,
     passwordHash: row.passwordHash,
     status: row.status as TenantAccountRecord["status"],
@@ -42,7 +46,10 @@ function mapTenant(row: {
 }
 
 export class PrismaAuthRepository implements AuthRepository {
-  constructor(private readonly client: PrismaClient) {}
+  constructor(
+    private readonly client: PrismaClient,
+    private readonly runtime: PrismaClient
+  ) {}
 
   async findPlatformAccountByUsername(username: string): Promise<PlatformAccountRecord | null> {
     const row = await this.client.platformAccount.findUnique({ where: { username } });
@@ -58,19 +65,49 @@ export class PrismaAuthRepository implements AuthRepository {
     tenantCode: string,
     username: string
   ): Promise<TenantAccountRecord | null> {
-    const row = await this.client.tenantAccount.findFirst({
-      where: { username, tenant: { code: tenantCode } },
-      include: { roles: true }
+    // 先经“平台注册表”（tenants 对 pw_runtime 开放 SELECT）解析租户 id/status，
+    // 再在租户 GUC 内查询账号，避免运行时角色跨租户/无上下文读 tenant_accounts。
+    const tenant = await this.runtime.tenant.findUnique({
+      where: { code: tenantCode },
+      select: { id: true, status: true }
     });
-    return row ? mapTenant(row) : null;
+    if (!tenant) return null;
+    return withTenantContext(this.runtime, tenant.id, async (tx: DbTransaction) => {
+      const row = await tx.tenantAccount.findFirst({
+        where: { tenantId: tenant.id, username },
+        include: { roles: true }
+      });
+      if (!row) return null;
+      return mapTenant({
+        id: row.id,
+        tenantId: row.tenantId,
+        tenantStatus: tenant.status,
+        username: row.username,
+        passwordHash: row.passwordHash,
+        status: row.status,
+        roles: row.roles
+      });
+    });
   }
 
-  async findTenantAccountById(accountId: string): Promise<TenantAccountRecord | null> {
-    const row = await this.client.tenantAccount.findUnique({
-      where: { id: accountId },
-      include: { roles: true }
+  async findTenantAccountById(accountId: string, tenantId?: string | null): Promise<TenantAccountRecord | null> {
+    if (!tenantId) return null;
+    return withTenantContext(this.runtime, tenantId, async (tx: DbTransaction) => {
+      const row = await tx.tenantAccount.findUnique({
+        where: { id: accountId },
+        include: { roles: true, tenant: { select: { status: true } } }
+      });
+      if (!row) return null;
+      return mapTenant({
+        id: row.id,
+        tenantId: row.tenantId,
+        tenantStatus: row.tenant.status,
+        username: row.username,
+        passwordHash: row.passwordHash,
+        status: row.status,
+        roles: row.roles
+      });
     });
-    return row ? mapTenant(row) : null;
   }
 
   async createRefreshSession(session: NewRefreshSession): Promise<void> {
@@ -103,6 +140,20 @@ export class PrismaAuthRepository implements AuthRepository {
     await this.client.refreshSession.update({
       where: { id },
       data: { revokedAt: new Date() }
+    });
+  }
+
+  async recordAudit(entry: AuthAuditEntry): Promise<void> {
+    await this.client.auditLog.create({
+      data: {
+        tenantId: entry.tenantId,
+        actorType: entry.actorType ?? "system",
+        actorId: entry.actorId ?? null,
+        action: entry.action,
+        resourceType: entry.resourceType ?? null,
+        resourceId: entry.resourceId ?? null,
+        summary: entry.summary ? entry.summary.slice(0, 500) : null
+      }
     });
   }
 }

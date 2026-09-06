@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { DispatchService } from "./application/dispatch.service.js";
 import { PrismaDispatchRepository } from "./infrastructure/prisma-dispatch.repository.js";
 import { DispatchAdminController } from "./interface/dispatch-admin.controller.js";
@@ -18,14 +19,14 @@ export const DISPATCH_DB_CLIENT = "DISPATCH_DB_CLIENT";
     {
       provide: DISPATCH_DB_CLIENT,
       useFactory: () => {
-        const url = process.env.PLATFORM_DATABASE_URL ?? process.env.DATABASE_URL;
-        if (!url) throw new Error("PLATFORM_DATABASE_URL/DATABASE_URL is not configured");
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
       }
     },
     {
       provide: PrismaDispatchRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaDispatchRepository(client),
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaDispatchRepository(client)),
       inject: [DISPATCH_DB_CLIENT]
     },
     {

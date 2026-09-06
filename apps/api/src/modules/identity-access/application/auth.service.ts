@@ -1,4 +1,4 @@
-import { AccountDisabledError, InvalidCredentialsError, InvalidRefreshTokenError } from "../domain/errors.js";
+import { AccountDisabledError, InvalidCredentialsError, InvalidRefreshTokenError, TenantInactiveError } from "../domain/errors.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
 import type { RoleKey } from "../domain/roles.js";
 import { verifyPassword } from "../infrastructure/password.js";
@@ -50,10 +50,48 @@ export class AuthService {
   async loginTenant(tenantCode: string, username: string, password: string): Promise<SessionBundle> {
     const account = await this.repository.findTenantAccountByCodeAndUsername(tenantCode, username);
     if (!account) throw new InvalidCredentialsError();
-    if (account.status !== "ACTIVE") throw new AccountDisabledError();
+    if (account.tenantStatus !== "ACTIVE") {
+      await this.repository.recordAudit({
+        tenantId: account.tenantId,
+        actorType: "tenant_account",
+        actorId: account.id,
+        action: "auth.login_failed",
+        summary: "登录失败：门店已停用"
+      });
+      throw new TenantInactiveError();
+    }
+    if (account.status !== "ACTIVE") {
+      await this.repository.recordAudit({
+        tenantId: account.tenantId,
+        actorType: "tenant_account",
+        actorId: account.id,
+        action: "auth.login_failed",
+        summary: "登录失败：账号停用"
+      });
+      throw new AccountDisabledError();
+    }
     const ok = await verifyPassword(password, account.passwordHash);
-    if (!ok) throw new InvalidCredentialsError();
-    return this.issue(this.tenantPrincipal(account));
+    if (!ok) {
+      await this.repository.recordAudit({
+        tenantId: account.tenantId,
+        actorType: "tenant_account",
+        actorId: account.id,
+        action: "auth.login_failed",
+        summary: "登录失败：密码错误"
+      });
+      throw new InvalidCredentialsError();
+    }
+    const bundle = await this.issue(this.tenantPrincipal(account));
+    await this.repository.recordAudit({
+      tenantId: account.tenantId,
+      actorType: "tenant_account",
+      actorId: bundle.principal.sub,
+      action: "auth.login",
+      resourceType: "tenant_account",
+      resourceId: bundle.principal.sub,
+      summary: `门店登录成功：${username}`
+    });
+    return bundle;
   }
 
   private async issue(principal: AccessPrincipal): Promise<SessionBundle> {
@@ -86,11 +124,18 @@ export class AuthService {
     const account =
       scope === "platform"
         ? await this.repository.findPlatformAccountById(session.accountId)
-        : await this.repository.findTenantAccountById(session.accountId);
+        : await this.repository.findTenantAccountById(session.accountId, session.tenantId);
 
     if (!account || account.status !== "ACTIVE") {
       await this.repository.revokeRefreshSession(session.id);
       throw new InvalidRefreshTokenError();
+    }
+    if (scope === "tenant") {
+      const tenantAccount = account as TenantAccountRecord;
+      if (tenantAccount.tenantStatus !== "ACTIVE") {
+        await this.repository.revokeRefreshSession(session.id);
+        throw new InvalidRefreshTokenError();
+      }
     }
 
     const principal =

@@ -4,6 +4,7 @@ import { AdjustmentConflictError, AdjustmentNotFoundError, InvalidSessionInputEr
 import { PlayersService } from "../../players/application/players.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -18,7 +19,8 @@ function actorOf(req: AuthenticatedRequest): string {
 export class SessionsController {
   constructor(
     @Inject(PrismaSessionsRepository) private readonly repo: PrismaSessionsRepository,
-    @Inject(PlayersService) private readonly players: PlayersService
+    @Inject(PlayersService) private readonly players: PlayersService,
+    @Inject(AuditService) private readonly audit: AuditService
   ) {}
 
   private mapError(error: unknown): never {
@@ -63,7 +65,17 @@ export class SessionsController {
     const assigned = await this.repo.detailByOrder(tenantId, orderId);
     await this.requireActor(req, tenantId, assigned?.playerId ?? (await this.repo.assignedPlayerId(tenantId, orderId)));
     try {
-      return { data: await this.repo.start(tenantId, orderId, actorOf(req), assigned?.playerId ?? undefined) };
+      const result = await this.repo.start(tenantId, orderId, actorOf(req), assigned?.playerId ?? undefined);
+      await this.audit.record({
+        tenantId,
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: "session.start",
+        resourceType: "service_session",
+        resourceId: result.id,
+        summary: "开始服务场次"
+      });
+      return { data: result };
     } catch (error) {
       this.mapError(error);
     }
@@ -76,7 +88,17 @@ export class SessionsController {
     const assigned = await this.repo.detailByOrder(tenantId, orderId);
     await this.requireActor(req, tenantId, assigned?.playerId ?? (await this.repo.assignedPlayerId(tenantId, orderId)));
     try {
-      return { data: await this.repo.end(tenantId, orderId, actorOf(req)) };
+      const result = await this.repo.end(tenantId, orderId, actorOf(req));
+      await this.audit.record({
+        tenantId,
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: "session.end",
+        resourceType: "service_session",
+        resourceId: result.id,
+        summary: "结束服务场次"
+      });
+      return { data: result };
     } catch (error) {
       this.mapError(error);
     }
@@ -89,9 +111,17 @@ export class SessionsController {
     const view = await this.repo.detailById(tenantId, sessionId);
     await this.requireActor(req, tenantId, view?.playerId ?? null);
     try {
-      return {
-        data: await this.repo.requestAdjustment(tenantId, sessionId, Number(body.requestedDurationSeconds), String(body.reason ?? ""), actorOf(req))
-      };
+      const result = await this.repo.requestAdjustment(tenantId, sessionId, Number(body.requestedDurationSeconds), String(body.reason ?? ""), actorOf(req));
+      await this.audit.record({
+        tenantId,
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: "session.adjustment.request",
+        resourceType: "service_session",
+        resourceId: sessionId,
+        summary: "申请时长调整"
+      });
+      return { data: result };
     } catch (error) {
       this.mapError(error);
     }
@@ -107,9 +137,17 @@ export class SessionsController {
   ) {
     if (!this.isStaff(req)) throw new ForbiddenException("仅客服/店主可复核");
     try {
-      return {
-        data: await this.repo.reviewAdjustment(tenantIdOf(req), adjustmentId, body.approve === true, typeof body.comment === "string" ? body.comment : null)
-      };
+      const result = await this.repo.reviewAdjustment(tenantIdOf(req), adjustmentId, body.approve === true, typeof body.comment === "string" ? body.comment : null);
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: "session.adjustment.review",
+        resourceType: "session_adjustment",
+        resourceId: adjustmentId,
+        summary: body.approve === true ? "复核通过调整" : "复核拒绝调整"
+      });
+      return { data: result };
     } catch (error) {
       this.mapError(error);
     }

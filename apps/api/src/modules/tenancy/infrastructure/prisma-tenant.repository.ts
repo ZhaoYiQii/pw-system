@@ -81,10 +81,16 @@ export class PrismaTenantRepository implements TenantRepository {
   }
 
   async deactivate(id: string): Promise<TenantView> {
-    const row = await this.client.tenant.update({
-      where: { id },
-      data: { status: "INACTIVE" }
+    return this.client.$transaction(async (tx) => {
+      const row = await tx.tenant.update({
+        where: { id },
+        data: { status: "INACTIVE" }
+      });
+      await tx.refreshSession.updateMany({
+        where: { tenantId: id, revokedAt: null },
+        data: { revokedAt: new Date() }
+      });
+      return mapTenant(row);
     });
-    return mapTenant(row);
   }
 }

@@ -30,7 +30,7 @@ export class PrismaLedgerRepository {
 
     return this.client.$transaction(async (tx) => {
       const order = await tx.order.findFirst({ where: { tenantId, id: orderId }, select: { id: true, orderNo: true, status: true } });
-      if (!order) return null;
+      if (!order || order.status !== "PENDING_CONFIRMATION") return null;
       const session = await tx.serviceSession.findFirst({ where: { tenantId, orderId }, select: { status: true } });
       if (!session || (session.status !== "ENDED" && session.status !== "CONFIRMED")) return null;
       const assignment = await tx.assignment.findFirst({ where: { tenantId, orderId }, select: { playerId: true } });
@@ -71,7 +71,7 @@ export class PrismaLedgerRepository {
       }
       await tx.order.update({ where: { id: orderId }, data: { status: "COMPLETED" } });
       await tx.orderEvent.create({
-        data: { tenantId, orderId, eventType: "ORDER_ACCOUNTED", fromStatus: "ASSIGNED", toStatus: "COMPLETED", actorType: "tenant_account", actorId, payload: { earningId: earning.id, playerShareFen: split.playerShareFen } }
+        data: { tenantId, orderId, eventType: "ORDER_ACCOUNTED", fromStatus: order.status, toStatus: "COMPLETED", actorType: "tenant_account", actorId, payload: { earningId: earning.id, playerShareFen: split.playerShareFen } }
       });
       await tx.outboxEvent.create({
         data: { tenantId, aggregateType: "order", aggregateId: orderId, eventType: "order.accounted", payload: { orderId, earningId: earning.id } }

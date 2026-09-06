@@ -2,8 +2,8 @@ import type { PrismaClient } from "@pw/database";
 
 export interface AuditInput {
   tenantId: string;
-  actorType?: string;
-  actorId?: string;
+  actorType: string | null | undefined;
+  actorId: string | null | undefined;
   action: string;
   resourceType?: string;
   resourceId?: string;

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { LedgerRulesRepository } from "./infrastructure/prisma-ledger-rules.repository.js";
 import { LedgerRulesService } from "./application/ledger-rules.service.js";
 import { PrismaLedgerRepository } from "./infrastructure/prisma-ledger.repository.js";
@@ -26,14 +27,14 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
     {
       provide: LEDGER_DB_CLIENT,
       useFactory: () => {
-        const url = process.env.PLATFORM_DATABASE_URL ?? process.env.DATABASE_URL;
-        if (!url) throw new Error("PLATFORM_DATABASE_URL/DATABASE_URL is not configured");
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
       }
     },
     {
       provide: LedgerRulesRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new LedgerRulesRepository(client),
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new LedgerRulesRepository(client)),
       inject: [LEDGER_DB_CLIENT]
     },
     {
@@ -43,7 +44,7 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
     },
     {
       provide: PrismaLedgerRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaLedgerRepository(client),
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaLedgerRepository(client)),
       inject: [LEDGER_DB_CLIENT]
     },
     {
@@ -53,9 +54,10 @@ export const LEDGER_DB_CLIENT = "LEDGER_DB_CLIENT";
     },
     {
       provide: PrismaSettlementsRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaSettlementsRepository(client),
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaSettlementsRepository(client)),
       inject: [LEDGER_DB_CLIENT]
     }
-  ]
+  ],
+  exports: [LedgerService, LedgerRulesService]
 })
 export class LedgerModule {}

@@ -3,6 +3,7 @@ import { EntitlementsService } from "../application/entitlements.service.js";
 import { FeatureDisabledError, UnknownFeatureError } from "../domain/errors.js";
 import { Permissions, PlatformScope, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -12,7 +13,10 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 
 @Controller("api/v1")
 export class EntitlementsController {
-  constructor(@Inject(EntitlementsService) private readonly entitlements: EntitlementsService) {}
+  constructor(
+    @Inject(EntitlementsService) private readonly entitlements: EntitlementsService,
+    @Inject(AuditService) private readonly audit: AuditService
+  ) {}
 
   @TenantScope()
   @Get("tenant/features")
@@ -43,7 +47,7 @@ export class EntitlementsController {
   @PlatformScope()
   @Permissions("tenant.manage")
   @Post("platform/tenants/:tenantId/entitlements")
-  async setEntitlement(@Param("tenantId") tenantId: string, @Body() body: { featureKey?: unknown; enabled?: unknown }) {
+  async setEntitlement(@Req() req: AuthenticatedRequest, @Param("tenantId") tenantId: string, @Body() body: { featureKey?: unknown; enabled?: unknown }) {
     const featureKey = body.featureKey;
     const enabled = body.enabled;
     if (typeof featureKey !== "string" || typeof enabled !== "boolean") {
@@ -51,6 +55,15 @@ export class EntitlementsController {
     }
     try {
       await this.entitlements.setFeature(tenantId, featureKey, enabled);
+      await this.audit.record({
+        tenantId,
+        actorType: "platform_account",
+        actorId: req.principal?.sub ?? "platform",
+        action: "entitlement.set",
+        resourceType: "tenant_entitlement",
+        resourceId: tenantId,
+        summary: `${enabled ? "开启" : "关闭"} ${featureKey}`
+      });
       return { data: await this.entitlements.listFeatures(tenantId) };
     } catch (error) {
       if (error instanceof UnknownFeatureError) throw new NotFoundException(error.message);

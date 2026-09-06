@@ -16,7 +16,7 @@ export default defineConfig({
     env: {
       DATABASE_URL:
         process.env.DATABASE_URL ??
-        "postgresql://pw:pw_dev_only@127.0.0.1:5433/pw_saas_test?schema=public",
+        "postgresql://pw_runtime:pw_runtime_dev_only@127.0.0.1:5433/pw_saas_test?schema=public",
       PLATFORM_DATABASE_URL:
         process.env.PLATFORM_DATABASE_URL ??
         "postgresql://pw:pw_dev_only@127.0.0.1:5433/pw_saas_test?schema=public",

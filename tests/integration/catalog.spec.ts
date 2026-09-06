@@ -64,6 +64,7 @@ describe("Slice 4 catalog/customers/players HTTP (权限/价格边界/跨租户/
       for (const code of [tenantCode, otherTenantCode]) {
         const tenants = await client.tenant.findMany({ where: { code } });
         for (const t of tenants) {
+          await client.auditLog.deleteMany({ where: { tenantId: t.id } });
           await client.playerAvailability.deleteMany({ where: { tenantId: t.id } });
           await client.playerSkill.deleteMany({ where: { tenantId: t.id } });
           await client.pricingRule.deleteMany({ where: { tenantId: t.id } });

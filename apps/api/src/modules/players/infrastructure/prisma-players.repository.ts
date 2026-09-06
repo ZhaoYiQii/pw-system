@@ -164,14 +164,13 @@ export class PrismaPlayerRepository implements PlayerRepository {
   }
 
   async remove(tenantId: string, id: string): Promise<boolean> {
-    return this.client.$transaction(async (tx) => {
-      const player = await tx.playerProfile.findFirst({ where: { tenantId, id }, select: { id: true } });
-      if (!player) return false;
-      await tx.playerAvailability.deleteMany({ where: { tenantId, playerId: id } });
-      await tx.playerSkill.deleteMany({ where: { tenantId, playerId: id } });
-      const res = await tx.playerProfile.deleteMany({ where: { tenantId, id } });
-      return res.count > 0;
-    });
+    // 由 tenantGuarded 在事务内调用：this.client 已是带租户 GUC 的 tx
+    const player = await this.client.playerProfile.findFirst({ where: { tenantId, id }, select: { id: true } });
+    if (!player) return false;
+    await this.client.playerAvailability.deleteMany({ where: { tenantId, playerId: id } });
+    await this.client.playerSkill.deleteMany({ where: { tenantId, playerId: id } });
+    const res = await this.client.playerProfile.deleteMany({ where: { tenantId, id } });
+    return res.count > 0;
   }
 
   async gameInTenant(tenantId: string, gameId: string): Promise<boolean> {
@@ -215,36 +214,33 @@ export class PrismaPlayerRepository implements PlayerRepository {
   }
 
   async addAvailability(tenantId: string, playerId: string, input: AvailabilityInput): Promise<{ id: string }> {
-    const id = await this.client.$transaction(async (tx) => {
-      const lock = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM player_profiles
-        WHERE id = ${playerId}::uuid AND tenant_id = ${tenantId}::uuid
-        FOR UPDATE`;
-      if (lock.length === 0) return null;
-      const overlap = await tx.playerAvailability.findFirst({
-        where: {
-          tenantId,
-          playerId,
-          endsAt: { gt: input.startsAt },
-          startsAt: { lt: input.endsAt }
-        },
-        select: { id: true }
-      });
-      if (overlap) throw new OverlappingAvailabilityError();
-      const created = await tx.playerAvailability.create({
-        data: {
-          tenantId,
-          playerId,
-          startsAt: input.startsAt,
-          endsAt: input.endsAt,
-          ...(input.reason ? { reason: input.reason } : {})
-        },
-        select: { id: true }
-      });
-      return created.id;
+    // 由 tenantGuarded 在事务内调用：this.client 已是带租户 GUC 的 tx，行锁在事务提交时释放
+    const lock = await this.client.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM player_profiles
+      WHERE id = ${playerId}::uuid AND tenant_id = ${tenantId}::uuid
+      FOR UPDATE`;
+    if (lock.length === 0) throw new Error("player not found in transaction");
+    const overlap = await this.client.playerAvailability.findFirst({
+      where: {
+        tenantId,
+        playerId,
+        endsAt: { gt: input.startsAt },
+        startsAt: { lt: input.endsAt }
+      },
+      select: { id: true }
     });
-    if (!id) throw new Error("player not found in transaction");
-    return { id };
+    if (overlap) throw new OverlappingAvailabilityError();
+    const created = await this.client.playerAvailability.create({
+      data: {
+        tenantId,
+        playerId,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        ...(input.reason ? { reason: input.reason } : {})
+      },
+      select: { id: true }
+    });
+    return { id: created.id };
   }
 
   async removeAvailability(tenantId: string, playerId: string, availabilityId: string): Promise<boolean> {

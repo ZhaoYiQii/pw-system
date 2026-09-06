@@ -64,9 +64,9 @@ export class PlatformBillingController {
   @PlatformScope()
   @Permissions("platform.manage")
   @Post("tenants/:tenantId/activate")
-  async activate(@Param("tenantId") tenantId: string) {
+  async activate(@Req() req: AuthenticatedRequest, @Param("tenantId") tenantId: string) {
     try {
-      return { data: await this.svc.activate(tenantId) };
+      return { data: await this.svc.activate(tenantId, req.principal?.sub ?? "platform") };
     } catch (error) {
       bad(error);
     }

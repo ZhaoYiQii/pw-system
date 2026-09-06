@@ -5,6 +5,7 @@ import { CustomersService } from "../../customers/application/customers.service.
 import { OrdersService } from "../../orders/application/orders.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 /** 老板端（客户自助）：查看本人订单候选并选人。 */
 @Controller("api/v1/tenant/customer")
@@ -12,7 +13,8 @@ export class DispatchCustomerController {
   constructor(
     @Inject(DispatchService) private readonly dispatch: DispatchService,
     @Inject(CustomersService) private readonly customers: CustomersService,
-    @Inject(OrdersService) private readonly orders: OrdersService
+    @Inject(OrdersService) private readonly orders: OrdersService,
+    @Inject(AuditService) private readonly audit: AuditService
   ) {}
 
   private async ctxOf(req: AuthenticatedRequest, orderId: string): Promise<{ tenantId: string; accountId: string; customerProfileId: string }> {
@@ -49,7 +51,17 @@ export class DispatchCustomerController {
   async select(@Req() req: AuthenticatedRequest, @Param("orderId") orderId: string, @Body() body: { applicationId?: unknown }) {
     const ctx = await this.ctxOf(req, orderId);
     try {
-      return { data: await this.dispatch.assign(ctx.tenantId, orderId, body.applicationId as string, ctx.accountId) };
+      const assigned = await this.dispatch.assign(ctx.tenantId, orderId, body.applicationId as string, ctx.accountId);
+      await this.audit.record({
+        tenantId: ctx.tenantId,
+        actorType: "CUSTOMER",
+        actorId: ctx.accountId,
+        action: "dispatch.assign",
+        resourceType: "assignment",
+        resourceId: assigned.id,
+        summary: "客户自助选人"
+      });
+      return { data: assigned };
     } catch (error) {
       this.mapError(error);
     }

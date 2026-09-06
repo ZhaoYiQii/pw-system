@@ -11,6 +11,7 @@ import {
 } from "../domain/errors.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -29,7 +30,10 @@ function requireStaff(req: AuthenticatedRequest): void {
 
 @Controller("api/v1/tenant")
 export class DispatchAdminController {
-  constructor(@Inject(DispatchService) private readonly dispatch: DispatchService) {}
+  constructor(
+    @Inject(DispatchService) private readonly dispatch: DispatchService,
+    @Inject(AuditService) private readonly audit: AuditService
+  ) {}
 
   private mapError(error: unknown): never {
     if (error instanceof DispatchNotFoundError) throw new HttpException(error.message, HttpStatus.NOT_FOUND);
@@ -49,6 +53,15 @@ export class DispatchAdminController {
     requireStaff(req);
     try {
       await this.dispatch.publish(tenantIdOf(req), id, actorOf(req));
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: "dispatch.publish",
+        resourceType: "order",
+        resourceId: id,
+        summary: "发布派单"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.mapError(error);
@@ -74,6 +87,15 @@ export class DispatchAdminController {
     requireStaff(req);
     try {
       await this.dispatch.shortlist(tenantIdOf(req), id, applicationId, body.shortlisted === true, actorOf(req));
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: body.shortlisted === true ? "dispatch.shortlist" : "dispatch.reject",
+        resourceType: "application",
+        resourceId: applicationId,
+        summary: body.shortlisted === true ? "报名入候选" : "报名被拒绝"
+      });
       return { data: { ok: true } };
     } catch (error) {
       this.mapError(error);
@@ -86,7 +108,17 @@ export class DispatchAdminController {
   async assign(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body() body: { applicationId?: unknown }) {
     requireStaff(req);
     try {
-      return { data: await this.dispatch.assign(tenantIdOf(req), id, body.applicationId as string, actorOf(req)) };
+      const assigned = await this.dispatch.assign(tenantIdOf(req), id, body.applicationId as string, actorOf(req));
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: actorOf(req),
+        action: "dispatch.assign",
+        resourceType: "assignment",
+        resourceId: assigned.id,
+        summary: "指派陪玩"
+      });
+      return { data: assigned };
     } catch (error) {
       this.mapError(error);
     }

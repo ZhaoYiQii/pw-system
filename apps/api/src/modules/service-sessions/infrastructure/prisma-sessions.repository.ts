@@ -63,14 +63,35 @@ export class PrismaSessionsRepository {
     };
   }
 
-  /** 开始场次：订单必须 ASSIGNED；服务器时间；重复开始幂等返回同一场次。 */
+  /** 开始场次：ASSIGNED→READY→IN_PROGRESS；服务器时间；重复开始幂等返回同一场次。 */
   async start(tenantId: string, orderId: string, actorId: string, playerId?: string): Promise<SessionView> {
     const id = await this.client.$transaction(async (tx) => {
-      const order = await tx.order.findFirst({ where: { tenantId, id: orderId }, select: { status: true } });
-      if (!order) throw new SessionNotFoundError("order", orderId);
-      if (order.status !== "ASSIGNED") throw new SessionStateConflictError(orderId, order.status, "START");
+      // 行锁串行化并发 start，避免唯一约束下 500
+      const locks = await tx.$queryRaw<Array<{ id: string; status: string }>>`
+        SELECT id, status FROM orders
+        WHERE id = ${orderId}::uuid AND tenant_id = ${tenantId}::uuid
+        FOR UPDATE`;
+      if (locks.length === 0) throw new SessionNotFoundError("order", orderId);
+      const orderStatus = locks[0]?.status as string;
       const existing = await tx.serviceSession.findFirst({ where: { tenantId, orderId } });
       if (existing) return existing.id;
+      if (orderStatus === "ASSIGNED") {
+        await tx.orderEvent.create({
+          data: { tenantId, orderId, eventType: "ORDER_READY", fromStatus: "ASSIGNED", toStatus: "READY", actorType: "tenant_account", actorId, payload: {} }
+        });
+        await tx.order.update({ where: { id: orderId }, data: { status: "READY" } });
+        await tx.orderEvent.create({
+          data: { tenantId, orderId, eventType: "ORDER_STARTED", fromStatus: "READY", toStatus: "IN_PROGRESS", actorType: "tenant_account", actorId, payload: {} }
+        });
+        await tx.order.update({ where: { id: orderId }, data: { status: "IN_PROGRESS" } });
+      } else if (orderStatus !== "READY") {
+        throw new SessionStateConflictError(orderId, orderStatus, "START");
+      } else {
+        await tx.orderEvent.create({
+          data: { tenantId, orderId, eventType: "ORDER_STARTED", fromStatus: "READY", toStatus: "IN_PROGRESS", actorType: "tenant_account", actorId, payload: {} }
+        });
+        await tx.order.update({ where: { id: orderId }, data: { status: "IN_PROGRESS" } });
+      }
       const assignment = await tx.assignment.findFirst({ where: { tenantId, orderId }, select: { playerId: true, id: true } });
       const finalPlayerId = playerId ?? assignment?.playerId;
       if (!finalPlayerId) throw new InvalidSessionInputError("缺少陪玩");
@@ -106,6 +127,16 @@ export class PrismaSessionsRepository {
       await tx.outboxEvent.create({
         data: { tenantId, aggregateType: "session", aggregateId: s.id, eventType: "session.ended", payload: { orderId, durationSeconds: duration } }
       });
+      // 场次结束 → 订单 IN_PROGRESS → PENDING_CONFIRMATION（仅首次成功时写事件）
+      const orderRes = await tx.order.updateMany({
+        where: { tenantId, id: orderId, status: "IN_PROGRESS" },
+        data: { status: "PENDING_CONFIRMATION" }
+      });
+      if (orderRes.count > 0) {
+        await tx.orderEvent.create({
+          data: { tenantId, orderId, eventType: "ORDER_SESSION_ENDED", fromStatus: "IN_PROGRESS", toStatus: "PENDING_CONFIRMATION", actorType: "tenant_account", actorId, payload: { durationSeconds: duration } }
+        });
+      }
       return s.id;
     });
     return (await this.detailById(tenantId, id)) as SessionView;

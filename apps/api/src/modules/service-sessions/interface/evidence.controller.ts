@@ -5,6 +5,7 @@ import { BadRequestException, Controller, ForbiddenException, Get, Headers, Http
 import type { Request, Response } from "express";
 import { PrismaSessionsRepository } from "../infrastructure/prisma-sessions.repository.js";
 import { PlayersService } from "../../players/application/players.service.js";
+import { AuditService } from "../../audit/audit.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 
@@ -32,7 +33,8 @@ function sanitizeName(name: string): string {
 export class EvidenceController {
   constructor(
     @Inject(PrismaSessionsRepository) private readonly repo: PrismaSessionsRepository,
-    @Inject(PlayersService) private readonly players: PlayersService
+    @Inject(PlayersService) private readonly players: PlayersService,
+    @Inject(AuditService) private readonly audit: AuditService
   ) {}
 
   private tenantIdOf(req: AuthenticatedRequest): string {
@@ -100,6 +102,15 @@ export class EvidenceController {
         sizeBytes: bytes.length,
         sha256,
         uploadedBy: req.principal?.sub ?? null
+      });
+      await this.audit.record({
+        tenantId,
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? null,
+        action: "evidence.upload",
+        resourceType: "evidence_asset",
+        resourceId: created.id,
+        summary: `上传证据 ${created.id}`
       });
       res.status(HttpStatus.CREATED);
       return { data: { id: created.id, objectKey: key.replace(/\\/g, "/"), mimeType: detected.mime, sizeBytes: bytes.length, sha256 } };

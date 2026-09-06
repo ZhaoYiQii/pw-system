@@ -1,10 +1,11 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
 import { AuditService } from "./audit.service.js";
 import { AuditController } from "./audit.controller.js";
 
 export const AUDIT_DB_CLIENT = "AUDIT_DB_CLIENT";
 
+@Global()
 @Module({
   controllers: [AuditController],
   providers: [

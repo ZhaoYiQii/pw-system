@@ -69,6 +69,17 @@ export class PlatformBillingService {
       await tx.tenantSubscription.create({ data: { tenantId: tenant.id, packageCode: pkg?.code ?? "BASIC", status: "ACTIVE" } });
       return tenant;
     });
+    await this.client.auditLog.create({
+      data: {
+        tenantId: created.id,
+        actorType: "platform_account",
+        actorId,
+        action: "tenant.onboard",
+        resourceType: "tenant",
+        resourceId: created.id,
+        summary: `平台开通门店 ${created.code}`
+      }
+    });
     if (pkg) await this.assignPackage(created.id, pkg.code, actorId);
     return { tenantId: created.id, tenantCode: created.code };
   }
@@ -91,10 +102,21 @@ export class PlatformBillingService {
     return { tenantId, packageCode: pkg.code, addons: pkg.addons };
   }
 
-  async activate(tenantId: string) {
+  async activate(tenantId: string, actorId: string) {
     const t = await this.client.tenant.findFirst({ where: { id: tenantId } });
     if (!t) throw new Error("租户不存在");
     await this.client.tenant.update({ where: { id: tenantId }, data: { status: "ACTIVE" } });
+    await this.client.auditLog.create({
+      data: {
+        tenantId,
+        actorType: "platform_account",
+        actorId,
+        action: "tenant.activate",
+        resourceType: "tenant",
+        resourceId: tenantId,
+        summary: "激活门店"
+      }
+    });
     return { id: tenantId, status: "ACTIVE" };
   }
 }

@@ -63,6 +63,8 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
 
   afterAll(async () => {
     if (client) {
+      await client.auditLog.deleteMany({ where: { tenantId } });
+      await client.outboxEvent.deleteMany({ where: { tenantId } });
       await client.evidenceAsset.deleteMany({ where: { tenantId } });
       const sessions = await client.serviceSession.findMany({ where: { tenantId } });
       for (const s of sessions) {

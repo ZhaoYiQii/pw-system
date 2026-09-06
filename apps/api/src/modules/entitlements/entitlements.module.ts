@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { EntitlementsService } from "./application/entitlements.service.js";
 import { PrismaEntitlementRepository } from "./infrastructure/prisma-entitlement.repository.js";
 import { EntitlementsController } from "./interface/entitlements.controller.js";
@@ -12,14 +13,14 @@ export const ENTITLEMENT_DB_CLIENT = "ENTITLEMENT_DB_CLIENT";
     {
       provide: ENTITLEMENT_DB_CLIENT,
       useFactory: () => {
-        const url = process.env.PLATFORM_DATABASE_URL ?? process.env.DATABASE_URL;
-        if (!url) throw new Error("PLATFORM_DATABASE_URL/DATABASE_URL is not configured");
+        const url = process.env.DATABASE_URL;
+        if (!url) throw new Error("DATABASE_URL (runtime) is not configured");
         return createDatabaseClient(url);
       }
     },
     {
       provide: PrismaEntitlementRepository,
-      useFactory: (client: ReturnType<typeof createDatabaseClient>) => new PrismaEntitlementRepository(client),
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) => tenantGuarded(client, new PrismaEntitlementRepository(client)),
       inject: [ENTITLEMENT_DB_CLIENT]
     },
     {

@@ -148,7 +148,7 @@ export class OrdersService {
   async cancel(tenantId: string, orderId: string, actorId: string, reason: string | null): Promise<OrderView> {
     const order = await this.repository.loadFull(tenantId, orderId);
     if (!order) throw new OrderNotFoundError(orderId);
-    if (order.status !== "DRAFT" && order.status !== "CONFIRMED") {
+    if (!["DRAFT", "CONFIRMED", "DISPATCHING", "ASSIGNED", "READY"].includes(order.status)) {
       throw new OrderStateConflictError(orderId, order.status, "CANCELLED");
     }
     await this.repository.cancel(tenantId, orderId, actorId, reason);

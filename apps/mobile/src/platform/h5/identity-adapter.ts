@@ -16,31 +16,33 @@ export const identityAdapter: IdentityAdapter = {
     const res = await fetch(`${base}/api/v1/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(input)
     });
     const body = (await res.json()) as { data?: IdentitySession };
     if (!res.ok || !body.data) throw new Error(`login failed: ${res.status}`);
     return body.data;
   },
-  async refresh(refreshToken, scope) {
+  async refresh(scope) {
     const base = apiBase();
     if (!base) throw new Error("TARO_APP_API_BASE not configured");
     const res = await fetch(`${base}/api/v1/auth/refresh`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ scope, refreshToken })
+      credentials: "include",
+      body: JSON.stringify({ scope })
     });
     const body = (await res.json()) as { data?: IdentitySession };
     if (!res.ok || !body.data) throw new Error(`refresh failed: ${res.status}`);
     return body.data;
   },
-  async logout(refreshToken) {
+  async logout() {
     const base = apiBase();
     if (base) {
       await fetch(`${base}/api/v1/auth/logout`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ refreshToken })
+        credentials: "include"
       });
     }
   }

@@ -12,14 +12,9 @@ export const DATABASE_CLIENT = "DATABASE_CLIENT";
     {
       provide: DATABASE_CLIENT,
       useFactory: () => {
-        const url = process.env.DATABASE_URL;
-        if (!url) {
-          // 平台后台接口在 Slice 1 使用 owner 连接串（PLATFORM_DATABASE_URL 优先）；
-          // Slice 2/11 引入平台角色与审计后替换，禁止生产混用迁移凭据。
-          const platformUrl = process.env.PLATFORM_DATABASE_URL;
-          if (!platformUrl) throw new Error("DATABASE_URL/PLATFORM_DATABASE_URL is not configured");
-          return createDatabaseClient(platformUrl);
-        }
+        // 平台运营/租户注册表走平台角色；禁止把运行时只读角色用于平台写操作。
+        const url = process.env.PLATFORM_DATABASE_URL;
+        if (!url) throw new Error("PLATFORM_DATABASE_URL is not configured");
         return createDatabaseClient(url);
       }
     },

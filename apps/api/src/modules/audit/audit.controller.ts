@@ -1,6 +1,6 @@
 import { Controller, Get, HttpException, HttpStatus, Inject, Query, Req } from "@nestjs/common";
 import { AuditService } from "./audit.service.js";
-import { TenantScope } from "../../common/auth/decorators.js";
+import { Permissions, TenantScope } from "../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
 
 @Controller("api/v1/tenant/audit")
@@ -8,6 +8,7 @@ export class AuditController {
   constructor(@Inject(AuditService) private readonly audit: AuditService) {}
 
   @TenantScope()
+  @Permissions("audit.view")
   @Get()
   async list(@Req() req: AuthenticatedRequest, @Query("limit") limit?: unknown) {
     const tenantId = req.principal?.tenantId;

@@ -3,6 +3,7 @@ import { LedgerService } from "../application/ledger.service.js";
 import { PlayersService } from "../../players/application/players.service.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
+import { AuditService } from "../../audit/audit.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -12,7 +13,10 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 
 @Controller("api/v1/tenant")
 export class AccountingController {
-  constructor(@Inject(LedgerService) private readonly ledger: LedgerService) {}
+  constructor(
+    @Inject(LedgerService) private readonly ledger: LedgerService,
+    @Inject(AuditService) private readonly audit: AuditService
+  ) {}
 
   @TenantScope()
   @Permissions("finance.manage")
@@ -21,7 +25,17 @@ export class AccountingController {
     const role = req.principal?.role;
     if (role !== "TENANT_OWNER" && role !== "FINANCE") throw new ForbiddenException("仅店主/财务可核算");
     try {
-      return { data: await this.ledger.completeAccounting(tenantIdOf(req), orderId, req.principal?.sub ?? "system") };
+      const result = await this.ledger.completeAccounting(tenantIdOf(req), orderId, req.principal?.sub ?? "system");
+      await this.audit.record({
+        tenantId: tenantIdOf(req),
+        actorType: req.principal?.role,
+        actorId: req.principal?.sub ?? "system",
+        action: "ledger.accounting",
+        resourceType: "earning",
+        resourceId: result.earningId,
+        summary: `订单核算 ${orderId}`
+      });
+      return { data: result };
     } catch (error) {
       throw new HttpException(error instanceof Error ? error.message : String(error), HttpStatus.BAD_REQUEST);
     }

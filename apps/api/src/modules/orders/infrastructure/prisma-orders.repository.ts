@@ -314,7 +314,7 @@ export class PrismaOrdersRepository implements OrdersRepository {
         WHERE id = ${orderId}::uuid AND tenant_id = ${tenantId}::uuid FOR UPDATE`;
       if (lock.length === 0) return;
       const current = lock[0] as { id: string; status: string; order_no: string };
-      if (current.status !== "DRAFT" && current.status !== "CONFIRMED") {
+      if (!["DRAFT", "CONFIRMED", "DISPATCHING", "ASSIGNED", "READY"].includes(current.status)) {
         throw new OrderStateConflictError(orderId, current.status, "CANCELLED");
       }
       await tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
@@ -329,6 +329,15 @@ export class PrismaOrdersRepository implements OrdersRepository {
           actorId,
           payload: { reason: reason ?? null, orderNo: current.order_no }
         }
+      });
+      // 取消后的业务清理：关闭公开派单，过期仍未处理的报名
+      await tx.dispatchPublication.updateMany({
+        where: { tenantId, orderId, status: "OPEN" },
+        data: { status: "CLOSED", closedAt: new Date() }
+      });
+      await tx.application.updateMany({
+        where: { tenantId, orderId, status: { in: ["APPLIED", "SHORTLISTED"] } },
+        data: { status: "EXPIRED" }
       });
       await tx.outboxEvent.create({
         data: {

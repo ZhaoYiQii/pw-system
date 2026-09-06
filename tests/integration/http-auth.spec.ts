@@ -67,6 +67,8 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
         await client.tenantAccountRole.deleteMany({ where: { tenantAccount: { tenant: { code: tenantCode } } } });
         await client.tenantAccount.deleteMany({ where: { tenant: { code: tenantCode } } });
         await client.tenantDomain.deleteMany({ where: { tenant: { code: tenantCode } } });
+        const httpTenant = await client.tenant.findUnique({ where: { code: tenantCode } });
+        if (httpTenant) await client.auditLog.deleteMany({ where: { tenantId: httpTenant.id } });
         await client.tenant.deleteMany({ where: { code: tenantCode } });
       }
       await client.$disconnect();
@@ -84,6 +86,7 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
   it("登录签发 access token 并设置 HttpOnly refresh cookie", async () => {
     const res = await login("platform", adminUsername, PW);
     expect(res.body.data.accessToken).toBeTruthy();
+    expect(res.body.data.refreshToken).toBeUndefined();
     const setCookie = (res.headers["set-cookie"] ?? []).join(";");
     expect(setCookie).toContain("pw_refresh=");
     expect(setCookie).toContain("HttpOnly");
@@ -138,14 +141,31 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
   it("refresh 经 HttpOnly cookie 旋转，旧 token 立即失效", async () => {
     const agent = request.agent(app.getHttpServer());
     const first = await agent.post("/api/v1/auth/login").send({ kind: "platform", username: adminUsername, password: PW }).expect(201);
-    const oldRefresh = first.body.data.refreshToken;
+    const cookieHeader = (first.headers["set-cookie"] ?? []) as string[];
+    const oldRefresh = cookieHeader
+      .find((c: string) => c.startsWith("pw_refresh="))
+      ?.split(";")[0]
+      ?.replace("pw_refresh=", "");
+    expect(oldRefresh).toBeTruthy();
     const second = await agent.post("/api/v1/auth/refresh").send({ scope: "platform" }).expect(201);
-    expect(second.body.data.refreshToken).not.toBe(oldRefresh);
+    expect(second.body.data.refreshToken).toBeUndefined();
+    const newCookie = ((second.headers["set-cookie"] ?? []) as string[])
+      .find((c: string) => c.startsWith("pw_refresh="))
+      ?.split(";")[0]
+      ?.replace("pw_refresh=", "");
+    expect(newCookie).toBeTruthy();
+    expect(newCookie).not.toBe(oldRefresh);
 
     const freshAgent = request.agent(app.getHttpServer());
     await freshAgent
       .post("/api/v1/auth/refresh")
-      .send({ scope: "platform", refreshToken: oldRefresh })
+      .send({ scope: "platform" })
+      .expect(401);
+    // 携带旧 token 的 cookie 也被拒绝
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/refresh")
+      .set("Cookie", `pw_refresh=${oldRefresh}`)
+      .send({ scope: "platform" })
       .expect(401);
   });
 

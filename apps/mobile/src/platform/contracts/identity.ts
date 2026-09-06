@@ -1,6 +1,6 @@
 export interface IdentitySession {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   principal: { sub: string; scope: string; role: string; username: string; tenantId?: string };
   expiresInSeconds: number;
 }
