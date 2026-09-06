@@ -21,6 +21,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # packages/database 使用 prisma-client generator（输出已 gitignore），需先 generate
+      - run: pnpm --filter @pw/database exec prisma generate
+
       # Slice 0 门禁；后续切片在此基础上追加对应验收命令。
       - run: pnpm lint
       - run: pnpm typecheck
