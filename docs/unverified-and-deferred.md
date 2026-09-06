@@ -44,3 +44,6 @@
 ## F. 台账项闭环（2026-09-06，Slice 4 启动时核验）
 - 完成（条件已满足，证据见下/CI）：`pnpm db:seed:dev` 修复（root package.json 增加 @pw/database workspace:*，pnpm install 后 `db:seed:dev` 退出 0：`seed ok`）；CI 增加 PostgreSQL service + migrate deploy + test:integration/test:tenant-isolation/test:contract（push 后由 GitHub Actions 验证）；actions/checkout@v5、actions/setup-node@v5。
 - Slice 4 Phase A（数据模型）：迁移 `20260906000400_customers_catalog` 应用到 pw_saas/pw_saas_test（prisma migrate deploy 退出 0）；customer_profiles/player_profiles/games/game_regions/service_products/pricing_rules/player_skills/player_availability + RLS（FORCE）+ DB CHECK（price>0、cost>=0、duration>0、ends>starts）；tenant-isolation 13/13（新增 catalog.spec 4 项：SELECT 不可见/INSERT tenant_id=B 拒绝/UPDATE/DELETE 拒绝/本店合法写入可见）；typecheck 8/8、integration 32/32。
+## G. Slice 4（2026-09-06，见 slice-4-acceptance.md）
+- 完成：数据层 004/005 + RLS；customers/players/catalog API；全局 PermissionsGuard；admin 客户/陪玩/服务目录三页；陪玩账号绑定 + /tenant/player/me 自助；mobile player 页面注册（双端构建）。
+- 新增待办：mobile 自助页真实数据接线依赖 H5 登录 UI（后端已就绪）；运行态公网域名 E2E。
