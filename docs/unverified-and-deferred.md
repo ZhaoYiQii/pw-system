@@ -104,3 +104,7 @@
 ## X. Slice 10 Phase B（2026-09-06）
 - 完成：AiProviderPort + Deterministic（capabilities.supported=false 不伪装）；parse-requirement 缺失检查（SUGGESTED/NEEDS_REVIEW，持久化 ai_run/suggestion）；合法候选过滤（技能/接单/时间）。integration 57/57。
 - 待办/挂账：外部 LLM provider（需授权/API key）、超时重试熔断、AI 采纳写入人工结果与审计、AI UI（后置）。
+## Y. Slice 11（2026-09-06）— SaaS 开通与套餐（本轮收尾点）
+- 完成：tenant_subscriptions；PACKAGES BASIC/PRO/PREMIUM；平台一键开通（租户+域名+owner+品牌 config+费率+订阅 一次事务，不完整拒绝）；套餐指派（addon entitlements+审计）；activate。integration 58/58。
+- 按用户指示：Slice 11 完成后**本轮开发暂时结束**。一期后端主线覆盖 Slice 0–11。
+- 仍未做/挂账：Slice 12（H5 发布候选与小程序适配完整性）、第二阶段 Slice 13；全部 UI 重做；外部集成（微信/支付/AI provider/对象存储/短信）；Worker/BullMQ 调度与容器化；若干专项（审计脱敏、容量/备份验收、真实域名部署）。详见本文档各节。
