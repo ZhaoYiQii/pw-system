@@ -5,7 +5,8 @@ export default defineConfig({
     environment: "node",
     include: [
       "apps/api/src/**/*.spec.ts",
-      "apps/worker/src/**/*.spec.ts"
+      "apps/worker/src/**/*.spec.ts",
+      "packages/config-schema/src/**/*.spec.ts"
     ],
     env: {
       SESSION_SECRET:

@@ -49,3 +49,7 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 
 - 完成 HTTP 级权限矩阵、HttpOnly cookie+Origin 校验、登录限流、seed；HTTP E2E 5 用例；test:integration 20/20、unit 7/7、isolation 9/9、全量构建/双端绿。
 - 剩余（记录）：H5 浏览器登录 E2E 待 mobile H5 登录 UI（业务切片）；多实例限流 Redis（Slice 9）。
+## Slice 3 进度（2026-09-06，Phase A partial）
+
+- 完成 @pw/config-schema（Zod4 配置 schema/默认值/合并/测试 5 项），unit 12/12。
+- 剩余：config/entitlements 表与 API、admin/mobile 主题应用、契约测试（见台账 D）。
