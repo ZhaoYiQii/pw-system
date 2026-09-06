@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "openapi:document": "tsc -p tsconfig.build.json && node scripts/generate-openapi.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/main.js"
   },

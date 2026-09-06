@@ -1,0 +1,1217 @@
+openapi: 3.0.0
+paths:
+  /health:
+    get:
+      operationId: health_getHealth
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - Health
+  /api/v1/platform/tenants:
+    post:
+      operationId: tenancy_createTenant
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: &a1
+        - Tenancy
+    get:
+      operationId: tenancy_listTenants
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a1
+  /api/v1/platform/tenants/{id}/deactivate:
+    post:
+      operationId: tenancy_deactivateTenant
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a1
+  /api/v1/public/tenant-resolve:
+    get:
+      operationId: tenancy_resolveTenant
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a1
+  /api/v1/tenant/audit:
+    get:
+      operationId: audit_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - Audit
+  /api/v1/auth/login:
+    post:
+      operationId: auth_login
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: &a2
+        - Auth
+  /api/v1/auth/refresh:
+    post:
+      operationId: auth_refresh
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a2
+  /api/v1/auth/logout:
+    post:
+      operationId: auth_logout
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a2
+  /api/v1/auth/me:
+    get:
+      operationId: auth_me
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a2
+  /api/v1/platform/me:
+    get:
+      operationId: me_platformMe
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a3
+        - Me
+  /api/v1/tenant/me:
+    get:
+      operationId: me_tenantMe
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a3
+  /api/v1/tenant/features:
+    get:
+      operationId: entitlements_listTenantFeatures
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a4
+        - Entitlements
+  /api/v1/tenant/addon/{featureKey}:
+    get:
+      operationId: entitlements_addonCapability
+      parameters:
+        - name: featureKey
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a4
+  /api/v1/platform/tenants/{tenantId}/entitlements:
+    get:
+      operationId: entitlements_listEntitlements
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a4
+    post:
+      operationId: entitlements_setEntitlement
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a4
+  /api/v1/tenant/config:
+    get:
+      operationId: tenantConfig_get
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a5
+        - TenantConfig
+    post:
+      operationId: tenantConfig_save
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a5
+  /api/v1/tenant/config/rollback:
+    post:
+      operationId: tenantConfig_rollback
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a5
+  /api/v1/tenant/config/versions:
+    get:
+      operationId: tenantConfig_versions
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a5
+  /api/v1/public/storefront/config:
+    get:
+      operationId: storefrontConfig_getConfig
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - StorefrontConfig
+  /api/v1/tenant/customers:
+    get:
+      operationId: customers_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a6
+        - Customers
+    post:
+      operationId: customers_create
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a6
+  /api/v1/tenant/customers/{id}:
+    get:
+      operationId: customers_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a6
+    patch:
+      operationId: customers_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a6
+    delete:
+      operationId: customers_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a6
+  /api/v1/tenant/customers/{id}/account:
+    post:
+      operationId: customers_bind
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a6
+  /api/v1/tenant/customer/me:
+    get:
+      operationId: customerSelf_me
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a7
+        - CustomerSelf
+  /api/v1/tenant/customer/orders:
+    get:
+      operationId: customerSelf_myOrders
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a7
+    post:
+      operationId: customerSelf_createOrder
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a7
+  /api/v1/tenant/customer/orders/{orderId}/complete:
+    post:
+      operationId: customerSelf_confirmComplete
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a7
+  /api/v1/tenant/orders:
+    get:
+      operationId: orders_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a8
+        - Orders
+    post:
+      operationId: orders_create
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a8
+  /api/v1/tenant/orders/{id}:
+    get:
+      operationId: orders_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a8
+  /api/v1/tenant/orders/{id}/confirm:
+    post:
+      operationId: orders_confirm
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a8
+  /api/v1/tenant/orders/{id}/cancel:
+    post:
+      operationId: orders_cancel
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a8
+  /api/v1/tenant/orders/{id}/staff-confirm:
+    post:
+      operationId: orders_staffConfirm
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a8
+  /api/v1/platform/tenants/{tenantId}/finance-rules:
+    get:
+      operationId: platformFinance_get
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a9
+        - PlatformFinance
+    patch:
+      operationId: platformFinance_set
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a9
+  /api/v1/tenant/finance-rules:
+    get:
+      operationId: tenantFinance_get
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a10
+        - TenantFinance
+  /api/v1/tenant/finance-rules/store-cut:
+    post:
+      operationId: tenantFinance_setStoreCut
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a10
+  /api/v1/tenant/finance-rules/split-preview:
+    post:
+      operationId: tenantFinance_preview
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a10
+  /api/v1/tenant/orders/{orderId}/accounting:
+    post:
+      operationId: accounting_accounting
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags:
+        - Accounting
+  /api/v1/tenant/player/finance:
+    get:
+      operationId: playerFinance_finance
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - PlayerFinance
+  /api/v1/tenant/settlements:
+    get:
+      operationId: settlements_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a11
+        - Settlements
+    post:
+      operationId: settlements_create
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a11
+  /api/v1/tenant/settlements/{id}/items:
+    post:
+      operationId: settlements_addItems
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a11
+  /api/v1/tenant/settlements/{id}/review:
+    post:
+      operationId: settlements_review
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a11
+  /api/v1/tenant/settlements/{id}/approve:
+    post:
+      operationId: settlements_approve
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a11
+  /api/v1/tenant/settlements/{id}/pay:
+    post:
+      operationId: settlements_pay
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a11
+  /api/v1/tenant/settlements/{id}/void:
+    post:
+      operationId: settlements_voidBatch
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a11
+  /api/v1/tenant/players:
+    get:
+      operationId: players_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a12
+        - Players
+    post:
+      operationId: players_create
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/players/{id}:
+    get:
+      operationId: players_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a12
+    patch:
+      operationId: players_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a12
+    delete:
+      operationId: players_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/players/{id}/skills:
+    post:
+      operationId: players_addSkill
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/players/{id}/skills/{skillId}:
+    delete:
+      operationId: players_removeSkill
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: skillId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/players/{id}/availability:
+    post:
+      operationId: players_addAvailability
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/players/{id}/account:
+    post:
+      operationId: players_bind
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/players/{id}/availability/{availabilityId}:
+    delete:
+      operationId: players_removeAvailability
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: availabilityId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/player/me:
+    get:
+      operationId: playerSelf_me
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a13
+        - PlayerSelf
+    patch:
+      operationId: playerSelf_updateMe
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a13
+  /api/v1/tenant/player/availability:
+    post:
+      operationId: playerSelf_addAvailability
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a13
+  /api/v1/tenant/player/availability/{availabilityId}:
+    delete:
+      operationId: playerSelf_removeAvailability
+      parameters:
+        - name: availabilityId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a13
+  /api/v1/tenant/catalog/games:
+    get:
+      operationId: catalog_listGames
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a14
+        - Catalog
+    post:
+      operationId: catalog_createGame
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/games/{id}:
+    patch:
+      operationId: catalog_updateGame
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+    delete:
+      operationId: catalog_removeGame
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/regions:
+    get:
+      operationId: catalog_listRegions
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/games/{gameId}/regions:
+    post:
+      operationId: catalog_createRegion
+      parameters:
+        - name: gameId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/regions/{id}:
+    patch:
+      operationId: catalog_updateRegion
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+    delete:
+      operationId: catalog_removeRegion
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/products:
+    get:
+      operationId: catalog_listProducts
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+    post:
+      operationId: catalog_createProduct
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/products/{id}:
+    patch:
+      operationId: catalog_updateProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+    delete:
+      operationId: catalog_removeProduct
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/products/{productId}/pricing:
+    get:
+      operationId: catalog_listRules
+      parameters:
+        - name: productId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+    post:
+      operationId: catalog_createRule
+      parameters:
+        - name: productId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/catalog/pricing/{id}:
+    patch:
+      operationId: catalog_updateRule
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+    delete:
+      operationId: catalog_removeRule
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a14
+  /api/v1/tenant/orders/{id}/publish:
+    post:
+      operationId: dispatchAdmin_publish
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: &a15
+        - DispatchAdmin
+  /api/v1/tenant/orders/{id}/applications:
+    get:
+      operationId: dispatchAdmin_applications
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a15
+  /api/v1/tenant/orders/{id}/applications/{applicationId}/shortlist:
+    post:
+      operationId: dispatchAdmin_shortlist
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: applicationId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a15
+  /api/v1/tenant/orders/{id}/assignment:
+    post:
+      operationId: dispatchAdmin_assign
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a15
+  /api/v1/tenant/player/order-hall:
+    get:
+      operationId: dispatchPlayer_hall
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a16
+        - DispatchPlayer
+  /api/v1/tenant/player/applications:
+    get:
+      operationId: dispatchPlayer_mine
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a16
+  /api/v1/tenant/player/orders/{orderId}/applications:
+    post:
+      operationId: dispatchPlayer_apply
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a16
+  /api/v1/tenant/customer/orders/{orderId}/applications:
+    get:
+      operationId: dispatchCustomer_candidates
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a17
+        - DispatchCustomer
+  /api/v1/tenant/customer/orders/{orderId}/assignment:
+    post:
+      operationId: dispatchCustomer_select
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a17
+  /api/v1/tenant/orders/{orderId}/session:
+    get:
+      operationId: sessions_session
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a18
+        - Sessions
+  /api/v1/tenant/orders/{orderId}/session/start:
+    post:
+      operationId: sessions_start
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a18
+  /api/v1/tenant/orders/{orderId}/session/end:
+    post:
+      operationId: sessions_end
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a18
+  /api/v1/tenant/sessions/{sessionId}/adjustments:
+    post:
+      operationId: sessions_adjust
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a18
+  /api/v1/tenant/sessions/{sessionId}/adjustments/{adjustmentId}/review:
+    post:
+      operationId: sessions_review
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: adjustmentId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a18
+  /api/v1/tenant/sessions/{sessionId}/evidence:
+    post:
+      operationId: evidence_upload
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-file-name
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: &a19
+        - Evidence
+  /api/v1/tenant/evidence/{id}:
+    get:
+      operationId: evidence_download
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a19
+  /api/v1/tenant/orders/{orderId}/disputes:
+    get:
+      operationId: disputes_list
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a20
+        - Disputes
+    post:
+      operationId: disputes_open
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a20
+  /api/v1/tenant/disputes/{disputeId}/resolve:
+    post:
+      operationId: disputes_resolve
+      parameters:
+        - name: disputeId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a20
+  /api/v1/tenant/notifications:
+    get:
+      operationId: notifications_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - Notifications
+  /api/v1/tenant/ai/capabilities:
+    get:
+      operationId: ai_capabilities
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a21
+        - Ai
+  /api/v1/tenant/ai/parse-requirement:
+    post:
+      operationId: ai_parse
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a21
+  /api/v1/tenant/ai/orders/{orderId}/recommendations:
+    get:
+      operationId: ai_recommend
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a21
+  /api/v1/platform/packages:
+    get:
+      operationId: platformBilling_packages
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a22
+        - PlatformBilling
+  /api/v1/platform/onboarding/tenants:
+    post:
+      operationId: platformBilling_onboard
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a22
+  /api/v1/platform/tenants/{tenantId}/package:
+    post:
+      operationId: platformBilling_assign
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a22
+  /api/v1/platform/tenants/{tenantId}/activate:
+    post:
+      operationId: platformBilling_activate
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a22
+info:
+  title: 陪玩门店多租户 SaaS API
+  description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。
+  version: 1.0.0
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    access-token:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+      description: tenant/platform access token
+  schemas: {}

@@ -10,6 +10,7 @@ export default tseslint.config(
       "**/dist/**",
       "**/lib/**",
       "**/coverage/**",
+      "packages/api-client/src/**",
       ".pnpm-store/**",
       ".pnpm-cache/**",
       "pnpm-lock.yaml"

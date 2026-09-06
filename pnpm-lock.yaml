@@ -203,6 +203,12 @@ importers:
 
   apps/worker: {}
 
+  packages/api-client:
+    devDependencies:
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   packages/config-schema:
     dependencies:
       zod:
