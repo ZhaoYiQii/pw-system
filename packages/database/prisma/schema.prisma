@@ -213,14 +213,15 @@ model CustomerProfile {
   tenantId        String       @map("tenant_id") @db.Uuid
   tenantAccountId String?      @map("tenant_account_id") @db.Uuid
   name            String
-  mobile    String?
+  mobileEnc  String? @map("mobile_enc")
+  mobileHash String? @map("mobile_hash")
   remark    String?
   status    ActiveStatus @default(ACTIVE)
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
   version   Int          @default(1)
 
-  @@unique([tenantId, mobile])
+  @@unique([tenantId, mobileHash])
   @@unique([tenantId, tenantAccountId])
   @@index([tenantId])
   @@map("customer_profiles")
@@ -231,7 +232,8 @@ model PlayerProfile {
   tenantId        String       @map("tenant_id") @db.Uuid
   tenantAccountId String?      @map("tenant_account_id") @db.Uuid
   name            String
-  mobile          String?
+  mobileEnc       String?  @map("mobile_enc")
+  mobileHash      String?  @map("mobile_hash")
   intro           String?
   status          ActiveStatus @default(ACTIVE)
   acceptingOrders Boolean      @default(true) @map("accepting_orders")
@@ -239,7 +241,7 @@ model PlayerProfile {
   updatedAt       DateTime     @updatedAt @map("updated_at")
   version         Int          @default(1)
 
-  @@unique([tenantId, mobile])
+  @@unique([tenantId, mobileHash])
   @@unique([tenantId, tenantAccountId])
   @@index([tenantId])
   @@map("player_profiles")

@@ -6,8 +6,8 @@ export class PlayerNotFoundError extends Error {
 }
 
 export class DuplicatePlayerError extends Error {
-  constructor(mobile: string | undefined) {
-    super(`player with mobile ${mobile ?? "(none)"} already exists`);
+  constructor() {
+    super("player with this mobile already exists");
     this.name = "DuplicatePlayerError";
   }
 }

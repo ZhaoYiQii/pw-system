@@ -6,8 +6,8 @@ export class CustomerNotFoundError extends Error {
 }
 
 export class DuplicateCustomerError extends Error {
-  constructor(mobile: string | undefined) {
-    super(`customer with mobile ${mobile ?? "(none)"} already exists`);
+  constructor() {
+    super("customer with this mobile already exists");
     this.name = "DuplicateCustomerError";
   }
 }

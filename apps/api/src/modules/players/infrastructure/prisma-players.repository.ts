@@ -5,6 +5,11 @@ import type {
   PlayerView,
 } from "../domain/player.js";
 import {
+  decryptPhone,
+  encryptPhone,
+  phoneHash,
+} from "../../../common/pii/phone.js";
+import {
   AccountNotPlayerError,
   DuplicatePlayerError,
   OverlappingAvailabilityError,
@@ -32,7 +37,8 @@ function mapPlayer(row: {
   id: string;
   tenantId: string;
   name: string;
-  mobile: string | null;
+  mobileEnc: string | null;
+  mobileHash: string | null;
   intro: string | null;
   status: string;
   acceptingOrders: boolean;
@@ -43,7 +49,7 @@ function mapPlayer(row: {
     id: row.id,
     tenantId: row.tenantId,
     name: row.name,
-    mobile: row.mobile,
+    mobile: row.mobileEnc ? decryptPhone(row.mobileEnc) : null,
     intro: row.intro,
     status: row.status as PlayerView["status"],
     acceptingOrders: row.acceptingOrders,
@@ -118,7 +124,8 @@ export class PrismaPlayerRepository implements PlayerRepository {
     if (opts.q)
       where.OR = [
         { name: { contains: opts.q, mode: "insensitive" } },
-        { mobile: { contains: opts.q } },
+        // 明文不再落库：仅支持归一化后的完整号码精确命中哈希。
+        { mobileHash: phoneHash(tenantId, opts.q) },
       ];
     const rows = await this.client.playerProfile.findMany({
       where,
@@ -161,11 +168,15 @@ export class PrismaPlayerRepository implements PlayerRepository {
 
   async create(tenantId: string, input: PlayerInput): Promise<PlayerView> {
     try {
+      const phone = input.mobile
+        ? encryptPhone(tenantId, input.mobile)
+        : { mobileEnc: null, mobileHash: null };
       const row = await this.client.playerProfile.create({
         data: {
           tenantId,
           name: input.name,
-          ...(input.mobile ? { mobile: input.mobile } : {}),
+          mobileEnc: phone.mobileEnc,
+          mobileHash: phone.mobileHash,
           ...(input.intro ? { intro: input.intro } : {}),
           status: input.status ?? "ACTIVE",
           acceptingOrders: input.acceptingOrders ?? true,
@@ -179,7 +190,7 @@ export class PrismaPlayerRepository implements PlayerRepository {
         "code" in error &&
         (error as { code?: string }).code === "P2002"
       ) {
-        throw new DuplicatePlayerError(input.mobile ?? undefined);
+        throw new DuplicatePlayerError();
       }
       throw error;
     }
@@ -191,11 +202,19 @@ export class PrismaPlayerRepository implements PlayerRepository {
     input: Partial<PlayerInput>,
   ): Promise<PlayerView | null> {
     try {
+      const phone =
+        input.mobile !== undefined
+          ? input.mobile
+            ? encryptPhone(tenantId, input.mobile)
+            : { mobileEnc: null, mobileHash: null }
+          : undefined;
       const res = await this.client.playerProfile.updateMany({
         where: { tenantId, id },
         data: {
           ...(input.name !== undefined ? { name: input.name } : {}),
-          ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
+          ...(phone
+            ? { mobileEnc: phone.mobileEnc, mobileHash: phone.mobileHash }
+            : {}),
           ...(input.intro !== undefined ? { intro: input.intro } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.acceptingOrders !== undefined
@@ -212,7 +231,7 @@ export class PrismaPlayerRepository implements PlayerRepository {
         "code" in error &&
         (error as { code?: string }).code === "P2002"
       ) {
-        throw new DuplicatePlayerError(input.mobile ?? undefined);
+        throw new DuplicatePlayerError();
       }
       throw error;
     }
@@ -383,11 +402,19 @@ export class PrismaPlayerRepository implements PlayerRepository {
     accountId: string,
     input: Partial<PlayerInput>,
   ): Promise<PlayerView | null> {
+    const phone =
+      input.mobile !== undefined
+        ? input.mobile
+          ? encryptPhone(tenantId, input.mobile)
+          : { mobileEnc: null, mobileHash: null }
+        : undefined;
     const res = await this.client.playerProfile.updateMany({
       where: { tenantId, tenantAccountId: accountId },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
+        ...(phone
+          ? { mobileEnc: phone.mobileEnc, mobileHash: phone.mobileHash }
+          : {}),
         ...(input.intro !== undefined ? { intro: input.intro } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
         ...(input.acceptingOrders !== undefined

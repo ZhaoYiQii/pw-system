@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@pw/database";
 import type { CustomerView } from "../domain/customer.js";
 import {
+  decryptPhone,
+  encryptPhone,
+  phoneHash,
+} from "../../../common/pii/phone.js";
+import {
   AccountNotCustomerError,
   CustomerAccountBoundError,
   CustomerNotFoundError,
@@ -24,7 +29,8 @@ function map(row: {
   id: string;
   tenantId: string;
   name: string;
-  mobile: string | null;
+  mobileEnc: string | null;
+  mobileHash: string | null;
   remark: string | null;
   status: string;
   createdAt: Date;
@@ -34,7 +40,7 @@ function map(row: {
     id: row.id,
     tenantId: row.tenantId,
     name: row.name,
-    mobile: row.mobile,
+    mobile: row.mobileEnc ? decryptPhone(row.mobileEnc) : null,
     remark: row.remark,
     status: row.status as CustomerView["status"],
     createdAt: row.createdAt,
@@ -53,7 +59,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
           ? {
               OR: [
                 { name: { contains: query, mode: "insensitive" } },
-                { mobile: { contains: query } },
+                // 明文不再落库：仅支持归一化后的完整号码精确命中哈希。
+                { mobileHash: phoneHash(tenantId, query) },
               ],
             }
           : {}),
@@ -72,11 +79,15 @@ export class PrismaCustomerRepository implements CustomerRepository {
 
   async create(tenantId: string, input: CustomerInput): Promise<CustomerView> {
     try {
+      const phone = input.mobile
+        ? encryptPhone(tenantId, input.mobile)
+        : { mobileEnc: null, mobileHash: null };
       const row = await this.client.customerProfile.create({
         data: {
           tenantId,
           name: input.name,
-          ...(input.mobile ? { mobile: input.mobile } : {}),
+          mobileEnc: phone.mobileEnc,
+          mobileHash: phone.mobileHash,
           ...(input.remark ? { remark: input.remark } : {}),
           status: input.status ?? "ACTIVE",
         },
@@ -89,7 +100,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
         "code" in error &&
         (error as { code?: string }).code === "P2002"
       ) {
-        throw new DuplicateCustomerError(input.mobile ?? undefined);
+        throw new DuplicateCustomerError();
       }
       throw error;
     }
@@ -101,11 +112,19 @@ export class PrismaCustomerRepository implements CustomerRepository {
     input: Partial<CustomerInput>,
   ): Promise<CustomerView | null> {
     try {
+      const phone =
+        input.mobile !== undefined
+          ? input.mobile
+            ? encryptPhone(tenantId, input.mobile)
+            : { mobileEnc: null, mobileHash: null }
+          : undefined;
       const row = await this.client.customerProfile.updateMany({
         where: { tenantId, id },
         data: {
           ...(input.name !== undefined ? { name: input.name } : {}),
-          ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
+          ...(phone
+            ? { mobileEnc: phone.mobileEnc, mobileHash: phone.mobileHash }
+            : {}),
           ...(input.remark !== undefined ? { remark: input.remark } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
         },
@@ -119,7 +138,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
         "code" in error &&
         (error as { code?: string }).code === "P2002"
       ) {
-        throw new DuplicateCustomerError(input.mobile ?? undefined);
+        throw new DuplicateCustomerError();
       }
       throw error;
     }
