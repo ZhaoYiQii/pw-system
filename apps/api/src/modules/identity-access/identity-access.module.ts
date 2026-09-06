@@ -10,6 +10,7 @@ import { TokenService } from "./infrastructure/tokens.js";
 import { AuthController } from "./interface/auth.controller.js";
 import { MeController } from "./interface/me.controller.js";
 import { RateLimitService } from "../../common/auth/rate-limit.service.js";
+import { RedisRateLimitService } from "../../common/auth/redis-rate-limit.service.js";
 import { EntitlementsModule } from "../entitlements/entitlements.module.js";
 
 export const AUTH_PLATFORM_CLIENT = "AUTH_PLATFORM_CLIENT";
@@ -60,7 +61,14 @@ export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: EntitlementGuard },
-    RateLimitService,
+    {
+      // 多实例共享限流：配置 REDIS_URL 时用 Redis，否则退回进程内存实现。
+      provide: RateLimitService,
+      useFactory: () => {
+        const url = process.env.REDIS_URL;
+        return url ? new RedisRateLimitService(url) : new RateLimitService();
+      },
+    },
   ],
   exports: [AuthService, RateLimitService],
 })

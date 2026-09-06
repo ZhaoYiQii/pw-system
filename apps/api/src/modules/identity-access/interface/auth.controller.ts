@@ -139,7 +139,11 @@ export class AuthController {
     const password = requiredString(body.password, "password");
     const rateKey = (req.ip ?? "unknown") + ":" + kind + ":" + username;
     if (
-      this.rateLimit.isBlocked(rateKey, LOGIN_MAX_FAILURES, LOGIN_WINDOW_MS)
+      await this.rateLimit.isBlocked(
+        rateKey,
+        LOGIN_MAX_FAILURES,
+        LOGIN_WINDOW_MS,
+      )
     ) {
       throw new HttpException(
         "too many attempts",
@@ -155,7 +159,7 @@ export class AuthController {
               username,
               password,
             );
-      this.rateLimit.reset(rateKey);
+      await this.rateLimit.reset(rateKey);
       setRefreshCookie(res, bundle.refreshToken);
       const csrfToken = setCsrfCookie(res);
       return {
@@ -172,7 +176,7 @@ export class AuthController {
         error instanceof AccountDisabledError ||
         error instanceof TenantInactiveError
       ) {
-        this.rateLimit.recordFailure(rateKey, LOGIN_WINDOW_MS);
+        await this.rateLimit.recordFailure(rateKey, LOGIN_WINDOW_MS);
         throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);
       }
       if (error instanceof InvalidRefreshTokenError) {
