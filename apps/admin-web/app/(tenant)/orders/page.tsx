@@ -55,6 +55,32 @@ interface OrderView extends OrderRow {
   }>;
 }
 
+interface ApplicationView {
+  id: string;
+  orderId: string;
+  playerId: string;
+  playerName: string;
+  status: string;
+  playerNote: string | null;
+  createdAt: string;
+}
+
+interface SessionView {
+  id: string;
+  orderId: string;
+  status: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationSeconds: number | null;
+  adjustments: Array<{
+    id: string;
+    originalDurationSeconds: number;
+    requestedDurationSeconds: number;
+    status: string;
+    reason: string;
+  }>;
+}
+
 type PageState =
   | { phase: "loading" }
   | { phase: "unauthenticated" }
@@ -64,6 +90,12 @@ type PageState =
 const STATUS: Record<string, { text: string; cls: string }> = {
   DRAFT: { text: "草稿", cls: "badge badge-inactive" },
   CONFIRMED: { text: "已确认", cls: "badge badge-active" },
+  DISPATCHING: { text: "派单中", cls: "badge badge-info" },
+  ASSIGNED: { text: "已指派", cls: "badge badge-info" },
+  READY: { text: "待开始", cls: "badge badge-info" },
+  IN_PROGRESS: { text: "服务中", cls: "badge badge-active" },
+  PENDING_CONFIRMATION: { text: "待确认", cls: "badge badge-active" },
+  COMPLETED: { text: "已完成", cls: "badge badge-active" },
   CANCELLED: { text: "已取消", cls: "badge badge-error" },
 };
 
@@ -86,6 +118,8 @@ export default function OrdersPage() {
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [detail, setDetail] = useState<OrderView | null>(null);
+  const [applications, setApplications] = useState<ApplicationView[]>([]);
+  const [sessionInfo, setSessionInfo] = useState<SessionView | null>(null);
 
   const load = useCallback(async () => {
     setPage({ phase: "loading" });
@@ -168,30 +202,138 @@ export default function OrdersPage() {
   const loadDetail = async (id: string) => {
     setDetailId(id);
     setDetail(null);
+    setApplications([]);
+    setSessionInfo(null);
     setMsg(null);
     try {
-      setDetail(await apiFetch<OrderView>(`/api/v1/tenant/orders/${id}`));
+      const order = await apiFetch<OrderView>(`/api/v1/tenant/orders/${id}`);
+      setDetail(order);
+      if (
+        [
+          "DISPATCHING",
+          "ASSIGNED",
+          "READY",
+          "IN_PROGRESS",
+          "PENDING_CONFIRMATION",
+        ].includes(order.status)
+      ) {
+        try {
+          setApplications(
+            await apiFetch<ApplicationView[]>(
+              `/api/v1/tenant/orders/${id}/applications`,
+            ),
+          );
+        } catch {
+          setApplications([]);
+        }
+      }
+      if (
+        ["READY", "IN_PROGRESS", "PENDING_CONFIRMATION", "COMPLETED"].includes(
+          order.status,
+        )
+      ) {
+        try {
+          setSessionInfo(
+            await apiFetch<SessionView>(`/api/v1/tenant/orders/${id}/session`),
+          );
+        } catch {
+          setSessionInfo(null);
+        }
+      }
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     }
   };
 
-  const transition = async (id: string, action: "confirm" | "cancel") => {
+  const transition = async (
+    id: string,
+    action: "confirm" | "cancel" | "publish" | "session-start" | "session-end",
+  ) => {
     setBusy(true);
     setMsg(null);
     setOkMsg(null);
     try {
-      const init: RequestInit = { method: "POST" };
-      if (action === "cancel")
-        init.body = JSON.stringify({ reason: "手动取消" });
-      await apiFetch<unknown>(`/api/v1/tenant/orders/${id}/${action}`, init);
-      setOkMsg(
-        action === "confirm"
-          ? "订单已确认（价格快照已冻结）。"
-          : "订单已取消。",
-      );
+      if (action === "confirm" || action === "cancel" || action === "publish") {
+        const init: RequestInit = { method: "POST" };
+        if (action === "cancel")
+          init.body = JSON.stringify({ reason: "手动取消" });
+        await apiFetch<unknown>(`/api/v1/tenant/orders/${id}/${action}`, init);
+        setOkMsg(
+          action === "confirm"
+            ? "订单已确认（价格快照已冻结）。"
+            : action === "publish"
+              ? "已发布派单，等待陪玩报名。"
+              : "订单已取消。",
+        );
+      } else {
+        await apiFetch<unknown>(
+          `/api/v1/tenant/orders/${id}/session/${action === "session-start" ? "start" : "end"}`,
+          { method: "POST" },
+        );
+        setOkMsg(action === "session-start" ? "场次已开始。" : "场次已结束。");
+      }
       await load();
       await loadDetail(id);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const staffConfirm = async (id: string) => {
+    setBusy(true);
+    setMsg(null);
+    setOkMsg(null);
+    try {
+      await apiFetch<unknown>(`/api/v1/tenant/orders/${id}/staff-confirm`, {
+        method: "POST",
+      });
+      setOkMsg("已完成客服确认与核算。");
+      await load();
+      await loadDetail(id);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const shortlist = async (
+    orderId: string,
+    applicationId: string,
+    shortlisted: boolean,
+  ) => {
+    setBusy(true);
+    setMsg(null);
+    setOkMsg(null);
+    try {
+      await apiFetch<unknown>(
+        `/api/v1/tenant/orders/${orderId}/applications/${applicationId}/shortlist`,
+        { method: "POST", body: JSON.stringify({ shortlisted }) },
+      );
+      setOkMsg(shortlisted ? "已加入候选。" : "已移出候选。");
+      await loadDetail(orderId);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const assign = async (orderId: string, applicationId: string) => {
+    if (!window.confirm("确认指派该陪玩？其余有效报名将自动过期。")) return;
+    setBusy(true);
+    setMsg(null);
+    setOkMsg(null);
+    try {
+      await apiFetch<unknown>(`/api/v1/tenant/orders/${orderId}/assignment`, {
+        method: "POST",
+        body: JSON.stringify({ applicationId }),
+      });
+      setOkMsg("已指派陪玩。");
+      await load();
+      await loadDetail(orderId);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -371,15 +513,26 @@ export default function OrdersPage() {
                                 </>
                               ) : null}
                               {o.status === "CONFIRMED" ? (
-                                <button
-                                  className="btn"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void transition(o.id, "cancel")
-                                  }
-                                >
-                                  取消
-                                </button>
+                                <>
+                                  <button
+                                    className="btn btn-primary"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      void transition(o.id, "publish")
+                                    }
+                                  >
+                                    发布派单
+                                  </button>
+                                  <button
+                                    className="btn"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      void transition(o.id, "cancel")
+                                    }
+                                  >
+                                    取消
+                                  </button>
+                                </>
                               ) : null}
                             </div>
                           </td>
@@ -436,6 +589,122 @@ export default function OrdersPage() {
                 ) : (
                   <p className="muted">尚未生成价格快照（确认后冻结）。</p>
                 )}
+                {(detail.status === "DISPATCHING" ||
+                  detail.status === "ASSIGNED") &&
+                applications.length > 0 ? (
+                  <div className="card" style={{ marginTop: 16 }}>
+                    <h3 className="card-title">
+                      报名（{applications.length}）
+                    </h3>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>陪玩</th>
+                          <th>状态</th>
+                          <th>备注</th>
+                          {detail.status === "DISPATCHING" ? (
+                            <th>操作</th>
+                          ) : null}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {applications.map((a) => (
+                          <tr key={a.id}>
+                            <td>{a.playerName}</td>
+                            <td>{a.status}</td>
+                            <td className="muted">{a.playerNote ?? "-"}</td>
+                            {detail.status === "DISPATCHING" ? (
+                              <td>
+                                <div className="row-actions">
+                                  {a.status === "APPLIED" ? (
+                                    <button
+                                      className="btn"
+                                      disabled={busy}
+                                      onClick={() =>
+                                        void shortlist(detail.id, a.id, true)
+                                      }
+                                    >
+                                      入候选
+                                    </button>
+                                  ) : null}
+                                  {a.status === "SHORTLISTED" ? (
+                                    <button
+                                      className="btn btn-primary"
+                                      disabled={busy}
+                                      onClick={() =>
+                                        void assign(detail.id, a.id)
+                                      }
+                                    >
+                                      指派
+                                    </button>
+                                  ) : null}
+                                  {a.status === "SHORTLISTED" ? (
+                                    <button
+                                      className="btn"
+                                      disabled={busy}
+                                      onClick={() =>
+                                        void shortlist(detail.id, a.id, false)
+                                      }
+                                    >
+                                      移出候选
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </td>
+                            ) : null}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+                {detail.status === "DISPATCHING" &&
+                applications.length === 0 ? (
+                  <p className="muted">已发布，等待陪玩报名。</p>
+                ) : null}
+                <div className="row-actions" style={{ marginTop: 16 }}>
+                  {["ASSIGNED", "READY"].includes(detail.status) ? (
+                    <button
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() =>
+                        void transition(detail.id, "session-start")
+                      }
+                    >
+                      开始场次
+                    </button>
+                  ) : null}
+                  {detail.status === "IN_PROGRESS" ? (
+                    <button
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() => void transition(detail.id, "session-end")}
+                    >
+                      结束场次
+                    </button>
+                  ) : null}
+                  {detail.status === "PENDING_CONFIRMATION" ? (
+                    <button
+                      className="btn btn-primary"
+                      disabled={busy}
+                      onClick={() => void staffConfirm(detail.id)}
+                    >
+                      客服确认完成
+                    </button>
+                  ) : null}
+                </div>
+                {sessionInfo ? (
+                  <p className="muted">
+                    场次：{sessionInfo.status} · 开始{" "}
+                    {sessionInfo.startedAt
+                      ? new Date(sessionInfo.startedAt).toLocaleString()
+                      : "-"}{" "}
+                    · 结束{" "}
+                    {sessionInfo.endedAt
+                      ? new Date(sessionInfo.endedAt).toLocaleString()
+                      : "-"}
+                  </p>
+                ) : null}
                 <h3 className="card-title" style={{ marginTop: 16 }}>
                   时间线
                 </h3>
