@@ -82,3 +82,6 @@
 ## Q. Slice 8 Phase C-1（2026-09-06）— 订单核算
 - 完成：POST orders/:id/accounting（生成 earning=playerShare≈77%，写入平衡 ledger：借客户应收=贷平台/门店/应付陪玩，幂等，订单→COMPLETED）；GET tenant/player/finance（pending/batched/paid 余额）。unit 20/20、integration 52/52。
 - 待办（Phase C-2）：结算批次 DRAFT→REVIEWED→APPROVED→PAID(线下记录)/VOID、职责分离（发起人不得批准自己）、并发同一 earning 不可入双活批次、开放争议阻止（随 Slice9 disputes）；陪玩提现流程与 UI 后置。
+## R. 简单 UI 首批（2026-09-06）
+- 门店「财务」页 /finance：费率展示与调整（门店抽成）+ 分账试算（接入 finance-rules/store-cut/split-preview）；导航/首页加入 财务。截图 s8-finance-rules/preview。
+- 原则：后续 UI 先做“简单可用”版本随功能走，美观后置；Slice 8 Phase C-2（结算批次）仍未开始。
