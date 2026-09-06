@@ -352,6 +352,17 @@ export type CustomerSelfMeResponses = {
     200: unknown;
 };
 
+export type CustomerSelfCatalogData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/customer/catalog';
+};
+
+export type CustomerSelfCatalogResponses = {
+    200: unknown;
+};
+
 export type CustomerSelfMyOrdersData = {
     body?: never;
     path?: never;

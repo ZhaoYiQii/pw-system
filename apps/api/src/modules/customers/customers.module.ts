@@ -7,11 +7,12 @@ import { CustomersController } from "./interface/customers.controller.js";
 import { CustomerSelfController } from "./interface/customer-self.controller.js";
 import { OrdersModule } from "../orders/orders.module.js";
 import { LedgerModule } from "../ledger/ledger.module.js";
+import { CatalogModule } from "../catalog/catalog.module.js";
 
 export const CUSTOMERS_DB_CLIENT = "CUSTOMERS_DB_CLIENT";
 
 @Module({
-  imports: [OrdersModule, LedgerModule],
+  imports: [OrdersModule, LedgerModule, CatalogModule],
   controllers: [CustomersController, CustomerSelfController],
   providers: [
     {

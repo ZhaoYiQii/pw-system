@@ -490,6 +490,20 @@
         ]
       }
     },
+    "/api/v1/tenant/customer/catalog": {
+      "get": {
+        "operationId": "customerSelf_catalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "CustomerSelf"
+        ]
+      }
+    },
     "/api/v1/tenant/customer/orders": {
       "get": {
         "operationId": "customerSelf_myOrders",

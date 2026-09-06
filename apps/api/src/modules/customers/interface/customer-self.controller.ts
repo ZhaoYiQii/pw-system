@@ -18,6 +18,7 @@ import { TenantScope } from "../../../common/auth/decorators.js";
 import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { CatalogService } from "../../catalog/application/catalog.service.js";
 import { ApiCreatedResponse, ApiOkResponse } from "@nestjs/swagger";
 import {
   accountingResultSchema,
@@ -34,6 +35,7 @@ export class CustomerSelfController {
     @Inject(OrdersService) private readonly orders: OrdersService,
     @Inject(LedgerService) private readonly ledger: LedgerService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(CatalogService) private readonly catalogService: CatalogService,
   ) {}
 
   private requireCustomer(req: AuthenticatedRequest): {
@@ -59,6 +61,43 @@ export class CustomerSelfController {
         throw new HttpException("尚未绑定客户档案", HttpStatus.NOT_FOUND);
       }
       throw error;
+    }
+  }
+
+  /** 客户自助下单用的只读目录：启用产品 + 全部定价规则（前端按 product 过滤）。 */
+  @TenantScope()
+  @Get("catalog")
+  async catalog(@Req() req: AuthenticatedRequest) {
+    const ctx = this.requireCustomer(req);
+    try {
+      const products = await this.catalogService.listProducts(ctx.tenantId, {
+        enabled: true,
+      });
+      const rules = await this.catalogService.listRules(ctx.tenantId);
+      return {
+        data: {
+          products: products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            gameName: p.gameName,
+            regionName: p.regionName,
+            description: p.description,
+          })),
+          rules: rules
+            .filter((r) => r.enabled)
+            .map((r) => ({
+              id: r.id,
+              serviceProductId: r.serviceProductId,
+              durationSeconds: r.durationSeconds,
+              priceFen: r.priceFen,
+            })),
+        },
+      };
+    } catch (error) {
+      throw new HttpException(
+        error instanceof Error ? error.message : String(error),
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 

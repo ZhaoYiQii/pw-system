@@ -5,6 +5,7 @@ import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
 import { apiAdapter } from "@platform-api";
+import { formatFenYuan } from "../../../features/money/money";
 import "./index.css";
 
 interface OrderRow {
@@ -20,6 +21,21 @@ interface Candidate {
   playerNote: string | null;
 }
 
+interface CatalogProduct {
+  id: string;
+  name: string;
+  gameName: string;
+  regionName: string | null;
+  description: string | null;
+}
+
+interface CatalogRule {
+  id: string;
+  serviceProductId: string;
+  durationSeconds: number;
+  priceFen: string;
+}
+
 export default function CandidatesPage() {
   const [token, setToken] = useState<string | null>(session.getToken());
   const [tenantCode, setTenantCode] = useState("");
@@ -30,6 +46,11 @@ export default function CandidatesPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [cands, setCands] = useState<Candidate[]>([]);
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [rules, setRules] = useState<CatalogRule[]>([]);
+  const [newProductId, setNewProductId] = useState("");
+  const [newDuration, setNewDuration] = useState("");
+  const [newDescription, setNewDescription] = useState("");
 
   const loadOrders = async (t: string) => {
     try {
@@ -42,6 +63,50 @@ export default function CandidatesPage() {
       setMsg(error instanceof Error ? error.message : String(error));
       session.clearToken();
       setToken(null);
+    }
+  };
+
+  const loadCatalog = async (t: string) => {
+    try {
+      const data = await apiAdapter.request<{
+        products: CatalogProduct[];
+        rules: CatalogRule[];
+      }>("/api/v1/tenant/customer/catalog", { token: t });
+      setProducts(data.products);
+      setRules(data.rules);
+    } catch {
+      setProducts([]);
+      setRules([]);
+    }
+  };
+
+  const createOrder = async () => {
+    if (!token) return;
+    if (!newProductId || !newDuration || !newDescription.trim()) {
+      setMsg("请选择产品/时长并填写需求描述");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request("/api/v1/tenant/customer/orders", {
+        method: "POST",
+        token,
+        body: {
+          requirement: {
+            description: newDescription.trim(),
+            serviceProductId: newProductId,
+            durationSeconds: Number(newDuration),
+          },
+        },
+      });
+      setMsg("已创建订单草稿，等待门店确认与派单。");
+      setNewDescription("");
+      await loadOrders(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -70,6 +135,7 @@ export default function CandidatesPage() {
       setToken(s.accessToken);
       setPassword("");
       await loadOrders(s.accessToken);
+      await loadCatalog(s.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -168,6 +234,58 @@ export default function CandidatesPage() {
       ) : (
         <>
           {msg ? <Text className="err">{msg}</Text> : null}
+          {products.length > 0 ? (
+            <View className="card">
+              <Text className="strong">自助下单</Text>
+              <Text className="label">选择服务产品</Text>
+              {products.map((p) => (
+                <Button
+                  key={p.id}
+                  size="mini"
+                  onClick={() => {
+                    setNewProductId(p.id);
+                    setNewDuration("");
+                  }}
+                >
+                  {p.gameName} · {p.name}
+                  {p.regionName ? `（${p.regionName}）` : ""}
+                </Button>
+              ))}
+              {newProductId ? (
+                <>
+                  <Text className="label">时长</Text>
+                  {rules
+                    .filter((r) => r.serviceProductId === newProductId)
+                    .map((r) => (
+                      <Button
+                        key={r.id}
+                        size="mini"
+                        onClick={() =>
+                          setNewDuration(String(r.durationSeconds))
+                        }
+                      >
+                        {Math.floor(r.durationSeconds / 60)} 分钟 ·{" "}
+                        {formatFenYuan(r.priceFen)}
+                      </Button>
+                    ))}
+                  <Text className="label">需求描述</Text>
+                  <Input
+                    className="input"
+                    value={newDescription}
+                    onInput={(e) => setNewDescription(e.detail.value)}
+                    placeholder="例如：钻石以上双排两小时"
+                  />
+                  <Button
+                    className="btn primary"
+                    disabled={busy || !newDuration}
+                    onClick={() => void createOrder()}
+                  >
+                    提交订单
+                  </Button>
+                </>
+              ) : null}
+            </View>
+          ) : null}
           {orders.length === 0 ? (
             <Text className="muted">
               暂无订单（可由商家端为你创建并确认/发布）
