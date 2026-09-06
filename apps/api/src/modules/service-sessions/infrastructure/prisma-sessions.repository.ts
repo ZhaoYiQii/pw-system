@@ -158,17 +158,35 @@ export class PrismaSessionsRepository {
     return (await this.detailById(tenantId, sessionId)) as SessionView;
   }
 
-  async reviewAdjustment(tenantId: string, adjustmentId: string, approve: boolean, comment: string | null): Promise<SessionView> {
+  async reviewAdjustment(tenantId: string, adjustmentId: string, approve: boolean, comment: string | null, actorId: string): Promise<SessionView> {
     const sessionId = await this.client.$transaction(async (tx) => {
       const a = await tx.sessionAdjustment.findFirst({ where: { tenantId, id: adjustmentId } });
       if (!a) throw new AdjustmentNotFoundError(adjustmentId);
       if (a.status !== "PENDING") throw new AdjustmentConflictError("该调整已处理");
+      if (a.requestedBy !== null && a.requestedBy === actorId) {
+        throw new AdjustmentConflictError("发起人不能复核自己的调整");
+      }
       await tx.sessionAdjustment.update({
         where: { id: a.id },
         data: { status: approve ? "APPROVED" : "REJECTED", ...(comment ? { reviewComment: comment } : {}) }
       });
+      const session = await tx.serviceSession.findFirst({
+        where: { tenantId, id: a.sessionId },
+        select: { id: true, status: true }
+      });
+      if (!session) throw new SessionNotFoundError("session", a.sessionId);
       if (approve) {
-        await tx.serviceSession.update({ where: { id: a.sessionId }, data: { status: "ENDED", durationSeconds: a.requestedDurationSeconds } });
+        // ADJUSTMENT_PENDING → CONFIRMED：批准后时长定稿
+        await tx.serviceSession.update({ where: { id: a.sessionId }, data: { status: "CONFIRMED", durationSeconds: a.requestedDurationSeconds } });
+        await tx.sessionEvent.create({
+          data: { tenantId, sessionId: a.sessionId, eventType: "SESSION_CONFIRMED", fromStatus: session.status, toStatus: "CONFIRMED", actorType: "tenant_account", actorId, payload: { durationSeconds: a.requestedDurationSeconds, adjustmentId: a.id } }
+        });
+      } else {
+        // 拒绝调整：回到 ENDED，保留原时长
+        await tx.serviceSession.update({ where: { id: a.sessionId }, data: { status: "ENDED" } });
+        await tx.sessionEvent.create({
+          data: { tenantId, sessionId: a.sessionId, eventType: "SESSION_ADJUSTMENT_REJECTED", fromStatus: session.status, toStatus: "ENDED", actorType: "tenant_account", actorId, payload: { adjustmentId: a.id } }
+        });
       }
       return a.sessionId;
     });

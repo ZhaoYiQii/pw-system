@@ -31,7 +31,7 @@ export class PrismaLedgerRepository {
     return this.client.$transaction(async (tx) => {
       const order = await tx.order.findFirst({ where: { tenantId, id: orderId }, select: { id: true, orderNo: true, status: true } });
       if (!order || order.status !== "PENDING_CONFIRMATION") return null;
-      const session = await tx.serviceSession.findFirst({ where: { tenantId, orderId }, select: { status: true } });
+      const session = await tx.serviceSession.findFirst({ where: { tenantId, orderId }, select: { id: true, status: true } });
       if (!session || (session.status !== "ENDED" && session.status !== "CONFIRMED")) return null;
       const assignment = await tx.assignment.findFirst({ where: { tenantId, orderId }, select: { playerId: true } });
       if (!assignment) return null;
@@ -68,6 +68,13 @@ export class PrismaLedgerRepository {
       if (debit !== credit) throw new Error("ledger unbalanced");
       for (const e of entries) {
         await tx.ledgerEntry.create({ data: { tenantId, transactionId: txRow.id, accountId: e.accountId, direction: e.direction as never, amountFen: e.amountFen } });
+      }
+      // 场次 ENDED/CONFIRMED → CONFIRMED（核算/确认完成时定稿）
+      if (session.status !== "CONFIRMED") {
+        await tx.serviceSession.update({ where: { id: session.id }, data: { status: "CONFIRMED" } });
+        await tx.sessionEvent.create({
+          data: { tenantId, sessionId: session.id, eventType: "SESSION_CONFIRMED", fromStatus: session.status, toStatus: "CONFIRMED", actorType: "tenant_account", actorId, payload: {} }
+        });
       }
       await tx.order.update({ where: { id: orderId }, data: { status: "COMPLETED" } });
       await tx.orderEvent.create({

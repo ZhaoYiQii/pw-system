@@ -58,13 +58,15 @@
 ### B1 订单状态机完整化
 - [x] 描述：按规格 10.1 补齐 CONFIRMED→DISPATCHING→ASSIGNED→READY→IN_PROGRESS→PENDING_CONFIRMATION→COMPLETED 与各可取消状态迁移；显式迁移表、事件+审计、409 无部分写入。
 - [ ] 来源：审查 P1-4
+- ✅ B2（2026-09-07）| 调整复核改店主/财务并禁止自审（409）；批准→CONFIRMED，拒绝→ENDED；核算完成将场次置 CONFIRMED+事件；integration 22/72、tsc/eslint 绿。剩余：真实超时自动确认调度、证据完整性门槛。
 - ✅ B1-Part1（2026-09-07）| 新增 order-state-machine 迁移表；session start 推进 ASSIGNED→READY→IN_PROGRESS、end 推进 PENDING_CONFIRMATION；核算仅允许 PENDING_CONFIRMATION 且事件动态；取消集合扩展；integration 22/72、isolation 25、tsc/eslint 绿。
 - ✅ B1-Part2（2026-09-07）| 客户确认完成 POST /tenant/customer/orders/:id/complete；客服/店主确认完成 POST /tenant/orders/:id/staff-confirm；取消时关闭发布+过期报名；状态机测试 2/2，integration 22/72、isolation 25/25、tsc/eslint 绿。
 - [ ] 残余：真正的超时自动确认调度（当前为客服人工入口）；READY 确认 UI 拆分；场次证据完整性门槛（见 B2）；审计动作已由控制器写入 order.customer_confirm/staff_confirm。
 
 ### B2 场次状态机完整化
-- [ ] 描述：ENDED→CONFIRMED、ADJUSTMENT_PENDING→CONFIRMED 真实迁移；客户确认/超时确认；复核职责分离（申请人≠复核人，财务参与）。
+- [x] 描述：ENDED→CONFIRMED、ADJUSTMENT_PENDING→CONFIRMED 真实迁移；客户确认/超时确认；复核职责分离（申请人≠复核人，财务参与）。
 - [ ] 来源：审查 P1-4
+- ✅ B2（2026-09-07）| 调整复核改店主/财务并禁止自审（409）；批准→CONFIRMED，拒绝→ENDED；核算完成将场次置 CONFIRMED+事件；integration 22/72、tsc/eslint 绿。剩余：真实超时自动确认调度、证据完整性门槛。
 
 ### B3 金额端到端 bigint/十进制字符串
 - [ ] 描述：repository 边界输出十进制字符串或 BigInt 值对象；API JSON 金额字段为字符串；domain 校验统一 Money 类型。

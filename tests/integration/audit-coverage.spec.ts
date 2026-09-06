@@ -189,15 +189,20 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
     const ended = (await req(playerToken).post(`/api/v1/tenant/orders/${created.id}/session/end`).expect(201)).body.data as { durationSeconds: number };
     expect(ended.durationSeconds).toBeGreaterThanOrEqual(1);
 
-    const adjustment = (await req(playerToken)
+    const adjustment = (await req(ownerToken)
       .post(`/api/v1/tenant/sessions/${start.id}/adjustments`, { requestedDurationSeconds: ended.durationSeconds + 600, reason: "等待补时" })
       .expect(201)).body.data as { status: string };
     expect(adjustment.status).toBe("ADJUSTMENT_PENDING");
     const detail = (await req(ownerToken).get(`/api/v1/tenant/orders/${created.id}/session`).expect(200)).body.data as {
       adjustments: Array<{ id: string }>;
     };
+    // 发起人不能复核自己的调整
     await req(ownerToken)
-      .post(`/api/v1/tenant/sessions/${start.id}/adjustments/${detail.adjustments[0]?.id}/review`, { approve: true, comment: "同意" })
+      .post(`/api/v1/tenant/sessions/${start.id}/adjustments/${detail.adjustments[0]?.id}/review`, { approve: true, comment: "自审应拒" })
+      .expect(409);
+    // 财务复核通过
+    await req(financeToken)
+      .post(`/api/v1/tenant/sessions/${start.id}/adjustments/${detail.adjustments[0]?.id}/review`, { approve: true, comment: "财务同意" })
       .expect(201);
 
     const accounting = (await req(ownerToken).post(`/api/v1/tenant/orders/${created.id}/accounting`).expect(201)).body.data as { earningId: string };

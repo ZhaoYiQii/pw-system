@@ -138,6 +138,8 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
     const accountedEvent = view.timeline.find((e) => e.eventType === "ORDER_ACCOUNTED");
     expect(accountedEvent?.fromStatus).toBe("PENDING_CONFIRMATION");
     expect(accountedEvent?.toStatus).toBe("COMPLETED");
+    const sessionView = (await req(ownerToken).get(`/api/v1/tenant/orders/${order.id}/session`).expect(200)).body.data as { status: string };
+    expect(sessionView.status).toBe("CONFIRMED");
   });
 
   it("DISPATCHING 订单可直接取消（状态机可取消集合）", async () => {

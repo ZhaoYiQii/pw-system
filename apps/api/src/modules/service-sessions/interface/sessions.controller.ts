@@ -135,9 +135,10 @@ export class SessionsController {
     @Param("adjustmentId") adjustmentId: string,
     @Body() body: { approve?: unknown; comment?: unknown }
   ) {
-    if (!this.isStaff(req)) throw new ForbiddenException("仅客服/店主可复核");
+    const role = req.principal?.role;
+    if (role !== "TENANT_OWNER" && role !== "FINANCE") throw new ForbiddenException("仅店主/财务可复核调整");
     try {
-      const result = await this.repo.reviewAdjustment(tenantIdOf(req), adjustmentId, body.approve === true, typeof body.comment === "string" ? body.comment : null);
+      const result = await this.repo.reviewAdjustment(tenantIdOf(req), adjustmentId, body.approve === true, typeof body.comment === "string" ? body.comment : null, actorOf(req));
       await this.audit.record({
         tenantId: tenantIdOf(req),
         actorType: req.principal?.role,
