@@ -339,3 +339,132 @@ model PlayerAvailability {
   @@index([tenantId, playerId, startsAt])
   @@map("player_availability")
 }
+// ===== Slice 5：需求确认与订单（主规格 10.1/11.3-11.5/12.1/14.2）=====
+// 状态机唯一入口写入 order_events；order_price_snapshots/order_events 不可变（无 updated_at）。
+// outbox_events 与业务写入同事务；idempotency_records 支持 Idempotency-Key。
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  DISPATCHING
+  ASSIGNED
+  READY
+  IN_PROGRESS
+  PENDING_CONFIRMATION
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id                 String      @id @default(uuid()) @db.Uuid
+  tenantId           String      @map("tenant_id") @db.Uuid
+  orderNo            String      @map("order_no")
+  customerProfileId  String      @map("customer_profile_id") @db.Uuid
+  scheduledStartAt   DateTime?   @map("scheduled_start_at") @db.Timestamptz
+  status             OrderStatus @default(DRAFT)
+  remark             String?
+  version            Int         @default(1)
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  @@unique([tenantId, orderNo])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, customerProfileId, createdAt])
+  @@map("orders")
+}
+
+model OrderRequirement {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  orderId          String   @map("order_id") @db.Uuid
+  gameId           String?  @map("game_id") @db.Uuid
+  serviceProductId String?  @map("service_product_id") @db.Uuid
+  gender           String?
+  description      String
+  desiredStartAt   DateTime? @map("desired_start_at") @db.Timestamptz
+  durationSeconds  Int?     @map("duration_seconds")
+  minBudgetFen     BigInt?  @map("min_budget_fen") @db.BigInt
+  maxBudgetFen     BigInt?  @map("max_budget_fen") @db.BigInt
+  note             String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  version          Int      @default(1)
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, orderId])
+  @@map("order_requirements")
+}
+
+/// 价格快照不可变：确认订单时按当时产品/价格生成，禁止改历史。
+model OrderPriceSnapshot {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  orderId          String   @map("order_id") @db.Uuid
+  snapshotVersion  Int      @map("snapshot_version")
+  serviceProductId String?  @map("service_product_id") @db.Uuid
+  productName      String   @map("product_name")
+  regionName       String?  @map("region_name")
+  durationSeconds  Int      @map("duration_seconds")
+  unitPriceFen     BigInt   @map("unit_price_fen") @db.BigInt
+  playerCostFen    BigInt   @default(0) @map("player_cost_fen") @db.BigInt
+  quantity         Int      @default(1)
+  lineTotalFen     BigInt   @map("line_total_fen") @db.BigInt
+  currency         String   @default("CNY")
+  generatedAt      DateTime @default(now()) @map("generated_at")
+
+  @@unique([tenantId, orderId, snapshotVersion, serviceProductId])
+  @@index([tenantId, orderId])
+  @@map("order_price_snapshots")
+}
+
+/// 订单事件（不可变，仅追加）。状态迁移唯一入口写入。
+model OrderEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  eventType  String   @map("event_type")
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  actorType  String?  @map("actor_type")
+  actorId    String?  @map("actor_id") @db.Uuid
+  payload    Json     @default("{}")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([tenantId, orderId, occurredAt])
+  @@map("order_events")
+}
+
+/// Outbox：业务事务内写入，Worker 提交后消费（幂等按 eventId/aggregateId）。
+model OutboxEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  aggregateType String   @map("aggregate_type")
+  aggregateId   String   @map("aggregate_id")
+  eventType     String   @map("event_type")
+  payload       Json     @default("{}")
+  status        String   @default("PENDING")
+  availableAt   DateTime @default(now()) @map("available_at")
+  attempts      Int      @default(0)
+  lastError     String?  @map("last_error")
+  processedAt   DateTime? @map("processed_at") @db.Timestamptz
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
+}
+
+/// 幂等记录：写接口重复提交返回同一业务结果。
+model IdempotencyRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  idempotencyKey String   @map("idempotency_key")
+  operation     String
+  entityType    String?  @map("entity_type")
+  entityId      String?  @map("entity_id")
+  responseJson  Json?    @map("response_json")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, idempotencyKey, operation])
+  @@index([tenantId, entityType, entityId])
+  @@map("idempotency_records")
+}
