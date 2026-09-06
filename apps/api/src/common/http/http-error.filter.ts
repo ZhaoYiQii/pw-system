@@ -7,6 +7,7 @@ import {
   Logger,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
+import { ApiValidationError } from "../validation/validation-error.js";
 
 const TITLES: Record<number, string> = {
   [HttpStatus.BAD_REQUEST]: "Bad Request",
@@ -62,11 +63,18 @@ export class HttpErrorFilter implements ExceptionFilter {
       );
     }
 
+    const fieldErrors =
+      exception instanceof ApiValidationError
+        ? exception.fieldErrors
+        : undefined;
+
     res.status(status).json({
       type:
-        status === HttpStatus.INTERNAL_SERVER_ERROR
-          ? "about:blank"
-          : "about:blank#http-error",
+        exception instanceof ApiValidationError
+          ? "about:blank#validation-error"
+          : status === HttpStatus.INTERNAL_SERVER_ERROR
+            ? "about:blank"
+            : "about:blank#http-error",
       title: TITLES[status] ?? "Error",
       status,
       code:
@@ -75,6 +83,7 @@ export class HttpErrorFilter implements ExceptionFilter {
           : "INTERNAL_ERROR",
       message,
       requestId,
+      ...(fieldErrors ? { fieldErrors } : {}),
     });
   }
 }

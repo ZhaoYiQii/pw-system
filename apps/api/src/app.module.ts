@@ -6,6 +6,8 @@ import { HealthService } from "./health/health.service.js";
 import { TenantContextInterceptor } from "./common/tenant-context/tenant-context.interceptor.js";
 import { RequestContextMiddleware } from "./common/http/request-context.middleware.js";
 import { HttpErrorFilter } from "./common/http/http-error.filter.js";
+import { ValidationInterceptor } from "./common/validation/validation.interceptor.js";
+import "./common/validation/api-validation-rules.js";
 import { TenancyModule } from "./modules/tenancy/tenancy.module.js";
 import { IdentityAccessModule } from "./modules/identity-access/identity-access.module.js";
 import { TenantConfigModule } from "./modules/tenant-config/tenant-config.module.js";
@@ -52,6 +54,10 @@ import { PlatformBillingModule } from "./modules/platform-billing/platform-billi
     {
       provide: APP_INTERCEPTOR,
       useClass: TenantContextInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ValidationInterceptor,
     },
   ],
 })
