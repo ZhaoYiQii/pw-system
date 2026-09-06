@@ -39,3 +39,8 @@ Slice 0 六条验收命令全部退出 0，状态为 **code-changed + locally-ve
 - Docker 容器：`docker compose up -d` 退出码 0；修正 postgres:18 卷挂载为 `/var/lib/postgresql` 后，postgres/redis/minio 均运行中，postgres、redis 为 healthy。
 - H5 真实渲染验证：Playwright Chromium（@playwright/test 1.63.0，加入根 devDependencies）。headless Chromium 打开 H5 产物，页面文本 = `runtime=h5adapter=H5_ADAPTER`；断言 `runtime=h5`=true、`H5_ADAPTER`=true、`WECHAT_ADAPTER`=false、控制台错误=[]，退出码 0。
 - 原“未验证项”中：Node 偏差（已解决）、H5 浏览器渲染（已解决）、容器未启动（已解决）。
+## 第三轮补充验证（2026-09-06，远程推送与 CI）
+
+- `git push -u origin master` 退出码 0（远程 `https://github.com/ZhaoYiQii/pw-system.git`；gh 令牌经 `gh auth refresh -s workflow` 补充 workflow 权限）。
+- GitHub Actions CI 远程运行通过：run 34025773595，job ci 1m7s，`pnpm install --frozen-lockfile`、`lint`、`typecheck`、`test`、`build`、`build:h5`、`build:weapp` 全部 ✓。唯一注解为 runner 将 Node20 版 actions 强制跑在 Node24（非阻断）。
+- 原“CI 未在远程运行”一项已解决。

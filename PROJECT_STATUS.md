@@ -3,11 +3,11 @@
 - 项目：陪玩门店多租户 SaaS
 - 规格版本：v1.0（2026-09-06 用户确认作为实现基线）
 - 状态日期：2026-09-06
-- 当前阶段：Slice 0 已实施（本地验证完成，降级项已处理），等待 Slice 1
+- 当前阶段：Slice 0 已实施（本地 + GitHub Actions 远程验证完成），等待 Slice 1
 - 业务代码：未开始（仅骨架与健康接口）
 - Slice 0：已实施；六条验收命令全部退出 0；H5 渲染已验证
 - 依赖：已安装（pnpm 10.34.5 经 corepack 固定；含根 devDependency @playwright/test 1.63.0）
-- Git 仓库：已初始化；提交 `97e2dcc` + `36dd26c` + 本次降级项处理提交
+- Git 仓库：已初始化并推送远程 `https://github.com/ZhaoYiQii/pw-system.git`（origin/master 跟踪中）
 - Node：本机 24.19.0（≥24.15，满足基线）；CI 目标 24.20.0（.nvmrc）
 - Docker：Docker Desktop 运行中；postgres:18 / redis:7 / minio 容器已启动，postgres、redis healthy
 - 数据库：容器已启动但未建库、未迁移（Slice 1 引入）
@@ -29,4 +29,4 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 
 1. **小程序开发暂缓**：第一期推进期间不做微信小程序“开发/真机/审核/发布”；保留 `pnpm build:weapp` 作为兼容性编译门禁（防止移动端源码破坏双端可移植性），该门禁已全绿。Slice 13 与 weapp 增值服务相关工作整体后移，需另行授权。
 2. **mobile React 大版本**：接受 mobile 使用 React 18.3.1 作为当前基线（Taro 4.2.1 上游仅支持 react@^18），React 19 升版挂起，待 Taro 上游支持后作为独立任务；admin-web 保持 React 19.2.8。详见 ADR-0000。
-3. **远程仓库**：未提供远程地址与鉴权前，不执行任何 push/上传源码；CI workflow 仅在本地等价命令维度验证。
+3. **远程仓库**：未提供远程地址与鉴权前，不执行任何 push/上传源码；CI workflow 仅在本地等价命令维度验证。- 2026-09-06 | 远程：`git push -u origin master` 退出码 0（gh 鉴权补充 workflow 权限后成功）；GitHub Actions CI 运行 34025773595 通过（1m7s，lint/typecheck/test/build/build:h5/build:weapp 全 ✓）。
