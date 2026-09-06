@@ -81,7 +81,7 @@
 - [ ] 来源：审查 P1-6、ADR-008
 - ✅ B3-Part1（2026-09-07）| split 引擎 bigint；核算/试算/批次合计/陪玩余额输出十进制字符串分；integration 22/72、unit 21、tsc/eslint 绿。
 - ✅ B3-Part2（2026-09-07）| orders/catalog/dispatch 金额改十进制字符串分（MoneyFen 统一校验 + repository 读/写边界 + 快照/需求/订单大厅字符串化 + Outbox payload）；catalog/orders/dispatch/finance 金额测试同步并新增 number 金额拒绝红测试；admin/mobile 金额 helper（formatFenYuan/sumFen）+ 页面展示适配；typecheck、lint、unit 25、integration 22/74、build、build:h5、build:weapp 全绿。
-- [ ] 剩余（后续）：OpenAPI schema 与生成客户端（E1）；AI 模块 RequirementFields 等其余金额输入口径统一复查（超出本 Slice 范围）。
+- [ ] 剩余（后续）：AI 模块 RequirementFields 等其余金额输入口径统一复查（E1 已完成于 R1，2026-09-07）。
 
 ### B4 结算与场次并发幂等加固
 
@@ -150,8 +150,9 @@
 
 ### E1 OpenAPI + 生成客户端
 
-- [ ] 描述：Nest Swagger、operationId、openapi.yaml、packages/api-client 生成、CI openapi:check。
+- [x] 描述：Nest Swagger、operationId、openapi.yaml、packages/api-client 生成、CI openapi:check。
 - [ ] 来源：规格 12/19、审查 P2-11
+- ✅ 2026-09-07 | R1：@nestjs/swagger 12.0.1；SwaggerModule + operationId；openapi.yaml/openapi.json 与 packages/api-client（@hey-api/openapi-ts 0.99）生成管线；orders/catalog/dispatch/finance-rules/player-finance 金额字段已进 schema 与 client string 类型；contract 新增 openapi-money.spec 3 项；CI openapi:check；contract 2 文件/6 用例、integration 22/74、isolation 25、unit 25、typecheck/lint/build/h5/weapp 绿。
 
 ### E2 Zod 输入校验 + RFC9457 错误结构
 
@@ -181,6 +182,7 @@
 
 - [ ] 描述：test:critical、test:e2e、db:migrate:check、db:seed:test 实现，去掉 not-implemented 占位。
 - [ ] 来源：规格 19.1、审查 P2-17
+- ✅ 2026-09-07 | R1：test:critical（8 文件/23 用例）、db:migrate:check（prisma migrate status up to date）、db:seed:test（seed test ok）已真实实现并本地验证；test:e2e 仍留待 F2/R6。
 
 ### F2 Playwright E2E 入库
 
@@ -191,6 +193,7 @@
 
 - [ ] 描述：CI 增加 format:check、E2E、openapi:check、coverage。
 - [ ] 来源：审查 P2-17
+- ✅ 2026-09-07 | R1：CI 已增加 db:migrate:check、format:check、openapi:check；全仓 Prettier 基线提交（b99a66d/7a6d27d）；E2E 与 coverage 留待 F2/F3 后半。
 
 ### F4 容量基线
 
