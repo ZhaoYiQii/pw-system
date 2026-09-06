@@ -470,3 +470,69 @@ model IdempotencyRecord {
   @@index([tenantId, entityType, entityId])
   @@map("idempotency_records")
 }
+// ===== Slice 6：派单、报名、候选与选人（主规格 10.2/11.3/12.3）=====
+// 同一陪玩对同一订单只有一个有效报名；指派唯一（assignment.order_id 唯一）；其余报名原子 EXPIRED。
+
+enum ApplicationStatus {
+  APPLIED
+  SHORTLISTED
+  SELECTED
+  WITHDRAWN
+  REJECTED
+  EXPIRED
+}
+
+enum PublicationStatus {
+  OPEN
+  CLOSED
+}
+
+model DispatchPublication {
+  id          String             @id @default(uuid()) @db.Uuid
+  tenantId    String             @map("tenant_id") @db.Uuid
+  orderId     String             @map("order_id") @db.Uuid
+  status      PublicationStatus  @default(OPEN)
+  publishedAt DateTime           @default(now()) @map("published_at")
+  closedAt    DateTime?          @map("closed_at") @db.Timestamptz
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  version     Int                @default(1)
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, status, publishedAt])
+  @@map("dispatch_publications")
+}
+
+model Application {
+  id         String            @id @default(uuid()) @db.Uuid
+  tenantId   String            @map("tenant_id") @db.Uuid
+  orderId    String            @map("order_id") @db.Uuid
+  playerId   String            @map("player_id") @db.Uuid
+  status     ApplicationStatus @default(APPLIED)
+  playerNote String?           @map("player_note")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+  version    Int               @default(1)
+
+  @@unique([tenantId, orderId, playerId])
+  @@index([tenantId, orderId, status])
+  @@index([tenantId, playerId, status])
+  @@map("applications")
+}
+
+model Assignment {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  orderId       String   @map("order_id") @db.Uuid
+  playerId      String   @map("player_id") @db.Uuid
+  applicationId String?  @map("application_id") @db.Uuid
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  version       Int      @default(1)
+
+  @@unique([tenantId, orderId])
+  @@unique([tenantId, applicationId])
+  @@index([tenantId, playerId])
+  @@map("assignments")
+}

@@ -51,3 +51,10 @@
 - 迁移 `20260906000600_orders` 应用到开发/测试库：orders/order_requirements/order_price_snapshots/order_events/outbox_events/idempotency_records + OrderStatus + RLS；快照/事件不可变；line_total=unit*qty CHECK；幂等唯一(tenant,key,op)。
 - tenant-isolation orders.spec 4 项 → 17/17；lint/typecheck 绿。
 - 待办（Phase B 起）：订单状态机 DRAFT→CONFIRMED、价格快照生成、需求完整性校验、双入口（客服/客户自助）、时间线、Outbox 事件、H5 登录接线。
+## I. Slice 5 收尾与未完成（2026-09-06）
+- 完成：数据层006/007；订单 DRAFT→CONFIRMED 状态机+不可变价格快照+Outbox+幂等（integration 43/43）；admin /orders 页；客户档案-账号绑定；客户自助 me/下单/我的订单。
+- 未完成（条件：后续 UI/登录批次）：mobile customer/order-create、customer/order-detail 页面 + H5 登录接线（同时闭环台账 B “H5 浏览器登录 E2E”）；admin 订单筛选/取消原因弹窗等体验。
+- 条件核验：本轮无新增可直接闭环的旧项（微信/React19/支付/AI/真实域名/Redis/CSRF/平台凭据/容器化仍未满足，照常挂账）。
+
+## J. Slice 6 Phase A（2026-09-06 启动）
+- 见后续提交：派单/报名/指派数据模型迁移 008 + RLS + 隔离测试。
