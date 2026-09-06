@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, apiFetch, clearAccessToken } from "../../_lib/api";
+import { ApiError, apiFetch } from "../../_lib/api";
+import { TenantNav } from "../../_lib/tenant-nav";
 
 interface BrandConfig {
   primaryColor: string;
@@ -62,7 +62,6 @@ type PageState =
   | { phase: "ready" };
 
 export default function TenantSettingsPage() {
-  const router = useRouter();
   const [page, setPage] = useState<PageState>({ phase: "loading" });
   const [effective, setEffective] = useState<EffectiveConfig | null>(null);
   const [versions, setVersions] = useState<ConfigVersionRow[]>([]);
@@ -173,10 +172,6 @@ export default function TenantSettingsPage() {
     }
   };
 
-  const logout = () => {
-    clearAccessToken();
-    router.push("/store/login");
-  };
 
   const configError = effective?.status === "CONFIG_ERROR";
   const canRollback = versions.length > 1;
@@ -185,14 +180,7 @@ export default function TenantSettingsPage() {
 
   return (
     <main>
-      <nav className="topnav">
-        <span className="brand">PW SaaS</span>
-        <Link href="/settings">门店设置</Link>
-        <span className="spacer" />
-        <button className="btn" onClick={logout}>
-          退出
-        </button>
-      </nav>
+      <TenantNav />
       <div className="page">
         <h1 className="page-title">门店设置</h1>
         <p className="page-desc">
@@ -459,4 +447,3 @@ export default function TenantSettingsPage() {
     </main>
   );
 }
-

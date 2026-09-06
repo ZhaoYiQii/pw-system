@@ -326,3 +326,8 @@ body {
 .muted {
   color: var(--text-muted);
 }
+
+.row-selected td {
+  background: #f0f5ff;
+}
+

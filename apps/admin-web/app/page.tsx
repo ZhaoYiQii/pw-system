@@ -27,6 +27,15 @@ export default function HomePage() {
           <Link className="btn" href="/store/login">
             门店登录
           </Link>
+          <Link className="btn" href="/customers">
+            客户
+          </Link>
+          <Link className="btn" href="/players">
+            陪玩
+          </Link>
+          <Link className="btn" href="/catalog">
+            服务目录
+          </Link>
           <Link className="btn" href="/settings">
             门店设置
           </Link>
