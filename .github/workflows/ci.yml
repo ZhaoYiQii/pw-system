@@ -58,6 +58,7 @@ jobs:
       - run: pnpm test:integration
       - run: pnpm test:tenant-isolation
       - run: pnpm test:contract
+      - run: pnpm test:coverage
       - run: pnpm db:migrate:check
       - run: pnpm format:check
       - run: pnpm openapi:check

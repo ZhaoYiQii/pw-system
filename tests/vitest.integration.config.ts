@@ -11,6 +11,22 @@ export default defineConfig({
     },
   },
   test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "text-summary"],
+      include: ["apps/api/src/**/*.ts"],
+      exclude: [
+        "**/*.spec.ts",
+        "apps/api/src/openapi/**",
+        "apps/api/src/main.ts",
+      ],
+      thresholds: {
+        statements: 80,
+        functions: 80,
+        lines: 80,
+        branches: 60,
+      },
+    },
     environment: "node",
     include: ["tests/integration/**/*.spec.ts"],
     env: {
