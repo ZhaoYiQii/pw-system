@@ -58,3 +58,6 @@
 
 ## J. Slice 6 Phase A（2026-09-06 启动）
 - 见后续提交：派单/报名/指派数据模型迁移 008 + RLS + 隔离测试。
+## K. Slice 6 Phase B（2026-09-06）
+- 完成：派单 API publish/apply/shortlist/assign（原子指派行锁+唯一；并发仅一成功；指派后其余 EXPIRED、发布 CLOSED、订单 ASSIGNED）；陪玩 order-hall/apply/my applications；integration 45/45。
+- 剩余（UI/登录批次）：admin /dispatch 页（发布/候选/指派 UI）；mobile order-hall/application-detail/candidates；派单撤回报名 WITHDRAWN 状态未做（记入待办）。
