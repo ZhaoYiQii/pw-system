@@ -36,3 +36,8 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 - 未完成：API tenancy 模块/tenant-context、平台后台租户页、移动端 tenant-locator、停用不可用页。
 - 容器端口因宿主机原生服务占用改为 5433/6380/9002/9003。
 - 证据：prisma migrate deploy exit 0；vitest 输出见 docs/acceptance/slice-1-acceptance.md。
+## Slice 1 收尾（2026-09-06）
+
+- 完成剩余项：API tenancy 模块 + 拒绝客户端 tenantId；平台后台 /tenants 页；mobile tenant-locator（h5/weapp）+ 停用不可用页。Slice 1 代码层面完成。
+- 证据：typecheck 6/6、lint、unit 3/3、build 4/4、test:integration 8/8、test:tenant-isolation 6/6、build:h5、build:weapp 全绿（本地）。CI（GitHub Actions）跑 lint/typecheck/test/build/双端。
+- 遗留（非阻塞）：平台接口认证属 Slice 2；admin/mobile 运行态 E2E 需运行中的 API+真实域名，按验收命令范围以构建级为准。

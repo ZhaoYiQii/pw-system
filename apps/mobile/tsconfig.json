@@ -4,7 +4,10 @@
     "target": "es2017",
     "module": "commonjs",
     "moduleResolution": "node",
-    "lib": ["es2017", "dom"],
+    "lib": [
+      "es2017",
+      "dom"
+    ],
     "jsx": "react-jsx",
     "noEmit": true,
     "allowJs": true,
@@ -12,10 +15,21 @@
     "outDir": "lib",
     "rootDir": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@platform-runtime": ["./src/platform/h5/runtime.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@platform-runtime": [
+        "./src/platform/h5/runtime.ts"
+      ],
+      "@platform-locator": [
+        "./src/platform/h5/tenant-locator.ts"
+      ]
     }
   },
-  "include": ["./src", "./types", "./config"],
+  "include": [
+    "./src",
+    "./types",
+    "./config"
+  ],
   "compileOnSave": false
 }

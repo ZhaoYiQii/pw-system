@@ -1,3 +1,17 @@
 .index {
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meta {
+  font-size: 24px;
+  color: #888888;
+}
+
+.unavailable {
+  padding: 24px;
+  background-color: #fff1f0;
+  color: #cf1322;
 }

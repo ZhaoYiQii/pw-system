@@ -32,3 +32,11 @@
 ## 结论
 
 Slice 1 数据库层与租户隔离验证已 locally-verified；整体切片未完成，剩余部分继续在 Slice 1 内完成，不进入 Slice 2。
+
+## 第二轮（Slice 1 收尾，2026-09-06）
+
+- API tenancy 模块完成：domain（TenantView/ResolvedTenant/错误）、application（TenancyService：CreateTenant/List/Deactivate/ResolveByHost/assertNoClientTenantId）、infrastructure（PrismaTenantRepository）、interface（TenancyController：POST/GET /api/v1/platform/tenants、POST .../:id/deactivate、GET /api/v1/public/tenant-resolve）。
+- 平台后台 `/tenants` 页完成（列表/新建/停用；loading/error/empty/unauthenticated 状态；Next 构建通过，运行态未 E2E——无运行中的 API 与认证）。
+- mobile tenant-locator 完成：contracts + h5 适配器（按 location.host 调公开解析）+ weapp typed-unsupported；首页显示门店状态与停用不可用页/错误重试（构建通过，运行态需真实域名+API，未 E2E）。
+- 测试：`pnpm test:integration` 8/8（含 tenancy-service 6 项：创建+域名解析/重复码/非法码/停用 INACTIVE/停用不存在/拒绝客户端 tenantId）；`pnpm test:tenant-isolation` 6/6；typecheck 6/6、lint、unit 3/3、build 4/4、build:h5、build:weapp 全绿。
+- 已知边界：平台接口 Slice 1 尚未接认证（Slice 2 加 guard）；平台操作当前用 owner 连接串（PLATFORM_DATABASE_URL），Slice 2/11 引入平台角色与审计后替换。

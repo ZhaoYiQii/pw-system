@@ -15,6 +15,10 @@ function applyRuntimeAlias(chain: {
     "@platform-runtime",
     path.join(process.cwd(), runtimeDir, "runtime")
   );
+  chain.resolve.alias.set(
+    "@platform-locator",
+    path.join(process.cwd(), runtimeDir, "tenant-locator")
+  );
 }
 
 export default defineConfig<"webpack5">(async (merge) => {
