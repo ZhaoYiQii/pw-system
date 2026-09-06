@@ -43,4 +43,41 @@ export const apiAdapter: ApiAdapter = {
     }
     return (data as { data?: T })?.data as T;
   },
+  async uploadBytes<T>(
+    path: string,
+    token: string,
+    name: string,
+    bytes: Uint8Array,
+  ): Promise<T> {
+    const base = apiBase();
+    if (!base) throw new Error("TARO_APP_API_BASE not configured");
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/octet-stream",
+        "x-file-name": encodeURIComponent(name),
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+      body: bytes as unknown as BodyInit,
+    });
+    const text = await res.text();
+    let data: unknown = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+    if (!res.ok) {
+      const message =
+        data &&
+        typeof data === "object" &&
+        "message" in data &&
+        typeof (data as { message?: unknown }).message === "string"
+          ? (data as { message: string }).message
+          : `HTTP ${res.status}`;
+      throw new Error(message);
+    }
+    return (data as { data?: T })?.data as T;
+  },
 };

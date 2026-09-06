@@ -5,6 +5,7 @@ import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
 import { apiAdapter } from "@platform-api";
+import { mediaAdapter } from "@platform-media";
 import { formatFenYuan } from "../../../features/money/money";
 import "./index.css";
 
@@ -153,6 +154,26 @@ export default function OrderHallPage() {
     }
   };
 
+  const uploadEvidence = async (sessionId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const image = await mediaAdapter.chooseImage();
+      await apiAdapter.uploadBytes(
+        `/api/v1/tenant/sessions/${sessionId}/evidence`,
+        token,
+        image.name,
+        image.bytes,
+      );
+      setMsg("证据图片已上传。");
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const logout = () => {
     session.clearToken();
     setToken(null);
@@ -241,15 +262,28 @@ export default function OrderHallPage() {
                   ) : null}
                 </View>
                 {m.status === "SELECTED" && sessions[m.orderId] ? (
-                  <Button
-                    size="mini"
-                    disabled={busy}
-                    onClick={() => void toggleSession(m.orderId)}
-                  >
-                    {sessions[m.orderId]?.status === "STARTED"
-                      ? "结束场次"
-                      : "开始场次"}
-                  </Button>
+                  <>
+                    {sessions[m.orderId]?.status === "STARTED" ? (
+                      <Button
+                        size="mini"
+                        disabled={busy}
+                        onClick={() =>
+                          void uploadEvidence(sessions[m.orderId]?.id ?? "")
+                        }
+                      >
+                        上传证据
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="mini"
+                      disabled={busy}
+                      onClick={() => void toggleSession(m.orderId)}
+                    >
+                      {sessions[m.orderId]?.status === "STARTED"
+                        ? "结束场次"
+                        : "开始场次"}
+                    </Button>
+                  </>
                 ) : null}
               </View>
             ))}

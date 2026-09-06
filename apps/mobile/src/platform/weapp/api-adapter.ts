@@ -5,4 +5,7 @@ export const apiAdapter: ApiAdapter = {
   async request(): Promise<never> {
     throw new Error("WECHAT_API_NOT_CONFIGURED");
   },
+  async uploadBytes(): Promise<never> {
+    throw new Error("WECHAT_API_NOT_CONFIGURED");
+  },
 };

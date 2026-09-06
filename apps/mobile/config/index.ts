@@ -35,6 +35,10 @@ function applyRuntimeAlias(chain: {
     "@platform-api",
     path.join(process.cwd(), runtimeDir, "api-adapter"),
   );
+  chain.resolve.alias.set(
+    "@platform-media",
+    path.join(process.cwd(), runtimeDir, "media-adapter"),
+  );
 }
 
 export default defineConfig<"webpack5">(async (merge) => {

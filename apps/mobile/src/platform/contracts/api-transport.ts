@@ -7,4 +7,10 @@ export interface ApiInit {
 
 export interface ApiAdapter {
   request<T = unknown>(path: string, init?: ApiInit): Promise<T>;
+  uploadBytes<T = unknown>(
+    path: string,
+    token: string,
+    name: string,
+    bytes: Uint8Array,
+  ): Promise<T>;
 }

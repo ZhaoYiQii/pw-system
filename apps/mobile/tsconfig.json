@@ -18,7 +18,8 @@
       "@platform-runtime-config": ["./src/platform/h5/runtime-config.ts"],
       "@platform-identity": ["./src/platform/h5/identity-adapter.ts"],
       "@platform-session": ["./src/platform/h5/session-store.ts"],
-      "@platform-api": ["./src/platform/h5/api-adapter.ts"]
+      "@platform-api": ["./src/platform/h5/api-adapter.ts"],
+      "@platform-media": ["./src/platform/h5/media-adapter.ts"]
     }
   },
   "include": ["./src", "./types", "./config"],
