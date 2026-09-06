@@ -209,9 +209,10 @@ enum ActiveStatus {
 }
 
 model CustomerProfile {
-  id        String       @id @default(uuid()) @db.Uuid
-  tenantId  String       @map("tenant_id") @db.Uuid
-  name      String
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  tenantAccountId String?      @map("tenant_account_id") @db.Uuid
+  name            String
   mobile    String?
   remark    String?
   status    ActiveStatus @default(ACTIVE)
@@ -220,6 +221,7 @@ model CustomerProfile {
   version   Int          @default(1)
 
   @@unique([tenantId, mobile])
+  @@unique([tenantId, tenantAccountId])
   @@index([tenantId])
   @@map("customer_profiles")
 }

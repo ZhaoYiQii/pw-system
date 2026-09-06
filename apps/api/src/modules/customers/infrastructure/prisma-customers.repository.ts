@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@pw/database";
 import type { CustomerView } from "../domain/customer.js";
-import { DuplicateCustomerError } from "../domain/errors.js";
+import { AccountNotCustomerError, CustomerAccountBoundError, CustomerNotFoundError, DuplicateCustomerError } from "../domain/errors.js";
+
+function isP2002(error: unknown): boolean {
+  return error !== null && typeof error === "object" && "code" in error && (error as { code?: string }).code === "P2002";
+}
 import type { CustomerInput, CustomerRepository } from "../application/customers.service.js";
 
 function map(row: {
@@ -88,5 +92,25 @@ export class PrismaCustomerRepository implements CustomerRepository {
   async remove(tenantId: string, id: string): Promise<boolean> {
     const res = await this.client.customerProfile.deleteMany({ where: { tenantId, id } });
     return res.count > 0;
+  }
+
+  async bind(tenantId: string, customerId: string, accountId: string): Promise<CustomerView> {
+    const account = await this.client.tenantAccount.findFirst({
+      where: { tenantId, id: accountId, roles: { some: { role: "CUSTOMER" } } },
+      select: { id: true }
+    });
+    if (!account) throw new AccountNotCustomerError(accountId);
+    try {
+      const res = await this.client.customerProfile.updateMany({
+        where: { tenantId, id: customerId },
+        data: { tenantAccountId: accountId }
+      });
+      if (res.count === 0) throw new CustomerNotFoundError(customerId);
+      const row = await this.find(tenantId, customerId);
+      return row as CustomerView;
+    } catch (error) {
+      if (isP2002(error)) throw new CustomerAccountBoundError();
+      throw error;
+    }
   }
 }

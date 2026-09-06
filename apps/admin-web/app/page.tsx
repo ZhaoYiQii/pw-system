@@ -30,6 +30,9 @@ export default function HomePage() {
           <Link className="btn" href="/customers">
             客户
           </Link>
+          <Link className="btn" href="/orders">
+            订单
+          </Link>
           <Link className="btn" href="/players">
             陪玩
           </Link>

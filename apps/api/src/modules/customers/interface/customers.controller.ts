@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Inject, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { CustomersService } from "../application/customers.service.js";
-import { CustomerNotFoundError, DuplicateCustomerError, InvalidCustomerInputError } from "../domain/errors.js";
+import { AccountNotCustomerError, CustomerAccountBoundError, CustomerNotFoundError, DuplicateCustomerError, InvalidCustomerInputError } from "../domain/errors.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 
@@ -16,6 +16,8 @@ export class CustomersController {
 
   private mapError(error: unknown): never {
     if (error instanceof CustomerNotFoundError) throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+    if (error instanceof AccountNotCustomerError) throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    if (error instanceof CustomerAccountBoundError) throw new HttpException(error.message, HttpStatus.CONFLICT);
     if (error instanceof DuplicateCustomerError) throw new HttpException(error.message, HttpStatus.CONFLICT);
     if (error instanceof InvalidCustomerInputError) throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     throw error;
@@ -69,6 +71,19 @@ export class CustomersController {
       if (body.remark !== undefined) input.remark = body.remark as string | null;
       if (body.status === "ACTIVE" || body.status === "INACTIVE") input.status = body.status;
       return { data: await this.customers.update(tenantIdOf(req), id, input) };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("customer.manage")
+  @Post(":id/account")
+  async bind(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body() body: { accountId?: unknown }) {
+    try {
+      return {
+        data: await this.customers.bind(tenantIdOf(req), id, body.accountId as string)
+      };
     } catch (error) {
       this.mapError(error);
     }

@@ -18,6 +18,7 @@ export interface CustomerRepository {
   create(tenantId: string, input: CustomerInput): Promise<CustomerView>;
   update(tenantId: string, id: string, input: Partial<CustomerInput>): Promise<CustomerView | null>;
   remove(tenantId: string, id: string): Promise<boolean>;
+  bind(tenantId: string, customerId: string, accountId: string): Promise<CustomerView>;
 }
 
 function assertValid(input: CustomerInput | Partial<CustomerInput>): void {
@@ -77,5 +78,11 @@ export class CustomersService {
   async remove(tenantId: string, id: string): Promise<void> {
     const removed = await this.repository.remove(tenantId, id);
     if (!removed) throw new CustomerNotFoundError(id);
+  }
+
+  async bind(tenantId: string, customerId: string, accountId: string): Promise<CustomerView> {
+    const customer = await this.repository.find(tenantId, customerId);
+    if (!customer) throw new CustomerNotFoundError(customerId);
+    return this.repository.bind(tenantId, customerId, accountId);
   }
 }

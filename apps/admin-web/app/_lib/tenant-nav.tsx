@@ -6,6 +6,7 @@ import { clearAccessToken } from "./api";
 
 const LINKS = [
   { href: "/customers", label: "客户" },
+  { href: "/orders", label: "订单" },
   { href: "/players", label: "陪玩" },
   { href: "/catalog", label: "服务目录" },
   { href: "/settings", label: "门店设置" }

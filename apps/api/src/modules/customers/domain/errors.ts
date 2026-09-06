@@ -18,3 +18,16 @@ export class InvalidCustomerInputError extends Error {
     this.name = "InvalidCustomerInputError";
   }
 }
+export class AccountNotCustomerError extends Error {
+  constructor(accountId: string) {
+    super(`account is not a CUSTOMER role account: ${accountId}`);
+    this.name = "AccountNotCustomerError";
+  }
+}
+
+export class CustomerAccountBoundError extends Error {
+  constructor() {
+    super("account already bound to another customer profile");
+    this.name = "CustomerAccountBoundError";
+  }
+}
