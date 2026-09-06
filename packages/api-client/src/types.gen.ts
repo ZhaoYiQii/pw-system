@@ -15,6 +15,17 @@ export type HealthGetHealthResponses = {
     200: unknown;
 };
 
+export type ReadyReadyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/ready';
+};
+
+export type ReadyReadyResponses = {
+    200: unknown;
+};
+
 export type TenancyListTenantsData = {
     body?: never;
     path?: never;

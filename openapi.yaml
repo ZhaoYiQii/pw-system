@@ -9,6 +9,15 @@ paths:
           description: ""
       tags:
         - Health
+  /ready:
+    get:
+      operationId: ready_ready
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - Ready
   /api/v1/platform/tenants:
     post:
       operationId: tenancy_createTenant
