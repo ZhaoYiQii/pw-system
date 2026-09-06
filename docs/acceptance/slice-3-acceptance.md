@@ -18,3 +18,11 @@
 - admin：门店设置页（品牌主题 + 版本/回滚）、平台套餐/功能开关页。
 - mobile：runtime-config 拉取品牌 token 并应用；无效配置门店进入 CONFIG_ERROR。
 - 契约测试：tests/contract/tenant-config.spec.ts。
+
+## Phase B（2026-09-06）
+
+- DB 迁移 `20260906000300_tenant_config_entitlements`：tenant_config_versions / tenant_entitlements（+FORCE RLS），已应用到 pw_saas 与 pw_saas_test（prisma migrate deploy exit 0）。
+- API：TenantConfigService/PrismaConfigRepository（默认配置、版本化保存、回滚、CONFIG_ERROR 失败关闭）；EntitlementsService/Repository（core 常开、addon 默认关、平台开关、addon 门禁 FeatureDisabled→403）；控制器（tenant/config 读写回滚/versions、tenant/features、tenant/addon/:key 门禁、platform/tenants/:id/entitlements 读写）。
+- 集成测试 5 项（默认配置/非法配置拒绝/保存生效+版本/回滚/entitlements 门禁）；契约测试 3 项接通 `pnpm test:contract`。
+- 全量：test:integration 25/25、contract 3/3、unit 12/12、typecheck 8/8、lint、build 5/5、build:h5、build:weapp 全绿。
+- 剩余（台账 D）：admin 门店设置页（品牌 token/版本/回滚）、平台功能开关页、mobile runtime-config 品牌应用（运行态需 API+域名）。

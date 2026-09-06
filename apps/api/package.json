@@ -15,7 +15,8 @@
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "@pw/database": "workspace:*",
-    "jose": "6.2.12"
+    "jose": "6.2.12",
+    "@pw/config-schema": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/testing": "12.0.1",

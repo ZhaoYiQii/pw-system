@@ -53,3 +53,7 @@ Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packag
 
 - 完成 @pw/config-schema（Zod4 配置 schema/默认值/合并/测试 5 项），unit 12/12。
 - 剩余：config/entitlements 表与 API、admin/mobile 主题应用、契约测试（见台账 D）。
+## Slice 3 Phase B（2026-09-06）
+
+- 完成迁移3（config_versions/entitlements+RLS）、tenant-config/entitlements API、契约测试；test:integration 25/25、contract 3/3、unit 12/12、typecheck 8/8、build/双端绿。
+- 剩余：admin 主题/功能开关 UI、mobile runtime-config（台账 D）。

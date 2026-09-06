@@ -27,7 +27,6 @@
 | npm CLI 本机缓存权限问题 | 2026-09-06 | 已用 pnpm（基线）替代，不阻塞 |
 
 > 更新规则：每项完成时追加“完成日期 + 证据命令/退出码 + 责任切片”，不删除历史。
-## D. Slice 3 剩余（2026-09-06，Phase A 完成 @pw/config-schema）
-- tenant_config_versions / tenant_entitlements 迁移与 RLS
-- API tenant-config（版本化/回滚/生效配置）与 entitlements（core 常开、addon 默认关、未授权关闭/403）
-- admin 门店设置（品牌 token）+ 平台功能开关页；mobile runtime-config 品牌应用；CONFIG_ERROR 失败关闭；契约测试
+## D. Slice 3 剩余（2026-09-06 更新：Phase A+B 完成，剩余 UI/mobile）
+- 完成：@pw/config-schema；tenant_config_versions/tenant_entitlements 迁移+RLS；tenant-config（版本化/回滚/CONFIG_ERROR 关闭）与 entitlements（core 常开、addon 默认关、门禁）API；契约测试（test:contract 3/3）。
+- 剩余：admin 门店设置页（品牌 token/版本/回滚）、平台功能开关页；mobile runtime-config 品牌应用（运行态需 API+域名）

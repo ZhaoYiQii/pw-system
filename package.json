@@ -14,7 +14,7 @@
     "test:critical": "node scripts/not-implemented.mjs test:critical \"Slice 5+（订单/场次/结算状态机切片引入）\"",
     "test:integration": "vitest run --config tests/vitest.integration.config.ts",
     "test:tenant-isolation": "vitest run --config tests/vitest.tenant-isolation.config.ts",
-    "test:contract": "node scripts/not-implemented.mjs test:contract \"Slice 3+（OpenAPI 客户端契约）\"",
+    "test:contract": "vitest run --config tests/vitest.contract.config.ts",
     "test:e2e": "node scripts/not-implemented.mjs test:e2e \"Slice 5+（Playwright E2E）\"",
     "build": "turbo run build",
     "build:h5": "turbo run build:h5",
