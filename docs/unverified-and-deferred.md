@@ -98,3 +98,6 @@
 ## V. Slice 9 Phase C（2026-09-06）
 - 完成：Outbox relay（PENDING→PROCESSED、attempts/FAILED、outbox_event_id 去重）、站内通知写 INAPP + GET tenant/notifications。integration 56/56。
 - 待办/挂账：真正 Worker/BullMQ 调度与短信/微信 provider degraded（当前为拉取型 relay，可在 worker 集成；Redis/BullMQ 与容器化后置）、审计脱敏细化、争议/审计/通知 UI（后置）。
+## W. Slice 10 Phase A（2026-09-06）
+- 迁移 `20260906001400_ai`：ai_runs（provider/model/prompt 版本）、ai_suggestions（结构化 payload+confidence_bp+人工采纳 status）；RLS；isolation 25/25。
+- 待办（Phase B/C）：AiProviderPort + 超时/重试/熔断；确定性 Fake（生产无授权→unavailable，不伪装）；需求解析缺失检查；候选过滤（AI 仅在合法集合内排序，不虚构价格/低置信→NEEDS_REVIEW）；人工采纳与 audit；外部 LLM provider 需授权（台账 A）。
