@@ -23,6 +23,14 @@ function applyRuntimeAlias(chain: {
     "@platform-runtime-config",
     path.join(process.cwd(), runtimeDir, "runtime-config")
   );
+  chain.resolve.alias.set(
+    "@platform-identity",
+    path.join(process.cwd(), runtimeDir, "identity-adapter")
+  );
+  chain.resolve.alias.set(
+    "@platform-session",
+    path.join(process.cwd(), runtimeDir, "session-store")
+  );
 }
 
 export default defineConfig<"webpack5">(async (merge) => {
@@ -95,4 +103,3 @@ export default defineConfig<"webpack5">(async (merge) => {
   }
   return merge({}, baseConfig, prodConfig);
 });
-

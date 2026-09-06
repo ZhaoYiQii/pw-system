@@ -1,0 +1,147 @@
+import { Button, Input, Text, View } from "@tarojs/components";
+import { useLoad } from "@tarojs/taro";
+import { useState } from "react";
+import { identityAdapter } from "@platform-identity";
+import { session } from "@platform-session";
+import { tenantLocator } from "@platform-locator";
+import "./index.css";
+
+interface HallItem { id: string; orderNo: string; productName: string; durationSeconds: number; unitPriceFen: number; desiredStartAt: string | null }
+interface MyApp { id: string; orderId: string; status: string; createdAt: string }
+
+function base(): string {
+  const cfg = typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
+  if (cfg) return cfg;
+  if (typeof location !== "undefined") return location.origin;
+  return "";
+}
+
+async function api(path: string, token: string, init?: RequestInit) {
+  const res = await fetch(`${base()}${path}`, {
+    ...init,
+    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) }
+  });
+  const text = await res.text();
+  let data: unknown = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (!res.ok) {
+    const message = data && typeof data === "object" && "message" in data && typeof (data as { message?: unknown }).message === "string" ? (data as { message: string }).message : `HTTP ${res.status}`;
+    throw new Error(message);
+  }
+  return (data as { data?: unknown })?.data;
+}
+
+export default function OrderHallPage() {
+  const [token, setToken] = useState<string | null>(session.getToken());
+  const [tenantCode, setTenantCode] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [hall, setHall] = useState<HallItem[]>([]);
+  const [mine, setMine] = useState<MyApp[]>([]);
+
+  const load = async (t: string) => {
+    try {
+      const h = (await api("/api/v1/tenant/player/order-hall", t)) as HallItem[];
+      const m = (await api("/api/v1/tenant/player/applications", t)) as MyApp[];
+      setHall(h);
+      setMine(m);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+      if (session.getToken()) {
+        session.clearToken();
+        setToken(null);
+      }
+    }
+  };
+
+  useLoad(async () => {
+    const t = session.getToken();
+    setToken(t);
+    if (t) await load(t);
+    const info = await tenantLocator.resolveTenant();
+    if (info.state === "ok" && info.tenant?.code) setTenantCode(info.tenant.code);
+  });
+
+  const login = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+            const loginInput: { kind: "tenant"; username: string; password: string; tenantCode?: string } = { kind: "tenant", username, password };
+      if (tenantCode) loginInput.tenantCode = tenantCode;
+      const s = await identityAdapter.login(loginInput);
+      session.setToken(s.accessToken);
+      setToken(s.accessToken);
+      setPassword("");
+      await load(s.accessToken);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const apply = async (orderId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api(`/api/v1/tenant/player/orders/${orderId}/applications`, token, { method: "POST", body: JSON.stringify({}) });
+      setMsg("报名成功");
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logout = () => {
+    session.clearToken();
+    setToken(null);
+    setMsg(null);
+  };
+
+  return (
+    <View className="page">
+      <Text className="title">接单大厅</Text>
+      {token === null ? (
+        <View className="card">
+          <Text className="label">门店 code</Text>
+          <Input className="input" value={tenantCode} onInput={(e) => setTenantCode(e.detail.value)} placeholder="demo" />
+          <Text className="label">账号（陪玩）</Text>
+          <Input className="input" value={username} onInput={(e) => setUsername(e.detail.value)} placeholder="player" />
+          <Text className="label">密码</Text>
+          <Input className="input" password value={password} onInput={(e) => setPassword(e.detail.value)} placeholder="••••" />
+          <Button className="btn" disabled={busy} onClick={() => void login()}>登录并查看可接订单</Button>
+          {msg ? <Text className="err">{msg}</Text> : null}
+        </View>
+      ) : (
+        <>
+          <View className="row">
+            <Text className="label">已登录（可接 {hall.length}）</Text>
+            <Button size="mini" onClick={logout}>退出</Button>
+          </View>
+          {msg ? <Text className="err">{msg}</Text> : null}
+          {hall.length === 0 ? <Text className="muted">暂无派单（可先由商家端发布订单）</Text> : null}
+          {hall.map((o) => (
+            <View key={o.id} className="card">
+              <Text className="strong">{o.productName} · {Math.floor(o.durationSeconds / 60)} 分钟</Text>
+              <Text className="muted">单号 {o.orderNo} · ¥{(o.unitPriceFen / 100).toFixed(2)}</Text>
+              {o.desiredStartAt ? <Text className="muted">期望开始：{new Date(o.desiredStartAt).toLocaleString()}</Text> : null}
+              <Button className="btn primary" disabled={busy} onClick={() => void apply(o.id)}>报名</Button>
+            </View>
+          ))}
+          <View className="card">
+            <Text className="strong">我的报名</Text>
+            {mine.length === 0 ? <Text className="muted">暂无报名</Text> : null}
+            {mine.map((m) => (
+              <Text key={m.id} className="muted">单 {m.orderId.slice(0, 8)}… · 状态：{m.status}</Text>
+            ))}
+          </View>
+        </>
+      )}
+    </View>
+  );
+}

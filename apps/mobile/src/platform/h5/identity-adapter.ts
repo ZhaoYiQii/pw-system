@@ -1,7 +1,10 @@
 import type { IdentityAdapter, IdentitySession } from "../contracts/identity";
 
 function apiBase(): string {
-  if (process.env.TARO_APP_API_BASE) return process.env.TARO_APP_API_BASE;
+  const configured =
+    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
+  if (configured) return configured;
+  if (typeof location !== "undefined") return location.origin;
   return "";
 }
 

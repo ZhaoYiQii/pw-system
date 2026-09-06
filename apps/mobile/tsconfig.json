@@ -26,6 +26,12 @@
       ],
       "@platform-runtime-config": [
         "./src/platform/h5/runtime-config.ts"
+      ],
+      "@platform-identity": [
+        "./src/platform/h5/identity-adapter.ts"
+      ],
+      "@platform-session": [
+        "./src/platform/h5/session-store.ts"
       ]
     }
   },
