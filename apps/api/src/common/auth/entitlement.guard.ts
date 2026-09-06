@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  SetMetadata,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { EntitlementsService } from "../../modules/entitlements/application/entitlements.service.js";
@@ -14,22 +15,21 @@ export const REQUIRED_ADDON_KEY = "pw:requiredAddon";
 
 /** 要求租户已开通某 addon；由全局 EntitlementGuard 执行。 */
 export const RequireAddon = (featureKey: string) =>
-  Reflect.metadata(REQUIRED_ADDON_KEY, featureKey);
+  SetMetadata(REQUIRED_ADDON_KEY, featureKey);
 
 @Injectable()
 export class EntitlementGuard implements CanActivate {
-  private readonly reflector = new Reflector();
-
   constructor(
     @Inject(EntitlementsService)
     private readonly entitlements: EntitlementsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const feature = this.reflector.getAllAndOverride<string>(
-      REQUIRED_ADDON_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const reflector = new Reflector();
+    const feature = reflector.getAllAndOverride<string>(REQUIRED_ADDON_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!feature) return true;
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const tenantId = request.principal?.tenantId;

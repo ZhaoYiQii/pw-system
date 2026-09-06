@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   HttpException,
   HttpStatus,
@@ -11,9 +10,8 @@ import {
   Req,
 } from "@nestjs/common";
 import { AiAssistantService } from "./ai.service.js";
-import { EntitlementsService } from "../entitlements/application/entitlements.service.js";
-import { FeatureDisabledError } from "../entitlements/domain/errors.js";
 import { Permissions, TenantScope } from "../../common/auth/decorators.js";
+import { RequireAddon } from "../../common/auth/entitlement.guard.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
@@ -26,13 +24,9 @@ function tenantIdOf(req: AuthenticatedRequest): string {
 export class AiController {
   constructor(
     @Inject(AiAssistantService) private readonly ai: AiAssistantService,
-    @Inject(EntitlementsService)
-    private readonly entitlements: EntitlementsService,
   ) {}
 
   private mapError(error: unknown): never {
-    if (error instanceof FeatureDisabledError)
-      throw new ForbiddenException(error.message);
     throw new HttpException(
       error instanceof Error ? error.message : String(error),
       HttpStatus.BAD_REQUEST,
@@ -47,16 +41,13 @@ export class AiController {
 
   @TenantScope()
   @Permissions("tenant.manage")
+  @RequireAddon("addon.ai_requirement_parser")
   @Post("parse-requirement")
   async parse(
     @Req() req: AuthenticatedRequest,
     @Body() body: Record<string, unknown>,
   ) {
     try {
-      await this.entitlements.ensureAddonEnabled(
-        tenantIdOf(req),
-        "addon.ai_requirement_parser",
-      );
       const fields: {
         description?: string;
         serviceProductId?: string | null;
@@ -94,16 +85,13 @@ export class AiController {
 
   @TenantScope()
   @Permissions("tenant.manage")
+  @RequireAddon("addon.ai_match_recommendation")
   @Get("orders/:orderId/recommendations")
   async recommend(
     @Req() req: AuthenticatedRequest,
     @Param("orderId") orderId: string,
   ) {
     try {
-      await this.entitlements.ensureAddonEnabled(
-        tenantIdOf(req),
-        "addon.ai_match_recommendation",
-      );
       return {
         data: await this.ai.recommendPlayers(
           tenantIdOf(req),

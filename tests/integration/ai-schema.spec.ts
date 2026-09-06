@@ -181,5 +181,24 @@ describe("Slice 10 AI (deterministic/不可用标记/合法候选)", () => {
     expect(
       await client.aiSuggestion.count({ where: { tenantId } }),
     ).toBeGreaterThanOrEqual(2);
+
+    const parserUpdate = await client.tenantEntitlement.updateMany({
+      where: { tenantId, featureKey: "addon.ai_requirement_parser" },
+      data: { enabled: false },
+    });
+    const matchUpdate = await client.tenantEntitlement.updateMany({
+      where: { tenantId, featureKey: "addon.ai_match_recommendation" },
+      data: { enabled: false },
+    });
+    expect(parserUpdate.count).toBe(1);
+    expect(matchUpdate.count).toBe(1);
+    await req(ownerToken)
+      .post("/api/v1/tenant/ai/parse-requirement", {
+        description: "关闭后不可用",
+      })
+      .expect(403);
+    await req(ownerToken)
+      .get(`/api/v1/tenant/ai/orders/${orderId}/recommendations`)
+      .expect(403);
   });
 });
