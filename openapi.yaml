@@ -64,6 +64,20 @@ paths:
           description: ""
       tags:
         - Audit
+  /api/v1/platform/tenants/{tenantId}/audit:
+    get:
+      operationId: platformAudit_platformList
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags:
+        - PlatformAudit
   /api/v1/auth/login:
     post:
       operationId: auth_login

@@ -83,6 +83,19 @@ export type AuditListResponses = {
     200: unknown;
 };
 
+export type PlatformAuditPlatformListData = {
+    body?: never;
+    path: {
+        tenantId: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/tenants/{tenantId}/audit';
+};
+
+export type PlatformAuditPlatformListResponses = {
+    200: unknown;
+};
+
 export type AuthLoginData = {
     body?: never;
     path?: never;
