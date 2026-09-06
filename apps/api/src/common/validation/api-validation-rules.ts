@@ -9,6 +9,311 @@ import { routeValidations } from "./validation-registry.js";
 const nonEmptyText = (label: string, max: number) =>
   z.string().trim().min(1).max(max, `${label} 超长`);
 
+const nullableText = (label: string, max: number) =>
+  z.string().trim().max(max, `${label} 超长`).nullable().optional();
+
+const statusEnum = z.enum(["ACTIVE", "INACTIVE"]);
+
+routeValidations.set("POST /api/v1/auth/login", {
+  body: z.strictObject({
+    kind: z.enum(["platform", "tenant"]),
+    username: z.string().min(1),
+    password: z.string().min(1),
+    tenantCode: z.string().min(1).optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/auth/refresh", {
+  body: z.strictObject({
+    scope: z.enum(["platform", "tenant"]),
+  }),
+});
+
+routeValidations.set("POST /api/v1/platform/tenants", {
+  body: z.strictObject({
+    code: z.string().trim().min(1).max(40),
+    name: nonEmptyText("name", 100),
+    timezone: z.string().min(1).optional(),
+    primaryHost: z.string().min(1).optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/customers", {
+  body: z.strictObject({
+    name: nonEmptyText("name", 60),
+    mobile: nullableText("mobile", 32),
+    remark: nullableText("remark", 500),
+  }),
+});
+
+routeValidations.set("PATCH /api/v1/tenant/customers/:id", {
+  body: z.strictObject({
+    name: nonEmptyText("name", 60).optional(),
+    mobile: nullableText("mobile", 32),
+    remark: nullableText("remark", 500),
+    status: statusEnum.optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/customers/:id/account", {
+  body: z.strictObject({
+    accountId: z.string().uuid(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/players", {
+  body: z.strictObject({
+    name: nonEmptyText("name", 60),
+    mobile: nullableText("mobile", 32),
+    intro: nullableText("intro", 1000),
+    acceptingOrders: z.boolean().optional(),
+  }),
+});
+
+routeValidations.set("PATCH /api/v1/tenant/players/:id", {
+  body: z.strictObject({
+    name: nonEmptyText("name", 60).optional(),
+    mobile: nullableText("mobile", 32),
+    intro: nullableText("intro", 1000),
+    status: statusEnum.optional(),
+    acceptingOrders: z.boolean().optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/players/:id/skills", {
+  body: z.strictObject({
+    gameId: z.string().uuid(),
+    gameRegionId: z.string().uuid().nullable().optional(),
+    title: nullableText("title", 100),
+    note: nullableText("note", 500),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/players/:id/account", {
+  body: z.strictObject({
+    accountId: z.string().uuid(),
+  }),
+});
+
+routeValidations.set("PATCH /api/v1/tenant/player/me", {
+  body: z.strictObject({
+    acceptingOrders: z.boolean(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/player/availability", {
+  body: z.strictObject({
+    startsAt: z.string().datetime({ offset: true }),
+    endsAt: z.string().datetime({ offset: true }),
+    reason: nullableText("reason", 200),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/config", {
+  body: z.strictObject({
+    config: z.record(z.string(), z.unknown()),
+  }),
+});
+
+routeValidations.set("POST /api/v1/platform/tenants/:tenantId/entitlements", {
+  body: z.strictObject({
+    featureKey: z.string().min(1),
+    enabled: z.boolean(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/platform/onboarding/tenants", {
+  body: z.strictObject({
+    code: z.string().trim().min(1).max(40),
+    name: nonEmptyText("name", 100),
+    host: z.string().min(1).max(200),
+    ownerUsername: z.string().min(1).max(60),
+    ownerPassword: z.string().min(8).max(200),
+    brandPrimary: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/)
+      .optional(),
+    brandAccent: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/)
+      .optional(),
+    logoText: z.string().max(40).optional(),
+    storeCutBp: z.number().int().min(0).max(10000).optional(),
+    packageCode: z.string().optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/platform/tenants/:tenantId/package", {
+  body: z.strictObject({
+    packageCode: z.string().min(1),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/finance-rules/store-cut", {
+  body: z.strictObject({
+    storeCutBp: z.number().int().min(0).max(10000),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/catalog/games", {
+  body: z.strictObject({
+    name: nonEmptyText("游戏名", 60),
+  }),
+});
+
+routeValidations.set("PATCH /api/v1/tenant/catalog/games/:id", {
+  body: z.strictObject({
+    name: nonEmptyText("游戏名", 60).optional(),
+    enabled: z.boolean().optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/catalog/games/:gameId/regions", {
+  body: z.strictObject({
+    name: nonEmptyText("区服名", 60),
+  }),
+});
+
+routeValidations.set("PATCH /api/v1/tenant/catalog/regions/:id", {
+  body: z.strictObject({
+    name: nonEmptyText("区服名", 60).optional(),
+    enabled: z.boolean().optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/catalog/products", {
+  body: z.strictObject({
+    gameId: z.string().uuid(),
+    gameRegionId: z.string().uuid().nullable().optional(),
+    name: nonEmptyText("产品名", 80),
+    description: nullableText("description", 500),
+  }),
+});
+
+routeValidations.set("PATCH /api/v1/tenant/catalog/products/:id", {
+  body: z.strictObject({
+    name: nonEmptyText("产品名", 80).optional(),
+    description: nullableText("description", 500),
+    enabled: z.boolean().optional(),
+    gameRegionId: z.string().uuid().nullable().optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/settlements/:id/items", {
+  body: z.strictObject({
+    earningIds: z.array(z.string().uuid()).min(1),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/orders/:orderId/disputes", {
+  body: z.strictObject({
+    reason: nonEmptyText("reason", 500),
+    earningId: z.string().uuid().nullable().optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/disputes/:disputeId/resolve", {
+  body: z.strictObject({
+    resolution: nonEmptyText("resolution", 500),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/sessions/:sessionId/adjustments", {
+  body: z.strictObject({
+    requestedDurationSeconds: z.number().int().min(1),
+    reason: nullableText("reason", 500),
+  }),
+});
+
+routeValidations.set(
+  "POST /api/v1/tenant/sessions/:sessionId/adjustments/:adjustmentId/review",
+  {
+    body: z.strictObject({
+      approve: z.boolean(),
+      comment: nullableText("comment", 500),
+    }),
+  },
+);
+
+routeValidations.set("PATCH /api/v1/platform/tenants/:tenantId/finance-rules", {
+  body: z.strictObject({
+    platformFeeBp: z.number().int().min(0).max(10000),
+  }),
+});
+
+routeValidations.set(
+  "POST /api/v1/tenant/orders/:id/applications/:applicationId/shortlist",
+  {
+    body: z.strictObject({
+      shortlisted: z.boolean(),
+    }),
+  },
+);
+
+routeValidations.set(
+  "POST /api/v1/tenant/player/orders/:orderId/applications",
+  {
+    body: z.strictObject({
+      note: nullableText("note", 500),
+    }),
+  },
+);
+
+routeValidations.set(
+  "POST /api/v1/tenant/customer/orders/:orderId/assignment",
+  {
+    body: z.strictObject({
+      applicationId: z.string().uuid(),
+    }),
+  },
+);
+
+const requirementSchema = z.strictObject({
+  description: z.string().trim().min(2).max(1000),
+  gameId: z.string().uuid().nullable().optional(),
+  serviceProductId: z.string().uuid().nullable().optional(),
+  gender: nullableText("gender", 20),
+  desiredStartAt: z.string().datetime({ offset: true }).nullable().optional(),
+  durationSeconds: z
+    .number()
+    .int()
+    .min(1)
+    .max(86_400 * 365)
+    .nullable()
+    .optional(),
+  minBudgetFen: fenMoney("minBudgetFen").nullable().optional(),
+  maxBudgetFen: fenMoney("maxBudgetFen").nullable().optional(),
+  note: nullableText("note", 1000),
+});
+
+routeValidations.set("POST /api/v1/tenant/orders", {
+  body: z.strictObject({
+    customerProfileId: z.string().uuid(),
+    orderNo: z.string().max(40).optional(),
+    remark: nullableText("remark", 1000),
+    idempotencyKey: z.string().min(8).max(100).optional(),
+    requirement: requirementSchema.optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/customer/orders", {
+  body: z.strictObject({
+    requirement: requirementSchema.optional(),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/ai/parse-requirement", {
+  body: z.strictObject({
+    description: z.string().min(1).max(1000).optional(),
+    gameId: z.string().nullable().optional(),
+    serviceProductId: z.string().nullable().optional(),
+    durationSeconds: z.number().int().min(1).nullable().optional(),
+    desiredStartAt: z.string().min(1).nullable().optional(),
+    minBudgetFen: z.number().int().min(0).nullable().optional(),
+    maxBudgetFen: z.number().int().min(0).nullable().optional(),
+  }),
+});
+
 routeValidations.set(
   "POST /api/v1/tenant/catalog/products/:productId/pricing",
   {
@@ -54,10 +359,10 @@ routeValidations.set("POST /api/v1/tenant/orders/:id/assignment", {
   }),
 });
 
-routeValidations.set("POST /api/v1/tenant/players/:playerId/availability", {
+routeValidations.set("POST /api/v1/tenant/players/:id/availability", {
   body: z.strictObject({
-    startsAt: z.string().min(1),
-    endsAt: z.string().min(1),
-    reason: nonEmptyText("reason", 200).optional(),
+    startsAt: z.string().datetime({ offset: true }),
+    endsAt: z.string().datetime({ offset: true }),
+    reason: nullableText("reason", 200),
   }),
 });
