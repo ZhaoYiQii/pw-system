@@ -89,3 +89,6 @@
 - 完成：结算批次 list/create/add earning(行锁,仅 PENDING,不可双活)/review/approve(发起人不可批自己)/pay(线下记录→earning PAID)/void(退回 PENDING)；PAID 后不可改。
 - unit 20/20、integration 54/54（settlement-concurrency 2）、lint/typecheck 绿。
 - 待办：开放争议阻止结算（随 Slice9 disputes）、陪玩提现流程、财务 UI 完善（后置）。
+## T. Slice 9 Phase A（2026-09-06）
+- 迁移 `20260906001200_disputes_audit_notify`：disputes/dispute_events(OPEN/RESOLVED)、audit_logs(只追加)、notification_deliveries(重试)；RLS；isolation 24/24。
+- 待办（Phase B/C）：争议状态机 + 结算 hold（开放争议 earning 不可结算，冻结用）、审计写入脱敏/查询权限（审计不可更新删除由只追加表+无 update API 保障）、Outbox relay/通知重试（BullMQ + worker + 短信/微信 degraded）、站内通知。UI 后置。
