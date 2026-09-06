@@ -83,3 +83,7 @@
 - 本地开发容器已启动：`docker compose up -d` 退出码 0；postgres:18 卷挂载路径按官方 18+ 要求修正为 `/var/lib/postgresql`（原 `/var/lib/postgresql/data` 会触发镜像启动保护）。
 - 新增根 devDependency：`@playwright/test@1.63.0`（用于 H5 渲染验证；E2E 套件仍按规格属 Slice 5+，本项仅安装浏览器与依赖，未创建测试套件）。
 - React 大版本偏差（mobile React 18.3.1）仍有效：Taro 全系最新 4.2.1 peer 仅 `react@^18`（registry 实证），等待上游支持后作为独立升级任务回归主规格。
+## ADR-0000 增补 4（2026-09-06，范围决策）
+
+- mobile React 18.3.1 由用户确认为当前接受基线（React 19 升版挂起，待 Taro 上游支持后独立处理）；admin-web 保持 React 19.2.8。
+- 微信小程序开发/真机/审核/发布暂缓；`pnpm build:weapp` 保留为兼容性编译门禁。
