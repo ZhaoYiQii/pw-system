@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { createDatabaseClient } from "@pw/database";
 import { AuthGuard } from "../../common/auth/auth.guard.js";
+import { PermissionsGuard } from "../../common/auth/permissions.guard.js";
 import { AuthService } from "./application/auth.service.js";
 import { PrismaAuthRepository } from "./infrastructure/auth.repository.js";
 import { TokenService } from "./infrastructure/tokens.js";
@@ -44,8 +45,13 @@ export const AUTH_DB_CLIENT = "AUTH_DB_CLIENT";
       provide: APP_GUARD,
       useClass: AuthGuard
     },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard
+    },
     RateLimitService
   ],
   exports: [AuthService, RateLimitService]
 })
 export class IdentityAccessModule {}
+

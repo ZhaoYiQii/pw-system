@@ -1,9 +1,8 @@
-import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpException, HttpStatus, Inject, Param, Post, Query, Req } from "@nestjs/common";
 import type { Request } from "express";
 import { TenancyService } from "../application/tenancy.service.js";
 import { DuplicateTenantCodeError, InvalidTenantCodeError, TenantNotFoundError } from "../domain/errors.js";
 import { PlatformScope, Permissions, Public } from "../../../common/auth/decorators.js";
-import { PermissionsGuard } from "../../../common/auth/permissions.guard.js";
 
 interface CreateTenantBody {
   code?: unknown;
@@ -19,9 +18,8 @@ function asString(value: unknown, field: string): string {
   return value;
 }
 
-// 平台运营接口：Slice 1 尚未接入认证（Slice 2 增加 guard）；路由路径与 OpenAPI 契约在后续切片固化。
+// 平台运营接口；权限由全局 PermissionsGuard（@Permissions）统一强制。
 @Controller("api/v1")
-@UseGuards(PermissionsGuard)
 export class TenancyController {
   constructor(@Inject(TenancyService) private readonly tenancy: TenancyService) {}
 
@@ -88,3 +86,5 @@ export class TenancyController {
     }
   }
 }
+
+

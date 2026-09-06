@@ -2,11 +2,22 @@ import { Module } from "@nestjs/common";
 import { HealthController } from "./health/health.controller.js";
 import { TenancyModule } from "./modules/tenancy/tenancy.module.js";
 import { IdentityAccessModule } from "./modules/identity-access/identity-access.module.js";
-import { EntitlementsModule } from "./modules/entitlements/entitlements.module.js";
 import { TenantConfigModule } from "./modules/tenant-config/tenant-config.module.js";
+import { EntitlementsModule } from "./modules/entitlements/entitlements.module.js";
+import { CustomersModule } from "./modules/customers/customers.module.js";
+import { PlayersModule } from "./modules/players/players.module.js";
+import { CatalogModule } from "./modules/catalog/catalog.module.js";
 
 @Module({
   controllers: [HealthController],
-  imports: [TenancyModule, IdentityAccessModule, TenantConfigModule, EntitlementsModule]
+  imports: [
+    TenancyModule,
+    IdentityAccessModule,
+    TenantConfigModule,
+    EntitlementsModule,
+    CustomersModule,
+    PlayersModule,
+    CatalogModule
+  ]
 })
 export class AppModule {}
