@@ -1,5 +1,5 @@
 import { randomBytes, scrypt as scryptCb } from "node:crypto";
-import type { PrismaClient } from "@pw/database";
+import type { DbTransaction, PrismaClient } from "@pw/database";
 import { PACKAGES, packageByCode } from "./packages.js";
 
 async function hashPassword(password: string): Promise<string> {
@@ -35,6 +35,7 @@ export class PlatformBillingService {
 
   async onboard(input: OnboardInput, actorId: string) {
     const pkg = packageByCode(input.packageCode ?? "BASIC");
+    if (!pkg) throw new Error("未知套餐");
     if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(input.code))
       throw new Error("门店 code 非法");
     if (!input.host || !input.ownerUsername || input.ownerPassword.length < 8)
@@ -49,6 +50,7 @@ export class PlatformBillingService {
       const tenant = await tx.tenant.create({
         data: { code: input.code, name: input.name, status: "ACTIVE" },
       });
+      const now = new Date();
       await tx.tenantDomain.create({
         data: { tenantId: tenant.id, host: input.host, isPrimary: true },
       });
@@ -94,82 +96,178 @@ export class PlatformBillingService {
       await tx.tenantSubscription.create({
         data: {
           tenantId: tenant.id,
-          packageCode: pkg?.code ?? "BASIC",
+          packageCode: pkg.code,
           status: "ACTIVE",
+          startsAt: now,
+          endsAt: addDays(now, pkg.durationDays),
         },
       });
+      await replacePackageEntitlements(
+        tx,
+        tenant.id,
+        pkg,
+        actorId,
+        "tenant.onboard",
+        `平台开通门店 ${tenant.code}（套餐 ${pkg.code}）`,
+      );
       return tenant;
     });
-    await this.client.auditLog.create({
-      data: {
-        tenantId: created.id,
-        actorType: "platform_account",
-        actorId,
-        action: "tenant.onboard",
-        resourceType: "tenant",
-        resourceId: created.id,
-        summary: `平台开通门店 ${created.code}`,
-      },
-    });
-    if (pkg) await this.assignPackage(created.id, pkg.code, actorId);
     return { tenantId: created.id, tenantCode: created.code };
   }
 
   async assignPackage(tenantId: string, packageCode: string, actorId: string) {
     const pkg = packageByCode(packageCode);
     if (!pkg) throw new Error("未知套餐");
-    await this.client.$transaction(async (tx) => {
+    return this.client.$transaction(async (tx) => {
       const t = await tx.tenant.findFirst({ where: { id: tenantId } });
       if (!t) throw new Error("租户不存在");
+      const now = new Date();
+      await tx.tenantSubscription.updateMany({
+        where: { tenantId, status: "ACTIVE" },
+        data: { status: "SUPERSEDED", endsAt: now },
+      });
       await tx.tenantSubscription.create({
-        data: { tenantId, packageCode: pkg.code, status: "ACTIVE" },
+        data: {
+          tenantId,
+          packageCode: pkg.code,
+          status: "ACTIVE",
+          startsAt: now,
+          endsAt: addDays(now, pkg.durationDays),
+        },
       });
-      await tx.tenantEntitlement.deleteMany({
-        where: { tenantId, featureKey: { startsWith: "addon." } },
+      await replacePackageEntitlements(
+        tx,
+        tenantId,
+        pkg,
+        actorId,
+        "tenant.package.assign",
+        `指派套餐 ${pkg.code}`,
+      );
+      return { tenantId, packageCode: pkg.code, addons: pkg.addons };
+    });
+  }
+
+  async activate(tenantId: string, actorId: string) {
+    return this.client.$transaction(async (tx) => {
+      const t = await tx.tenant.findFirst({ where: { id: tenantId } });
+      if (!t) throw new Error("租户不存在");
+      const [config, finance, ownerRole, subscription] = await Promise.all([
+        tx.tenantConfigVersion.findFirst({
+          where: { tenantId, status: "ACTIVE" },
+          select: { id: true },
+        }),
+        tx.financeRateRule.findFirst({
+          where: { tenantId },
+          select: { id: true },
+        }),
+        tx.tenantAccountRole.findFirst({
+          where: { tenantId, role: "TENANT_OWNER" },
+          select: { id: true },
+        }),
+        tx.tenantSubscription.findFirst({
+          where: { tenantId, status: "ACTIVE" },
+          select: { id: true },
+        }),
+      ]);
+      const missing = [
+        config ? null : "配置版本",
+        finance ? null : "分账费率",
+        ownerRole ? null : "店主账号",
+        subscription ? null : "有效订阅",
+      ].filter((x): x is string => x !== null);
+      if (missing.length > 0)
+        throw new Error(`门店开通不完整（缺 ${missing.join("/")}）`);
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: { status: "ACTIVE" },
       });
-      for (const addon of pkg.addons) {
-        await tx.tenantEntitlement.create({
-          data: {
-            tenantId,
-            featureKey: addon,
-            enabled: true,
-            source: `package:${pkg.code}`,
-          },
-        });
-      }
       await tx.auditLog.create({
         data: {
           tenantId,
           actorType: "platform_account",
           actorId,
-          action: "tenant.package.assign",
+          action: "tenant.activate",
           resourceType: "tenant",
           resourceId: tenantId,
-          summary: `指派套餐 ${pkg.code}`,
+          summary: "激活门店",
         },
       });
+      return { id: tenantId, status: "ACTIVE" };
     });
-    return { tenantId, packageCode: pkg.code, addons: pkg.addons };
   }
 
-  async activate(tenantId: string, actorId: string) {
-    const t = await this.client.tenant.findFirst({ where: { id: tenantId } });
-    if (!t) throw new Error("租户不存在");
-    await this.client.tenant.update({
-      where: { id: tenantId },
-      data: { status: "ACTIVE" },
+  /** 平台维护/worker 调用：把已到期 ACTIVE 订阅置 EXPIRED，并回收其套餐 addon 权限。 */
+  async expireDueSubscriptions(): Promise<number> {
+    return this.client.$transaction(async (tx) => {
+      const now = new Date();
+      const due = await tx.tenantSubscription.findMany({
+        where: { status: "ACTIVE", endsAt: { lt: now } },
+        select: { tenantId: true },
+      });
+      if (due.length === 0) return 0;
+      const tenantIds = Array.from(new Set(due.map((d) => d.tenantId)));
+      const res = await tx.tenantSubscription.updateMany({
+        where: {
+          tenantId: { in: tenantIds },
+          status: "ACTIVE",
+          endsAt: { lt: now },
+        },
+        data: { status: "EXPIRED", endsAt: now },
+      });
+      const renewed = await tx.tenantSubscription.findMany({
+        where: { tenantId: { in: tenantIds }, status: "ACTIVE" },
+        select: { tenantId: true },
+      });
+      const stillActive = new Set(renewed.map((r) => r.tenantId));
+      const expiredTenants = tenantIds.filter((id) => !stillActive.has(id));
+      if (expiredTenants.length > 0) {
+        await tx.tenantEntitlement.deleteMany({
+          where: {
+            tenantId: { in: expiredTenants },
+            featureKey: { startsWith: "addon." },
+            source: { startsWith: "package:" },
+          },
+        });
+      }
+      return res.count;
     });
-    await this.client.auditLog.create({
+  }
+}
+
+function addDays(from: Date, days: number): Date {
+  return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+async function replacePackageEntitlements(
+  tx: DbTransaction,
+  tenantId: string,
+  pkg: { code: string; addons: string[] },
+  actorId: string,
+  action: string,
+  summary: string,
+): Promise<void> {
+  await tx.tenantEntitlement.deleteMany({
+    where: { tenantId, featureKey: { startsWith: "addon." } },
+  });
+  for (const addon of pkg.addons) {
+    await tx.tenantEntitlement.create({
       data: {
         tenantId,
-        actorType: "platform_account",
-        actorId,
-        action: "tenant.activate",
-        resourceType: "tenant",
-        resourceId: tenantId,
-        summary: "激活门店",
+        featureKey: addon,
+        enabled: true,
+        source: `package:${pkg.code}`,
       },
     });
-    return { id: tenantId, status: "ACTIVE" };
   }
+  await tx.auditLog.create({
+    data: {
+      tenantId,
+      actorType: "platform_account",
+      actorId,
+      action,
+      resourceType: "tenant",
+      resourceId: tenantId,
+      summary,
+    },
+  });
 }

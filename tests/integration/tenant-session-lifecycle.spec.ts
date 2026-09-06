@@ -40,6 +40,35 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
     await client.tenantAccountRole.create({
       data: { tenantId, tenantAccountId: owner.id, role: "TENANT_OWNER" },
     });
+    // 以平台完整开通形态创建（D3 起 activate 校验配置/费率/店主/订阅完整性）。
+    await client.tenantConfigVersion.create({
+      data: {
+        tenantId,
+        version: 1,
+        status: "ACTIVE",
+        config: {
+          schemaVersion: "v1",
+          brand: {
+            primaryColor: "#123456",
+            accentColor: "#abcdef",
+            logoText: "生命周期店",
+            borderRadius: 8,
+          },
+          storefront: { allowCustomerSelection: true },
+        },
+      },
+    });
+    await client.financeRateRule.create({
+      data: { tenantId, platformFeeBp: 300, storeCutBp: 2000 },
+    });
+    await client.tenantSubscription.create({
+      data: {
+        tenantId,
+        packageCode: "BASIC",
+        status: "ACTIVE",
+        endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
     await client.platformAccount.create({
       data: {
         username: `lc_pf_${suffix}`,
@@ -70,6 +99,10 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
       });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
+      await client.tenantSubscription.deleteMany({ where: { tenantId } });
+      await client.tenantEntitlement.deleteMany({ where: { tenantId } });
+      await client.tenantConfigVersion.deleteMany({ where: { tenantId } });
+      await client.financeRateRule.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
       await client.platformAccount.deleteMany({
         where: { username: `lc_pf_${suffix}` },
