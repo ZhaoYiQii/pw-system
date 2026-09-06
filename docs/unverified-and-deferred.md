@@ -65,3 +65,6 @@
 - 完成：老板（客户）自助候选/选人（dispatch customer controller + 归属校验，dispatch-concurrency 3 项）；mobile H5 登录接线（identity guard + session-store localStorage；weapp typed unsupported）；陪玩端 order-hall 报名、老板端 candidates 选 TA（build:h5/weapp 绿）。
 - 台账 B “H5 浏览器登录 E2E”：本机 Playwright 真实跑通 商家→陪玩报名→老板选人→订单 ASSIGNED（s6-01..06 截图）；公网域名 E2E 仍挂账。
 - 剩余：admin /dispatch 页（发布/候选/指派 UI 仍走 API/订单页）、派单撤回 WITHDRAWN、商家端订单页状态中文（ASSIGNED=已选定 待美化）。
+## M. Slice 7 Phase A（2026-09-06）
+- 迁移 `20260906000900_service_sessions`：service_sessions/session_events/session_adjustments/evidence_assets + SessionStatus/AdjustmentStatus + CHECK + RLS；isolation sessions.spec 2 → 22/22。
+- 待办（Phase B/C）：场次状态机（SCHEDULED→STARTED→ENDED→CONFIRMED/ADJUSTMENT_PENDING，服务器权威时钟、幂等）、调整复核、证据上传（intent/内容 magic bytes/≤10MiB/授权下载；生产对象存储待台账 A）、H5/weapp media adapter 与 session 页。
