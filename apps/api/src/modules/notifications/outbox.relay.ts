@@ -2,6 +2,7 @@ import type { PrismaClient } from "@pw/database";
 
 const MAX_ATTEMPTS = 10;
 const PROCESSING_LEASE_MS = 5 * 60 * 1000;
+const MAX_BACKOFF_MS = 5 * 60 * 1000;
 const TITLE_BY_EVENT: Record<string, string> = {
   "order.created": "订单已创建",
   "order.confirmed": "订单已确认",
@@ -81,14 +82,22 @@ export async function drainOutbox(
       });
       done += 1;
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message.slice(0, 500) : String(error);
+      // 已达最大尝试次数 → FAILED 死信（人工 requeue）；否则按 attempt 指数退避后重试。
+      if (row.attempts >= MAX_ATTEMPTS) {
+        await client.outboxEvent.update({
+          where: { id: row.id },
+          data: { status: "FAILED", lastError: message },
+        });
+        continue;
+      }
       await client.outboxEvent.update({
         where: { id: row.id },
         data: {
-          status: "FAILED",
-          lastError:
-            error instanceof Error
-              ? error.message.slice(0, 500)
-              : String(error),
+          status: "PENDING",
+          availableAt: new Date(Date.now() + outboxRetryDelayMs(row.attempts)),
+          lastError: message,
         },
       });
     }
@@ -114,4 +123,10 @@ export async function requeueFailedOutboxEvent(
     },
   });
   return res.count > 0;
+}
+
+/** 指数退避：attempt=1 起 5s → 10s → 20s…，封顶 5 分钟。 */
+export function outboxRetryDelayMs(attempt: number): number {
+  const base = 5_000 * 2 ** Math.max(0, attempt - 1);
+  return Math.min(base, MAX_BACKOFF_MS);
 }
