@@ -425,3 +425,31 @@ routeValidations.set("PATCH /api/v1/tenant/game-templates/:id", {
     message: "至少提供一个可更新字段",
   }),
 });
+
+routeValidations.set("POST /api/v1/tenant/game-dispatch/orders", {
+  body: z.strictObject({
+    templateId: z.string().uuid(),
+    customerProfileId: z.string().uuid(),
+    formValues: z.record(z.string(), z.string().max(500)).optional(),
+    desiredStartAt: z.string().datetime({ offset: true }).nullable().optional(),
+    durationMinutes: z.number().int().min(1).max(1440),
+    lines: z
+      .array(
+        z.strictObject({
+          positionLabel: z.string().trim().min(1).max(40),
+          requiredCount: z.number().int().min(1).max(10),
+        }),
+      )
+      .min(1)
+      .max(50),
+  }),
+});
+
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch/orders/:orderId/assignment",
+  {
+    body: z.strictObject({
+      applicationIds: z.array(z.string().uuid()).min(1).max(100),
+    }),
+  },
+);

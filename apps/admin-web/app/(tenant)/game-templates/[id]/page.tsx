@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../../_lib/api";
 import { fenToYuanText, yuanToFenString } from "../../../_lib/money";
@@ -68,7 +68,6 @@ type PageState =
 
 export default function GameTemplateEditorPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const [page, setPage] = useState<PageState>({ phase: "loading" });
   const [name, setName] = useState("");
   const [enabled, setEnabled] = useState(true);

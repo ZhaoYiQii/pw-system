@@ -1,0 +1,668 @@
+import { randomBytes } from "node:crypto";
+import type { PrismaClient, DbTransaction } from "@pw/database";
+import type {
+  DispatchApplicationView,
+  DispatchCopyResult,
+  DispatchDraftInput,
+  DispatchLineView,
+  DispatchView,
+} from "../domain/dispatch.js";
+import {
+  DispatchConflictError,
+  DispatchInputError,
+  DispatchNotFoundError,
+  DispatchStateError,
+} from "../domain/dispatch-errors.js";
+
+type Tx = DbTransaction;
+
+interface RankRuleJson {
+  rankLabel: string;
+  addPriceFen: string;
+}
+
+function code(): string {
+  return `${Date.now().toString(36).toUpperCase()}${randomBytes(4)
+    .toString("hex")
+    .toUpperCase()}`;
+}
+
+function fen(fenString: string): bigint {
+  return BigInt(fenString);
+}
+
+export class GameDispatchService {
+  public client: PrismaClient;
+
+  constructor(client: PrismaClient) {
+    this.client = client;
+  }
+
+  private async findDispatch(
+    tenantId: string,
+    orderId: string,
+    tx: Tx = this.client,
+  ): Promise<{
+    order: {
+      id: string;
+      status: string;
+      customerProfileId: string;
+      orderNo: string;
+      createdAt: Date;
+    };
+    gd: {
+      id: string;
+      orderId: string;
+      dispatchNo: string;
+      formValuesJson: unknown;
+      durationMinutes: number;
+      desiredStartAt: Date | null;
+      snapshotId: string | null;
+      modeLabel: string | null;
+      targetRankLabel: string | null;
+    };
+  } | null> {
+    const gd = await tx.gameDispatchOrder.findFirst({
+      where: { tenantId, orderId },
+    });
+    if (!gd) return null;
+    const order = await tx.order.findFirst({
+      where: { tenantId, id: orderId },
+    });
+    if (!order) return null;
+    return { gd, order };
+  }
+
+  private async rankAdd(
+    tx: Tx,
+    tenantId: string,
+    snapshotId: string,
+    rankLabel: string | undefined | null,
+  ): Promise<bigint> {
+    if (!snapshotId) return 0n;
+    const snapshot = await tx.gameDispatchTemplateSnapshot.findFirst({
+      where: { tenantId, id: snapshotId },
+    });
+    if (!snapshot) return 0n;
+    const rules = (snapshot.rankRulesJson ?? []) as unknown as RankRuleJson[];
+    const hit = rules.find((r) => r.rankLabel === rankLabel);
+    return hit ? fen(hit.addPriceFen) : 0n;
+  }
+
+  async createDraft(
+    tenantId: string,
+    actorId: string,
+    input: DispatchDraftInput,
+  ): Promise<{ orderId: string; dispatchOrderId: string; dispatchNo: string }> {
+    const customer = await this.client.customerProfile.findFirst({
+      where: { tenantId, id: input.customerProfileId },
+    });
+    if (!customer) throw new DispatchInputError("客户不存在");
+    const template = await this.client.gameDispatchTemplate.findFirst({
+      where: { tenantId, id: input.templateId, enabled: true },
+    });
+    if (!template) throw new DispatchInputError("模板不存在或已停用");
+    const templateFields = await this.client.gameDispatchTemplateField.findMany(
+      {
+        where: { templateId: template.id },
+        orderBy: { sortOrder: "asc" },
+      },
+    );
+    const templatePositions = await this.client.gameDispatchPosition.findMany({
+      where: { templateId: template.id, enabled: true },
+      orderBy: { sortOrder: "asc" },
+    });
+    const templateRanks = await this.client.gameDispatchRankRule.findMany({
+      where: { templateId: template.id },
+      orderBy: { sortOrder: "asc" },
+    });
+    const formValues = input.formValues ?? {};
+    const mode =
+      typeof formValues["mode"] === "string" ? formValues["mode"] : null;
+    const rankField = templateFields.find(
+      (f) => f.fieldKey.includes("rank") || f.label.includes("段位"),
+    );
+    const targetRank =
+      rankField && typeof formValues[rankField.fieldKey] === "string"
+        ? formValues[rankField.fieldKey]
+        : null;
+    const description =
+      Object.entries(formValues)
+        .map(([key, value]) => `${key}:${value}`)
+        .join("\n") || "游戏派单";
+    const orderNo = `GDOR${code()}`;
+    const dispatchNo = `GD${code()}`;
+    const result = await this.client.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          tenantId,
+          orderNo,
+          customerProfileId: customer.id,
+          status: "DRAFT",
+          processType: "GAME_DISPATCH",
+        },
+      });
+      const snapshot = await tx.gameDispatchTemplateSnapshot.create({
+        data: {
+          tenantId,
+          orderId: order.id,
+          templateId: template.id,
+          templateName: template.name,
+          fieldsJson: JSON.parse(
+            JSON.stringify(
+              templateFields.map((f) => ({
+                fieldKey: f.fieldKey,
+                label: f.label,
+                fieldType: f.fieldType,
+                options: f.options ?? [],
+              })),
+            ),
+          ),
+          positionsJson: JSON.parse(
+            JSON.stringify(
+              templatePositions.map((p) => ({
+                label: p.label,
+                defaultCount: p.defaultCount,
+              })),
+            ),
+          ),
+          rankRulesJson: JSON.parse(
+            JSON.stringify(
+              templateRanks.map((r) => ({
+                rankLabel: r.rankLabel,
+                addPriceFen: r.addPriceFen.toString(),
+              })),
+            ),
+          ),
+          copyLinesJson: JSON.parse(JSON.stringify(template.copyLines ?? [])),
+        },
+      });
+      const gd = await tx.gameDispatchOrder.create({
+        data: {
+          tenantId,
+          orderId: order.id,
+          snapshotId: snapshot.id,
+          dispatchNo,
+          formValuesJson: formValues,
+          modeLabel: mode,
+          ...(targetRank ? { targetRankLabel: targetRank } : {}),
+          desiredStartAt: input.desiredStartAt
+            ? new Date(input.desiredStartAt)
+            : null,
+          durationMinutes: input.durationMinutes,
+        },
+      });
+      const merged = new Map<string, number>();
+      for (const line of input.lines) {
+        const count = Math.max(1, Math.min(10, line.requiredCount || 1));
+        merged.set(
+          line.positionLabel,
+          (merged.get(line.positionLabel) ?? 0) + count,
+        );
+      }
+      if (merged.size === 0) throw new DispatchInputError("至少需要一个位置行");
+      await tx.gameDispatchLine.createMany({
+        data: Array.from(merged.entries()).map(([label, count], index) => ({
+          tenantId,
+          dispatchOrderId: gd.id,
+          orderId: order.id,
+          positionLabel: label,
+          requiredCount: count,
+          sortOrder: index,
+        })),
+      });
+      await tx.orderRequirement.create({
+        data: {
+          tenantId,
+          orderId: order.id,
+          description,
+          desiredStartAt: input.desiredStartAt
+            ? new Date(input.desiredStartAt)
+            : null,
+          durationSeconds: input.durationMinutes * 60,
+        },
+      });
+      await tx.orderEvent.create({
+        data: {
+          tenantId,
+          orderId: order.id,
+          eventType: "GAME_DISPATCH_DRAFT",
+          fromStatus: null,
+          toStatus: "DRAFT",
+          actorType: "tenant_account",
+          actorId,
+          payload: { dispatchNo },
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.draft",
+          resourceType: "order",
+          resourceId: order.id,
+          summary: `创建派单 ${dispatchNo}`,
+        },
+      });
+      return { orderId: order.id, dispatchOrderId: gd.id, dispatchNo };
+    });
+    return result;
+  }
+
+  async publish(
+    tenantId: string,
+    actorId: string,
+    orderId: string,
+  ): Promise<DispatchView> {
+    await this.client.$transaction(async (tx) => {
+      const foundLocal = await this.findDispatch(tenantId, orderId, tx);
+      if (!foundLocal) throw new DispatchNotFoundError();
+      if (!["DRAFT", "CONFIRMED"].includes(foundLocal.order.status)) {
+        throw new DispatchStateError("仅草稿/待发布派单可发布");
+      }
+      const roundCount = await tx.gameDispatchRound.count({
+        where: { tenantId, orderId },
+      });
+      const now = new Date();
+      await tx.gameDispatchRound.create({
+        data: {
+          tenantId,
+          dispatchOrderId: foundLocal.gd.id,
+          orderId,
+          roundNo: roundCount + 1,
+          opensAt: now,
+          closesAt: new Date(now.getTime() + 10 * 60 * 1000),
+          status: "OPEN",
+        },
+      });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "DISPATCHING" },
+      });
+      await tx.orderEvent.create({
+        data: {
+          tenantId,
+          orderId,
+          eventType: "GAME_DISPATCH_PUBLISHED",
+          fromStatus: foundLocal.order.status,
+          toStatus: "DISPATCHING",
+          actorType: "tenant_account",
+          actorId,
+          payload: { dispatchNo: foundLocal.gd.dispatchNo },
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.publish",
+          resourceType: "order",
+          resourceId: orderId,
+          summary: `发布派单 ${foundLocal.gd.dispatchNo}`,
+        },
+      });
+      return foundLocal;
+    });
+    return this.view(tenantId, orderId);
+  }
+
+  async applications(
+    tenantId: string,
+    orderId: string,
+  ): Promise<DispatchView["lines"]> {
+    const found = await this.findDispatch(tenantId, orderId);
+    if (!found) throw new DispatchNotFoundError();
+    return this.lines(tenantId, found.gd.id, orderId);
+  }
+
+  async apply(
+    tenantId: string,
+    playerAccountId: string,
+    orderId: string,
+    lineId: string,
+  ): Promise<DispatchApplicationView> {
+    return this.client.$transaction(async (tx) => {
+      const player = await tx.playerProfile.findFirst({
+        where: { tenantId, tenantAccountId: playerAccountId },
+      });
+      if (!player) throw new DispatchInputError("陪玩档案未绑定");
+      const found = await this.findDispatch(tenantId, orderId, tx);
+      if (!found) throw new DispatchNotFoundError();
+      if (found.order.status !== "DISPATCHING")
+        throw new DispatchStateError("订单不在报名阶段");
+      const round = await tx.gameDispatchRound.findFirst({
+        where: {
+          tenantId,
+          orderId,
+          status: "OPEN",
+          closesAt: { gt: new Date() },
+        },
+        orderBy: { roundNo: "desc" },
+      });
+      if (!round) throw new DispatchStateError("当前报名通道已关闭");
+      const line = await tx.gameDispatchLine.findFirst({
+        where: { tenantId, orderId, id: lineId },
+      });
+      if (!line) throw new DispatchInputError("报名位置不存在");
+      const existing = await tx.gameDispatchApplication.findFirst({
+        where: {
+          tenantId,
+          roundId: round.id,
+          lineId,
+          playerId: player.id,
+        },
+      });
+      if (existing && existing.status === "APPLIED")
+        throw new DispatchConflictError("已报名该位置");
+      const row = existing
+        ? await tx.gameDispatchApplication.update({
+            where: { id: existing.id },
+            data: { status: "APPLIED", playerNote: null },
+          })
+        : await tx.gameDispatchApplication.create({
+            data: {
+              tenantId,
+              roundId: round.id,
+              lineId,
+              orderId,
+              playerId: player.id,
+              positionLabel: line.positionLabel,
+              status: "APPLIED",
+            },
+          });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId: playerAccountId,
+          action: "game_dispatch.apply",
+          resourceType: "application",
+          resourceId: row.id,
+          summary: "陪玩报名",
+        },
+      });
+      return {
+        id: row.id,
+        playerId: player.id,
+        playerName: player.name,
+        positionLabel: line.positionLabel,
+        status: row.status,
+        createdAt: row.createdAt.toISOString(),
+      };
+    });
+  }
+
+  async withdraw(
+    tenantId: string,
+    playerAccountId: string,
+    applicationId: string,
+  ): Promise<void> {
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: playerAccountId },
+    });
+    if (!player) throw new DispatchInputError("陪玩档案未绑定");
+    const res = await this.client.gameDispatchApplication.updateMany({
+      where: {
+        tenantId,
+        id: applicationId,
+        playerId: player.id,
+        status: "APPLIED",
+      },
+      data: { status: "WITHDRAWN" },
+    });
+    if (res.count === 0)
+      throw new DispatchConflictError("仅可取消 APPLIED 状态的本人报名");
+  }
+
+  async staffRemove(
+    tenantId: string,
+    actorId: string,
+    applicationId: string,
+  ): Promise<void> {
+    const res = await this.client.gameDispatchApplication.updateMany({
+      where: { tenantId, id: applicationId, status: "APPLIED" },
+      data: { status: "REJECTED" },
+    });
+    if (res.count === 0) throw new DispatchConflictError("仅可移除有效报名");
+    await this.client.auditLog.create({
+      data: {
+        tenantId,
+        actorType: "tenant_account",
+        actorId,
+        action: "game_dispatch.staff_remove",
+        resourceType: "application",
+        resourceId: applicationId,
+      },
+    });
+  }
+
+  async assign(
+    tenantId: string,
+    actorId: string,
+    orderId: string,
+    applicationIds: string[],
+  ): Promise<DispatchView> {
+    if (applicationIds.length === 0)
+      throw new DispatchInputError("至少选择一个报名");
+    await this.client.$transaction(async (tx) => {
+      const found = await this.findDispatch(tenantId, orderId, tx);
+      if (!found) throw new DispatchNotFoundError();
+      const apps = await tx.gameDispatchApplication.findMany({
+        where: { tenantId, orderId, id: { in: applicationIds } },
+      });
+      if (apps.length !== applicationIds.length)
+        throw new DispatchInputError("部分报名不存在");
+      for (const app of apps) {
+        if (app.status !== "APPLIED")
+          throw new DispatchConflictError("仅可选中有效报名");
+      }
+      const lines = await tx.gameDispatchLine.findMany({
+        where: { tenantId, orderId },
+      });
+      const slotsByLine = new Map<string, number>();
+      for (const app of apps) {
+        const line = lines.find((l) => l.id === app.lineId);
+        if (!line) throw new DispatchInputError("位置行不存在");
+        const used = slotsByLine.get(line.id) ?? 0;
+        if (used + 1 > line.requiredCount)
+          throw new DispatchConflictError(
+            `位置 ${line.positionLabel} 已超过需要人数`,
+          );
+        slotsByLine.set(line.id, used + 1);
+      }
+      const snapshot = found.gd.snapshotId
+        ? await tx.gameDispatchTemplateSnapshot.findFirst({
+            where: { tenantId, id: found.gd.snapshotId },
+          })
+        : null;
+      const rules = (snapshot?.rankRulesJson ??
+        []) as unknown as RankRuleJson[];
+      const hit = rules.find((r) => r.rankLabel === found.gd.targetRankLabel);
+      for (const app of apps) {
+        const player = await tx.playerProfile.findFirst({
+          where: { tenantId, id: app.playerId },
+        });
+        if (!player) throw new DispatchInputError("陪玩不存在");
+        const line = lines.find((l) => l.id === app.lineId);
+        if (!line) continue;
+        await tx.orderSlot.create({
+          data: {
+            tenantId,
+            orderId,
+            dispatchOrderId: found.gd.id,
+            lineId: app.lineId,
+            applicationId: app.id,
+            playerId: app.playerId,
+            positionLabel: app.positionLabel,
+            unitPriceFen:
+              player.basePricePerHourFen + (hit ? fen(hit.addPriceFen) : 0n),
+            createdBy: actorId,
+          },
+        });
+        await tx.gameDispatchApplication.update({
+          where: { id: app.id },
+          data: { status: "SELECTED" },
+        });
+      }
+      const selected = await tx.orderSlot.count({
+        where: { tenantId, orderId },
+      });
+      const totalRequired = lines.reduce((acc, l) => acc + l.requiredCount, 0);
+      if (selected >= totalRequired) {
+        await tx.order.update({
+          where: { id: orderId },
+          data: { status: "ASSIGNED" },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.assign",
+          resourceType: "order",
+          resourceId: orderId,
+          summary: `选定 ${applicationIds.length} 名陪玩`,
+        },
+      });
+    });
+    return this.view(tenantId, orderId);
+  }
+
+  async view(tenantId: string, orderId: string): Promise<DispatchView> {
+    const found = await this.findDispatch(tenantId, orderId);
+    if (!found) throw new DispatchNotFoundError();
+    return this.viewWith(tenantId, orderId, found);
+  }
+
+  async copy(tenantId: string, orderId: string): Promise<DispatchCopyResult> {
+    const found = await this.findDispatch(tenantId, orderId);
+    if (!found) throw new DispatchNotFoundError();
+    const copy = await this.copyResult(tenantId, orderId, found);
+    return copy;
+  }
+
+  private async viewWith(
+    tenantId: string,
+    orderId: string,
+    found: NonNullable<
+      Awaited<ReturnType<GameDispatchService["findDispatch"]>>
+    >,
+  ): Promise<DispatchView> {
+    const lines = await this.lines(tenantId, found.gd.id, orderId);
+    const round = await this.client.gameDispatchRound.findFirst({
+      where: { tenantId, orderId },
+      orderBy: { roundNo: "desc" },
+    });
+    const copy = await this.copyResult(tenantId, orderId, found);
+    return {
+      orderId,
+      dispatchOrderId: found.gd.id,
+      dispatchNo: found.gd.dispatchNo,
+      status: found.order.status,
+      customerProfileId: found.order.customerProfileId,
+      templateName: "",
+      formValues: (found.gd.formValuesJson ?? {}) as Record<string, string>,
+      durationMinutes: found.gd.durationMinutes,
+      desiredStartAt: found.gd.desiredStartAt
+        ? found.gd.desiredStartAt.toISOString()
+        : null,
+      lines,
+      round: round
+        ? {
+            roundNo: round.roundNo,
+            opensAt: round.opensAt.toISOString(),
+            closesAt: round.closesAt.toISOString(),
+            status: round.status,
+          }
+        : null,
+      ...copy,
+    };
+  }
+
+  private async lines(
+    tenantId: string,
+    dispatchOrderId: string,
+    orderId: string,
+  ): Promise<DispatchLineView[]> {
+    const rows = await this.client.gameDispatchLine.findMany({
+      where: { tenantId, dispatchOrderId },
+      orderBy: { sortOrder: "asc" },
+    });
+    const apps = await this.client.gameDispatchApplication.findMany({
+      where: { tenantId, orderId },
+    });
+    const playerIds = apps.map((a) => a.playerId);
+    const players = playerIds.length
+      ? await this.client.playerProfile.findMany({
+          where: { tenantId, id: { in: playerIds } },
+        })
+      : [];
+    const byId = new Map(players.map((p) => [p.id, p]));
+    return rows.map((row) => ({
+      id: row.id,
+      positionLabel: row.positionLabel,
+      requiredCount: row.requiredCount,
+      applications: apps
+        .filter((a) => a.lineId === row.id)
+        .map<DispatchApplicationView>((a) => ({
+          id: a.id,
+          playerId: a.playerId,
+          playerName: byId.get(a.playerId)?.name ?? "未知陪玩",
+          positionLabel: a.positionLabel,
+          status: a.status,
+          createdAt: a.createdAt.toISOString(),
+        })),
+    }));
+  }
+
+  private async copyResult(
+    tenantId: string,
+    orderId: string,
+    found: NonNullable<
+      Awaited<ReturnType<GameDispatchService["findDispatch"]>>
+    >,
+  ): Promise<DispatchCopyResult> {
+    const snapshot = found.gd.snapshotId
+      ? await this.client.gameDispatchTemplateSnapshot.findFirst({
+          where: { tenantId, id: found.gd.snapshotId },
+        })
+      : null;
+    const lines = await this.lines(tenantId, found.gd.id, orderId);
+    const form = (found.gd.formValuesJson ?? {}) as Record<string, string>;
+    const copyLines = (snapshot?.copyLinesJson ?? []) as unknown as Array<{
+      label: string;
+      valueKey: string | null;
+    }>;
+    const positionsText = lines
+      .map((l) => `${l.positionLabel}×${l.requiredCount}`)
+      .join("/");
+    const valueOf = (key: string | null): string => {
+      if (!key) return "";
+      if (key === "dispatchNo") return found.gd.dispatchNo;
+      if (key === "positions") return positionsText;
+      if (key === "duration") return `${found.gd.durationMinutes} 分钟`;
+      if (key === "startAt")
+        return found.gd.desiredStartAt
+          ? found.gd.desiredStartAt.toLocaleString("zh-CN")
+          : "";
+      return form[key] ?? "";
+    };
+    const copyText = (
+      copyLines.length
+        ? copyLines
+        : [{ label: "派单编号", valueKey: "dispatchNo" }]
+    )
+      .map((c) => `${c.label}：${valueOf(c.valueKey)}`)
+      .join("\n");
+    const h5Origin = process.env.H5_ORIGIN ?? "";
+    const query = `order=${orderId}`;
+    return {
+      copyText,
+      applyUrl: `${h5Origin}/#/pages/player/order-hall/index?${query}`,
+      bossUrl: `${h5Origin}/#/pages/customer/candidates/index?${query}`,
+    };
+  }
+}
