@@ -1,65 +1,57 @@
-# 项目状态
+# 项目状态（2026-09-07 校对版）
 
 - 项目：陪玩门店多租户 SaaS
 - 规格版本：v1.0（2026-09-06 用户确认作为实现基线）
-- 状态日期：2026-09-06
-- 当前阶段：Slice 0 已实施（本地 + GitHub Actions 远程验证完成），等待 Slice 1
-- 业务代码：未开始（仅骨架与健康接口）
-- Slice 0：已实施；六条验收命令全部退出 0；H5 渲染已验证
-- 依赖：已安装（pnpm 10.34.5 经 corepack 固定；含根 devDependency @playwright/test 1.63.0）
-- Git 仓库：已初始化并推送远程 `https://github.com/ZhaoYiQii/pw-system.git`（origin/master 跟踪中）
-- Node：本机 24.19.0（≥24.15，满足基线）；CI 目标 24.20.0（.nvmrc）
-- Docker：Docker Desktop 运行中；postgres:18 / redis:7 / minio 容器已启动，postgres、redis healthy
-- 数据库：容器已启动但未建库、未迁移（Slice 1 引入）
-- H5：构建通过；Playwright Chromium 渲染验证页面显示 runtime=h5 / H5_ADAPTER
-- 微信小程序：weapp 构建通过（含 WECHAT_ADAPTER，无 h5 标记）；未提交、未发布
-- Linux 容器验证：未执行（Dockerfiles 与容器化属后续切片）
-- 云服务与真实密钥：未配置
+- 状态日期：2026-09-07
+- 当前阶段：核心业务主链路已在本地跑通并全绿；剩余为业务增强、工程收尾与发布上线（H1–H6）。具体开放项见 [docs/DEVELOPMENT_BACKLOG.md](docs/DEVELOPMENT_BACKLOG.md) 与 [docs/unverified-and-deferred.md](docs/unverified-and-deferred.md)。
 
-## 状态更新记录（必须带证据）
+## 本地环境
 
-- 2026-09-06 | Slice 0：lint/typecheck/test/build/build:h5/build:weapp 全部退出 0；git init + 提交；docker compose pull/up 退出 0。
-- 2026-09-06 | 降级项处理：winget 升级 Node→24.19.0（exit 0）；docker compose up -d（exit 0，三容器运行）；Playwright Chromium H5 渲染验证通过（runtime=h5/H5_ADAPTER，无控制台错误）；六条验收命令在 24.19.0 下重跑全绿。
+- Node 24.19.0、pnpm 10.34.5（corepack 固定）、Turbo、Vitest、Playwright 已就绪。
+- Docker：postgres:18 / redis:7 / minio 容器运行中；本机端口 postgres 5433、redis 6380、minio 9002/9003。
+- Git：远程 `https://github.com/ZhaoYiQii/pw-system.git`，`origin/master` 保持同步。
 
-## 下一允许动作
+## 本地四端运行拓扑
 
-Slice 1（租户开通与隔离）需用户明确授权后实施；涉及 packages/database（Prisma 7 + PostgreSQL RLS）、tenancy 模块、host/短码解析与租户隔离测试。数据库迁移与建库需单独授权。
+| 端 | 地址 | 角色 |
+| --- | --- | --- |
+| API | http://127.0.0.1:3100 | 统一后端（无页面） |
+| 平台端 / 商家端 | http://localhost:3005 | admin-web：平台登录与商家端同源不同路由 |
+| 陪玩端 / 老板端 | http://localhost:3101 | mobile H5：角色页同源不同页面 |
 
-## 范围决策记录（2026-09-06，用户明确）
+联调演示账号（密码均 `Dev-Password-123`）：`admin`（平台）、`owner`（店主）、`player`/`player2`（陪玩）、`customer`（老板），门店 code `c1`/`demo`。
 
-1. **小程序开发暂缓**：第一期推进期间不做微信小程序“开发/真机/审核/发布”；保留 `pnpm build:weapp` 作为兼容性编译门禁（防止移动端源码破坏双端可移植性），该门禁已全绿。Slice 13 与 weapp 增值服务相关工作整体后移，需另行授权。
-2. **mobile React 大版本**：接受 mobile 使用 React 18.3.1 作为当前基线（Taro 4.2.1 上游仅支持 react@^18），React 19 升版挂起，待 Taro 上游支持后作为独立任务；admin-web 保持 React 19.2.8。详见 ADR-0000。
-3. **远程仓库**：未提供远程地址与鉴权前，不执行任何 push/上传源码；CI workflow 仅在本地等价命令维度验证。- 2026-09-06 | 远程：`git push -u origin master` 退出码 0（gh 鉴权补充 workflow 权限后成功）；GitHub Actions CI 运行 34025773595 通过（1m7s，lint/typecheck/test/build/build:h5/build:weapp 全 ✓）。
+## 已完成范围（截至 2026-09-07）
 
-## Slice 1 进度（2026-09-06，partial）
+- 后端主线 Slice 0–11：多租户/RLS、认证与权限、门店/陪玩/客户档案、服务目录、订单状态机、派单报名选人、场次与证据、分成与账本、结算批次、争议/审计/通知、Outbox、AI 需求解析、SaaS 开通与套餐。
+- 安全与质量收尾 R1–R5：OpenAPI/契约、Zod 输入校验与 RFC9457 错误、requestId/日志、/health 与 /ready、覆盖率门禁、CSRF/Origin/Fetch-Metadata、手机号加密、运行连接三分离、审计覆盖与脱敏、Redis 限流、后台 worker（订阅到期/超时确认/Outbox 消费）。
+- 陪玩运营 Block1：游戏模板 CRUD 与商家可视化编辑、陪玩基础价/段位加价、通用派单、同位置多人档位、报名/取消/刷新、老板 H5 选人与确认陪玩。
+- Block2 P1–P5：老板钱包与充值（模拟支付）、选人余额校验、每档场次开始/结束与开始/结束双证据、实际时长分账扣费、门店确认结算、老板 H5 钱包页。
+- 前端：admin 新栈样板（Tailwind v4 + shadcn/ui + TanStack Query）及多数业务页；mobile Taro H5 登录/接单/选人/场次/证据/钱包/争议入口全部接线；微信小程序保持双端构建门禁。
+- 最近门禁证据：P5 前全量 integration 98 用例全绿（Block2 P4）；P5 为前端钱包与 admin 确认结算按钮、无后端变化，mobile/admin/h5 构建与 typecheck 已绿。文档整理提交不触碰门禁。
 
-- 完成：packages/database（Prisma 7 + tenancy 表 + FORCE RLS + pw_runtime 角色）；迁移已应用到 pw_saas 与 pw_saas_test；test:tenant-isolation 6/6、test:integration 2/2；回归全绿。
-- 未完成：API tenancy 模块/tenant-context、平台后台租户页、移动端 tenant-locator、停用不可用页。
-- 容器端口因宿主机原生服务占用改为 5433/6380/9002/9003。
-- 证据：prisma migrate deploy exit 0；vitest 输出见 docs/acceptance/slice-1-acceptance.md。
+## 仍未完成（摘要，详细见两份清单）
 
-## Slice 1 收尾（2026-09-06）
+- 业务缺口：平台一键开店前端闭环（T1）、微信/手机验证码登录、真实线上支付、自动催缴。
+- UI/体验：admin 结算批次页、旧订单筛选/独立详情、场次/证据独立视图；mobile 收入明细/争议详情独立页；G4 旧页面渐进迁移。
+- 工程收尾：Playwright E2E 正式入库并替换 `test:e2e` 占位、容量基线、integration branches 60→80、可选 worker 崩溃注入测试。
+- 发布上线（H1–H6）：Linux 容器化、备份/恢复演练、phase-1 acceptance、审计/日志脱敏上线复查、真实域名部署（H5 品牌运行态 + 同源反代）、统一入口设备自动跳转。
 
-- 完成剩余项：API tenancy 模块 + 拒绝客户端 tenantId；平台后台 /tenants 页；mobile tenant-locator（h5/weapp）+ 停用不可用页。Slice 1 代码层面完成。
-- 证据：typecheck 6/6、lint、unit 3/3、build 4/4、test:integration 8/8、test:tenant-isolation 6/6、build:h5、build:weapp 全绿（本地）。CI（GitHub Actions）跑 lint/typecheck/test/build/双端。
-- 遗留（非阻塞）：平台接口认证属 Slice 2；admin/mobile 运行态 E2E 需运行中的 API+真实域名，按验收命令范围以构建级为准。
+## 外部挂起
 
-## Slice 2 进度（2026-09-06，partial）
+- 微信小程序真机/审核/发布（用户决定主程序完成后处理）。
+- mobile React 19（等 Taro 上游支持）。
+- 短信/微信通知、真实支付、AI Provider、生产对象存储所需密钥/账号。
+- 真实域名/服务器/反向代理、生产 `PII_MASTER_KEY`。
 
-- 完成：迁移 auth_rbac 应用；scrypt 密码；jose access/refresh 旋转会话；AuthGuard(@Public/@PlatformScope/@TenantScope)；auth 端点；admin 登录页(/login、/store/login)；mobile identity-adapter。unit 7/7、integration 15/15、tenant-isolation 9/9、typecheck/lint/build/双端全绿。
-- 未完成：HTTP 级权限矩阵、H5 登录 E2E、HttpOnly cookie+CSRF/Origin、限流、初始管理员 seed。
+## 范围决策记录
 
-## Slice 2 收尾（2026-09-06）
+1. weapp 开发暂缓；保留 `pnpm build:weapp` 作为双端兼容性门禁。
+2. mobile React 18.3.1 为当前基线（Taro 4.2.1），React 19 升版挂起。
+3. admin 前端渐进迁移到 Tailwind v4 + shadcn/ui + TanStack Query；新功能一律新栈，旧页“改到即迁”。
+4. 金额统一十进制字符串分/BigInt，禁止浮点。
+5. Redis 共享限流 + DB Outbox 覆盖队列语义，不引入 BullMQ（2026-09-07 记录）。
 
-- 完成 HTTP 级权限矩阵、HttpOnly cookie+Origin 校验、登录限流、seed；HTTP E2E 5 用例；test:integration 20/20、unit 7/7、isolation 9/9、全量构建/双端绿。
-- 剩余（记录）：H5 浏览器登录 E2E 待 mobile H5 登录 UI（业务切片）；多实例限流 Redis（Slice 9）。
+## 状态更新记录
 
-## Slice 3 进度（2026-09-06，Phase A partial）
-
-- 完成 @pw/config-schema（Zod4 配置 schema/默认值/合并/测试 5 项），unit 12/12。
-- 剩余：config/entitlements 表与 API、admin/mobile 主题应用、契约测试（见台账 D）。
-
-## Slice 3 Phase B（2026-09-06）
-
-- 完成迁移3（config_versions/entitlements+RLS）、tenant-config/entitlements API、契约测试；test:integration 25/25、contract 3/3、unit 12/12、typecheck 8/8、build/双端绿。
-- 剩余：admin 主题/功能开关 UI、mobile runtime-config（台账 D）。
+- 2026-09-07 | 本文件由 Slice 0 骨架期状态整体校对为当前主线完成状态；历史切片证据回查 git log `cce1ca0..3692450`。
