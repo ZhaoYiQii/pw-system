@@ -1,9 +1,24 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ApiError, apiFetch } from "../../_lib/api";
-import { TenantNav } from "../../_lib/tenant-nav";
+import { TenantShell } from "../../_lib/tenant-shell";
 
 interface NotificationRow {
   id: string;
@@ -13,126 +28,155 @@ interface NotificationRow {
   createdAt: string;
 }
 
-type PageState =
-  | { phase: "loading" }
-  | { phase: "unauthenticated" }
-  | { phase: "error"; message: string }
-  | { phase: "ready" };
+function Inner() {
+  const queryClient = useQueryClient();
+  const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-export default function NotificationsPage() {
-  const [page, setPage] = useState<PageState>({ phase: "loading" });
-  const [rows, setRows] = useState<NotificationRow[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
+  const rowsQuery = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => apiFetch<NotificationRow[]>("/api/v1/tenant/notifications"),
+  });
 
-  const load = useCallback(async () => {
-    setPage({ phase: "loading" });
-    try {
-      setRows(
-        await apiFetch<NotificationRow[]>("/api/v1/tenant/notifications"),
-      );
-      setPage({ phase: "ready" });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        setPage({ phase: "unauthenticated" });
-      else
-        setPage({
-          phase: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const markRead = async (id: string) => {
-    try {
-      await apiFetch<unknown>(`/api/v1/tenant/notifications/${id}/read`, {
+  const markRead = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<unknown>(`/api/v1/tenant/notifications/${id}/read`, {
         method: "POST",
-      });
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    }
-  };
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
 
-  const markAll = async () => {
-    try {
-      const res = await apiFetch<{ updated: number }>(
-        "/api/v1/tenant/notifications/read-all",
-        { method: "POST" },
-      );
-      setMsg(`已将 ${res.updated} 条通知标记为已读。`);
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    }
-  };
+  const markAll = useMutation({
+    mutationFn: () =>
+      apiFetch<{ updated: number }>("/api/v1/tenant/notifications/read-all", {
+        method: "POST",
+      }),
+    onSuccess: (res) => {
+      setNotice(`已将 ${res.updated} 条通知标记为已读。`);
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+
+  const unauthorized =
+    rowsQuery.error instanceof ApiError && rowsQuery.error.status === 401;
+  if (unauthorized) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>尚未登录门店账号</CardTitle>
+          <CardDescription>请先以门店角色登录。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/store/login">去登录</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <main>
-      <TenantNav />
-      <div className="page">
-        <h1 className="page-title">站内通知</h1>
-        <p className="page-desc">订单状态事件推送；支持单项/全部标记已读。</p>
-        {msg ? <p className="banner banner-success">{msg}</p> : null}
-        {page.phase === "unauthenticated" ? (
-          <div className="card">
-            <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">
-              去登录
-            </Link>
-          </div>
-        ) : null}
-        {page.phase === "ready" ? (
-          <div className="card">
-            <div
-              className="row-actions"
-              style={{ justifyContent: "space-between" }}
-            >
-              <h2 className="card-title" style={{ margin: 0 }}>
-                通知（{rows.length}）
-              </h2>
-              <button className="btn" onClick={() => void markAll()}>
-                全部已读
-              </button>
+    <div className="flex flex-col gap-6">
+      {notice ? <p className="text-sm text-emerald-600">{notice}</p> : null}
+      {message ? <p className="text-sm text-destructive">{message}</p> : null}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>站内通知</CardTitle>
+              <CardDescription>
+                订单状态事件推送；支持单项/全部标记已读。
+              </CardDescription>
             </div>
-            {rows.length === 0 ? <p className="muted">暂无通知。</p> : null}
-            {rows.map((n) => (
+            <Button
+              variant="outline"
+              disabled={markAll.isPending}
+              onClick={() => markAll.mutate()}
+            >
+              全部已读
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {rowsQuery.isPending ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              加载中…
+            </p>
+          ) : null}
+          {rowsQuery.isError && !unauthorized ? (
+            <p className="text-sm text-destructive">
+              加载失败：
+              {rowsQuery.error instanceof Error
+                ? rowsQuery.error.message
+                : String(rowsQuery.error)}
+            </p>
+          ) : null}
+          {!rowsQuery.isPending && rowsQuery.data?.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              暂无通知。
+            </p>
+          ) : null}
+          <div className="flex flex-col divide-y">
+            {(rowsQuery.data ?? []).map((n) => (
               <div
                 key={n.id}
-                className="row-actions"
-                style={{
-                  justifyContent: "space-between",
-                  borderBottom: "1px solid var(--border)",
-                  padding: "10px 0",
-                  opacity: n.readAt ? 0.72 : 1,
-                }}
+                className={`flex items-start justify-between gap-4 py-3 ${
+                  n.readAt ? "opacity-70" : ""
+                }`}
               >
-                <div>
-                  <strong>{n.title ?? "系统通知"}</strong>
-                  <p className="muted" style={{ margin: "4px 0" }}>
+                <div className="min-w-0">
+                  <p className="font-medium">{n.title ?? "系统通知"}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {n.content}
                   </p>
-                  <span className="muted">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {new Date(n.createdAt).toLocaleString()}
                     {n.readAt ? " · 已读" : " · 未读"}
-                  </span>
+                  </p>
                 </div>
-                {n.readAt ? null : (
-                  <button className="btn" onClick={() => void markRead(n.id)}>
+                {!n.readAt ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={markRead.isPending}
+                    onClick={() => markRead.mutate(n.id)}
+                  >
                     标为已读
-                  </button>
-                )}
+                  </Button>
+                ) : null}
               </div>
             ))}
           </div>
-        ) : null}
-        {page.phase === "error" ? (
-          <p className="banner banner-error">加载失败：{page.message}</p>
-        ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function NotificationsPage() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <TenantShell>
+      <h1 className="text-2xl font-semibold tracking-tight">站内通知</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        门店关键操作与订单状态推送。
+      </p>
+      <div className="mt-6">
+        <QueryClientProvider client={queryClient}>
+          <Inner />
+        </QueryClientProvider>
       </div>
-    </main>
+    </TenantShell>
   );
 }
