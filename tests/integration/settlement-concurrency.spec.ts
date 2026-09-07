@@ -123,9 +123,49 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
     const b1 = (
       await req(ownerToken).post("/api/v1/tenant/settlements").expect(201)
     ).body.data as { id: string };
+
+    const pending = (
+      await req(ownerToken)
+        .get("/api/v1/tenant/settlements/earnings")
+        .expect(200)
+    ).body.data as Array<{
+      id: string;
+      amountFen: string;
+      playerName: string;
+      orderNo: string;
+    }>;
+    expect(
+      pending.some(
+        (e) =>
+          e.id === earningIds[0] &&
+          e.amountFen === "7700" &&
+          e.playerName === "结算玩" &&
+          typeof e.orderNo === "string" &&
+          e.orderNo.length > 0,
+      ),
+    ).toBe(true);
+
     await req(ownerToken)
       .post(`/api/v1/tenant/settlements/${b1.id}/items`, { earningIds })
       .expect(201);
+
+    const detail = (
+      await req(ownerToken)
+        .get(`/api/v1/tenant/settlements/${b1.id}`)
+        .expect(200)
+    ).body.data as {
+      id: string;
+      itemCount: number;
+      items: Array<{
+        earningId: string;
+        amountFen: string;
+        playerName: string;
+        orderNo: string;
+      }>;
+    };
+    expect(detail.itemCount).toBe(2);
+    expect(detail.items).toHaveLength(2);
+    expect(detail.items.every((i) => i.amountFen === "7700")).toBe(true);
 
     // 同一 earning 进第二个批次被拒
     const b2 = (

@@ -10,6 +10,27 @@ export interface BatchView {
   createdAt: Date;
 }
 
+export interface PendingEarningView {
+  id: string;
+  playerId: string;
+  amountFen: string;
+  playerName: string;
+  orderNo: string;
+  createdAt: Date;
+}
+
+export interface SettlementDetailItem {
+  earningId: string;
+  amountFen: string;
+  playerName: string;
+  orderNo: string;
+  createdAt: Date;
+}
+
+export interface SettlementDetailView extends BatchView {
+  items: SettlementDetailItem[];
+}
+
 export class PrismaSettlementsRepository {
   constructor(private readonly client: PrismaClient) {}
 
@@ -39,6 +60,93 @@ export class PrismaSettlementsRepository {
       });
     }
     return out;
+  }
+
+  async listEarnings(tenantId: string): Promise<PendingEarningView[]> {
+    const earnings = await this.client.earning.findMany({
+      where: { tenantId, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (earnings.length === 0) return [];
+    const playerIds = Array.from(new Set(earnings.map((e) => e.playerId)));
+    const orderIds = Array.from(new Set(earnings.map((e) => e.orderId)));
+    const players = await this.client.playerProfile.findMany({
+      where: { tenantId, id: { in: playerIds } },
+      select: { id: true, name: true },
+    });
+    const orders = await this.client.order.findMany({
+      where: { tenantId, id: { in: orderIds } },
+      select: { id: true, orderNo: true },
+    });
+    const playerById = new Map(players.map((p) => [p.id, p.name]));
+    const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+    return earnings.map((e) => ({
+      id: e.id,
+      playerId: e.playerId,
+      amountFen: e.amountFen.toString(),
+      playerName: playerById.get(e.playerId) ?? "未知陪玩",
+      orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+      createdAt: e.createdAt,
+    }));
+  }
+
+  async detail(
+    tenantId: string,
+    batchId: string,
+  ): Promise<SettlementDetailView | null> {
+    const batch = await this.client.settlementBatch.findFirst({
+      where: { tenantId, id: batchId },
+    });
+    if (!batch) return null;
+    const items = await this.client.settlementItem.findMany({
+      where: { tenantId, batchId },
+      orderBy: { createdAt: "asc" },
+    });
+    const outItems: SettlementDetailItem[] = [];
+    if (items.length > 0) {
+      const earningIds = items.map((i) => i.earningId);
+      const earnings = await this.client.earning.findMany({
+        where: { tenantId, id: { in: earningIds } },
+      });
+      const playerIds = Array.from(
+        new Set(earnings.map((e) => e.playerId)),
+      );
+      const orderIds = Array.from(new Set(earnings.map((e) => e.orderId)));
+      const players = await this.client.playerProfile.findMany({
+        where: { tenantId, id: { in: playerIds } },
+        select: { id: true, name: true },
+      });
+      const orders = await this.client.order.findMany({
+        where: { tenantId, id: { in: orderIds } },
+        select: { id: true, orderNo: true },
+      });
+      const playerById = new Map(players.map((p) => [p.id, p.name]));
+      const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+      for (const item of items) {
+        const earning = earnings.find((e) => e.id === item.earningId);
+        outItems.push({
+          earningId: item.earningId,
+          amountFen: item.amountFen.toString(),
+          playerName: earning
+            ? (playerById.get(earning.playerId) ?? "未知陪玩")
+            : "未知陪玩",
+          orderNo: earning
+            ? (orderNoById.get(earning.orderId) ?? "未知订单")
+            : "未知订单",
+          createdAt: item.createdAt,
+        });
+      }
+    }
+    return {
+      id: batch.id,
+      batchNo: batch.batchNo,
+      status: batch.status,
+      totalAmountFen: batch.totalAmountFen.toString(),
+      itemCount: items.length,
+      createdBy: batch.createdBy,
+      createdAt: batch.createdAt,
+      items: outItems,
+    };
   }
 
   async create(tenantId: string, actorId: string): Promise<string> {

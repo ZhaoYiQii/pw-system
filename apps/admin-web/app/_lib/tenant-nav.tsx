@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/disputes", label: "争议" },
   { href: "/settings", label: "门店设置" },
   { href: "/finance", label: "财务" },
+  { href: "/settlements", label: "结算批次" },
 ];
 
 /** D2：仅当租户已开通对应 addon 时才显示可选入口。 */

@@ -53,6 +53,28 @@ export class SettlementsController {
 
   @TenantScope()
   @Permissions("finance.manage")
+  @Get("earnings")
+  async listEarnings(@Req() req: AuthenticatedRequest) {
+    this.guard(req);
+    return { data: await this.repo.listEarnings(tenantIdOf(req)) };
+  }
+
+  @TenantScope()
+  @Permissions("finance.manage")
+  @Get(":id")
+  async detail(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    this.guard(req);
+    const view = await this.repo.detail(tenantIdOf(req), id);
+    if (!view)
+      throw new HttpException("批次不存在", HttpStatus.NOT_FOUND);
+    return { data: view };
+  }
+
+  @TenantScope()
+  @Permissions("finance.manage")
   @Post()
   async create(@Req() req: AuthenticatedRequest) {
     this.guard(req);
