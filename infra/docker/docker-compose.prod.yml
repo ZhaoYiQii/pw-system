@@ -108,6 +108,7 @@ services:
       dockerfile: infra/docker/Dockerfile.admin
       args:
         NEXT_PUBLIC_API_ORIGIN: ${NEXT_PUBLIC_API_ORIGIN}
+        NEXT_PUBLIC_TENANT_HOST_SUFFIX: ${NEXT_PUBLIC_TENANT_HOST_SUFFIX:-17ai.club}
     restart: unless-stopped
     environment:
       NODE_ENV: production

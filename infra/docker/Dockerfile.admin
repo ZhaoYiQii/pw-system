@@ -29,6 +29,8 @@ COPY packages/tsconfig packages/tsconfig
 
 ARG NEXT_PUBLIC_API_ORIGIN=https://api.17ai.club
 ENV NEXT_PUBLIC_API_ORIGIN=${NEXT_PUBLIC_API_ORIGIN}
+ARG NEXT_PUBLIC_TENANT_HOST_SUFFIX=17ai.club
+ENV NEXT_PUBLIC_TENANT_HOST_SUFFIX=${NEXT_PUBLIC_TENANT_HOST_SUFFIX}
 RUN pnpm --filter @pw/admin-web build
 
 FROM node:24.20.0-bookworm-slim AS runtime

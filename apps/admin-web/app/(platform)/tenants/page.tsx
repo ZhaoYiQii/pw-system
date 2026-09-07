@@ -32,6 +32,10 @@ import { ApiError, apiFetch, clearAccessToken } from "../../_lib/api";
 
 type TenantStatus = "ACTIVE" | "INACTIVE" | "CONFIG_ERROR";
 
+const tenantHostSuffix = (
+  process.env.NEXT_PUBLIC_TENANT_HOST_SUFFIX ?? "17ai.club"
+).replace(/^\./, "");
+
 interface TenantRow {
   id: string;
   code: string;
@@ -65,7 +69,7 @@ const STATUS_META: Record<
 
 function defaultHostFor(code: string): string {
   const c = code.trim().toLowerCase();
-  return c ? `${c}.example.com` : "";
+  return c ? `${c}.${tenantHostSuffix}` : "";
 }
 
 function primaryDomainHref(host: string): string {
@@ -241,13 +245,15 @@ function Inner() {
                   </label>
                   <Input
                     id="host"
-                    placeholder={defaultHostFor(code) || "shop.example.com"}
+                    placeholder={
+                      defaultHostFor(code) || `shop.${tenantHostSuffix}`
+                    }
                     value={host}
                     onChange={(e) => setHost(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
                     留空将自动生成{" "}
-                    {defaultHostFor(code) || "{code}.example.com"}。
+                    {defaultHostFor(code) || `{code}.${tenantHostSuffix}`}。
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">
