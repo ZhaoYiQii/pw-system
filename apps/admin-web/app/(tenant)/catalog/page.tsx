@@ -326,7 +326,7 @@ export default function CatalogPage() {
                 />
                 <button
                   className="btn btn-primary"
-                  disabled={busy}
+                  disabled={busy || !newGame.trim()}
                   onClick={() => void createGame()}
                 >
                   新建游戏
@@ -410,7 +410,7 @@ export default function CatalogPage() {
                     />
                     <button
                       className="btn btn-primary"
-                      disabled={busy}
+                      disabled={busy || !newRegion.trim()}
                       onClick={() => void createRegion()}
                     >
                       新建区服
@@ -478,7 +478,7 @@ export default function CatalogPage() {
                     </select>
                     <button
                       className="btn btn-primary"
-                      disabled={busy}
+                      disabled={busy || !newProduct.trim()}
                       onClick={() => void createProduct()}
                     >
                       新建产品
@@ -578,7 +578,13 @@ export default function CatalogPage() {
                   />
                   <button
                     className="btn btn-primary"
-                    disabled={busy}
+                    disabled={
+                      busy ||
+                      !ruleDuration.trim() ||
+                      Number(ruleDuration) <= 0 ||
+                      !rulePrice.trim() ||
+                      Number(rulePrice) <= 0
+                    }
                     onClick={() => void createRule()}
                   >
                     新增价格
