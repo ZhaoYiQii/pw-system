@@ -15,7 +15,7 @@
     "test:integration": "vitest run --config tests/vitest.integration.config.ts",
     "test:tenant-isolation": "vitest run --config tests/vitest.tenant-isolation.config.ts",
     "test:contract": "vitest run --config tests/vitest.contract.config.ts",
-    "test:coverage": "vitest run --config tests/vitest.integration.config.ts --coverage",
+    "test:coverage": "vitest run --config tests/vitest.coverage.config.ts --coverage",
     "test:coverage:critical": "vitest run --config tests/vitest.critical-domain.config.ts --coverage",
     "test:e2e": "playwright test",
     "build": "turbo run build",
