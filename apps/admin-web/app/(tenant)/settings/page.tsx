@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
+import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
 import { TenantNav } from "../../_lib/tenant-nav";
 
 interface BrandConfig {
@@ -413,16 +414,27 @@ export default function TenantSettingsPage() {
             <div className="card">
               <h2 className="card-title">增值功能（只读）</h2>
               <p className="card-desc">
-                增值功能由平台在「套餐与功能开关」中开通/关闭，这里仅展示当前状态。
+                增值功能由平台在「套餐与增值功能」中开通/关闭，这里仅展示当前状态。
               </p>
               {addons.length === 0 ? (
                 <p className="muted">加载中…</p>
               ) : (
                 <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>功能</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {addons.map((f) => (
                       <tr key={f.featureKey}>
-                        <td>{f.featureKey}</td>
+                        <td>
+                          <strong>{featureLabel(f.featureKey)}</strong>
+                          <div className="muted">
+                            {featureDescription(f.featureKey)}
+                          </div>
+                        </td>
                         <td>
                           <span
                             className={
