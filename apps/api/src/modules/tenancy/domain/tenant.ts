@@ -10,6 +10,7 @@ export interface TenantView {
   createdAt: Date;
   updatedAt: Date;
   version: number;
+  primaryHost?: string | null;
 }
 
 export interface ResolvedTenant {

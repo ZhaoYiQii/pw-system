@@ -16,7 +16,9 @@ function mapTenant(row: {
   createdAt: Date;
   updatedAt: Date;
   version: number;
+  domains?: { host: string }[];
 }): TenantView {
+  const primaryHost = row.domains?.[0]?.host;
   return {
     id: row.id,
     code: row.code,
@@ -26,6 +28,7 @@ function mapTenant(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     version: row.version,
+    ...(primaryHost ? { primaryHost } : {}),
   };
 }
 
@@ -67,6 +70,13 @@ export class PrismaTenantRepository implements TenantRepository {
   async listTenants(): Promise<TenantView[]> {
     const rows = await this.client.tenant.findMany({
       orderBy: { createdAt: "asc" },
+      include: {
+        domains: {
+          where: { isPrimary: true },
+          orderBy: { createdAt: "asc" },
+          take: 1,
+        },
+      },
     });
     return rows.map(mapTenant);
   }

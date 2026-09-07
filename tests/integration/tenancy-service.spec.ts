@@ -52,6 +52,20 @@ describe("tenancy service (application + repository)", () => {
     expect(resolved.status).toBe("ACTIVE");
   });
 
+  it("门店列表返回自动生成的主域名（primaryHost）", async () => {
+    const code = `svc_host_${suffix}`;
+    codes.push(code);
+    const host = `host-${suffix}.example.com`;
+    await service.createTenant({
+      code,
+      name: "列表主域名店",
+      primaryHost: host,
+    });
+    const list = await service.listTenants();
+    const row = list.find((item) => item.code === code);
+    expect(row?.primaryHost).toBe(host);
+  });
+
   it("重复 code 抛 DuplicateTenantCodeError", async () => {
     const code = `svc_dup_${suffix}`;
     codes.push(code);

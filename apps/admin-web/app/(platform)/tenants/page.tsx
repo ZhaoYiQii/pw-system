@@ -39,6 +39,7 @@ interface TenantRow {
   status: TenantStatus;
   timezone: string;
   createdAt: string;
+  primaryHost?: string | null;
 }
 
 interface PackageOption {
@@ -65,6 +66,10 @@ const STATUS_META: Record<
 function defaultHostFor(code: string): string {
   const c = code.trim().toLowerCase();
   return c ? `${c}.example.com` : "";
+}
+
+function primaryDomainHref(host: string): string {
+  return /^https?:\/\//i.test(host) ? host : `https://${host}`;
 }
 
 function Inner() {
@@ -241,8 +246,8 @@ function Inner() {
                     onChange={(e) => setHost(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    留空将自动生成 {defaultHostFor(code) || "{code}.example.com"}
-                    。
+                    留空将自动生成{" "}
+                    {defaultHostFor(code) || "{code}.example.com"}。
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -336,7 +341,9 @@ function Inner() {
               <CardTitle>
                 门店列表（{tenantsQuery.data?.length ?? 0}）
               </CardTitle>
-              <CardDescription>开通后店主可登录商家端开始使用。</CardDescription>
+              <CardDescription>
+                开通后店主可登录商家端开始使用。
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {tenantsQuery.isPending ? (
@@ -355,6 +362,7 @@ function Inner() {
                     <TableRow>
                       <TableHead>code</TableHead>
                       <TableHead>名称</TableHead>
+                      <TableHead>主域名</TableHead>
                       <TableHead>状态</TableHead>
                       <TableHead>时区</TableHead>
                       <TableHead className="text-right">操作</TableHead>
@@ -370,6 +378,20 @@ function Inner() {
                             {tenant.code}
                           </TableCell>
                           <TableCell>{tenant.name}</TableCell>
+                          <TableCell className="max-w-[240px]">
+                            {tenant.primaryHost ? (
+                              <a
+                                href={primaryDomainHref(tenant.primaryHost)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="break-all text-sky-600 hover:underline"
+                              >
+                                {tenant.primaryHost}
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={meta.variant}>{meta.text}</Badge>
                           </TableCell>
@@ -379,9 +401,7 @@ function Inner() {
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button asChild variant="outline" size="sm">
-                                <Link
-                                  href={`/packages?tenantId=${tenant.id}`}
-                                >
+                                <Link href={`/packages?tenantId=${tenant.id}`}>
                                   套餐/功能
                                 </Link>
                               </Button>
@@ -425,10 +445,7 @@ function PlatformHeader({ onLogout }: { onLogout: () => void }) {
     <header className="flex items-center gap-5 border-b bg-white px-6 py-3">
       <span className="font-semibold">PW SaaS</span>
       <nav className="flex items-center gap-4 text-sm">
-        <Link
-          href="/tenants"
-          className="font-medium text-foreground"
-        >
+        <Link href="/tenants" className="font-medium text-foreground">
           租户管理
         </Link>
         <Link
