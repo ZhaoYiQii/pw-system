@@ -31,6 +31,17 @@
 - 开发用 Fake Provider 在生产环境必须硬失败，不能静默启用。
 - 只修改当前 Slice 拥有的文件；需要越界时停止并说明原因。
 
+### 前端技术栈（G4 渐进式迁移）
+
+- 2026-09-07 用户决定：admin 前端采用渐进式迁移，新功能一律使用新栈；旧页面“改到即迁”，目标是把全部程序逐步迁移到新栈。
+- 新栈基线：Tailwind v4（`apps/admin-web/app/globals.css` 中的 token 与 utilities）、shadcn/ui 风格组件（`apps/admin-web/components/ui/*`）、TanStack Query 服务端数据、Zustand（仅出现共享全局状态时再引入，不得为了用而用）。
+- 新增或重写 admin 页面/组件时必须使用新栈；不得在新页面继续使用旧 `globals.css` 自建 `.card/.btn/.data-table` 等遗留类。
+- 修改一个旧页面时，应把该页一次性迁移到新栈（含数据请求改用 TanStack Query）；不得在同一页面同时混用旧类与新组件。
+- 未在当前任务范围内且未被触碰的旧页面不主动迁移，避免无关改动扩散；迁移到某页后从任务清单记录该页状态。
+- 移动端 Taro（H5/weapp）不引入 Tailwind/shadcn；TanStack Query/Zustand 若引入必须先经平台契约/ADR。
+- 所有旧样式只可在没有活动使用方后，作为独立清理任务删除；删除前用 `rg` 验证无引用。
+- 迁移不得改变后端 API、金额、权限、租户隔离或既有门禁；每次迁移后跑 admin typecheck/lint/build。
+
 ## 测试与完成声明
 
 有可执行测试缝隙的行为必须先建立失败测试，再做最小实现。任何失败先复现和诊断一个可证伪的根因，不得连续盲改。
