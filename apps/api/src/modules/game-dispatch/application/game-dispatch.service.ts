@@ -342,6 +342,101 @@ export class GameDispatchService {
     return this.lines(tenantId, found.gd.id, orderId);
   }
 
+  async playerSignup(
+    tenantId: string,
+    playerAccountId: string,
+    orderId: string,
+  ): Promise<{
+    orderId: string;
+    status: string;
+    round: DispatchView["round"];
+    lines: Array<{
+      lineId: string;
+      positionLabel: string;
+      requiredCount: number;
+      myApplicationId: string | null;
+      myStatus: string | null;
+    }>;
+  }> {
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: playerAccountId },
+    });
+    if (!player) throw new DispatchNotFoundError("陪玩档案未绑定");
+    const found = await this.findDispatch(tenantId, orderId);
+    if (!found) throw new DispatchNotFoundError();
+    const lines = await this.client.gameDispatchLine.findMany({
+      where: { tenantId, dispatchOrderId: found.gd.id },
+      orderBy: { sortOrder: "asc" },
+    });
+    const apps = await this.client.gameDispatchApplication.findMany({
+      where: { tenantId, orderId, playerId: player.id },
+    });
+    const round = await this.client.gameDispatchRound.findFirst({
+      where: { tenantId, orderId },
+      orderBy: { roundNo: "desc" },
+    });
+    return {
+      orderId,
+      status: found.order.status,
+      round: round
+        ? {
+            roundNo: round.roundNo,
+            opensAt: round.opensAt.toISOString(),
+            closesAt: round.closesAt.toISOString(),
+            status: round.status,
+          }
+        : null,
+      lines: lines.map((line) => {
+        const mine = apps.find(
+          (a) => a.lineId === line.id && a.status === "APPLIED",
+        );
+        return {
+          lineId: line.id,
+          positionLabel: line.positionLabel,
+          requiredCount: line.requiredCount,
+          myApplicationId: mine?.id ?? null,
+          myStatus: mine?.status ?? null,
+        };
+      }),
+    };
+  }
+
+  private async customerOf(
+    tenantId: string,
+    customerAccountId: string,
+    orderId: string,
+  ): Promise<{ customerProfileId: string }> {
+    const profile = await this.client.customerProfile.findFirst({
+      where: { tenantId, tenantAccountId: customerAccountId },
+    });
+    if (!profile) throw new DispatchNotFoundError("老板档案未绑定");
+    const order = await this.client.order.findFirst({
+      where: { tenantId, id: orderId },
+    });
+    if (!order || order.customerProfileId !== profile.id)
+      throw new DispatchNotFoundError("无权操作该订单");
+    return { customerProfileId: profile.id };
+  }
+
+  async customerView(
+    tenantId: string,
+    customerAccountId: string,
+    orderId: string,
+  ): Promise<DispatchView> {
+    await this.customerOf(tenantId, customerAccountId, orderId);
+    return this.view(tenantId, orderId);
+  }
+
+  async customerAssign(
+    tenantId: string,
+    customerAccountId: string,
+    orderId: string,
+    applicationIds: string[],
+  ): Promise<DispatchView> {
+    await this.customerOf(tenantId, customerAccountId, orderId);
+    return this.assign(tenantId, customerAccountId, orderId, applicationIds);
+  }
+
   async apply(
     tenantId: string,
     playerAccountId: string,
@@ -683,11 +778,17 @@ export class GameDispatchService {
       .map((c) => `${c.label}：${valueOf(c.valueKey)}`)
       .join("\n");
     const h5Origin = process.env.H5_ORIGIN ?? "";
-    const query = `order=${orderId}`;
+    const tenantRow = await this.client.tenant.findUnique({
+      where: { id: tenantId },
+      select: { code: true },
+    });
+    const query = `order=${orderId}&tenant=${encodeURIComponent(
+      tenantRow?.code ?? "",
+    )}`;
     return {
       copyText,
-      applyUrl: `${h5Origin}/#/pages/player/order-hall/index?${query}`,
-      bossUrl: `${h5Origin}/#/pages/customer/candidates/index?${query}`,
+      applyUrl: `${h5Origin}/#/pages/player/game-signup/index?${query}`,
+      bossUrl: `${h5Origin}/#/pages/customer/game-select/index?${query}`,
     };
   }
 }

@@ -453,3 +453,12 @@ routeValidations.set(
     }),
   },
 );
+
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch/customer/orders/:orderId/assignment",
+  {
+    body: z.strictObject({
+      applicationIds: z.array(z.string().uuid()).min(1).max(100),
+    }),
+  },
+);

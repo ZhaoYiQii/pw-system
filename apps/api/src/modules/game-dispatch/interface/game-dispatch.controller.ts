@@ -123,6 +123,80 @@ export class GameDispatchController {
   }
 
   @TenantScope()
+  @Permissions("dispatch.manage")
+  @Get("player/orders/:orderId/signup")
+  async playerSignup(
+    @Req() req: AuthenticatedRequest,
+    @Param("orderId") orderId: string,
+  ) {
+    if (req.principal?.role !== "PLAYER") {
+      throw new HttpException("需要陪玩身份", HttpStatus.FORBIDDEN);
+    }
+    try {
+      return {
+        data: await this.dispatch.playerSignup(
+          tenantIdOf(req),
+          req.principal.sub,
+          orderId,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("order.manage")
+  @Get("customer/orders/:orderId/select")
+  async customerSelect(
+    @Req() req: AuthenticatedRequest,
+    @Param("orderId") orderId: string,
+  ) {
+    if (req.principal?.role !== "CUSTOMER") {
+      throw new HttpException("需要老板身份", HttpStatus.FORBIDDEN);
+    }
+    try {
+      return {
+        data: await this.dispatch.customerView(
+          tenantIdOf(req),
+          req.principal.sub,
+          orderId,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("order.manage")
+  @Post("customer/orders/:orderId/assignment")
+  async customerAssign(
+    @Req() req: AuthenticatedRequest,
+    @Param("orderId") orderId: string,
+    @Body() body: { applicationIds?: unknown },
+  ) {
+    if (req.principal?.role !== "CUSTOMER") {
+      throw new HttpException("需要老板身份", HttpStatus.FORBIDDEN);
+    }
+    try {
+      const ids = Array.isArray(body.applicationIds)
+        ? body.applicationIds.filter((v): v is string => typeof v === "string")
+        : [];
+      return {
+        data: await this.dispatch.customerAssign(
+          tenantIdOf(req),
+          req.principal.sub,
+          orderId,
+          ids,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
   @Permissions("gameDispatch.manage")
   @Get("orders/:orderId/copy-text")
   async copy(

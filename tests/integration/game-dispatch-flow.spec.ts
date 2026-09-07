@@ -26,6 +26,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
   let tenantId: string;
   let customerId: string;
   let ownerToken: string;
+  let customerToken = "";
   let templateId = "";
   let playerTokens: Record<string, string> = {};
   let orderId = "";
@@ -66,6 +67,20 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       data: { tenantId, name: "老板一号" },
     });
     customerId = customer.id;
+    const customerAcc = await client.tenantAccount.create({
+      data: { tenantId, username: `cb_${suffix}`, passwordHash: hash },
+    });
+    await client.tenantAccountRole.create({
+      data: {
+        tenantId,
+        tenantAccountId: customerAcc.id,
+        role: "CUSTOMER",
+      },
+    });
+    await client.customerProfile.update({
+      where: { id: customer.id },
+      data: { tenantAccountId: customerAcc.id },
+    });
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -80,6 +95,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       return (res.body as { data: Data }).data.accessToken as string;
     }
     ownerToken = await login("boss");
+    customerToken = await login(`cb_${suffix}`);
     playerTokens = {
       p1: await login(`p1_${suffix}`),
       p2: await login(`p2_${suffix}`),
@@ -272,15 +288,18 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       applications: Array<{ id: string }>;
     }>;
     const ids = refreshed.flatMap((a) => a.applications.map((x) => x.id));
-    await req(ownerToken)
-      .post(`/api/v1/tenant/game-dispatch/orders/${orderId}/assignment`, {
-        applicationIds: ids.slice(0, 2),
-      })
-      .expect(201);
-    const finalAssign = await req(ownerToken)
-      .post(`/api/v1/tenant/game-dispatch/orders/${orderId}/assignment`, {
-        applicationIds: ids.slice(2, 3),
-      })
+    const selectView = (
+      await req(customerToken)
+        .get(`/api/v1/tenant/game-dispatch/customer/orders/${orderId}/select`)
+        .expect(200)
+    ).body.data as { lines: Array<{ applications: Array<{ id: string }> }> };
+    expect(selectView.lines.flatMap((l) => l.applications)).toHaveLength(3);
+
+    const finalAssign = await req(customerToken)
+      .post(
+        `/api/v1/tenant/game-dispatch/customer/orders/${orderId}/assignment`,
+        { applicationIds: ids },
+      )
       .expect(201);
     expect((finalAssign.body as { data: { status: string } }).data.status).toBe(
       "ASSIGNED",

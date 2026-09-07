@@ -4,7 +4,9 @@ export default defineAppConfig({
     "pages/player/profile/index",
     "pages/player/availability/index",
     "pages/player/order-hall/index",
+    "pages/player/game-signup/index",
     "pages/customer/candidates/index",
+    "pages/customer/game-select/index",
   ],
   window: {
     backgroundTextStyle: "light",
