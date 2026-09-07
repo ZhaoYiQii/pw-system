@@ -463,6 +463,12 @@ routeValidations.set(
   },
 );
 
+routeValidations.set("POST /api/v1/boss/wallet/recharge", {
+  body: z.strictObject({
+    amountFen: positiveFenMoney("amountFen"),
+  }),
+});
+
 routeValidations.set("POST /api/v1/tenant/game-dispatch/customer/orders", {
   body: z.strictObject({
     templateId: z.string().uuid(),

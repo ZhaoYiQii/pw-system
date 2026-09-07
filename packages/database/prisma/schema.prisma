@@ -1087,3 +1087,117 @@ model OrderSlot {
   @@index([tenantId, playerId, status])
   @@map("order_slots")
 }
+
+// ===== Block2：老板钱包 / 模拟支付 / 档位场次与结算 =====
+
+model BossWallet {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  customerProfileId String   @map("customer_profile_id") @db.Uuid
+  bossNo            String   @map("boss_no")
+  balanceFen        BigInt   @map("balance_fen") @db.BigInt
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  version           Int      @default(1)
+
+  @@unique([tenantId, customerProfileId])
+  @@unique([tenantId, bossNo])
+  @@index([tenantId, bossNo])
+  @@map("boss_wallets")
+}
+
+model WalletEntry {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  customerProfileId String   @map("customer_profile_id") @db.Uuid
+  walletId          String   @map("wallet_id") @db.Uuid
+  txNo              String   @map("tx_no")
+  type              String
+  amountFen         BigInt   @map("amount_fen") @db.BigInt
+  balanceAfterFen   BigInt   @map("balance_after_fen") @db.BigInt
+  referenceType     String?  @map("reference_type")
+  referenceId       String?  @map("reference_id")
+  reason            String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, txNo])
+  @@index([tenantId, customerProfileId, createdAt])
+  @@index([tenantId, referenceType, referenceId])
+  @@map("wallet_entries")
+}
+
+model PaymentOrder {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  customerProfileId String    @map("customer_profile_id") @db.Uuid
+  outNo             String    @map("out_no")
+  amountFen         BigInt    @map("amount_fen") @db.BigInt
+  provider          String    @default("mock")
+  providerRef       String?   @map("provider_ref")
+  status            String    @default("PENDING")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  version           Int       @default(1)
+
+  @@unique([tenantId, outNo])
+  @@index([tenantId, customerProfileId, status])
+  @@map("payment_orders")
+}
+
+model SlotSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  orderSlotId      String    @map("order_slot_id") @db.Uuid
+  orderId          String    @map("order_id") @db.Uuid
+  playerId         String    @map("player_id") @db.Uuid
+  startedAt        DateTime? @map("started_at") @db.Timestamptz
+  endedAt          DateTime? @map("ended_at") @db.Timestamptz
+  durationSeconds  Int?      @map("duration_seconds")
+  status           String    @default("NOT_STARTED")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
+
+  @@unique([tenantId, orderSlotId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, playerId, status])
+  @@map("slot_sessions")
+}
+
+model SlotEvidence {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  sessionId    String   @map("session_id") @db.Uuid
+  orderSlotId  String   @map("order_slot_id") @db.Uuid
+  objectKey    String   @map("object_key") @unique
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  sha256       String
+  evidenceType String   @map("evidence_type")
+  uploadedBy   String?  @map("uploaded_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, sessionId])
+  @@index([tenantId, orderSlotId])
+  @@map("slot_evidence")
+}
+
+model SlotEarning {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  orderSlotId   String   @map("order_slot_id") @db.Uuid
+  orderId       String   @map("order_id") @db.Uuid
+  playerId      String   @map("player_id") @db.Uuid
+  amountFen     BigInt   @map("amount_fen") @db.BigInt
+  status        String   @default("PENDING")
+  detailJson    Json     @default("{}") @map("detail_json")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  version       Int      @default(1)
+
+  @@unique([tenantId, orderSlotId])
+  @@index([tenantId, orderId])
+  @@index([tenantId, playerId, status])
+  @@map("slot_earnings")
+}

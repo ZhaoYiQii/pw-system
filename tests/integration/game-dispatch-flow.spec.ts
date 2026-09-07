@@ -154,6 +154,9 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       await client.order.deleteMany({ where: { tenantId } });
       await client.playerSkill.deleteMany({ where: { tenantId } });
       await client.playerProfile.deleteMany({ where: { tenantId } });
+      await client.paymentOrder.deleteMany({ where: { tenantId } });
+      await client.walletEntry.deleteMany({ where: { tenantId } });
+      await client.bossWallet.deleteMany({ where: { tenantId } });
       await client.customerProfile.deleteMany({ where: { tenantId } });
       await client.gameDispatchRankRule.deleteMany({ where: { tenantId } });
       await client.gameDispatchPosition.deleteMany({ where: { tenantId } });
@@ -329,5 +332,27 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     expect(
       (draft.body as { data: { dispatchNo: string } }).data.dispatchNo,
     ).toMatch(/^GD/);
+  });
+
+  it("老板钱包可充值并生成流水", async () => {
+    const first = (
+      await req(customerToken).get("/api/v1/boss/wallet").expect(200)
+    ).body.data as { bossNo: string; balanceFen: string };
+    expect(first.bossNo).toMatch(/^B/);
+    expect(first.balanceFen).toBe("0");
+
+    const after = (
+      await req(customerToken)
+        .post("/api/v1/boss/wallet/recharge", { amountFen: "10000" })
+        .expect(201)
+    ).body.data as {
+      balanceFen: string;
+      entries: Array<{ txNo: string; type: string; amountFen: string }>;
+    };
+    expect(after.balanceFen).toBe("10000");
+    expect(after.entries[0]).toMatchObject({
+      type: "RECHARGE",
+      amountFen: "10000",
+    });
   });
 });
