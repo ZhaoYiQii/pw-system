@@ -54,7 +54,9 @@ export default function OrderHallPage() {
       )?.enabled;
       setHallEnabled(enabled !== false);
       if (enabled === false)
-        setMsg("该门店未开通接单大厅 addon，无法报名接单。");
+        setMsg(
+          "该门店未开通「陪玩接单大厅」，暂时无法报名接单，请联系门店开通。",
+        );
     } catch {
       setHallEnabled(true);
     }

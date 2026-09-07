@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiFetch, clearAccessToken } from "../../_lib/api";
+import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
 
 interface Tenant {
   id: string;
@@ -17,31 +18,6 @@ interface FeatureState {
   core: boolean;
   enabled: boolean;
 }
-
-const FEATURE_LABELS: Record<string, string> = {
-  "core.tenancy": "租户与域名解析",
-  "core.identity": "身份与账号体系",
-  "core.audit": "审计日志",
-  "core.customers": "客户管理",
-  "core.players": "陪玩管理",
-  "core.catalog": "服务目录与价格",
-  "core.orders": "订单",
-  "core.dispatch": "派单",
-  "core.sessions": "服务场次",
-  "core.settlements": "结算",
-  "addon.customer_self_service": "客户自助服务",
-  "addon.player_order_hall": "陪玩接单大厅",
-  "addon.ai_requirement_parser": "AI 需求解析",
-  "addon.ai_match_recommendation": "AI 匹配推荐",
-  "addon.ai_anomaly_detection": "AI 异常检测",
-  "addon.advanced_reports": "高级报表",
-  "addon.custom_domain": "自定义域名",
-  "addon.independent_miniprogram": "独立小程序",
-  "addon.online_payment": "在线支付",
-  "addon.enterprise_wechat_notifications": "企业微信通知",
-  "addon.chain_stores": "连锁门店",
-  "addon.open_api": "开放 API",
-};
 
 type LoadState =
   | { phase: "loading" }
@@ -131,9 +107,7 @@ export default function PlatformPackagesPage() {
         },
       );
       setFeatures(list);
-      setNotice(
-        `已${next ? "开启" : "关闭"} ${FEATURE_LABELS[featureKey] ?? featureKey}。`,
-      );
+      setNotice(`已${next ? "开启" : "关闭"} ${featureLabel(featureKey)}。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -163,10 +137,10 @@ export default function PlatformPackagesPage() {
         </button>
       </nav>
       <div className="page">
-        <h1 className="page-title">套餐与功能开关</h1>
+        <h1 className="page-title">套餐与增值功能</h1>
         <p className="page-desc">
-          为门店开通/关闭增值功能（核心功能永久启用）。后端 API
-          与前端菜单同时受开关约束。
+          为门店开通或关闭增值功能。关闭后，门店后台对应的功能入口会隐藏，
+          相关服务也会停用。
         </p>
 
         {state.phase === "unauthenticated" ? (
@@ -221,9 +195,7 @@ export default function PlatformPackagesPage() {
               <>
                 <div className="card">
                   <h2 className="card-title">核心功能（永久启用）</h2>
-                  <p className="card-desc">
-                    随套餐提供，不可关闭；平台只管理下方增值功能。
-                  </p>
+                  <p className="card-desc">随套餐长期提供，不可单独关闭。</p>
                   <table className="data-table">
                     <tbody>
                       {core.map((f) => (
@@ -232,9 +204,11 @@ export default function PlatformPackagesPage() {
                             <span className="badge badge-info">常开</span>
                           </td>
                           <td>
-                            {FEATURE_LABELS[f.featureKey] ?? f.featureKey}
+                            <strong>{featureLabel(f.featureKey)}</strong>
+                            <div className="muted">
+                              {featureDescription(f.featureKey)}
+                            </div>
                           </td>
-                          <td className="muted">{f.featureKey}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -244,14 +218,11 @@ export default function PlatformPackagesPage() {
                 <div className="card">
                   <h2 className="card-title">增值功能（可销售）</h2>
                   <p className="card-desc">
-                    关闭后对应模块的 API 返回 403，前端入口同步隐藏（Slice 3+
-                    逐步接入）。
+                    按门店经营需要逐个开通；开启后，商家后台会出现对应的功能入口。
                   </p>
                   <table className="data-table">
                     <tbody>
                       {addons.map((f) => {
-                        const label =
-                          FEATURE_LABELS[f.featureKey] ?? f.featureKey;
                         return (
                           <tr key={f.featureKey}>
                             <td>
@@ -268,8 +239,10 @@ export default function PlatformPackagesPage() {
                               </label>
                             </td>
                             <td>
-                              {label}
-                              <div className="muted">{f.featureKey}</div>
+                              <strong>{featureLabel(f.featureKey)}</strong>
+                              <div className="muted">
+                                {featureDescription(f.featureKey)}
+                              </div>
                             </td>
                             <td>
                               <span

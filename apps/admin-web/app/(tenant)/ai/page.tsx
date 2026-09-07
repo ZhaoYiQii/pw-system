@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
+import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
 import { TenantNav } from "../../_lib/tenant-nav";
 
 interface FeatureRow {
@@ -60,8 +61,8 @@ export default function AiPage() {
       <div className="page">
         <h1 className="page-title">AI 需求助手</h1>
         <p className="page-desc">
-          解析订单需求与推荐陪玩的能力状态；未配置外部 Provider
-          时明确显示不可用，不伪装成功。
+          查看 AI 相关功能的开通与实际可用状态；未配置服务商时会明确提示不可用，
+          不伪装成功。
         </p>
         {page.phase === "unauthenticated" ? (
           <div className="card">
@@ -77,16 +78,17 @@ export default function AiPage() {
               <h2 className="card-title">AI 能力</h2>
               <p className="muted">
                 {capabilities?.supported
-                  ? `可用（Provider: ${capabilities.provider ?? "-"}）`
+                  ? `可用（服务商：${capabilities.provider ?? "-"}）`
                   : `不可用：${capabilities?.reason ?? "未配置"}`}
               </p>
             </div>
             <div className="card">
-              <h2 className="card-title">套餐开关（只读）</h2>
+              <h2 className="card-title">AI 增值功能（只读）</h2>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Feature</th>
+                    <th>功能</th>
+                    <th>说明</th>
                     <th>状态</th>
                   </tr>
                 </thead>
@@ -95,7 +97,10 @@ export default function AiPage() {
                     .filter((f) => f.featureKey.startsWith("addon.ai_"))
                     .map((f) => (
                       <tr key={f.featureKey}>
-                        <td>{f.featureKey}</td>
+                        <td>{featureLabel(f.featureKey)}</td>
+                        <td className="muted">
+                          {featureDescription(f.featureKey)}
+                        </td>
                         <td>
                           <span
                             className={
@@ -113,7 +118,9 @@ export default function AiPage() {
               </table>
               {features.filter((f) => f.featureKey.startsWith("addon.ai_"))
                 .length === 0 ? (
-                <p className="muted">套餐未包含任何 AI addon。</p>
+                <p className="muted">
+                  尚未开通 AI 增值功能，可让平台方在“套餐与增值功能”页开通。
+                </p>
               ) : null}
             </div>
           </>
