@@ -31,7 +31,7 @@ async function enableAddon(featureKey) {
 await enableAddon("addon.customer_self_service");
 await enableAddon("addon.player_order_hall");
 
-async function requireAccount(username, roleHint) {
+async function requireAccount(username) {
   const account = await client.tenantAccount.findFirst({
     where: { tenantId: tid, username },
   });
@@ -66,12 +66,12 @@ async function ensureProfile(model, name, account, extra = {}) {
 }
 
 // 客户账号 customer 绑定「老王」，陪玩账号 player 绑定「阿伟」。
-const customerAccount = await requireAccount("customer", "CUSTOMER");
+const customerAccount = await requireAccount("customer");
 await ensureProfile("customerProfile", "老王", customerAccount, {
   remark: "门店联调演示客户",
 });
 
-const playerAccount = await requireAccount("player", "PLAYER");
+const playerAccount = await requireAccount("player");
 const player = await ensureProfile("playerProfile", "阿伟", playerAccount, {
   intro: "王者荣耀 荣耀王者 50星",
 });

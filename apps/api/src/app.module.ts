@@ -24,6 +24,7 @@ import { DisputesModule } from "./modules/disputes/disputes.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { AiAssistantModule } from "./modules/ai-assistant/ai.module.js";
 import { PlatformBillingModule } from "./modules/platform-billing/platform-billing.module.js";
+import { GameDispatchModule } from "./modules/game-dispatch/game-dispatch.module.js";
 
 @Module({
   controllers: [HealthController, ReadyController],
@@ -44,6 +45,7 @@ import { PlatformBillingModule } from "./modules/platform-billing/platform-billi
     NotificationsModule,
     AiAssistantModule,
     PlatformBillingModule,
+    GameDispatchModule,
   ],
   providers: [
     HealthService,

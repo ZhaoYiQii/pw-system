@@ -366,3 +366,60 @@ routeValidations.set("POST /api/v1/tenant/players/:id/availability", {
     reason: nullableText("reason", 200),
   }),
 });
+
+const gameTemplateFieldBody = z.strictObject({
+  fieldKey: z
+    .string()
+    .regex(/^[a-z][a-z0-9_]{0,39}$/, "字段标识需为小写字母开头字母数字下划线"),
+  label: z.string().trim().min(1).max(40, "字段名称超长"),
+  fieldType: z.enum([
+    "text",
+    "select",
+    "multiline",
+    "datetime",
+    "duration",
+    "note",
+  ]),
+  required: z.boolean().optional(),
+  options: z.array(z.string().min(1).max(50)).max(100).optional(),
+  placeholder: z.string().max(60).nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  enabled: z.boolean().optional(),
+});
+
+const gameTemplatePositionBody = z.strictObject({
+  label: z.string().trim().min(1).max(40, "位置名称超长"),
+  defaultCount: z.number().int().min(1).max(10).optional(),
+  enabled: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+const gameTemplateRankBody = z.strictObject({
+  rankLabel: z.string().trim().min(1).max(40, "段位名称超长"),
+  addPriceFen: fenMoney("addPriceFen"),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+const gameTemplateCopyLineBody = z.strictObject({
+  label: z.string().trim().min(1).max(200, "文案行超长"),
+  valueKey: z.string().max(40).nullable().optional(),
+});
+
+const gameTemplateBody = z.strictObject({
+  name: z.string().trim().min(1).max(60, "模板名称超长"),
+  enabled: z.boolean().optional(),
+  fields: z.array(gameTemplateFieldBody).max(100).optional(),
+  positions: z.array(gameTemplatePositionBody).max(50).optional(),
+  rankRules: z.array(gameTemplateRankBody).max(50).optional(),
+  copyLines: z.array(gameTemplateCopyLineBody).max(100).optional(),
+});
+
+routeValidations.set("POST /api/v1/tenant/game-templates", {
+  body: gameTemplateBody,
+});
+
+routeValidations.set("PATCH /api/v1/tenant/game-templates/:id", {
+  body: gameTemplateBody.partial().refine((v) => Object.keys(v).length > 0, {
+    message: "至少提供一个可更新字段",
+  }),
+});

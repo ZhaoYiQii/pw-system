@@ -26,6 +26,7 @@ export const PERMISSION_KEYS = [
   "finance.manage",
   "settlement.manage",
   "dispute.manage",
+  "gameDispatch.manage",
   "audit.view",
   "report.view",
   "ai.view",
@@ -55,6 +56,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
     "finance.manage",
     "settlement.manage",
     "dispute.manage",
+    "gameDispatch.manage",
     "report.view",
     "audit.view",
   ],
@@ -63,6 +65,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
     "catalog.manage",
     "customer.manage",
     "player.manage",
+    "gameDispatch.manage",
     "report.view",
   ],
   CUSTOMER_SERVICE: [
@@ -72,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
     "dispatch.manage",
     "session.manage",
     "dispute.manage",
+    "gameDispatch.manage",
   ],
   FINANCE: [
     "tenant.view",
