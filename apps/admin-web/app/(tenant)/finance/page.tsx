@@ -1,9 +1,32 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ApiError, apiFetch } from "../../_lib/api";
-import { TenantNav } from "../../_lib/tenant-nav";
+import { TenantShell } from "../../_lib/tenant-shell";
 import { formatFenYuan, sumFen } from "../../_lib/money";
 
 interface Rules {
@@ -20,187 +43,209 @@ function pct(bp: number): string {
   return `${(bp / 100).toFixed(2)}%`;
 }
 
-export default function FinancePage() {
-  const [rules, setRules] = useState<Rules | null>(null);
+function Inner() {
   const [storeCut, setStoreCut] = useState("");
   const [amount, setAmount] = useState("");
   const [split, setSplit] = useState<Split | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
-  const [unauth, setUnauth] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        setRules(await apiFetch<Rules>("/api/v1/tenant/finance-rules"));
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 401) setUnauth(true);
-        else setMsg(error instanceof Error ? error.message : String(error));
-      }
-    })();
-  }, []);
+  const rulesQuery = useQuery({
+    queryKey: ["finance", "rules"],
+    queryFn: () => apiFetch<Rules>("/api/v1/tenant/finance-rules"),
+  });
 
-  const saveStoreCut = async () => {
-    setBusy(true);
-    setMsg(null);
-    setOk(null);
-    try {
-      const updated = await apiFetch<Rules>(
-        "/api/v1/tenant/finance-rules/store-cut",
-        {
-          method: "POST",
-          body: JSON.stringify({ storeCutBp: Number(storeCut) }),
-        },
-      );
-      setRules(updated);
-      setOk("已保存门店抽成。");
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const saveStoreCut = useMutation({
+    mutationFn: () =>
+      apiFetch<Rules>("/api/v1/tenant/finance-rules/store-cut", {
+        method: "POST",
+        body: JSON.stringify({ storeCutBp: Number(storeCut) }),
+      }),
+    onSuccess: () => {
+      setNotice("已保存门店抽成。");
+      rulesQuery.refetch();
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
 
-  const preview = async () => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      setSplit(
-        await apiFetch<Split>("/api/v1/tenant/finance-rules/split-preview", {
-          method: "POST",
-          body: JSON.stringify({ amountFen: amount }),
-        }),
-      );
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const preview = useMutation({
+    mutationFn: () =>
+      apiFetch<Split>("/api/v1/tenant/finance-rules/split-preview", {
+        method: "POST",
+        body: JSON.stringify({ amountFen: amount }),
+      }),
+    onSuccess: (data) => setSplit(data),
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
 
-  if (unauth) {
+  const rules = rulesQuery.data ?? null;
+
+  if (rulesQuery.error instanceof ApiError && rulesQuery.error.status === 401) {
     return (
-      <main>
-        <TenantNav />
-        <div className="page">
-          <div className="card">
-            <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">
-              去登录
-            </Link>
-          </div>
-        </div>
-      </main>
+      <Card>
+        <CardHeader>
+          <CardTitle>尚未登录门店账号</CardTitle>
+          <CardDescription>请先以门店角色登录。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/store/login">去登录</Link>
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <main>
-      <TenantNav />
-      <div className="page">
-        <h1 className="page-title">财务 · 分成规则</h1>
-        <p className="page-desc">
-          平台费/门店抽成按“老板应付金额”拆分；陪玩到手为剩余（尾差归陪玩）。
+    <div className="flex flex-col gap-6">
+      {notice ? <p className="text-sm text-emerald-600">{notice}</p> : null}
+      {message ? <p className="text-sm text-destructive">{message}</p> : null}
+      {rulesQuery.isError ? (
+        <p className="text-sm text-destructive">
+          加载失败：
+          {rulesQuery.error instanceof Error
+            ? rulesQuery.error.message
+            : String(rulesQuery.error)}
         </p>
-        {msg ? <p className="banner banner-error">{msg}</p> : null}
-        {ok ? <p className="banner banner-success">{ok}</p> : null}
+      ) : null}
 
-        <div className="card">
-          <h2 className="card-title">当前费率（基点 bp，1% = 100bp）</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>当前费率（基点 bp，1% = 100bp）</CardTitle>
+          <CardDescription>
+            平台费/门店抽成按“老板应付金额”拆分；陪玩到手为剩余（尾差归陪玩）。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
           {rules ? (
-            <table className="data-table">
-              <tbody>
-                <tr>
-                  <td>平台服务费</td>
-                  <td>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>角色</TableHead>
+                  <TableHead>费率</TableHead>
+                  <TableHead>说明</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>平台服务费</TableCell>
+                  <TableCell>
                     {rules.platformFeeBp} bp（{pct(rules.platformFeeBp)}）
-                  </td>
-                  <td className="muted">由平台后台调整</td>
-                </tr>
-                <tr>
-                  <td>门店抽成</td>
-                  <td>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    由平台后台调整
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>门店抽成</TableCell>
+                  <TableCell>
                     {rules.storeCutBp} bp（{pct(rules.storeCutBp)}）
-                  </td>
-                  <td className="muted">本店可调整</td>
-                </tr>
-                <tr>
-                  <td>陪玩到手</td>
-                  <td>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    本店可调整
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>陪玩到手</TableCell>
+                  <TableCell>
                     {10000 - rules.platformFeeBp - rules.storeCutBp} bp（
                     {pct(10000 - rules.platformFeeBp - rules.storeCutBp)}）
-                  </td>
-                  <td className="muted">剩余部分（尾差归陪玩）</td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    剩余部分（尾差归陪玩）
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           ) : (
-            <p className="muted">加载中…</p>
+            <p className="text-sm text-muted-foreground">加载中…</p>
           )}
-          <div
-            className="row-actions"
-            style={{ marginTop: 12, alignItems: "flex-end" }}
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (storeCut.trim()) saveStoreCut.mutate();
+            }}
           >
-            <div className="field" style={{ margin: 0 }}>
-              <label>门店抽成（bp，0-10000）</label>
-              <input
-                className="input"
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="store-cut">
+                门店抽成（bp，0-10000）
+              </label>
+              <Input
+                id="store-cut"
                 type="number"
+                className="w-48"
                 value={storeCut}
                 onChange={(e) => setStoreCut(e.target.value)}
                 placeholder="如 2000 = 20%"
               />
             </div>
-            <button
-              className="btn btn-primary"
-              disabled={busy || !storeCut}
-              onClick={() => void saveStoreCut()}
+            <Button
+              type="submit"
+              disabled={saveStoreCut.isPending || !storeCut}
             >
               保存门店抽成
-            </button>
-          </div>
-        </div>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
-        <div className="card">
-          <h2 className="card-title">分账试算</h2>
-          <div className="row-actions" style={{ alignItems: "flex-end" }}>
-            <div className="field" style={{ margin: 0 }}>
-              <label>老板应付金额（分，如 10000 = ¥100.00）</label>
-              <input
-                className="input"
+      <Card>
+        <CardHeader>
+          <CardTitle>分账试算</CardTitle>
+          <CardDescription>
+            输入老板应付金额，查看三方分账结果。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (amount.trim()) preview.mutate();
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="amount">
+                老板应付金额（分，如 10000 = ¥100.00）
+              </label>
+              <Input
+                id="amount"
                 type="number"
+                className="w-56"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="10000"
               />
             </div>
-            <button
-              className="btn"
-              disabled={busy || !amount}
-              onClick={() => void preview()}
-            >
+            <Button type="submit" disabled={preview.isPending || !amount}>
               试算
-            </button>
-          </div>
+            </Button>
+          </form>
           {split ? (
-            <table className="data-table" style={{ marginTop: 12 }}>
-              <tbody>
-                <tr>
-                  <td>平台服务费</td>
-                  <td>{formatFenYuan(split.platformFeeFen)}</td>
-                </tr>
-                <tr>
-                  <td>门店抽成</td>
-                  <td>{formatFenYuan(split.storeCutFen)}</td>
-                </tr>
-                <tr>
-                  <td>陪玩到手（可提现口径）</td>
-                  <td>{formatFenYuan(split.playerShareFen)}</td>
-                </tr>
-                <tr>
-                  <td>合计</td>
-                  <td>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>分账项</TableHead>
+                  <TableHead>金额</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>平台服务费</TableCell>
+                  <TableCell>{formatFenYuan(split.platformFeeFen)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>门店抽成</TableCell>
+                  <TableCell>{formatFenYuan(split.storeCutFen)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>陪玩到手（可提现口径）</TableCell>
+                  <TableCell>{formatFenYuan(split.playerShareFen)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>合计</TableCell>
+                  <TableCell>
                     {formatFenYuan(
                       sumFen([
                         split.platformFeeFen,
@@ -208,13 +253,37 @@ export default function FinancePage() {
                         split.playerShareFen,
                       ]),
                     )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           ) : null}
-        </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function FinancePage() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <TenantShell>
+      <h1 className="text-2xl font-semibold tracking-tight">财务 · 分成规则</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        费率查看、门店抽成调整与分账试算。
+      </p>
+      <div className="mt-6">
+        <QueryClientProvider client={queryClient}>
+          <Inner />
+        </QueryClientProvider>
       </div>
-    </main>
+    </TenantShell>
   );
 }
