@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { apiFetch, clearAccessToken, getAccessToken } from "./api";
 import {
   TENANT_ADDON_LINKS as ADDON_LINKS,
@@ -37,22 +38,33 @@ export function TenantNav() {
     router.push("/store/login");
   };
   return (
-    <nav className="topnav">
-      <span className="brand">PW SaaS</span>
-      {LINKS.map((l) => (
-        <Link key={l.href} href={l.href}>
-          {l.label}
-        </Link>
-      ))}
-      {addonLinks.map((l) => (
-        <Link key={l.href} href={l.href}>
-          {l.label}
-        </Link>
-      ))}
-      <span className="spacer" />
-      <button className="btn" onClick={logout}>
-        退出
-      </button>
-    </nav>
+    <header className="sticky top-0 z-10 border-b bg-white">
+      <div className="mx-auto flex max-w-[1440px] items-center gap-4 px-5 py-3">
+        <span className="whitespace-nowrap font-semibold">PW SaaS</span>
+        <nav className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto text-sm">
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l.label}
+            </Link>
+          ))}
+          {addonLinks.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <Button variant="outline" size="sm" onClick={logout}>
+          退出
+        </Button>
+      </div>
+    </header>
   );
 }
