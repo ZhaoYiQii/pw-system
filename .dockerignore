@@ -1,0 +1,49 @@
+# Git 与 CI
+.git
+.github
+.gitignore
+Dockerfile*
+**/Dockerfile
+docker-compose*.yml
+**/docker-compose*.yml
+
+# 依赖与缓存
+node_modules
+**/node_modules
+.pnpm-store
+.pnpm-cache
+.turbo
+**/.turbo
+coverage
+playwright-report
+test-results
+*.log
+logs
+tmp
+temp
+
+# 构建产物
+dist
+**/dist
+build
+**/build
+.next
+**/.next
+apps/mobile/dist
+
+# 本地配置与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+data
+**/data
+
+# 编辑器/OS
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+.swc
+**/.swc

@@ -1,0 +1,168 @@
+name: pw-saas-prod
+
+# 生产拓扑：Postgres/Redis 与应用同机（托管 PostgreSQL 就绪后再切换 DATABASE_URL）。
+# 所有应用端口只绑定 127.0.0.1，对外 HTTPS 由系统 Caddy 反代。
+# 用法：
+#   cd <repo>/infra/docker
+#   docker compose --env-file /srv/pw-saas/.env build
+#   docker compose --env-file /srv/pw-saas/.env run --rm pw-init <cmd>
+#   docker compose --env-file /srv/pw-saas/.env up -d
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [pw]
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [pw]
+
+  api:
+    image: pwsaas/api:prod
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://pw_runtime:${PW_RUNTIME_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      PLATFORM_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DATABASE_MIGRATION_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET}
+      PII_MASTER_KEY: ${PII_MASTER_KEY}
+      ADMIN_WEB_ORIGIN: ${ADMIN_WEB_ORIGIN}
+      H5_ORIGIN: ${H5_ORIGIN}
+      EVIDENCE_ROOT: /app/data/evidence
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      ALLOW_MOCK_PAYMENT: ${ALLOW_MOCK_PAYMENT:-false}
+    volumes:
+      - evidence:/app/data/evidence
+    ports:
+      - "127.0.0.1:4100:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks: [pw]
+
+  worker:
+    image: pwsaas/api:prod
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/background/bootstrap.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pw_runtime:${PW_RUNTIME_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      PLATFORM_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DATABASE_MIGRATION_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET}
+      PII_MASTER_KEY: ${PII_MASTER_KEY}
+      OUTBOX_POLL_MS: "5000"
+      ORDER_CONFIRM_TIMEOUT_MS: "900000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [pw]
+
+  admin:
+    image: pwsaas/admin:prod
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.admin
+      args:
+        NEXT_PUBLIC_API_ORIGIN: ${NEXT_PUBLIC_API_ORIGIN}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    ports:
+      - "127.0.0.1:4200:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [pw]
+
+  h5:
+    image: pwsaas/h5:prod
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.h5
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4300:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [pw]
+
+  pw-init:
+    image: pwsaas/api:prod
+    profiles: ["init"]
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://pw_runtime:${PW_RUNTIME_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      PLATFORM_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DATABASE_MIGRATION_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET}
+      PII_MASTER_KEY: ${PII_MASTER_KEY}
+      ADMIN_WEB_ORIGIN: ${ADMIN_WEB_ORIGIN}
+      H5_ORIGIN: ${H5_ORIGIN}
+      EVIDENCE_ROOT: /app/data/evidence
+    volumes:
+      - evidence:/app/data/evidence
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [pw]
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+  evidence: {}
+
+networks:
+  pw:
+    driver: bridge
