@@ -75,6 +75,117 @@ const playerAccount = await requireAccount("player");
 const player = await ensureProfile("playerProfile", "阿伟", playerAccount, {
   intro: "王者荣耀 荣耀王者 50星",
 });
+await client.playerProfile.update({
+  where: { id: player.id },
+  data: { basePricePerHourFen: 6000n },
+});
+
+// 默认英雄联盟派单模板：字段/位置/段位加价/群文案（已存在则跳过，不覆盖商家修改）。
+let lolTemplate = await client.gameDispatchTemplate.findFirst({
+  where: { tenantId: tid, name: "英雄联盟" },
+});
+if (!lolTemplate) {
+  lolTemplate = await client.gameDispatchTemplate.create({
+    data: {
+      tenantId: tid,
+      name: "英雄联盟",
+      copyLines: [
+        { label: "派单编号", valueKey: "dispatchNo" },
+        { label: "区", valueKey: "region" },
+        { label: "模式", valueKey: "mode" },
+        { label: "位置", valueKey: "positions" },
+        { label: "目标段位", valueKey: "rank" },
+        { label: "时长", valueKey: "duration" },
+        { label: "开始时间", valueKey: "startAt" },
+        { label: "补充需求", valueKey: "note" },
+        { label: "陪玩报名链接", valueKey: "applyUrl" },
+      ],
+    },
+  });
+  await client.gameDispatchTemplateField.createMany({
+    data: [
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        fieldKey: "region",
+        label: "区",
+        fieldType: "text",
+        required: true,
+        sortOrder: 0,
+      },
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        fieldKey: "rank",
+        label: "目标段位",
+        fieldType: "select",
+        required: true,
+        options: ["翡翠", "钻石", "大师"],
+        sortOrder: 1,
+      },
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        fieldKey: "mode",
+        label: "模式",
+        fieldType: "text",
+        required: true,
+        sortOrder: 2,
+      },
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        fieldKey: "note",
+        label: "补充需求",
+        fieldType: "multiline",
+        sortOrder: 3,
+      },
+    ],
+  });
+  await client.gameDispatchPosition.createMany({
+    data: [
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        label: "打野",
+        defaultCount: 2,
+        sortOrder: 0,
+      },
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        label: "辅助",
+        defaultCount: 1,
+        sortOrder: 1,
+      },
+    ],
+  });
+  await client.gameDispatchRankRule.createMany({
+    data: [
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        rankLabel: "翡翠",
+        addPriceFen: 1000n,
+        sortOrder: 0,
+      },
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        rankLabel: "钻石",
+        addPriceFen: 2000n,
+        sortOrder: 1,
+      },
+      {
+        tenantId: tid,
+        templateId: lolTemplate.id,
+        rankLabel: "大师",
+        addPriceFen: 3000n,
+        sortOrder: 2,
+      },
+    ],
+  });
+}
 
 // 服务目录：王者荣耀 → 微信1区 → 王者·组队1小时（3600 秒，1500 分）。
 let game = await client.game.findFirst({
