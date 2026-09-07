@@ -8,6 +8,7 @@ export default defineAppConfig({
     "pages/customer/candidates/index",
     "pages/customer/game-order/index",
     "pages/customer/game-select/index",
+    "pages/customer/wallet/index",
   ],
   window: {
     backgroundTextStyle: "light",

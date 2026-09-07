@@ -104,6 +104,23 @@ function Inner({ orderId }: { orderId: string }) {
     onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
   });
 
+  const settle = useMutation({
+    mutationFn: () =>
+      apiFetch<{ totalFen: string; balanceAfterFen: string }>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/confirm-settlement`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setMessage(
+        `结算完成，扣除 ${result.totalFen} 分，老板余额 ${result.balanceAfterFen} 分。`,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ["game-dispatch-detail", orderId],
+      });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+
   const copySelected = async () => {
     if (!data) return;
     const selected = data.lines
@@ -188,6 +205,19 @@ function Inner({ orderId }: { orderId: string }) {
                 disabled={publish.isPending}
               >
                 发布派单
+              </Button>
+            ) : null}
+            {data.status === "PENDING_CONFIRMATION" ? (
+              <Button
+                disabled={settle.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm("确认按实际时长向老板扣费并结算陪玩收入？")
+                  )
+                    settle.mutate();
+                }}
+              >
+                确认结算
               </Button>
             ) : null}
             <Button
