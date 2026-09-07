@@ -19,6 +19,7 @@ import {
 } from "./disputes.service.js";
 import { CustomersService } from "../customers/application/customers.service.js";
 import { OrdersService } from "../orders/application/orders.service.js";
+import { PlayersService } from "../players/application/players.service.js";
 import { Permissions, TenantScope } from "../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
 
@@ -52,6 +53,7 @@ export class DisputesController {
     @Inject(DisputesService) private readonly disputes: DisputesService,
     @Inject(CustomersService) private readonly customers: CustomersService,
     @Inject(OrdersService) private readonly orders: OrdersService,
+    @Inject(PlayersService) private readonly players: PlayersService,
   ) {}
 
   /** 客服/店主端租户级争议列表（客户只能按订单维度查看自己的争议）。 */
@@ -84,6 +86,42 @@ export class DisputesController {
         throw new ForbiddenException("只能查看自己订单的争议");
     }
     return { data: await this.disputes.list(tenantIdOf(req), orderId) };
+  }
+
+  @TenantScope()
+  @Permissions("dispute.view.own")
+  @Get("player/disputes")
+  async playerMine(@Req() req: AuthenticatedRequest) {
+    const role = req.principal?.role;
+    if (role !== "PLAYER")
+      throw new ForbiddenException("需要陪玩身份");
+    const profile = await this.players
+      .getByAccount(tenantIdOf(req), req.principal?.sub ?? "")
+      .catch(() => null);
+    if (!profile) throw new ForbiddenException("尚未绑定陪玩档案");
+    return {
+      data: await this.disputes.listMine(tenantIdOf(req), {
+        playerId: profile.id,
+      }),
+    };
+  }
+
+  @TenantScope()
+  @Permissions("dispute.view.own")
+  @Get("customer/disputes")
+  async customerMine(@Req() req: AuthenticatedRequest) {
+    const role = req.principal?.role;
+    if (role !== "CUSTOMER")
+      throw new ForbiddenException("需要老板身份");
+    const profile = await this.customers
+      .getByAccount(tenantIdOf(req), req.principal?.sub ?? "")
+      .catch(() => null);
+    if (!profile) throw new ForbiddenException("尚未绑定客户档案");
+    return {
+      data: await this.disputes.listMine(tenantIdOf(req), {
+        customerProfileId: profile.id,
+      }),
+    };
   }
 
   @TenantScope()

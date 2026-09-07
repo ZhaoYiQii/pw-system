@@ -7,6 +7,21 @@ export interface PlayerFinanceView {
   paidFen: string;
 }
 
+export interface PlayerIncomeRecord {
+  id: string;
+  source: "LEGACY" | "SLOT";
+  amountFen: string;
+  status: string;
+  orderNo: string;
+  createdAt: Date;
+}
+
+export interface PlayerIncomeView {
+  pendingFen: string;
+  settledFen: string;
+  records: PlayerIncomeRecord[];
+}
+
 export class PrismaLedgerRepository {
   constructor(private readonly client: PrismaClient) {}
 
@@ -237,5 +252,55 @@ export class PrismaLedgerRepository {
       else out.pendingFen = value;
     }
     return out;
+  }
+
+  async playerIncome(
+    tenantId: string,
+    playerId: string,
+  ): Promise<PlayerIncomeView> {
+    const [legacy, slots, orders] = await Promise.all([
+      this.client.earning.findMany({
+        where: { tenantId, playerId },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.client.slotEarning.findMany({
+        where: { tenantId, playerId },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.client.order.findMany({
+        where: { tenantId },
+        select: { id: true, orderNo: true },
+      }),
+    ]);
+    const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+    const records: PlayerIncomeRecord[] = [
+      ...legacy.map((e) => ({
+        id: e.id,
+        source: "LEGACY" as const,
+        amountFen: e.amountFen.toString(),
+        status: e.status,
+        orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+        createdAt: e.createdAt,
+      })),
+      ...slots.map((e) => ({
+        id: e.id,
+        source: "SLOT" as const,
+        amountFen: e.amountFen.toString(),
+        status: e.status,
+        orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+        createdAt: e.createdAt,
+      })),
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    let pendingFen = 0n;
+    let settledFen = 0n;
+    for (const r of records) {
+      if (r.status === "PAID") settledFen += BigInt(r.amountFen);
+      else pendingFen += BigInt(r.amountFen);
+    }
+    return {
+      pendingFen: pendingFen.toString(),
+      settledFen: settledFen.toString(),
+      records,
+    };
   }
 }

@@ -100,7 +100,7 @@ export class SettlementsController {
   async addItems(
     @Req() req: AuthenticatedRequest,
     @Param("id") id: string,
-    @Body() body: { earningIds?: unknown },
+    @Body() body: { earningIds?: unknown; slotEarningIds?: unknown },
   ) {
     this.guard(req);
     const ids = Array.isArray(body.earningIds)
@@ -108,8 +108,13 @@ export class SettlementsController {
           (x): x is string => typeof x === "string",
         )
       : [];
+    const slotIds = Array.isArray(body.slotEarningIds)
+      ? (body.slotEarningIds as unknown[]).filter(
+          (x): x is string => typeof x === "string",
+        )
+      : [];
     try {
-      await this.repo.addItems(tenantIdOf(req), id, ids);
+      await this.repo.addItems(tenantIdOf(req), id, ids, slotIds);
       await this.audit.record({
         tenantId: tenantIdOf(req),
         actorType: req.principal?.role,
@@ -117,7 +122,7 @@ export class SettlementsController {
         action: "settlement.add_items",
         resourceType: "settlement_batch",
         resourceId: id,
-        summary: `添加 ${ids.length} 条应收至批次`,
+        summary: `添加 ${ids.length} 条旧应收与 ${slotIds.length} 条档位收入至批次`,
       });
       return { data: { ok: true } };
     } catch (error) {

@@ -12,6 +12,7 @@ export interface BatchView {
 
 export interface PendingEarningView {
   id: string;
+  source: "LEGACY" | "SLOT";
   playerId: string;
   amountFen: string;
   playerName: string;
@@ -20,7 +21,10 @@ export interface PendingEarningView {
 }
 
 export interface SettlementDetailItem {
-  earningId: string;
+  itemId: string;
+  source: "LEGACY" | "SLOT";
+  earningId: string | null;
+  slotEarningId: string | null;
   amountFen: string;
   playerName: string;
   orderNo: string;
@@ -63,13 +67,29 @@ export class PrismaSettlementsRepository {
   }
 
   async listEarnings(tenantId: string): Promise<PendingEarningView[]> {
-    const earnings = await this.client.earning.findMany({
-      where: { tenantId, status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-    });
-    if (earnings.length === 0) return [];
-    const playerIds = Array.from(new Set(earnings.map((e) => e.playerId)));
-    const orderIds = Array.from(new Set(earnings.map((e) => e.orderId)));
+    const [legacy, slots] = await Promise.all([
+      this.client.earning.findMany({
+        where: { tenantId, status: "PENDING" },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.client.slotEarning.findMany({
+        where: { tenantId, status: "SETTLED" },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+    if (legacy.length === 0 && slots.length === 0) return [];
+    const playerIds = Array.from(
+      new Set([
+        ...legacy.map((e) => e.playerId),
+        ...slots.map((e) => e.playerId),
+      ]),
+    );
+    const orderIds = Array.from(
+      new Set([
+        ...legacy.map((e) => e.orderId),
+        ...slots.map((e) => e.orderId),
+      ]),
+    );
     const players = await this.client.playerProfile.findMany({
       where: { tenantId, id: { in: playerIds } },
       select: { id: true, name: true },
@@ -80,14 +100,27 @@ export class PrismaSettlementsRepository {
     });
     const playerById = new Map(players.map((p) => [p.id, p.name]));
     const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
-    return earnings.map((e) => ({
+    const legacyOut = legacy.map((e): PendingEarningView => ({
       id: e.id,
+      source: "LEGACY",
       playerId: e.playerId,
       amountFen: e.amountFen.toString(),
       playerName: playerById.get(e.playerId) ?? "未知陪玩",
       orderNo: orderNoById.get(e.orderId) ?? "未知订单",
       createdAt: e.createdAt,
     }));
+    const slotOut = slots.map((e): PendingEarningView => ({
+      id: e.id,
+      source: "SLOT",
+      playerId: e.playerId,
+      amountFen: e.amountFen.toString(),
+      playerName: playerById.get(e.playerId) ?? "未知陪玩",
+      orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+      createdAt: e.createdAt,
+    }));
+    return [...slotOut, ...legacyOut].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
 
   async detail(
@@ -104,14 +137,29 @@ export class PrismaSettlementsRepository {
     });
     const outItems: SettlementDetailItem[] = [];
     if (items.length > 0) {
-      const earningIds = items.map((i) => i.earningId);
-      const earnings = await this.client.earning.findMany({
-        where: { tenantId, id: { in: earningIds } },
-      });
+      const legacyItems = items.filter((i) => i.sourceType === "LEGACY");
+      const slotItems = items.filter((i) => i.sourceType === "SLOT");
+      const earningIds = legacyItems
+        .map((i) => i.earningId)
+        .filter((x): x is string => x !== null);
+      const slotEarningIds = slotItems
+        .map((i) => i.slotEarningId)
+        .filter((x): x is string => x !== null);
+      const [earnings, slotEarnings] = await Promise.all([
+        this.client.earning.findMany({
+          where: { tenantId, id: { in: earningIds } },
+        }),
+        this.client.slotEarning.findMany({
+          where: { tenantId, id: { in: slotEarningIds } },
+        }),
+      ]);
+      const allSources = [...earnings, ...slotEarnings];
       const playerIds = Array.from(
-        new Set(earnings.map((e) => e.playerId)),
+        new Set(allSources.map((e) => e.playerId)),
       );
-      const orderIds = Array.from(new Set(earnings.map((e) => e.orderId)));
+      const orderIds = Array.from(
+        new Set(allSources.map((e) => e.orderId)),
+      );
       const players = await this.client.playerProfile.findMany({
         where: { tenantId, id: { in: playerIds } },
         select: { id: true, name: true },
@@ -124,14 +172,21 @@ export class PrismaSettlementsRepository {
       const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
       for (const item of items) {
         const earning = earnings.find((e) => e.id === item.earningId);
+        const slotEarning = slotEarnings.find(
+          (e) => e.id === item.slotEarningId,
+        );
+        const source = earning ?? slotEarning;
         outItems.push({
+          itemId: item.id,
+          source: (item.sourceType === "SLOT" ? "SLOT" : "LEGACY"),
           earningId: item.earningId,
+          slotEarningId: item.slotEarningId,
           amountFen: item.amountFen.toString(),
-          playerName: earning
-            ? (playerById.get(earning.playerId) ?? "未知陪玩")
+          playerName: source
+            ? (playerById.get(source.playerId) ?? "未知陪玩")
             : "未知陪玩",
-          orderNo: earning
-            ? (orderNoById.get(earning.orderId) ?? "未知订单")
+          orderNo: source
+            ? (orderNoById.get(source.orderId) ?? "未知订单")
             : "未知订单",
           createdAt: item.createdAt,
         });
@@ -166,6 +221,7 @@ export class PrismaSettlementsRepository {
     tenantId: string,
     batchId: string,
     earningIds: string[],
+    slotEarningIds: string[] = [],
   ): Promise<void> {
     await this.client.$transaction(async (tx) => {
       const batch = await tx.settlementBatch.findFirst({
@@ -200,6 +256,34 @@ export class PrismaSettlementsRepository {
         });
         await tx.earning.update({
           where: { id: earningId },
+          data: { status: "BATCHED" },
+        });
+      }
+      for (const slotEarningId of slotEarningIds) {
+        const lock = await tx.$queryRaw<Array<{ id: string; status: string }>>`
+          SELECT id, status FROM slot_earnings
+          WHERE id = ${slotEarningId}::uuid AND tenant_id = ${tenantId}::uuid
+          FOR UPDATE`;
+        if (lock.length === 0) throw new Error("档位收入不存在");
+        const slot = lock[0] as { id: string; status: string };
+        if (slot.status !== "SETTLED")
+          throw new Error("该档位收入尚未完成老板结算或已入批次");
+        const row = await tx.slotEarning.findFirst({
+          where: { tenantId, id: slotEarningId },
+          select: { amountFen: true },
+        });
+        await tx.settlementItem.create({
+          data: {
+            tenantId,
+            batchId,
+            sourceType: "SLOT",
+            earningId: null,
+            slotEarningId,
+            amountFen: row?.amountFen ?? BigInt(0),
+          },
+        });
+        await tx.slotEarning.update({
+          where: { id: slotEarningId },
           data: { status: "BATCHED" },
         });
       }
@@ -262,10 +346,18 @@ export class PrismaSettlementsRepository {
       const items = await tx.settlementItem.findMany({
         where: { tenantId, batchId: id },
       });
+      const legacyIds = items
+        .filter((i) => i.sourceType === "LEGACY")
+        .map((i) => i.earningId)
+        .filter((x): x is string => x !== null);
+      const slotIds = items
+        .filter((i) => i.sourceType === "SLOT")
+        .map((i) => i.slotEarningId)
+        .filter((x): x is string => x !== null);
       const openD = await tx.dispute.findFirst({
         where: {
           tenantId,
-          earningId: { in: items.map((i) => i.earningId) },
+          earningId: { in: legacyIds },
           status: "OPEN",
         },
         select: { id: true },
@@ -281,10 +373,16 @@ export class PrismaSettlementsRepository {
           operatorId: actorId,
         },
       });
-      await tx.earning.updateMany({
-        where: { tenantId, id: { in: items.map((i) => i.earningId) } },
-        data: { status: "PAID" },
-      });
+      if (legacyIds.length > 0)
+        await tx.earning.updateMany({
+          where: { tenantId, id: { in: legacyIds } },
+          data: { status: "PAID" },
+        });
+      if (slotIds.length > 0)
+        await tx.slotEarning.updateMany({
+          where: { tenantId, id: { in: slotIds } },
+          data: { status: "PAID" },
+        });
       const paidRes = await tx.settlementBatch.updateMany({
         where: { tenantId, id, status: "APPROVED" },
         data: { status: "PAID", paidBy: actorId, totalAmountFen: total },
@@ -304,12 +402,26 @@ export class PrismaSettlementsRepository {
     await this.client.$transaction(async (tx) => {
       const items = await tx.settlementItem.findMany({
         where: { tenantId, batchId: id },
-        select: { earningId: true },
+        select: { sourceType: true, earningId: true, slotEarningId: true },
       });
-      await tx.earning.updateMany({
-        where: { tenantId, id: { in: items.map((i) => i.earningId) } },
-        data: { status: "PENDING" },
-      });
+      const legacyIds = items
+        .filter((i) => i.sourceType === "LEGACY")
+        .map((i) => i.earningId)
+        .filter((x): x is string => x !== null);
+      const slotIds = items
+        .filter((i) => i.sourceType === "SLOT")
+        .map((i) => i.slotEarningId)
+        .filter((x): x is string => x !== null);
+      if (legacyIds.length > 0)
+        await tx.earning.updateMany({
+          where: { tenantId, id: { in: legacyIds } },
+          data: { status: "PENDING" },
+        });
+      if (slotIds.length > 0)
+        await tx.slotEarning.updateMany({
+          where: { tenantId, id: { in: slotIds } },
+          data: { status: "SETTLED" },
+        });
       await tx.settlementItem.deleteMany({ where: { tenantId, batchId: id } });
       await tx.settlementBatch.update({
         where: { id },

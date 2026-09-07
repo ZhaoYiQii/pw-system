@@ -26,6 +26,7 @@ export const PERMISSION_KEYS = [
   "finance.manage",
   "settlement.manage",
   "dispute.manage",
+  "dispute.view.own",
   "gameDispatch.manage",
   "audit.view",
   "report.view",
@@ -83,8 +84,18 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
     "settlement.manage",
     "report.view",
   ],
-  PLAYER: ["tenant.view", "session.manage", "dispatch.manage"],
-  CUSTOMER: ["tenant.view", "order.manage", "dispute.manage"],
+  PLAYER: [
+    "tenant.view",
+    "session.manage",
+    "dispatch.manage",
+    "dispute.view.own",
+  ],
+  CUSTOMER: [
+    "tenant.view",
+    "order.manage",
+    "dispute.manage",
+    "dispute.view.own",
+  ],
 };
 
 export function permissionsFor(role: RoleKey): readonly PermissionKey[] {

@@ -1,5 +1,6 @@
 import {
   PrismaLedgerRepository,
+  PlayerIncomeView,
   PlayerFinanceView,
 } from "../infrastructure/prisma-ledger.repository.js";
 
@@ -27,5 +28,12 @@ export class LedgerService {
     playerId: string,
   ): Promise<PlayerFinanceView> {
     return this.repo.playerFinance(tenantId, playerId);
+  }
+
+  playerIncome(
+    tenantId: string,
+    playerId: string,
+  ): Promise<PlayerIncomeView> {
+    return this.repo.playerIncome(tenantId, playerId);
   }
 }

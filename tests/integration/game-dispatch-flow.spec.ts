@@ -26,6 +26,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
   let tenantId: string;
   let customerId: string;
   let ownerToken: string;
+  let financeToken = "";
   let customerToken = "";
   let templateId = "";
   let playerTokens: Record<string, string> = {};
@@ -60,6 +61,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       return { acc, profile };
     }
     await account("boss", "TENANT_OWNER");
+    await account("fin", "FINANCE");
     const p1 = await account(`p1_${suffix}`, "PLAYER", "阿一");
     const p2 = await account(`p2_${suffix}`, "PLAYER", "阿二");
     const p3 = await account(`p3_${suffix}`, "PLAYER", "阿三");
@@ -95,6 +97,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       return (res.body as { data: Data }).data.accessToken as string;
     }
     ownerToken = await login("boss");
+    financeToken = await login("fin");
     customerToken = await login(`cb_${suffix}`);
     playerTokens = {
       p1: await login(`p1_${suffix}`),
@@ -138,6 +141,9 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
 
   afterAll(async () => {
     if (client) {
+      await client.settlementItem.deleteMany({ where: { tenantId } });
+      await client.manualPaymentRecord.deleteMany({ where: { tenantId } });
+      await client.settlementBatch.deleteMany({ where: { tenantId } });
       await client.slotEvidence.deleteMany({ where: { tenantId } });
       await client.slotSession.deleteMany({ where: { tenantId } });
       await client.slotEarning.deleteMany({ where: { tenantId } });
@@ -410,6 +416,85 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       await req(customerToken).get("/api/v1/boss/wallet").expect(200)
     ).body.data as { balanceFen: string };
     expect(BigInt(walletView.balanceFen)).toBeLessThan(100000n);
+
+    // A 方案：SETTLED 档位收入进入结算批次，登记线下打款后置 PAID。
+    const slotIds = earnings.map((e) => e.id);
+    const pendingList = (
+      await req(ownerToken).get("/api/v1/tenant/settlements/earnings").expect(200)
+    ).body.data as Array<{ id: string; source: string }>;
+    expect(
+      pendingList.some(
+        (e) => e.source === "SLOT" && slotIds.includes(e.id),
+      ),
+    ).toBe(true);
+
+    const batch = (
+      await req(ownerToken).post("/api/v1/tenant/settlements").expect(201)
+    ).body.data as { id: string };
+    await req(ownerToken)
+      .post(`/api/v1/tenant/settlements/${batch.id}/items`, {
+        slotEarningIds: slotIds,
+      })
+      .expect(201);
+    const detail = (
+      await req(ownerToken)
+        .get(`/api/v1/tenant/settlements/${batch.id}`)
+        .expect(200)
+    ).body.data as {
+      itemCount: number;
+      items: Array<{ source: string; slotEarningId: string | null }>;
+    };
+    expect(detail.itemCount).toBe(3);
+    expect(
+      detail.items.every(
+        (i) => i.source === "SLOT" && i.slotEarningId !== null,
+      ),
+    ).toBe(true);
+
+    await req(ownerToken)
+      .post(`/api/v1/tenant/settlements/${batch.id}/review`)
+      .expect(201);
+    await req(financeToken)
+      .post(`/api/v1/tenant/settlements/${batch.id}/approve`)
+      .expect(201);
+    await req(ownerToken)
+      .post(`/api/v1/tenant/settlements/${batch.id}/pay`)
+      .expect(201);
+    const paid = await client.slotEarning.findMany({
+      where: { tenantId, id: { in: slotIds } },
+    });
+    expect(paid.every((e) => e.status === "PAID")).toBe(true);
+
+    const p1Account = await client.tenantAccount.findFirst({
+      where: { tenantId, username: `p1_${suffix}` },
+      select: { id: true },
+    });
+    const p1Profile = await client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: p1Account?.id },
+    });
+    const income = (
+      await req(playerTokens.p1)
+        .get("/api/v1/tenant/player/income")
+        .expect(200)
+    ).body.data as { pendingFen: string; settledFen: string; records: unknown[] };
+    const p1PaidCount = await client.slotEarning.count({
+      where: { tenantId, playerId: p1Profile?.id, status: "PAID" },
+    });
+    expect(BigInt(income.settledFen)).toBeGreaterThan(0n);
+    expect(income.records).toHaveLength(p1PaidCount);
+
+    const playerDisputes = (
+      await req(playerTokens.p1)
+        .get("/api/v1/tenant/player/disputes")
+        .expect(200)
+    ).body.data as unknown[];
+    expect(playerDisputes).toEqual([]);
+    const customerDisputes = (
+      await req(customerToken)
+        .get("/api/v1/tenant/customer/disputes")
+        .expect(200)
+    ).body.data as unknown[];
+    expect(customerDisputes).toEqual([]);
   });
 
   it("老板可自助查看模板并创建派单草稿", async () => {

@@ -6,11 +6,12 @@ import { AuditModule } from "../audit/audit.module.js";
 import { AuditService } from "../audit/audit.service.js";
 import { CustomersModule } from "../customers/customers.module.js";
 import { OrdersModule } from "../orders/orders.module.js";
+import { PlayersModule } from "../players/players.module.js";
 
 export const DISPUTES_DB_CLIENT = "DISPUTES_DB_CLIENT";
 
 @Module({
-  imports: [AuditModule, CustomersModule, OrdersModule],
+  imports: [AuditModule, CustomersModule, OrdersModule, PlayersModule],
   controllers: [DisputesController],
   providers: [
     {

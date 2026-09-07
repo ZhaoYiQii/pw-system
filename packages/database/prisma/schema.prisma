@@ -730,14 +730,18 @@ model SettlementBatch {
 }
 
 model SettlementItem {
-  id         String   @id @default(uuid()) @db.Uuid
-  tenantId   String   @map("tenant_id") @db.Uuid
-  batchId    String   @map("batch_id") @db.Uuid
-  earningId  String   @map("earning_id") @db.Uuid
-  amountFen  BigInt   @map("amount_fen") @db.BigInt
-  createdAt  DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  batchId       String   @map("batch_id") @db.Uuid
+  earningId     String?  @map("earning_id") @db.Uuid
+  slotEarningId String?  @map("slot_earning_id") @db.Uuid
+  sourceType    String   @default("LEGACY") @map("source_type")
+  amountFen     BigInt   @map("amount_fen") @db.BigInt
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@unique([tenantId, batchId, earningId])
+  @@unique([tenantId, batchId, slotEarningId])
+  @@unique([tenantId, slotEarningId])
   @@index([tenantId, earningId])
   @@index([tenantId, batchId])
   @@map("settlement_items")

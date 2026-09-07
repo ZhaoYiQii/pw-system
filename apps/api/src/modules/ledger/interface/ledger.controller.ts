@@ -92,4 +92,18 @@ export class PlayerFinanceController {
       });
     return { data: await this.ledger.playerFinance(p.tenantId, profile.id) };
   }
+
+  @TenantScope()
+  @Get("income")
+  async income(@Req() req: AuthenticatedRequest) {
+    const p = req.principal;
+    if (!p?.tenantId || p.role !== "PLAYER")
+      throw new ForbiddenException("需要陪玩身份");
+    const profile = await this.players
+      .getByAccount(p.tenantId, p.sub)
+      .catch(() => {
+        throw new ForbiddenException("尚未绑定陪玩档案");
+      });
+    return { data: await this.ledger.playerIncome(p.tenantId, profile.id) };
+  }
 }

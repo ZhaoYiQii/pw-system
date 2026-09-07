@@ -184,12 +184,28 @@ export default function PlayerProfilePage() {
                 {formatFenYuan(finance.batchedFen)} · 已打款{" "}
                 {formatFenYuan(finance.paidFen)}
               </Text>
+              <Button
+                size="mini"
+                onClick={() =>
+                  void Taro.reLaunch({ url: "/pages/player/income/index" })
+                }
+              >
+                收入详情
+              </Button>
             </View>
           ) : null}
           {msg ? <Text className="err">{msg}</Text> : null}
         </View>
       ) : null}
       <View className="row-actions">
+        <Button
+          className="btn"
+          onClick={() =>
+            void Taro.reLaunch({ url: "/pages/player/disputes/index" })
+          }
+        >
+          争议记录
+        </Button>
         <Button
           className="btn"
           onClick={() =>

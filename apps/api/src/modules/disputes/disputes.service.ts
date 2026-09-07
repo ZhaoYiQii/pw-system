@@ -172,6 +172,36 @@ export class DisputesService {
     );
   }
 
+  async listMine(
+    tenantId: string,
+    filter: { playerId?: string; customerProfileId?: string },
+  ) {
+    return withTenantContext(this.client, tenantId, async (tx: DbTransaction) => {
+      const rows = await tx.dispute.findMany({
+        where: { tenantId, ...filter },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      });
+      if (rows.length === 0) return [];
+      const orderIds = Array.from(new Set(rows.map((r) => r.orderId)));
+      const orders = await tx.order.findMany({
+        where: { tenantId, id: { in: orderIds } },
+        select: { id: true, orderNo: true },
+      });
+      const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+      return rows.map((d) => ({
+        id: d.id,
+        orderId: d.orderId,
+        orderNo: orderNoById.get(d.orderId) ?? "未知订单",
+        status: d.status,
+        reason: d.reason,
+        resolution: d.resolution,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      }));
+    });
+  }
+
   async hasOpenOnEarnings(
     tenantId: string,
     earningIds: string[],

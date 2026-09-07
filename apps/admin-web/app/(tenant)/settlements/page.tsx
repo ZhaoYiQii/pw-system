@@ -42,6 +42,7 @@ interface BatchRow {
 
 interface PendingEarning {
   id: string;
+  source: "LEGACY" | "SLOT";
   playerId: string;
   amountFen: string;
   playerName: string;
@@ -50,7 +51,10 @@ interface PendingEarning {
 }
 
 interface BatchDetailItem {
-  earningId: string;
+  itemId: string;
+  source: "LEGACY" | "SLOT";
+  earningId: string | null;
+  slotEarningId: string | null;
   amountFen: string;
   playerName: string;
   orderNo: string;
@@ -111,13 +115,25 @@ function Inner() {
 
   const addToBatch = useMutation({
     mutationFn: async (earningIds: string[]) => {
+      const rows = (earningsQuery.data ?? []).filter((e) =>
+        earningIds.includes(e.id),
+      );
+      const legacyIds = rows
+        .filter((r) => r.source === "LEGACY")
+        .map((r) => r.id);
+      const slotIds = rows
+        .filter((r) => r.source === "SLOT")
+        .map((r) => r.id);
       const draft = batchesQuery.data?.find((b) => b.status === "DRAFT");
       if (draft) {
         await apiFetch<unknown>(
           `/api/v1/tenant/settlements/${draft.id}/items`,
           {
             method: "POST",
-            body: JSON.stringify({ earningIds }),
+            body: JSON.stringify({
+              earningIds: legacyIds,
+              slotEarningIds: slotIds,
+            }),
           },
         );
         return draft.id;
@@ -130,7 +146,10 @@ function Inner() {
         `/api/v1/tenant/settlements/${created.id}/items`,
         {
           method: "POST",
-          body: JSON.stringify({ earningIds }),
+          body: JSON.stringify({
+            earningIds: legacyIds,
+            slotEarningIds: slotIds,
+          }),
         },
       );
       return created.id;
@@ -288,7 +307,7 @@ function Inner() {
               ) : null}
               {earningsQuery.data && earningsQuery.data.length > 0 ? (
                 <Table>
-                  <TableHeader>
+                <TableHeader>
                     <TableRow>
                       <TableHead className="w-10">
                         <input
@@ -309,6 +328,7 @@ function Inner() {
                           }
                         />
                       </TableHead>
+                      <TableHead>类型</TableHead>
                       <TableHead>陪玩</TableHead>
                       <TableHead>订单号</TableHead>
                       <TableHead className="text-right">应收金额</TableHead>
@@ -324,6 +344,9 @@ function Inner() {
                             checked={selectedEarningIds.includes(earning.id)}
                             onChange={() => toggleEarning(earning.id)}
                           />
+                        </TableCell>
+                        <TableCell>
+                          {earning.source === "SLOT" ? "档位收入" : "旧流程"}
                         </TableCell>
                         <TableCell className="font-medium">
                           {earning.playerName}
@@ -437,8 +460,9 @@ function Inner() {
                 ) : null}
                 {detailQuery.data && detailQuery.data.items.length > 0 ? (
                   <Table>
-                    <TableHeader>
+                <TableHeader>
                       <TableRow>
+                        <TableHead>类型</TableHead>
                         <TableHead>陪玩</TableHead>
                         <TableHead>订单号</TableHead>
                         <TableHead className="text-right">金额</TableHead>
@@ -446,7 +470,10 @@ function Inner() {
                     </TableHeader>
                     <TableBody>
                       {detailQuery.data.items.map((item) => (
-                        <TableRow key={item.earningId}>
+                        <TableRow key={item.itemId}>
+                          <TableCell>
+                            {item.source === "SLOT" ? "档位收入" : "旧流程"}
+                          </TableCell>
                           <TableCell className="font-medium">
                             {item.playerName}
                           </TableCell>

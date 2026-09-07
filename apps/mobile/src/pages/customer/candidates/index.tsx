@@ -1,4 +1,5 @@
 import { Button, Input, Text, View } from "@tarojs/components";
+import Taro from "@tarojs/taro";
 import { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
@@ -337,6 +338,14 @@ export default function CandidatesPage() {
               暂无订单（可由商家端为你创建并确认/发布）
             </Text>
           ) : null}
+          <Button
+            className="btn"
+            onClick={() =>
+              void Taro.reLaunch({ url: "/pages/customer/disputes/index" })
+            }
+          >
+            查看争议记录
+          </Button>
           {orders.map((o) => (
             <View key={o.id} className="card">
               <View className="row">

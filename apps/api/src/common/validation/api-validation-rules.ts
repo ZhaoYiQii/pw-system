@@ -202,9 +202,17 @@ routeValidations.set("PATCH /api/v1/tenant/catalog/products/:id", {
 });
 
 routeValidations.set("POST /api/v1/tenant/settlements/:id/items", {
-  body: z.strictObject({
-    earningIds: z.array(z.string().uuid()).min(1),
-  }),
+  body: z
+    .strictObject({
+      earningIds: z.array(z.string().uuid()).optional(),
+      slotEarningIds: z.array(z.string().uuid()).optional(),
+    })
+    .refine(
+      (v) =>
+        (v.earningIds?.length ?? 0) > 0 ||
+        (v.slotEarningIds?.length ?? 0) > 0,
+      { message: "至少提供一个 earningIds 或 slotEarningIds" },
+    ),
 });
 
 routeValidations.set("POST /api/v1/tenant/orders/:orderId/disputes", {
