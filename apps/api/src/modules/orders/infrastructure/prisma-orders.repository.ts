@@ -70,7 +70,7 @@ export class PrismaOrdersRepository implements OrdersRepository {
 
   async loadFull(tenantId: string, orderId: string): Promise<OrderView | null> {
     const order = await this.client.order.findFirst({
-      where: { tenantId, id: orderId },
+      where: { tenantId, id: orderId, processType: "CLASSIC" },
     });
     if (!order) return null;
     const customer = await this.client.customerProfile.findFirst({
@@ -160,6 +160,7 @@ export class PrismaOrdersRepository implements OrdersRepository {
     const rows = await this.client.order.findMany({
       where: {
         tenantId,
+        processType: "CLASSIC",
         ...(opts.status ? { status: opts.status as never } : {}),
       },
       orderBy: { createdAt: "desc" },
@@ -178,7 +179,7 @@ export class PrismaOrdersRepository implements OrdersRepository {
     customerProfileId: string,
   ): Promise<OrderView[]> {
     const rows = await this.client.order.findMany({
-      where: { tenantId, customerProfileId },
+      where: { tenantId, customerProfileId, processType: "CLASSIC" },
       orderBy: { createdAt: "desc" },
       take: 100,
     });

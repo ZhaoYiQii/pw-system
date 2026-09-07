@@ -208,6 +208,12 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     expect(publishedData.dispatchNo).toMatch(/^GD/);
     expect(publishedData.round.status).toBe("OPEN");
     expect(publishedData.copyText).toContain("派单编号");
+    const classicOrders = (
+      await req(ownerToken)
+        .get("/api/v1/tenant/orders?status=DISPATCHING")
+        .expect(200)
+    ).body.data as unknown[];
+    expect(classicOrders).toHaveLength(0);
     for (const line of publishedData.lines) {
       lineIds[line.positionLabel] = line.id;
     }
