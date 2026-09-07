@@ -1,7 +1,32 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ApiError, apiFetch } from "../../_lib/api";
 import { fenToYuanText, yuanToFenString } from "../../_lib/money";
 import { TenantNav } from "../../_lib/tenant-nav";
@@ -35,79 +60,46 @@ interface PlayerDetail extends Player {
   availability: Availability[];
 }
 
-type PageState =
-  | { phase: "loading" }
-  | { phase: "unauthenticated" }
-  | { phase: "error"; message: string }
-  | { phase: "ready" };
-
-export default function PlayersPage() {
-  const [page, setPage] = useState<PageState>({ phase: "loading" });
-  const [rows, setRows] = useState<Player[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+function Inner() {
+  const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [newMobile, setNewMobile] = useState("");
-  const [newBasePriceYuan, setNewBasePriceYuan] = useState("");
+  const [baseYuan, setBaseYuan] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PlayerDetail | null>(null);
   const [skillGameId, setSkillGameId] = useState("");
-  const [availFrom, setAvailFrom] = useState("");
-  const [availTo, setAvailTo] = useState("");
-  const [availReason, setAvailReason] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setPage({ phase: "loading" });
-    try {
-      const [players, gameList] = await Promise.all([
-        apiFetch<Player[]>("/api/v1/tenant/players"),
-        apiFetch<Game[]>("/api/v1/tenant/catalog/games"),
-      ]);
-      setRows(players);
-      setGames(gameList.filter((g) => g.enabled));
-      setPage({ phase: "ready" });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        setPage({ phase: "unauthenticated" });
-      else
-        setPage({
-          phase: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-    }
-  }, []);
+  const players = useQuery({
+    queryKey: ["players"],
+    queryFn: () => apiFetch<Player[]>("/api/v1/tenant/players"),
+  });
+  const games = useQuery({
+    queryKey: ["catalog-games"],
+    queryFn: () => apiFetch<Game[]>("/api/v1/tenant/catalog/games"),
+  });
+  const detail = useQuery({
+    queryKey: ["player-detail", selectedId],
+    queryFn: () =>
+      apiFetch<PlayerDetail>(`/api/v1/tenant/players/${selectedId as string}`),
+    enabled: selectedId !== null,
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const loadDetail = async (id: string) => {
-    setSelectedId(id);
-    setDetail(null);
-    setMsg(null);
-    try {
-      setDetail(await apiFetch<PlayerDetail>(`/api/v1/tenant/players/${id}`));
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    }
+  const refreshAll = () => {
+    void queryClient.invalidateQueries({ queryKey: ["players"] });
+    void queryClient.invalidateQueries({ queryKey: ["player-detail"] });
   };
 
-  const create = async () => {
-    if (!newName.trim()) {
-      setMsg("请填写陪玩姓名");
-      return;
-    }
-    const baseFen = yuanToFenString(newBasePriceYuan);
-    if (baseFen === null) {
-      setMsg("基础小时价需为非负金额，例如 50 或 50.5");
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<Player>("/api/v1/tenant/players", {
+  const create = useMutation({
+    mutationFn: () => {
+      const baseFen = yuanToFenString(baseYuan);
+      if (!newName.trim() || baseFen === null) {
+        setMessage("请填写姓名和合法的非负小时价");
+        throw new Error("invalid input");
+      }
+      return apiFetch<Player>("/api/v1/tenant/players", {
         method: "POST",
         body: JSON.stringify({
           name: newName,
@@ -115,400 +107,345 @@ export default function PlayersPage() {
           basePricePerHourFen: baseFen,
         }),
       });
+    },
+    onSuccess: () => {
       setNewName("");
       setNewMobile("");
-      setNewBasePriceYuan("");
-      setOkMsg("已创建陪玩。");
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      setBaseYuan("");
+      setMessage("已创建陪玩。");
+      refreshAll();
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
 
-  const toggleAccepting = async (p: Player) => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<Player>(`/api/v1/tenant/players/${p.id}`, {
+  const toggle = useMutation({
+    mutationFn: (p: Player) =>
+      apiFetch<Player>(`/api/v1/tenant/players/${p.id}`, {
         method: "PATCH",
         body: JSON.stringify({ acceptingOrders: !p.acceptingOrders }),
-      });
-      setOkMsg(
-        `${p.name} ${p.acceptingOrders ? "已暂停接单" : "已恢复接单"}。`,
-      );
-      await load();
-      if (selectedId === p.id) await loadDetail(p.id);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      }),
+    onSuccess: refreshAll,
+  });
 
-  const remove = async (p: Player) => {
-    if (!window.confirm(`确认删除陪玩「${p.name}」及其技能/排期？`)) return;
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(`/api/v1/tenant/players/${p.id}`, {
-        method: "DELETE",
-      });
-      if (selectedId === p.id) {
-        setSelectedId(null);
-        setDetail(null);
-      }
-      setOkMsg(`已删除 ${p.name}。`);
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const remove = useMutation({
+    mutationFn: (p: Player) =>
+      apiFetch<unknown>(`/api/v1/tenant/players/${p.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      setSelectedId(null);
+      refreshAll();
+    },
+  });
 
-  const addSkill = async () => {
-    if (!selectedId || !skillGameId) return;
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(`/api/v1/tenant/players/${selectedId}/skills`, {
-        method: "POST",
-        body: JSON.stringify({ gameId: skillGameId }),
-      });
-      await loadDetail(selectedId);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const addSkill = useMutation({
+    mutationFn: () =>
+      apiFetch<unknown>(
+        `/api/v1/tenant/players/${selectedId as string}/skills`,
+        {
+          method: "POST",
+          body: JSON.stringify({ gameId: skillGameId }),
+        },
+      ),
+    onSuccess: () => {
+      setSkillGameId("");
+      refreshAll();
+    },
+  });
 
-  const removeSkill = async (skillId: string) => {
-    if (!selectedId) return;
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(
-        `/api/v1/tenant/players/${selectedId}/skills/${skillId}`,
+  const removeSkill = useMutation({
+    mutationFn: (skillId: string) =>
+      apiFetch<unknown>(
+        `/api/v1/tenant/players/${selectedId as string}/skills/${skillId}`,
         { method: "DELETE" },
-      );
-      await loadDetail(selectedId);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      ),
+    onSuccess: refreshAll,
+  });
 
-  const addAvailability = async () => {
-    if (!selectedId || !availFrom || !availTo) {
-      setMsg("请填写开始与结束时间");
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(
-        `/api/v1/tenant/players/${selectedId}/availability`,
+  const addAvailability = useMutation({
+    mutationFn: () =>
+      apiFetch<unknown>(
+        `/api/v1/tenant/players/${selectedId as string}/availability`,
         {
           method: "POST",
           body: JSON.stringify({
-            startsAt: new Date(availFrom).toISOString(),
-            endsAt: new Date(availTo).toISOString(),
-            reason: availReason || undefined,
+            startsAt: new Date(from).toISOString(),
+            endsAt: new Date(to).toISOString(),
+            ...(reason ? { reason } : {}),
           }),
         },
-      );
-      setAvailFrom("");
-      setAvailTo("");
-      setAvailReason("");
-      await loadDetail(selectedId);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      ),
+    onSuccess: () => {
+      setFrom("");
+      setTo("");
+      setReason("");
+      refreshAll();
+    },
+  });
 
-  const removeAvailability = async (availabilityId: string) => {
-    if (!selectedId) return;
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(
-        `/api/v1/tenant/players/${selectedId}/availability/${availabilityId}`,
+  const removeAvailability = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<unknown>(
+        `/api/v1/tenant/players/${selectedId as string}/availability/${id}`,
         { method: "DELETE" },
-      );
-      await loadDetail(selectedId);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      ),
+    onSuccess: refreshAll,
+  });
+
+  if (players.isError || games.isError) {
+    const e = players.error ?? games.error;
+    return e instanceof ApiError && e.status === 401 ? (
+      <Button asChild variant="outline">
+        <Link href="/store/login">去登录</Link>
+      </Button>
+    ) : (
+      <p className="text-sm text-destructive">
+        加载失败：{e instanceof Error ? e.message : String(e)}
+      </p>
+    );
+  }
 
   return (
-    <main>
-      <TenantNav />
-      <div className="page">
-        <h1 className="page-title">陪玩</h1>
-        <p className="page-desc">
-          陪玩档案、技能与不可接单时间（重叠会被拒绝）。
-        </p>
-        {msg ? <p className="banner banner-error">{msg}</p> : null}
-        {okMsg ? <p className="banner banner-success">{okMsg}</p> : null}
-        {page.phase === "unauthenticated" ? (
-          <div className="card">
-            <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">
-              去登录
-            </Link>
-          </div>
-        ) : null}
-        {page.phase === "error" ? (
-          <p className="banner banner-error">加载失败：{page.message}</p>
-        ) : null}
-        {page.phase === "ready" ? (
-          <>
-            <div className="card">
-              <div
-                className="row-actions"
-                style={{
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <h2 className="card-title" style={{ margin: 0 }}>
-                  陪玩列表（{rows.length}）
-                </h2>
-              </div>
-              <div className="row-actions" style={{ marginBottom: 12 }}>
-                <input
-                  className="input"
-                  placeholder="姓名"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  style={{ maxWidth: 200 }}
-                />
-                <input
-                  className="input"
-                  placeholder="手机（可选）"
-                  value={newMobile}
-                  onChange={(e) => setNewMobile(e.target.value)}
-                  style={{ maxWidth: 200 }}
-                />
-                <input
-                  className="input"
-                  inputMode="decimal"
-                  placeholder="基础小时价(元)，如 50"
-                  value={newBasePriceYuan}
-                  onChange={(e) => setNewBasePriceYuan(e.target.value)}
-                  style={{ maxWidth: 200 }}
-                />
-                <button
-                  className="btn btn-primary"
-                  disabled={busy || !newName.trim() || !newBasePriceYuan.trim()}
-                  onClick={() => void create()}
-                >
-                  新建陪玩
-                </button>
-              </div>
-              {rows.length === 0 ? (
-                <p className="muted">暂无陪玩。</p>
+    <div className="flex flex-col gap-6">
+      {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>新建陪玩</CardTitle>
+          <CardDescription>基础小时价为店铺陪玩默认报价。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr_auto]"
+            onSubmit={(e) => {
+              e.preventDefault();
+              create.mutate();
+            }}
+          >
+            <Input
+              required
+              placeholder="姓名 *"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <Input
+              placeholder="手机（可选）"
+              value={newMobile}
+              onChange={(e) => setNewMobile(e.target.value)}
+            />
+            <Input
+              required
+              inputMode="decimal"
+              placeholder="基础小时价(元)"
+              value={baseYuan}
+              onChange={(e) => setBaseYuan(e.target.value)}
+            />
+            <Button type="submit" disabled={create.isPending}>
+              新建
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>陪玩列表（{players.data?.length ?? 0}）</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {players.isPending ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              加载中…
+            </p>
+          ) : null}
+          {players.data && players.data.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>手机</TableHead>
+                  <TableHead>小时价</TableHead>
+                  <TableHead>接单</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {players.data.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell>{p.mobile ?? "-"}</TableCell>
+                    <TableCell>
+                      {fenToYuanText(p.basePricePerHourFen)} 元/小时
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={p.acceptingOrders ? "default" : "outline"}
+                      >
+                        {p.acceptingOrders ? "接单中" : "暂停"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedId(p.id)}
+                        >
+                          {selectedId === p.id ? "刷新" : "详情"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggle.mutate(p)}
+                        >
+                          {p.acceptingOrders ? "暂停接单" : "恢复接单"}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`确认删除陪玩「${p.name}」？`))
+                              remove.mutate(p);
+                          }}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {selectedId && detail.data ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>{detail.data.name} · 详情</CardTitle>
+            <CardDescription>维护游戏技能与不可接单时间。</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <section>
+              <h3 className="mb-2 text-sm font-semibold">技能</h3>
+              {detail.data.skills.length === 0 ? (
+                <p className="text-sm text-muted-foreground">暂无技能。</p>
               ) : (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>姓名</th>
-                      <th>手机</th>
-                      <th>基础小时价</th>
-                      <th>接单</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.name}</td>
-                        <td>{p.mobile ?? <span className="muted">-</span>}</td>
-                        <td>
-                          {p.basePricePerHourFen
-                            ? `${fenToYuanText(p.basePricePerHourFen)} 元/小时`
-                            : "0 元/小时"}
-                        </td>
-                        <td>
-                          <span
-                            className={
-                              p.acceptingOrders
-                                ? "badge badge-active"
-                                : "badge badge-inactive"
-                            }
-                          >
-                            {p.acceptingOrders ? "接单中" : "暂停"}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="row-actions">
-                            <button
-                              className="btn"
-                              onClick={() => void loadDetail(p.id)}
-                            >
-                              {selectedId === p.id ? "刷新" : "详情"}
-                            </button>
-                            <button
-                              className="btn"
-                              disabled={busy}
-                              onClick={() => void toggleAccepting(p)}
-                            >
-                              {p.acceptingOrders ? "暂停接单" : "恢复接单"}
-                            </button>
-                            <button
-                              className="btn btn-danger"
-                              disabled={busy}
-                              onClick={() => void remove(p)}
-                            >
-                              删除
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <ul className="space-y-1 text-sm">
+                  {detail.data.skills.map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{s.gameName}</span>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeSkill.mutate(s.id)}
+                      >
+                        移除
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
-            {selectedId && detail ? (
-              <div className="card">
-                <h2 className="card-title">
-                  {detail.name} · 详情
-                  <span
-                    className={
-                      detail.acceptingOrders
-                        ? "badge badge-active"
-                        : "badge badge-inactive"
-                    }
-                    style={{ marginLeft: 8 }}
-                  >
-                    {detail.acceptingOrders ? "接单中" : "暂停接单"}
-                  </span>
-                </h2>
-
-                <h3 className="card-title">技能</h3>
-                {detail.skills.length === 0 ? (
-                  <p className="muted">暂无技能。</p>
-                ) : (
-                  <table className="data-table">
-                    <tbody>
-                      {detail.skills.map((s) => (
-                        <tr key={s.id}>
-                          <td>{s.gameName}</td>
-                          <td className="muted">{s.title ?? "-"}</td>
-                          <td>
-                            <button
-                              className="btn btn-danger"
-                              disabled={busy}
-                              onClick={() => void removeSkill(s.id)}
-                            >
-                              移除
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                <div className="row-actions">
-                  <select
-                    className="input"
-                    value={skillGameId}
-                    onChange={(e) => setSkillGameId(e.target.value)}
-                    style={{ maxWidth: 220 }}
-                  >
-                    <option value="">选择游戏…</option>
-                    {games.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    className="btn btn-primary"
-                    disabled={busy || !skillGameId}
-                    onClick={() => void addSkill()}
-                  >
-                    添加技能
-                  </button>
-                </div>
-
-                <h3 className="card-title" style={{ marginTop: 20 }}>
-                  不可接单时间
-                </h3>
-                {detail.availability.length === 0 ? (
-                  <p className="muted">暂无设置。</p>
-                ) : (
-                  <table className="data-table">
-                    <tbody>
-                      {detail.availability.map((a) => (
-                        <tr key={a.id}>
-                          <td>{new Date(a.startsAt).toLocaleString()}</td>
-                          <td>→</td>
-                          <td>{new Date(a.endsAt).toLocaleString()}</td>
-                          <td className="muted">{a.reason ?? "-"}</td>
-                          <td>
-                            <button
-                              className="btn btn-danger"
-                              disabled={busy}
-                              onClick={() => void removeAvailability(a.id)}
-                            >
-                              删除
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-                <div className="row-actions" style={{ alignItems: "flex-end" }}>
-                  <div className="field" style={{ margin: 0 }}>
-                    <label>开始</label>
-                    <input
-                      className="input"
-                      type="datetime-local"
-                      value={availFrom}
-                      onChange={(e) => setAvailFrom(e.target.value)}
-                    />
-                  </div>
-                  <div className="field" style={{ margin: 0 }}>
-                    <label>结束</label>
-                    <input
-                      className="input"
-                      type="datetime-local"
-                      value={availTo}
-                      onChange={(e) => setAvailTo(e.target.value)}
-                    />
-                  </div>
-                  <div className="field" style={{ margin: 0, flex: 1 }}>
-                    <label>原因（可选）</label>
-                    <input
-                      className="input"
-                      value={availReason}
-                      onChange={(e) => setAvailReason(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    className="btn btn-primary"
-                    disabled={busy}
-                    onClick={() => void addAvailability()}
-                  >
-                    添加不可用时间
-                  </button>
-                </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <select
+                  className="h-9 rounded-md border bg-background px-2 text-sm"
+                  value={skillGameId}
+                  onChange={(e) => setSkillGameId(e.target.value)}
+                >
+                  <option value="">选择游戏…</option>
+                  {(games.data ?? []).map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  disabled={!skillGameId}
+                  onClick={() => addSkill.mutate()}
+                >
+                  添加技能
+                </Button>
               </div>
-            ) : null}
-          </>
-        ) : null}
+            </section>
+            <section>
+              <h3 className="mb-2 text-sm font-semibold">不可接单时间</h3>
+              {detail.data.availability.length === 0 ? (
+                <p className="text-sm text-muted-foreground">暂无设置。</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {detail.data.availability.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex items-center justify-between"
+                    >
+                      <span>
+                        {new Date(a.startsAt).toLocaleString()} →{" "}
+                        {new Date(a.endsAt).toLocaleString()}
+                      </span>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeAvailability.mutate(a.id)}
+                      >
+                        删除
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <Input
+                  type="datetime-local"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                />
+                <Input
+                  type="datetime-local"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                />
+                <Input
+                  placeholder="原因（可选）"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+                <Button
+                  disabled={!from || !to}
+                  onClick={() => addAvailability.mutate()}
+                >
+                  添加
+                </Button>
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+export default function PlayersPage() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <main className="min-h-screen bg-[#f4f5f7]">
+      <TenantNav />
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <h1 className="text-2xl font-semibold tracking-tight">陪玩</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          陪玩档案、基础小时价、技能与不可接单时间。
+        </p>
+        <div className="mt-6">
+          <QueryClientProvider client={queryClient}>
+            <Inner />
+          </QueryClientProvider>
+        </div>
       </div>
     </main>
   );

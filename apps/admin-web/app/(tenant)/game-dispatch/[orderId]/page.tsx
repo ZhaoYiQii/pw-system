@@ -1,8 +1,23 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ApiError, apiFetch } from "../../../_lib/api";
 import { TenantNav } from "../../../_lib/tenant-nav";
 
@@ -24,222 +39,225 @@ interface DispatchDetail {
   copyText: string;
   applyUrl: string;
   bossUrl: string;
-  durationMinutes: number;
   lines: LineView[];
   round: { roundNo: number; closesAt: string; status: string } | null;
 }
 
-type PageState =
-  | { phase: "loading" }
-  | { phase: "unauthenticated" }
-  | { phase: "error"; message: string }
-  | { phase: "ready" };
+function Inner({ orderId }: { orderId: string }) {
+  const queryClient = useQueryClient();
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [message, setMessage] = useState<string | null>(null);
+
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["game-dispatch-detail", orderId],
+    queryFn: () =>
+      apiFetch<DispatchDetail>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}`,
+      ),
+  });
+
+  const removeApp = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<unknown>(`/api/v1/tenant/game-dispatch/applications/${id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      setMessage("已移除该报名。");
+      void queryClient.invalidateQueries({
+        queryKey: ["game-dispatch-detail", orderId],
+      });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+
+  const assign = useMutation({
+    mutationFn: () =>
+      apiFetch<DispatchDetail>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/assignment`,
+        {
+          method: "POST",
+          body: JSON.stringify({ applicationIds: Array.from(checked) }),
+        },
+      ),
+    onSuccess: () => {
+      setMessage("已确认选中，可复制选定文案并 @ 对应陪玩。");
+      setChecked(new Set());
+      void queryClient.invalidateQueries({
+        queryKey: ["game-dispatch-detail", orderId],
+      });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+
+  const copy = async () => {
+    if (!data) return;
+    try {
+      await navigator.clipboard.writeText(data.copyText);
+      setMessage("群文案已复制，可直接粘贴到陪玩群。");
+    } catch {
+      setMessage("复制失败，请手动选择文本复制。");
+    }
+  };
+
+  if (isError) {
+    return error instanceof ApiError && error.status === 401 ? (
+      <Button asChild variant="outline">
+        <Link href="/store/login">去登录</Link>
+      </Button>
+    ) : (
+      <p className="text-sm text-destructive">
+        加载失败：{error instanceof Error ? error.message : String(error)}
+      </p>
+    );
+  }
+  if (isPending || !data) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {message ? <p className="text-sm text-emerald-600">{message}</p> : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>{data.dispatchNo}</CardTitle>
+          <CardDescription>
+            复制后发到陪玩群；老板选人链接可转发给老板。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 text-sm">
+            {data.copyText}
+          </pre>
+          {data.applyUrl ? (
+            <p className="break-all text-xs text-muted-foreground">
+              报名链接：{data.applyUrl}
+            </p>
+          ) : null}
+          {data.bossUrl ? (
+            <p className="break-all text-xs text-muted-foreground">
+              老板选人链接：{data.bossUrl}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => void copy()}>复制群文案</Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                void queryClient.invalidateQueries({
+                  queryKey: ["game-dispatch-detail", orderId],
+                })
+              }
+            >
+              刷新报名
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/game-dispatch">返回列表</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {data.lines.map((line) => {
+        const remaining = line.requiredCount - checked.size;
+        return (
+          <Card key={line.id}>
+            <CardHeader>
+              <CardTitle>
+                {line.positionLabel}（需 {line.requiredCount} 人）
+              </CardTitle>
+              <CardDescription>
+                {remaining > 0 ? `还差 ${remaining} 人` : "人数已足够"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {line.applications.length === 0 ? (
+                <p className="py-3 text-sm text-muted-foreground">暂无报名。</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {line.applications.map((app) => (
+                    <div
+                      key={app.id}
+                      className="flex items-center justify-between rounded-md border px-3 py-2"
+                    >
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          disabled={
+                            app.status !== "APPLIED" ||
+                            data.status !== "DISPATCHING"
+                          }
+                          checked={checked.has(app.id)}
+                          onChange={(e) => {
+                            const next = new Set(checked);
+                            if (e.target.checked) next.add(app.id);
+                            else next.delete(app.id);
+                            setChecked(next);
+                          }}
+                        />
+                        <span className="font-medium">{app.playerName}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {app.status === "APPLIED" ? "已报名" : app.status}
+                        </span>
+                      </label>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={
+                          app.status !== "APPLIED" || removeApp.isPending
+                        }
+                        onClick={() => removeApp.mutate(app.id)}
+                      >
+                        移除报名
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+      <div>
+        <Button
+          disabled={
+            checked.size === 0 ||
+            data.status !== "DISPATCHING" ||
+            assign.isPending
+          }
+          onClick={() => assign.mutate()}
+        >
+          确认选中的陪玩
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function GameDispatchDetailPage() {
   const params = useParams<{ orderId: string }>();
-  const [page, setPage] = useState<PageState>({ phase: "loading" });
-  const [detail, setDetail] = useState<DispatchDetail | null>(null);
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [msg, setMsg] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    setPage({ phase: "loading" });
-    setMsg(null);
-    setOkMsg(null);
-    try {
-      const data = await apiFetch<DispatchDetail>(
-        `/api/v1/tenant/game-dispatch/orders/${params.orderId}`,
-      );
-      setDetail(data);
-      setChecked(new Set());
-      setPage({ phase: "ready" });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        setPage({ phase: "unauthenticated" });
-      else
-        setPage({
-          phase: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-    }
-  }, [params.orderId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const copyText = async () => {
-    if (!detail) return;
-    try {
-      await navigator.clipboard.writeText(detail.copyText);
-      setOkMsg("群文案已复制，可直接粘贴到陪玩群。");
-    } catch {
-      setMsg("复制失败，请手动选择文本复制。");
-    }
-  };
-
-  const removeApp = async (id: string) => {
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(
-        `/api/v1/tenant/game-dispatch/applications/${id}`,
-        {
-          method: "DELETE",
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: false },
         },
-      );
-      setOkMsg("已移除该报名。");
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const assign = async () => {
-    if (checked.size === 0) {
-      setMsg("请先勾选要确认的陪玩");
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    try {
-      await apiFetch<unknown>(
-        `/api/v1/tenant/game-dispatch/orders/${params.orderId}/assignment`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            applicationIds: Array.from(checked),
-          }),
-        },
-      );
-      setOkMsg("已确认选中，可复制下方选定文案并 @ 对应陪玩。");
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
+      }),
+  );
   return (
-    <main>
+    <main className="min-h-screen bg-[#f4f5f7]">
       <TenantNav />
-      <div className="page">
-        <h1 className="page-title">派单详情</h1>
-        {msg ? <p className="banner banner-error">{msg}</p> : null}
-        {okMsg ? <p className="banner banner-success">{okMsg}</p> : null}
-        {page.phase === "unauthenticated" ? (
-          <div className="card">
-            <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">
-              去登录
-            </Link>
-          </div>
-        ) : null}
-        {page.phase === "error" ? (
-          <p className="banner banner-error">加载失败：{page.message}</p>
-        ) : null}
-        {page.phase === "ready" && detail ? (
-          <>
-            <div className="card">
-              <div className="row-actions">
-                <strong>{detail.dispatchNo}</strong>
-                <button className="btn" onClick={() => void load()}>
-                  刷新报名
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => void copyText()}
-                >
-                  复制群文案
-                </button>
-                <Link className="btn" href="/game-dispatch">
-                  返回列表
-                </Link>
-              </div>
-              <pre className="muted" style={{ whiteSpace: "pre-wrap" }}>
-                {detail.copyText}
-              </pre>
-              {detail.applyUrl ? (
-                <p className="muted">报名链接：{detail.applyUrl}</p>
-              ) : null}
-              {detail.bossUrl ? (
-                <p className="muted">老板选人链接：{detail.bossUrl}</p>
-              ) : null}
-            </div>
-
-            {detail.lines.map((line) => (
-              <div className="card" key={line.id}>
-                <h2 className="card-title">
-                  {line.positionLabel}（需 {line.requiredCount} 人）
-                </h2>
-                {line.applications.length === 0 ? (
-                  <p className="muted">暂无报名。</p>
-                ) : (
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>选择</th>
-                        <th>陪玩</th>
-                        <th>状态</th>
-                        <th>报名时间</th>
-                        <th>操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {line.applications.map((app) => (
-                        <tr key={app.id}>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={checked.has(app.id)}
-                              disabled={
-                                app.status !== "APPLIED" ||
-                                busy ||
-                                detail.status !== "DISPATCHING"
-                              }
-                              onChange={(e) => {
-                                const next = new Set(checked);
-                                if (e.target.checked) next.add(app.id);
-                                else next.delete(app.id);
-                                setChecked(next);
-                              }}
-                            />
-                          </td>
-                          <td>{app.playerName}</td>
-                          <td>{app.status}</td>
-                          <td>{new Date(app.createdAt).toLocaleString()}</td>
-                          <td>
-                            <button
-                              className="btn btn-danger"
-                              disabled={app.status !== "APPLIED" || busy}
-                              onClick={() => void removeApp(app.id)}
-                            >
-                              移除报名
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            ))}
-            <div className="row-actions">
-              <button
-                className="btn btn-primary"
-                disabled={busy || detail.status !== "DISPATCHING"}
-                onClick={() => void assign()}
-              >
-                确认选中的陪玩
-              </button>
-            </div>
-          </>
-        ) : null}
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <h1 className="text-2xl font-semibold tracking-tight">派单详情</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          复制群文案、刷新报名并确认陪玩。
+        </p>
+        <div className="mt-6">
+          <QueryClientProvider client={queryClient}>
+            <Inner orderId={params.orderId} />
+          </QueryClientProvider>
+        </div>
       </div>
     </main>
   );

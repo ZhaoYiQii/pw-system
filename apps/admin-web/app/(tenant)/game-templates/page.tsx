@@ -1,8 +1,32 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ApiError, apiFetch } from "../../_lib/api";
 import { TenantNav } from "../../_lib/tenant-nav";
 
@@ -13,207 +37,201 @@ interface TemplateRow {
   updatedAt: string;
 }
 
-type PageState =
-  | { phase: "loading" }
-  | { phase: "unauthenticated" }
-  | { phase: "error"; message: string }
-  | { phase: "ready" };
-
-export default function GameTemplatesPage() {
+function Inner() {
   const router = useRouter();
-  const [page, setPage] = useState<PageState>({ phase: "loading" });
-  const [rows, setRows] = useState<TemplateRow[]>([]);
-  const [busy, setBusy] = useState(false);
+  const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setPage({ phase: "loading" });
-    try {
-      const list = await apiFetch<TemplateRow[]>(
-        "/api/v1/tenant/game-templates",
-      );
-      setRows(list);
-      setPage({ phase: "ready" });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401)
-        setPage({ phase: "unauthenticated" });
-      else
-        setPage({
-          phase: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-    }
-  }, []);
+  const {
+    data,
+    isPending,
+    isError,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["game-templates"],
+    queryFn: () => apiFetch<TemplateRow[]>("/api/v1/tenant/game-templates"),
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const create = async () => {
-    if (!newName.trim()) {
-      setMsg("请先填写模板名称");
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    setOkMsg(null);
-    try {
-      const created = await apiFetch<{ id: string }>(
-        "/api/v1/tenant/game-templates",
-        { method: "POST", body: JSON.stringify({ name: newName.trim() }) },
-      );
+  const create = useMutation({
+    mutationFn: () =>
+      apiFetch<{ id: string }>("/api/v1/tenant/game-templates", {
+        method: "POST",
+        body: JSON.stringify({ name: newName.trim() }),
+      }),
+    onSuccess: (row) => {
+      setNotice("模板已创建，请补充字段与价目。");
       setNewName("");
-      setOkMsg("模板已创建，请补充字段与价目。");
-      router.push(`/game-templates/${created.id}`);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      router.push(`/game-templates/${row.id}`);
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
 
-  const copy = async (id: string, name: string) => {
-    setBusy(true);
-    setMsg(null);
-    setOkMsg(null);
-    try {
-      const copied = await apiFetch<{ id: string }>(
-        `/api/v1/tenant/game-templates/${id}/copy`,
-        { method: "POST" },
-      );
-      setOkMsg(`已复制为「${name} 副本」。`);
-      await load();
-      router.push(`/game-templates/${copied.id}`);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const copy = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ id: string }>(`/api/v1/tenant/game-templates/${id}/copy`, {
+        method: "POST",
+      }),
+    onSuccess: (row) => {
+      setNotice("已复制为新模板。");
+      void queryClient.invalidateQueries({ queryKey: ["game-templates"] });
+      router.push(`/game-templates/${row.id}`);
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
 
-  const remove = async (id: string, name: string) => {
-    if (!window.confirm(`确认删除模板「${name}」？已发布派单不受影响。`))
-      return;
-    setBusy(true);
-    setMsg(null);
-    setOkMsg(null);
-    try {
-      await apiFetch<unknown>(`/api/v1/tenant/game-templates/${id}`, {
+  const remove = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<unknown>(`/api/v1/tenant/game-templates/${id}`, {
         method: "DELETE",
-      });
-      setOkMsg(`已删除模板「${name}」。`);
-      await load();
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      }),
+    onSuccess: () => {
+      setNotice("模板已删除。");
+      void queryClient.invalidateQueries({ queryKey: ["game-templates"] });
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
+
+  if (isError) {
+    return queryError instanceof ApiError && queryError.status === 401 ? (
+      <Button asChild variant="outline">
+        <Link href="/store/login">去登录</Link>
+      </Button>
+    ) : (
+      <p className="text-sm text-destructive">
+        加载失败：
+        {queryError instanceof Error ? queryError.message : String(queryError)}
+      </p>
+    );
+  }
 
   return (
-    <main>
+    <div className="flex flex-col gap-6">
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {notice ? <p className="text-sm text-emerald-600">{notice}</p> : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>新建游戏模板</CardTitle>
+          <CardDescription>例如：英雄联盟 / 王者荣耀。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-wrap items-center gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newName.trim()) create.mutate();
+            }}
+          >
+            <Input
+              className="max-w-72"
+              placeholder="游戏模板名称"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <Button
+              type="submit"
+              disabled={create.isPending || !newName.trim()}
+            >
+              创建并配置
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>模板列表（{data?.length ?? 0}）</CardTitle>
+          <CardDescription>不同游戏配置不同表单与价目。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isPending ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              加载中…
+            </p>
+          ) : null}
+          {!isPending && data?.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              暂无模板。
+            </p>
+          ) : null}
+          {data && data.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell>{row.enabled ? "启用" : "停用"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/game-templates/${row.id}`}>编辑</Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={copy.isPending}
+                          onClick={() => copy.mutate(row.id)}
+                        >
+                          复制
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={remove.isPending}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `确认删除模板「${row.name}」？已发布派单不受影响。`,
+                              )
+                            )
+                              remove.mutate(row.id);
+                          }}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function GameTemplatesPage() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <main className="min-h-screen bg-[#f4f5f7]">
       <TenantNav />
-      <div className="page">
-        <h1 className="page-title">陪玩模板</h1>
-        <p className="page-desc">
-          每个游戏一套模板：下单字段、位置人数、段位加价与派单文案都可自定义。
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <h1 className="text-2xl font-semibold tracking-tight">陪玩模板</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          每个游戏一套模板：下单字段、位置人数、段位加价与派单文案。
         </p>
-        {msg ? <p className="banner banner-error">{msg}</p> : null}
-        {okMsg ? <p className="banner banner-success">{okMsg}</p> : null}
-        {page.phase === "unauthenticated" ? (
-          <div className="card">
-            <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">
-              去登录
-            </Link>
-          </div>
-        ) : null}
-        {page.phase === "error" ? (
-          <p className="banner banner-error">加载失败：{page.message}</p>
-        ) : null}
-        {page.phase === "ready" ? (
-          <>
-            <div className="card">
-              <h2 className="card-title">新建游戏模板</h2>
-              <div className="row-actions">
-                <input
-                  className="input"
-                  placeholder="例如：英雄联盟"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  style={{ maxWidth: 260 }}
-                />
-                <button
-                  className="btn btn-primary"
-                  disabled={busy || !newName.trim()}
-                  onClick={() => void create()}
-                >
-                  创建并配置
-                </button>
-              </div>
-            </div>
-            <div className="card">
-              <h2 className="card-title">模板列表（{rows.length}）</h2>
-              {rows.length === 0 ? (
-                <p className="muted">暂无模板，先新建一个。</p>
-              ) : (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>名称</th>
-                      <th>状态</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.name}</td>
-                        <td>
-                          <span
-                            className={
-                              row.enabled
-                                ? "badge badge-active"
-                                : "badge badge-inactive"
-                            }
-                          >
-                            {row.enabled ? "启用" : "停用"}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="row-actions">
-                            <Link
-                              className="btn"
-                              href={`/game-templates/${row.id}`}
-                            >
-                              编辑
-                            </Link>
-                            <button
-                              className="btn"
-                              disabled={busy}
-                              onClick={() => void copy(row.id, row.name)}
-                            >
-                              复制
-                            </button>
-                            <button
-                              className="btn btn-danger"
-                              disabled={busy}
-                              onClick={() => void remove(row.id, row.name)}
-                            >
-                              删除
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
-        ) : null}
+        <div className="mt-6">
+          <QueryClientProvider client={queryClient}>
+            <Inner />
+          </QueryClientProvider>
+        </div>
       </div>
     </main>
   );
