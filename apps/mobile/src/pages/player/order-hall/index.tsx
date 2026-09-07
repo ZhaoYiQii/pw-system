@@ -76,13 +76,28 @@ export default function OrderHallPage() {
       for (const app of m) {
         if (app.status !== "SELECTED") continue;
         try {
-          const view = await apiAdapter.request<SessionView>(
+          const view = await apiAdapter.request<SessionView | null>(
             `/api/v1/tenant/orders/${app.orderId}/session`,
             { token: t },
           );
-          if (view) next[app.orderId] = view;
+          // 指派成功但场次尚未 start：以占位状态渲染“开始场次”按钮，
+          // start 响应返回真实 sessionId 后再展示证据/结束操作。
+          next[app.orderId] = view ?? {
+            id: "",
+            status: "NOT_STARTED",
+            startedAt: null,
+            endedAt: null,
+            durationSeconds: null,
+          };
         } catch {
-          // 未生成场次时跳过，不阻塞大厅加载。
+          // 未生成场次/尚未开始均不阻塞大厅加载，仍显示“开始场次”。
+          next[app.orderId] = {
+            id: "",
+            status: "NOT_STARTED",
+            startedAt: null,
+            endedAt: null,
+            durationSeconds: null,
+          };
         }
       }
       setSessions(next);

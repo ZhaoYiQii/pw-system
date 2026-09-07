@@ -97,7 +97,11 @@ export class SessionsController {
   ) {
     const tenantId = tenantIdOf(req);
     const view = await this.repo.detailByOrder(tenantId, orderId);
-    await this.requireActor(req, tenantId, view?.playerId ?? null);
+    // 指派后未开始场次时 view 为 null：仍是本单被指派陪玩可查状态，
+    // 不应按“无场次可操作”直接 403（403 仅用于非本单陪玩/无权限角色）。
+    const assignedPlayerId =
+      view?.playerId ?? (await this.repo.assignedPlayerId(tenantId, orderId));
+    await this.requireActor(req, tenantId, assignedPlayerId);
     return { data: view ?? null };
   }
 
