@@ -28,6 +28,12 @@ function code(): string {
     .toUpperCase()}`;
 }
 
+function bossNo(): string {
+  return `B${Date.now().toString(36).toUpperCase()}${randomBytes(3)
+    .toString("hex")
+    .toUpperCase()}`;
+}
+
 function fen(fenString: string): bigint {
   return BigInt(fenString);
 }
@@ -651,9 +657,61 @@ export class GameDispatchService {
         if (app.status !== "APPLIED")
           throw new DispatchConflictError("仅可选中有效报名");
       }
+      const order = await tx.order.findFirst({
+        where: { tenantId, id: orderId },
+      });
+      if (!order) throw new DispatchNotFoundError();
+      const wallet = await tx.bossWallet.findFirst({
+        where: { tenantId, customerProfileId: order.customerProfileId },
+      });
+      const walletRow =
+        wallet ??
+        (await tx.bossWallet.create({
+          data: {
+            tenantId,
+            customerProfileId: order.customerProfileId,
+            bossNo: bossNo(),
+            balanceFen: 0n,
+          },
+        }));
+      const locks = await tx.$queryRaw<Array<{ balance_fen: bigint }>>`
+        SELECT balance_fen FROM boss_wallets
+        WHERE id = ${walletRow.id}::uuid AND tenant_id = ${tenantId}::uuid
+        FOR UPDATE`;
+      const balance = locks[0]?.balance_fen ?? 0n;
+      const slotRows = await tx.orderSlot.findMany({
+        where: { tenantId, orderId },
+      });
       const lines = await tx.gameDispatchLine.findMany({
         where: { tenantId, orderId },
       });
+      const slotPrices = slotRows.map((s) => s.unitPriceFen);
+      for (const app of apps) {
+        const line = lines.find((l) => l.id === app.lineId);
+        if (!line) continue;
+        const player = await tx.playerProfile.findFirst({
+          where: { tenantId, id: app.playerId },
+        });
+        if (!player) throw new DispatchInputError("陪玩不存在");
+        const snapshot = found.gd.snapshotId
+          ? await tx.gameDispatchTemplateSnapshot.findFirst({
+              where: { tenantId, id: found.gd.snapshotId },
+            })
+          : null;
+        const rules = (snapshot?.rankRulesJson ??
+          []) as unknown as RankRuleJson[];
+        const hit = rules.find((r) => r.rankLabel === found.gd.targetRankLabel);
+        slotPrices.push(
+          player.basePricePerHourFen + (hit ? fen(hit.addPriceFen) : 0n),
+        );
+      }
+      const expectedFen = slotPrices.reduce(
+        (acc, price) =>
+          acc + (price * BigInt(found.gd.durationMinutes) + 59n) / 60n,
+        0n,
+      );
+      if (balance < expectedFen)
+        throw new DispatchStateError("老板余额不足，无法确认陪玩，请先充值");
       const slotsByLine = new Map<string, number>();
       for (const app of apps) {
         const line = lines.find((l) => l.id === app.lineId);

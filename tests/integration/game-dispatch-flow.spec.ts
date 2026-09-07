@@ -291,6 +291,15 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       applications: Array<{ id: string }>;
     }>;
     const ids = refreshed.flatMap((a) => a.applications.map((x) => x.id));
+    await req(customerToken)
+      .post(
+        `/api/v1/tenant/game-dispatch/customer/orders/${orderId}/assignment`,
+        { applicationIds: ids },
+      )
+      .expect(409);
+    await req(customerToken)
+      .post("/api/v1/boss/wallet/recharge", { amountFen: "100000" })
+      .expect(201);
     const selectView = (
       await req(customerToken)
         .get(`/api/v1/tenant/game-dispatch/customer/orders/${orderId}/select`)
@@ -339,7 +348,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       await req(customerToken).get("/api/v1/boss/wallet").expect(200)
     ).body.data as { bossNo: string; balanceFen: string };
     expect(first.bossNo).toMatch(/^B/);
-    expect(first.balanceFen).toBe("0");
+    const initial = BigInt(first.balanceFen);
 
     const after = (
       await req(customerToken)
@@ -349,7 +358,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       balanceFen: string;
       entries: Array<{ txNo: string; type: string; amountFen: string }>;
     };
-    expect(after.balanceFen).toBe("10000");
+    expect(after.balanceFen).toBe((initial + 10000n).toString());
     expect(after.entries[0]).toMatchObject({
       type: "RECHARGE",
       amountFen: "10000",
