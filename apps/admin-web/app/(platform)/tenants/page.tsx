@@ -1,13 +1,38 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ApiError, apiFetch, clearAccessToken } from "../../_lib/api";
 
 type TenantStatus = "ACTIVE" | "INACTIVE" | "CONFIG_ERROR";
 
-interface Tenant {
+interface TenantRow {
   id: string;
   code: string;
   name: string;
@@ -16,252 +41,423 @@ interface Tenant {
   createdAt: string;
 }
 
-type LoadState =
-  | { phase: "loading" }
-  | { phase: "error"; message: string }
-  | { phase: "unauthenticated" }
-  | { phase: "ready"; tenants: Tenant[] };
+interface PackageOption {
+  code: string;
+  name: string;
+  addons: string[];
+  durationDays: number;
+}
 
-const statusLabel: Record<TenantStatus, { text: string; className: string }> = {
-  ACTIVE: { text: "正常", className: "badge badge-active" },
-  INACTIVE: { text: "已停用", className: "badge badge-inactive" },
-  CONFIG_ERROR: { text: "配置错误", className: "badge badge-error" },
+interface OnboardResult {
+  tenantId: string;
+  tenantCode: string;
+}
+
+const STATUS_META: Record<
+  TenantStatus,
+  { text: string; variant: "default" | "outline" | "destructive" }
+> = {
+  ACTIVE: { text: "正常", variant: "default" },
+  INACTIVE: { text: "已停用", variant: "outline" },
+  CONFIG_ERROR: { text: "配置错误", variant: "destructive" },
 };
 
-export default function PlatformTenantsPage() {
+function defaultHostFor(code: string): string {
+  const c = code.trim().toLowerCase();
+  return c ? `${c}.example.com` : "";
+}
+
+function Inner() {
   const router = useRouter();
-  const [state, setState] = useState<LoadState>({ phase: "loading" });
+  const queryClient = useQueryClient();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [ownerUsername, setOwnerUsername] = useState("owner");
+  const [ownerPassword, setOwnerPassword] = useState("");
+  const [packageCode, setPackageCode] = useState("BASIC");
+  const [brandPrimary, setBrandPrimary] = useState("#2f54eb");
   const [notice, setNotice] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
-    setState({ phase: "loading" });
-    try {
-      const tenants = await apiFetch<Tenant[]>("/api/v1/platform/tenants");
-      setState({ phase: "ready", tenants });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setState({ phase: "unauthenticated" });
-      } else {
-        setState({
-          phase: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  }, []);
+  const tenantsQuery = useQuery({
+    queryKey: ["platform-tenants"],
+    queryFn: () => apiFetch<TenantRow[]>("/api/v1/platform/tenants"),
+  });
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const packagesQuery = useQuery({
+    queryKey: ["platform-packages"],
+    queryFn: () => apiFetch<PackageOption[]>("/api/v1/platform/packages"),
+  });
 
-  const createTenant = async () => {
-    setBusy(true);
-    setFormError(null);
-    setNotice(null);
-    try {
-      const created = await apiFetch<Tenant>("/api/v1/platform/tenants", {
+  const onboard = useMutation({
+    mutationFn: (): Promise<OnboardResult> => {
+      const resolvedHost =
+        host.trim() !== "" ? host.trim() : defaultHostFor(code);
+      return apiFetch<OnboardResult>("/api/v1/platform/onboarding/tenants", {
         method: "POST",
         body: JSON.stringify({
-          code,
-          name,
-          ...(host.trim() !== "" ? { primaryHost: host.trim() } : {}),
+          code: code.trim(),
+          name: name.trim(),
+          host: resolvedHost,
+          ownerUsername: ownerUsername.trim(),
+          ownerPassword,
+          brandPrimary,
+          packageCode,
         }),
       });
+    },
+    onSuccess: () => {
+      setNotice(
+        `已开通门店「${code.trim()}」。店主账号 ${ownerUsername.trim()} 可用同一密码在商家端登录。`,
+      );
       setCode("");
       setName("");
       setHost("");
-      setNotice(`已创建门店 ${created.code}（${created.name}）。`);
-      await reload();
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      setOwnerPassword("");
+      setFormError(null);
+      void queryClient.invalidateQueries({ queryKey: ["platform-tenants"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform-packages"] });
+    },
+    onError: (error) =>
+      setFormError(error instanceof Error ? error.message : String(error)),
+  });
 
-  const deactivateTenant = async (id: string, label: string) => {
-    if (!window.confirm(`确认停用门店「${label}」？停用后其 H5 前台将不可用。`))
-      return;
-    setBusy(true);
-    setFormError(null);
-    setNotice(null);
-    try {
-      await apiFetch<unknown>(`/api/v1/platform/tenants/${id}/deactivate`, {
+  const deactivate = useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      apiFetch<unknown>(`/api/v1/platform/tenants/${id}/deactivate`, {
         method: "POST",
-      });
-      setNotice(`已停用门店「${label}」。`);
-      await reload();
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      }),
+    onSuccess: () => {
+      setNotice("门店已停用。");
+      void queryClient.invalidateQueries({ queryKey: ["platform-tenants"] });
+    },
+    onError: (error) =>
+      setFormError(error instanceof Error ? error.message : String(error)),
+  });
+
+  const queryError =
+    tenantsQuery.error instanceof ApiError ? tenantsQuery.error : null;
 
   const logout = () => {
     clearAccessToken();
     router.push("/login");
   };
 
-  if (state.phase === "loading") return <p className="page">加载中…</p>;
+  if (queryError?.status === 401) {
+    return (
+      <main className="min-h-screen bg-[#f4f5f7]">
+        <PlatformHeader onLogout={logout} />
+        <div className="mx-auto max-w-6xl px-6 py-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>尚未登录平台账号</CardTitle>
+              <CardDescription>请先以平台管理员身份登录。</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link href="/login">去登录</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main>
-      <nav className="topnav">
-        <span className="brand">PW SaaS</span>
-        <Link href="/tenants">租户管理</Link>
-        <Link href="/packages">套餐与功能</Link>
-        <span className="spacer" />
-        <button className="btn" onClick={logout}>
-          退出
-        </button>
-      </nav>
-      <div className="page">
-        <h1 className="page-title">平台租户</h1>
-        <p className="page-desc">
-          创建门店、停用门店，或进入门店开通增值功能。
+    <main className="min-h-screen bg-[#f4f5f7]">
+      <PlatformHeader onLogout={logout} />
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <h1 className="text-2xl font-semibold tracking-tight">平台租户</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          一键开通门店、停用门店，或进入门店开通增值功能。
         </p>
-        {notice ? <p className="banner banner-success">{notice}</p> : null}
-        {formError ? <p className="banner banner-error">{formError}</p> : null}
 
-        {state.phase === "error" ? (
-          <p className="banner banner-error">
-            加载失败：{state.message}（请确认 API 已启动）
-          </p>
-        ) : null}
-        {state.phase === "unauthenticated" ? (
-          <div className="card">
-            <p>尚未登录平台账号。</p>
-            <Link className="btn btn-primary" href="/login">
-              去登录
-            </Link>
-          </div>
-        ) : null}
+        <div className="mt-6 flex flex-col gap-6">
+          {notice ? <p className="text-sm text-emerald-600">{notice}</p> : null}
+          {formError ? (
+            <p className="text-sm text-destructive">{formError}</p>
+          ) : null}
+          {tenantsQuery.isError && queryError ? (
+            <p className="text-sm text-destructive">
+              加载失败：
+              {queryError.message}（请确认 API 已启动）
+            </p>
+          ) : null}
 
-        {state.phase === "ready" ? (
-          <>
-            <div className="card">
-              <h2 className="card-title">新建门店</h2>
-              <p className="card-desc">
-                填写后平台自动创建租户；主域名可选，用于 H5 前台解析。
-              </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>一键开通新门店</CardTitle>
+              <CardDescription>
+                一次创建租户、店主账号、域名、品牌与套餐，店主可直接登录商家端。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <form
-                className="field-row"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void createTenant();
+                className="grid gap-4 sm:grid-cols-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!code.trim() || !name.trim() || ownerPassword.length < 8)
+                    return;
+                  onboard.mutate();
                 }}
               >
-                <div className="field">
-                  <label htmlFor="code">门店 code</label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="code">
+                    门店 code
+                  </label>
+                  <Input
                     id="code"
-                    className="input"
+                    placeholder="如 lol01"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    小写字母/数字开头，2–32 位，全局唯一。
+                  </p>
                 </div>
-                <div className="field">
-                  <label htmlFor="name">门店名称</label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="name">
+                    门店名称
+                  </label>
+                  <Input
                     id="name"
-                    className="input"
+                    placeholder="如 西西 Club"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
-                <div className="field">
-                  <label htmlFor="host">主域名（可选）</label>
-                  <input
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="host">
+                    主域名（H5 前台）
+                  </label>
+                  <Input
                     id="host"
-                    className="input"
+                    placeholder={defaultHostFor(code) || "shop.example.com"}
                     value={host}
                     onChange={(e) => setHost(e.target.value)}
-                    placeholder="shop.example.com"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    留空将自动生成 {defaultHostFor(code) || "{code}.example.com"}
+                    。
+                  </p>
                 </div>
-                <div className="field" style={{ justifyContent: "flex-end" }}>
-                  <button
-                    className="btn btn-primary"
-                    type="submit"
-                    disabled={busy}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="owner">
+                    店主账号
+                  </label>
+                  <Input
+                    id="owner"
+                    value={ownerUsername}
+                    onChange={(e) => setOwnerUsername(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    店主用此账号登录商家端。
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="password">
+                    店主密码
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={ownerPassword}
+                    onChange={(e) => setOwnerPassword(e.target.value)}
+                    minLength={8}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    至少 8 位；请平台直接交付给店主。
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="package">
+                    开通套餐
+                  </label>
+                  <select
+                    id="package"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                    value={packageCode}
+                    onChange={(e) => setPackageCode(e.target.value)}
                   >
-                    {busy ? "处理中…" : "创建"}
-                  </button>
+                    {(packagesQuery.data ?? []).map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name}（{p.durationDays} 天）
+                      </option>
+                    ))}
+                  </select>
+                  {packagesQuery.isError ? (
+                    <p className="text-xs text-destructive">
+                      套餐加载失败，默认使用基础版。
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium" htmlFor="brand">
+                    品牌主色（H5）
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="brand"
+                      type="color"
+                      className="h-9 w-16 p-1"
+                      value={brandPrimary}
+                      onChange={(e) => setBrandPrimary(e.target.value)}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {brandPrimary}
+                    </span>
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <Button
+                    type="submit"
+                    disabled={
+                      onboard.isPending ||
+                      !code.trim() ||
+                      !name.trim() ||
+                      ownerPassword.length < 8
+                    }
+                  >
+                    {onboard.isPending ? "开通中…" : "一键开通"}
+                  </Button>
                 </div>
               </form>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="card">
-              <h2 className="card-title">租户列表（{state.tenants.length}）</h2>
-              {state.tenants.length === 0 ? (
-                <p className="muted">暂无门店，请先创建。</p>
-              ) : (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>code</th>
-                      <th>名称</th>
-                      <th>状态</th>
-                      <th>时区</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {state.tenants.map((tenant) => {
-                      const badge =
-                        statusLabel[tenant.status] ?? statusLabel.INACTIVE;
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                门店列表（{tenantsQuery.data?.length ?? 0}）
+              </CardTitle>
+              <CardDescription>开通后店主可登录商家端开始使用。</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {tenantsQuery.isPending ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  加载中…
+                </p>
+              ) : null}
+              {!tenantsQuery.isPending && tenantsQuery.data?.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  暂无门店，请先一键开通。
+                </p>
+              ) : null}
+              {tenantsQuery.data && tenantsQuery.data.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>code</TableHead>
+                      <TableHead>名称</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>时区</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tenantsQuery.data.map((tenant) => {
+                      const meta =
+                        STATUS_META[tenant.status] ?? STATUS_META.INACTIVE;
                       return (
-                        <tr key={tenant.id}>
-                          <td>{tenant.code}</td>
-                          <td>{tenant.name}</td>
-                          <td>
-                            <span className={badge.className}>
-                              {badge.text}
-                            </span>
-                          </td>
-                          <td className="muted">{tenant.timezone}</td>
-                          <td>
-                            <div className="row-actions">
-                              <Link
-                                className="btn"
-                                href={`/packages?tenantId=${tenant.id}`}
-                              >
-                                套餐/功能
-                              </Link>
+                        <TableRow key={tenant.id}>
+                          <TableCell className="font-medium">
+                            {tenant.code}
+                          </TableCell>
+                          <TableCell>{tenant.name}</TableCell>
+                          <TableCell>
+                            <Badge variant={meta.variant}>{meta.text}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {tenant.timezone}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button asChild variant="outline" size="sm">
+                                <Link
+                                  href={`/packages?tenantId=${tenant.id}`}
+                                >
+                                  套餐/功能
+                                </Link>
+                              </Button>
                               {tenant.status === "ACTIVE" ? (
-                                <button
-                                  className="btn btn-danger"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void deactivateTenant(
-                                      tenant.id,
-                                      tenant.name,
-                                    )
-                                  }
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  disabled={deactivate.isPending}
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `确认停用门店「${tenant.name}」？停用后其 H5 前台将不可用。`,
+                                      )
+                                    ) {
+                                      setFormError(null);
+                                      deactivate.mutate({ id: tenant.id });
+                                    }
+                                  }}
                                 >
                                   停用
-                                </button>
+                                </Button>
                               ) : null}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </>
-        ) : null}
+                  </TableBody>
+                </Table>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </main>
+  );
+}
+
+function PlatformHeader({ onLogout }: { onLogout: () => void }) {
+  return (
+    <header className="flex items-center gap-5 border-b bg-white px-6 py-3">
+      <span className="font-semibold">PW SaaS</span>
+      <nav className="flex items-center gap-4 text-sm">
+        <Link
+          href="/tenants"
+          className="font-medium text-foreground"
+        >
+          租户管理
+        </Link>
+        <Link
+          href="/packages"
+          className="text-muted-foreground transition-colors hover:text-foreground"
+        >
+          套餐与功能
+        </Link>
+      </nav>
+      <span className="flex-1" />
+      <Button variant="outline" size="sm" onClick={onLogout}>
+        退出
+      </Button>
+    </header>
+  );
+}
+
+export default function PlatformTenantsPage() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Inner />
+    </QueryClientProvider>
   );
 }
