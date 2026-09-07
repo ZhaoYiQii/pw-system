@@ -618,7 +618,9 @@ export class GameDispatchService {
             1000,
         ),
       );
-      return tx.slotSession.update({
+      if (durationSeconds <= 0)
+        throw new DispatchStateError("服务时长不足，请稍后再结束");
+      const updated = await tx.slotSession.update({
         where: { id: session.id },
         data: {
           status: "ENDED",
@@ -626,6 +628,119 @@ export class GameDispatchService {
           durationSeconds,
         },
       });
+      const earningFen =
+        (slot.unitPriceFen * BigInt(Math.max(0, durationSeconds)) + 3599n) /
+        3600n;
+      await tx.slotEarning.upsert({
+        where: {
+          tenantId_orderSlotId: { tenantId, orderSlotId: slot.id },
+        },
+        update: {
+          amountFen: earningFen,
+          detailJson: {
+            unitPriceFen: slot.unitPriceFen.toString(),
+            durationSeconds,
+          },
+          status: "PENDING",
+        },
+        create: {
+          tenantId,
+          orderSlotId: slot.id,
+          orderId: slot.orderId,
+          playerId: slot.playerId,
+          amountFen: earningFen,
+          detailJson: {
+            unitPriceFen: slot.unitPriceFen.toString(),
+            durationSeconds,
+          },
+          status: "PENDING",
+        },
+      });
+      const totalSlots = await tx.orderSlot.count({
+        where: { tenantId, orderId: slot.orderId },
+      });
+      const endedSessions = await tx.slotSession.count({
+        where: { tenantId, orderId: slot.orderId, status: "ENDED" },
+      });
+      if (totalSlots > 0 && endedSessions >= totalSlots) {
+        await tx.order.update({
+          where: { id: slot.orderId },
+          data: { status: "PENDING_CONFIRMATION" },
+        });
+      }
+      return updated;
+    });
+  }
+
+  async confirmSettlement(tenantId: string, actorId: string, orderId: string) {
+    return this.client.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { tenantId, id: orderId },
+      });
+      if (!order) throw new DispatchNotFoundError("订单不存在");
+      if (order.status !== "PENDING_CONFIRMATION")
+        throw new DispatchStateError("订单不在待确认结算状态");
+      const earnings = await tx.slotEarning.findMany({
+        where: { tenantId, orderId, status: "PENDING" },
+      });
+      const slots = await tx.orderSlot.findMany({
+        where: { tenantId, orderId },
+      });
+      if (earnings.length !== slots.length)
+        throw new DispatchStateError("仍有档位未结束");
+      const total = earnings.reduce((acc, e) => acc + e.amountFen, 0n);
+      const wallet = await tx.bossWallet.findFirst({
+        where: { tenantId, customerProfileId: order.customerProfileId },
+      });
+      if (!wallet) throw new DispatchStateError("老板钱包不存在");
+      const locks = await tx.$queryRaw<Array<{ balance_fen: bigint }>>`
+        SELECT balance_fen FROM boss_wallets
+        WHERE id = ${wallet.id}::uuid AND tenant_id = ${tenantId}::uuid
+        FOR UPDATE`;
+      const balance = locks[0]?.balance_fen ?? 0n;
+      if (balance < total)
+        throw new DispatchStateError("老板余额不足，无法完成结算");
+      const after = balance - total;
+      await tx.bossWallet.update({
+        where: { id: wallet.id },
+        data: { balanceFen: after },
+      });
+      await tx.walletEntry.create({
+        data: {
+          tenantId,
+          customerProfileId: order.customerProfileId,
+          walletId: wallet.id,
+          txNo: `SET${Date.now().toString(36).toUpperCase()}${actorId
+            .slice(0, 6)
+            .toUpperCase()}`,
+          type: "DEDUCT",
+          amountFen: total,
+          balanceAfterFen: after,
+          referenceType: "order",
+          referenceId: orderId,
+          reason: "订单结算扣费",
+        },
+      });
+      await tx.slotEarning.updateMany({
+        where: { tenantId, orderId, status: "PENDING" },
+        data: { status: "SETTLED" },
+      });
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: "COMPLETED" },
+      });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.settlement",
+          resourceType: "order",
+          resourceId: orderId,
+          summary: `结算扣费 ${total.toString()} 分`,
+        },
+      });
+      return { totalFen: total.toString(), balanceAfterFen: after.toString() };
     });
   }
 

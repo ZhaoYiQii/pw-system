@@ -302,6 +302,26 @@ export class GameDispatchController {
   }
 
   @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Post("orders/:orderId/confirm-settlement")
+  async confirmSettlement(
+    @Req() req: AuthenticatedRequest,
+    @Param("orderId") orderId: string,
+  ) {
+    try {
+      return {
+        data: await this.dispatch.confirmSettlement(
+          tenantIdOf(req),
+          req.principal?.sub ?? "system",
+          orderId,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
   @Permissions("dispatch.manage")
   @Post("orders/:orderId/lines/:lineId/applications")
   async apply(

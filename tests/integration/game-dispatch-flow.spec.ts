@@ -345,10 +345,12 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     await req(playerTokens.p1)
       .post(`/api/v1/tenant/game-dispatch/slots/${slot?.id}/session/end`)
       .expect(409);
+    await new Promise((r) => setTimeout(r, 1100));
 
     const png = Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
+    await new Promise((r) => setTimeout(r, 1100));
     await request(app.getHttpServer())
       .post(`/api/v1/tenant/game-dispatch/slots/${slot?.id}/session/evidence`)
       .set("authorization", `Bearer ${playerTokens.p1}`)
@@ -363,6 +365,51 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       (end.body as { data: { status: string; durationSeconds: number } }).data
         .status,
     ).toBe("ENDED");
+
+    for (const name of ["阿二", "阿三"]) {
+      const otherPlayer = await client.playerProfile.findFirst({
+        where: { tenantId, name },
+      });
+      expect(otherPlayer).toBeTruthy();
+      const otherSlot = await client.orderSlot.findFirst({
+        where: { tenantId, orderId, playerId: otherPlayer?.id },
+      });
+      expect(otherSlot).toBeTruthy();
+      const token = name === "阿二" ? playerTokens.p2 : playerTokens.p3;
+      await req(token)
+        .post(
+          `/api/v1/tenant/game-dispatch/slots/${otherSlot?.id}/session/start`,
+        )
+        .expect(201);
+      await new Promise((r) => setTimeout(r, 1100));
+      await request(app.getHttpServer())
+        .post(
+          `/api/v1/tenant/game-dispatch/slots/${otherSlot?.id}/session/evidence`,
+        )
+        .set("authorization", `Bearer ${token}`)
+        .set("x-file-name", "proof.png")
+        .send(png)
+        .expect(201);
+      await req(token)
+        .post(`/api/v1/tenant/game-dispatch/slots/${otherSlot?.id}/session/end`)
+        .expect(201);
+    }
+
+    const settlement = await req(ownerToken)
+      .post(`/api/v1/tenant/game-dispatch/orders/${orderId}/confirm-settlement`)
+      .expect(201);
+    expect(
+      (settlement.body as { data: { totalFen: string } }).data.totalFen,
+    ).toBeTruthy();
+    const earnings = await client.slotEarning.findMany({
+      where: { tenantId, orderId },
+    });
+    expect(earnings).toHaveLength(3);
+    expect(earnings.every((e) => e.status === "SETTLED")).toBe(true);
+    const walletView = (
+      await req(customerToken).get("/api/v1/boss/wallet").expect(200)
+    ).body.data as { balanceFen: string };
+    expect(BigInt(walletView.balanceFen)).toBeLessThan(100000n);
   });
 
   it("老板可自助查看模板并创建派单草稿", async () => {
