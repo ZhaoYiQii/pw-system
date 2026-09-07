@@ -157,15 +157,32 @@ export default function OrderHallPage() {
     setMsg(null);
     try {
       const action = view.status === "STARTED" ? "end" : "start";
-      await apiAdapter.request(
-        `/api/v1/tenant/orders/${orderId}/session/${action}`,
-        {
-          method: "POST",
+      const captureProof = async (sessionId: string) => {
+        const evidence = await mediaAdapter.chooseEvidence({ capture: true });
+        await apiAdapter.uploadBytes(
+          `/api/v1/tenant/sessions/${sessionId}/capture`,
           token,
-        },
-      );
+          evidence.name,
+          evidence.bytes,
+        );
+      };
+      if (action === "start") {
+        const started = await apiAdapter.request<{ id: string }>(
+          `/api/v1/tenant/orders/${orderId}/session/start`,
+          { method: "POST", token },
+        );
+        await captureProof(started.id);
+      } else {
+        await captureProof(view.id);
+        await apiAdapter.request(
+          `/api/v1/tenant/orders/${orderId}/session/end`,
+          { method: "POST", token },
+        );
+      }
       setMsg(
-        action === "start" ? "场次已开始。" : "场次已结束，等待门店核算。",
+        action === "start"
+          ? "场次已开始，已保存开始照片/录像。"
+          : "场次已结束，已保存结束照片/录像。",
       );
       await load(token);
     } catch (error) {
