@@ -1,8 +1,12 @@
 export interface ChosenImage {
   name: string;
   bytes: Uint8Array;
+  kind: "image" | "video";
 }
 
 export interface MediaAdapter {
-  chooseImage(): Promise<ChosenImage>;
+  chooseEvidence(options?: {
+    kind?: "image" | "video";
+    capture?: boolean;
+  }): Promise<ChosenImage>;
 }

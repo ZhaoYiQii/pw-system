@@ -2565,6 +2565,22 @@ export type EvidenceUploadResponses = {
     201: unknown;
 };
 
+export type EvidenceCaptureData = {
+    body?: never;
+    headers: {
+        'x-file-name': string;
+    };
+    path: {
+        sessionId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/sessions/{sessionId}/capture';
+};
+
+export type EvidenceCaptureResponses = {
+    201: unknown;
+};
+
 export type EvidenceDownloadData = {
     body?: never;
     path: {

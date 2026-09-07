@@ -376,6 +376,19 @@ describe("Slice 7 session (服务器时钟/幂等/调整)", () => {
       .set("authorization", `Bearer ${ownerToken}`)
       .expect(200);
     expect(dl.body.length).toBe(png.length);
+    // MP4 视频证据同样通过 magic 识别（开始/结束可选图片或视频）。
+    const mp4 = Buffer.from([
+      0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x00,
+      0x00, 0x00, 0x00, 0x00,
+    ]);
+    const vup = await request(server)
+      .post(`/api/v1/tenant/sessions/${sess.id}/evidence`)
+      .set("authorization", `Bearer ${pToken}`)
+      .set("content-type", "application/octet-stream")
+      .set("x-file-name", "clip.mp4")
+      .send(mp4)
+      .expect(201);
+    expect((vup.body.data as { mimeType: string }).mimeType).toBe("video/mp4");
     // 跨租户下载 404（防枚举）
     const t2 = await client.tenant.create({
       data: { code: `s7b_${suffix}`, name: "隔壁店" },

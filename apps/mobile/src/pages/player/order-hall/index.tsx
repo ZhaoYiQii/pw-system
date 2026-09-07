@@ -175,19 +175,24 @@ export default function OrderHallPage() {
     }
   };
 
-  const uploadEvidence = async (sessionId: string) => {
+  const uploadEvidence = async (
+    sessionId: string,
+    mode: "upload" | "capture",
+  ) => {
     if (!token) return;
     setBusy(true);
     setMsg(null);
     try {
-      const image = await mediaAdapter.chooseImage();
+      const evidence = await mediaAdapter.chooseEvidence({
+        capture: mode === "capture",
+      });
       await apiAdapter.uploadBytes(
-        `/api/v1/tenant/sessions/${sessionId}/evidence`,
+        `/api/v1/tenant/sessions/${sessionId}/${mode}`,
         token,
-        image.name,
-        image.bytes,
+        evidence.name,
+        evidence.bytes,
       );
-      setMsg("证据图片已上传。");
+      setMsg(mode === "capture" ? "已拍摄并保存证据。" : "证据已上传。");
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -285,17 +290,40 @@ export default function OrderHallPage() {
                   ) : null}
                 </View>
                 {m.status === "SELECTED" && sessions[m.orderId] ? (
-                  <>
+                  <View className="row-actions">
                     {sessions[m.orderId]?.status === "STARTED" ? (
-                      <Button
-                        size="mini"
-                        disabled={busy}
-                        onClick={() =>
-                          void uploadEvidence(sessions[m.orderId]?.id ?? "")
-                        }
+                      <View
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: 8,
+                        }}
                       >
-                        上传证据
-                      </Button>
+                        <Button
+                          size="mini"
+                          disabled={busy}
+                          onClick={() =>
+                            void uploadEvidence(
+                              sessions[m.orderId]?.id ?? "",
+                              "upload",
+                            )
+                          }
+                        >
+                          上传证据
+                        </Button>
+                        <Button
+                          size="mini"
+                          disabled={busy}
+                          onClick={() =>
+                            void uploadEvidence(
+                              sessions[m.orderId]?.id ?? "",
+                              "capture",
+                            )
+                          }
+                        >
+                          拍照/录像
+                        </Button>
+                      </View>
                     ) : null}
                     <Button
                       size="mini"
@@ -306,7 +334,7 @@ export default function OrderHallPage() {
                         ? "结束场次"
                         : "开始场次"}
                     </Button>
-                  </>
+                  </View>
                 ) : null}
               </View>
             ))}

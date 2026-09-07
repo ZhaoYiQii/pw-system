@@ -23,7 +23,7 @@ import { AuditService } from "../../audit/audit.service.js";
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 50 * 1024 * 1024;
 const MIME_BY_MAGIC: Array<{
   mime: string;
   ext: string;
@@ -56,6 +56,29 @@ const MIME_BY_MAGIC: Array<{
       b.length > 12 &&
       b.toString("ascii", 0, 4) === "RIFF" &&
       b.toString("ascii", 8, 12) === "WEBP",
+  },
+  {
+    mime: "video/mp4",
+    ext: ".mp4",
+    magic: (b) => b.length > 12 && b.toString("ascii", 4, 8) === "ftyp",
+  },
+  {
+    mime: "video/webm",
+    ext: ".webm",
+    magic: (b) =>
+      b.length > 8 &&
+      b[0] === 0x1a &&
+      b[1] === 0x45 &&
+      b[2] === 0xdf &&
+      b[3] === 0xa3,
+  },
+  {
+    mime: "video/quicktime",
+    ext: ".mov",
+    magic: (b) =>
+      b.length > 12 &&
+      (b.toString("ascii", 4, 8) === "moov" ||
+        b.toString("ascii", 4, 8) === "mdat"),
   },
 ];
 
@@ -117,6 +140,40 @@ export class EvidenceController {
     @Param("sessionId") sessionId: string,
     @Headers("x-file-name") fileNameHeader?: string,
   ) {
+    return this.consumeEvidence(
+      req,
+      res,
+      sessionId,
+      fileNameHeader,
+      "evidence.upload",
+    );
+  }
+
+  /** 直拍/直录别名：前端走 input capture，请求体与上传接口一致。 */
+  @TenantScope()
+  @Post("sessions/:sessionId/capture")
+  async capture(
+    @Req() req: AuthenticatedRequest & Request,
+    @Res({ passthrough: true }) res: Response,
+    @Param("sessionId") sessionId: string,
+    @Headers("x-file-name") fileNameHeader?: string,
+  ) {
+    return this.consumeEvidence(
+      req,
+      res,
+      sessionId,
+      fileNameHeader,
+      "evidence.capture",
+    );
+  }
+
+  private async consumeEvidence(
+    req: AuthenticatedRequest & Request,
+    res: Response,
+    sessionId: string,
+    fileNameHeader: string | undefined,
+    auditAction: string,
+  ) {
     const tenantId = this.tenantIdOf(req);
     await this.requireSessionActor(req, sessionId);
     const bytes = await new Promise<Buffer>((resolvePromise, rejectPromise) => {
@@ -132,7 +189,7 @@ export class EvidenceController {
         chunks.push(chunk);
       });
       req.on("end", () => {
-        if (overflow) rejectPromise(new BadRequestException("文件超过 10MiB"));
+        if (overflow) rejectPromise(new BadRequestException("文件超过 50MiB"));
         else resolvePromise(Buffer.concat(chunks));
       });
       req.on("error", rejectPromise);
@@ -140,7 +197,9 @@ export class EvidenceController {
     const originalName = sanitizeName(fileNameHeader ?? "evidence.png");
     const detected = MIME_BY_MAGIC.find((m) => m.magic(bytes));
     if (!detected)
-      throw new BadRequestException("仅支持真实 JPEG/PNG/WebP 图片");
+      throw new BadRequestException(
+        "仅支持真实 JPEG/PNG/WebP 图片或 MP4/WebM/MOV 视频",
+      );
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     const key = path.join(
       tenantId,
@@ -168,7 +227,7 @@ export class EvidenceController {
         tenantId,
         actorType: req.principal?.role,
         actorId: req.principal?.sub ?? null,
-        action: "evidence.upload",
+        action: auditAction,
         resourceType: "evidence_asset",
         resourceId: created.id,
         summary: `上传证据 ${created.id}`,

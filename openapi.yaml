@@ -2897,6 +2897,24 @@ paths:
           description: ""
       tags: &a19
         - Evidence
+  /api/v1/tenant/sessions/{sessionId}/capture:
+    post:
+      operationId: evidence_capture
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-file-name
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a19
   /api/v1/tenant/evidence/{id}:
     get:
       operationId: evidence_download
