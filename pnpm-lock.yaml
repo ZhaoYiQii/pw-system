@@ -168,7 +168,7 @@ importers:
         version: 4.2.1(@swc/helpers@0.5.23)
       '@tarojs/plugin-framework-react':
         specifier: 4.2.1
-        version: 4.2.1(@tarojs/helper@4.2.1(@swc/helpers@0.5.23))(@tarojs/runtime@4.2.1)(@tarojs/shared@4.2.1)(react@18.3.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(sass@1.104.0)(stylus@0.64.0)(terser@5.51.2)(yaml@2.9.0))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))
+        version: 4.2.1(@pmmmwh/react-refresh-webpack-plugin@0.5.16(react-refresh@0.14.2)(type-fest@2.19.0)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(@tarojs/helper@4.2.1(@swc/helpers@0.5.23))(@tarojs/runtime@4.2.1)(@tarojs/shared@4.2.1)(react@18.3.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(sass@1.104.0)(stylus@0.64.0)(terser@5.51.2)(yaml@2.9.0))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))
       '@tarojs/plugin-platform-h5':
         specifier: 4.2.1
         version: 4.2.1(1228b9228b0be4f3c493b437bbc2d9b4)
@@ -200,6 +200,9 @@ importers:
       '@babel/preset-react':
         specifier: 7.29.7
         version: 7.29.7(@babel/core@7.29.7)
+      '@pmmmwh/react-refresh-webpack-plugin':
+        specifier: 0.5.16
+        version: 0.5.16(react-refresh@0.14.2)(type-fest@2.19.0)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))
       '@tarojs/cli':
         specifier: 4.2.1
         version: 4.2.1(@swc/helpers@0.5.23)(@types/node@24.13.3)
@@ -220,10 +223,13 @@ importers:
         version: 1.18.8
       babel-preset-taro:
         specifier: 4.2.1
-        version: 4.2.1(@babel/core@7.29.7)(@babel/plugin-transform-typescript@7.29.7(@babel/core@7.29.7))(@babel/preset-react@7.29.7(@babel/core@7.29.7))(@swc/helpers@0.5.23)
+        version: 4.2.1(@babel/core@7.29.7)(@babel/plugin-transform-typescript@7.29.7(@babel/core@7.29.7))(@babel/preset-react@7.29.7(@babel/core@7.29.7))(@swc/helpers@0.5.23)(react-refresh@0.14.2)
       postcss:
         specifier: 8.5.28
         version: 8.5.28
+      react-refresh:
+        specifier: 0.14.2
+        version: 0.14.2
       tsconfig-paths-webpack-plugin:
         specifier: 4.2.0
         version: 4.2.0
@@ -1821,6 +1827,32 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
+  '@pmmmwh/react-refresh-webpack-plugin@0.5.16':
+    resolution: {integrity: sha512-kLQc9xz6QIqd2oIYyXRUiAp79kGpFBm3fEM9ahfG1HI0WI5gdZ2OVHWdmZYnwODt7ISck+QuQ6sBPrtvUBML7Q==}
+    engines: {node: '>= 10.13'}
+    peerDependencies:
+      '@types/webpack': 4.x || 5.x
+      react-refresh: '>=0.10.0 <1.0.0'
+      sockjs-client: ^1.4.0
+      type-fest: '>=0.17.0 <5.0.0'
+      webpack: '>=4.43.0 <6.0.0'
+      webpack-dev-server: 3.x || 4.x || 5.x
+      webpack-hot-middleware: 2.x
+      webpack-plugin-serve: 0.x || 1.x
+    peerDependenciesMeta:
+      '@types/webpack':
+        optional: true
+      sockjs-client:
+        optional: true
+      type-fest:
+        optional: true
+      webpack-dev-server:
+        optional: true
+      webpack-hot-middleware:
+        optional: true
+      webpack-plugin-serve:
+        optional: true
+
   '@prisma/adapter-pg@7.10.0':
     resolution: {integrity: sha512-N7nwSor0HO1Kz6xBv0TPAjAPysKK0fac6p4fVN3ensLOuzc/83Fgmln5k92eK/cvzqdkSR/2kkAqlbcdwVrwpw==}
 
@@ -3159,6 +3191,11 @@ packages:
     engines: {'0': node >= 0.8.0}
     hasBin: true
 
+  ansi-html@0.0.9:
+    resolution: {integrity: sha512-ozbS3LuenHVxNRh/wdnN16QapUHzauqSomAl1jwwJRRsGwFwtj644lIhxfWu0Fy0acCij2+AEgHvjscq3dlVXg==}
+    engines: {'0': node >= 0.8.0}
+    hasBin: true
+
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
@@ -4153,6 +4190,9 @@ packages:
 
   error-ex@1.3.4:
     resolution: {integrity: sha512-sqQamAnR14VgCr1A618A3sGrygcpK+HEbenA/HiEAkkUwcZIIB/tgWqHFxWgOyDh4nB4JCRimh79dR5Ywc9MDQ==}
+
+  error-stack-parser@2.1.4:
+    resolution: {integrity: sha512-Sk5V6wVazPhq5MhpO+AUxJn5x7XSXGl1R93Vn7i+zS15KDVxQijejNCrz8340/2bgLBjR9GtEG8ZVKONDjcqGQ==}
 
   es-define-property@1.0.1:
     resolution: {integrity: sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==}
@@ -6447,6 +6487,10 @@ packages:
     peerDependencies:
       react: ^18.2.0
 
+  react-refresh@0.14.2:
+    resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
+    engines: {node: '>=0.10.0'}
+
   react@18.3.1:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
     engines: {node: '>=0.10.0'}
@@ -6887,6 +6931,9 @@ packages:
 
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
+
+  stackframe@1.3.4:
+    resolution: {integrity: sha512-oeVtt7eWQS+Na6F//S4kJ2K2VbRlS9D43mAlMyVpVWovy9o+jfgH8O9agzANzaiLjclA0oYzUXEM4PurhSUChw==}
 
   standard-as-callback@2.1.0:
     resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
@@ -9147,6 +9194,21 @@ snapshots:
     dependencies:
       playwright: 1.63.0
 
+  '@pmmmwh/react-refresh-webpack-plugin@0.5.16(react-refresh@0.14.2)(type-fest@2.19.0)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))':
+    dependencies:
+      ansi-html: 0.0.9
+      core-js-pure: 3.50.0
+      error-stack-parser: 2.1.4
+      html-entities: 2.6.0
+      loader-utils: 2.0.4
+      react-refresh: 0.14.2
+      schema-utils: 4.3.3
+      source-map: 0.7.6
+      webpack: 5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)
+    optionalDependencies:
+      type-fest: 2.19.0
+      webpack-dev-server: 4.15.2(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))
+
   '@prisma/adapter-pg@7.10.0':
     dependencies:
       '@prisma/driver-adapter-utils': 7.10.0
@@ -9751,7 +9813,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@tarojs/plugin-framework-react@4.2.1(@tarojs/helper@4.2.1(@swc/helpers@0.5.23))(@tarojs/runtime@4.2.1)(@tarojs/shared@4.2.1)(react@18.3.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(sass@1.104.0)(stylus@0.64.0)(terser@5.51.2)(yaml@2.9.0))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))':
+  '@tarojs/plugin-framework-react@4.2.1(@pmmmwh/react-refresh-webpack-plugin@0.5.16(react-refresh@0.14.2)(type-fest@2.19.0)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(@tarojs/helper@4.2.1(@swc/helpers@0.5.23))(@tarojs/runtime@4.2.1)(@tarojs/shared@4.2.1)(react@18.3.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(sass@1.104.0)(stylus@0.64.0)(terser@5.51.2)(yaml@2.9.0))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))':
     dependencies:
       '@tarojs/helper': 4.2.1(@swc/helpers@0.5.23)
       '@tarojs/runtime': 4.2.1
@@ -9761,6 +9823,7 @@ snapshots:
       lodash: 4.18.1
       tslib: 2.8.1
     optionalDependencies:
+      '@pmmmwh/react-refresh-webpack-plugin': 0.5.16(react-refresh@0.14.2)(type-fest@2.19.0)(webpack-dev-server@4.15.2(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)))(webpack@5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28))
       react: 18.3.1
       vite: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(sass@1.104.0)(stylus@0.64.0)(terser@5.51.2)(yaml@2.9.0)
       webpack: 5.91.0(@swc/core@1.3.96(@swc/helpers@0.5.23))(lightningcss@1.33.0)(postcss@8.5.28)
@@ -10658,6 +10721,8 @@ snapshots:
 
   ansi-html-community@0.0.8: {}
 
+  ansi-html@0.0.9: {}
+
   ansi-regex@5.0.1: {}
 
   ansi-regex@6.3.0: {}
@@ -10797,7 +10862,7 @@ snapshots:
       '@babel/core': 7.29.7
       lodash: 4.18.1
 
-  babel-preset-taro@4.2.1(@babel/core@7.29.7)(@babel/plugin-transform-typescript@7.29.7(@babel/core@7.29.7))(@babel/preset-react@7.29.7(@babel/core@7.29.7))(@swc/helpers@0.5.23):
+  babel-preset-taro@4.2.1(@babel/core@7.29.7)(@babel/plugin-transform-typescript@7.29.7(@babel/core@7.29.7))(@babel/preset-react@7.29.7(@babel/core@7.29.7))(@swc/helpers@0.5.23)(react-refresh@0.14.2):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
@@ -10816,6 +10881,7 @@ snapshots:
       core-js: 3.50.0
     optionalDependencies:
       '@babel/preset-react': 7.29.7(@babel/core@7.29.7)
+      react-refresh: 0.14.2
     transitivePeerDependencies:
       - '@babel/plugin-transform-typescript'
       - '@react-native/babel-preset'
@@ -11745,6 +11811,10 @@ snapshots:
   error-ex@1.3.4:
     dependencies:
       is-arrayish: 0.2.1
+
+  error-stack-parser@2.1.4:
+    dependencies:
+      stackframe: 1.3.4
 
   es-define-property@1.0.1: {}
 
@@ -14129,6 +14199,8 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
+  react-refresh@0.14.2: {}
+
   react@18.3.1:
     dependencies:
       loose-envify: 1.4.0
@@ -14667,6 +14739,8 @@ snapshots:
   sqlstring@2.3.3: {}
 
   stackback@0.0.2: {}
+
+  stackframe@1.3.4: {}
 
   standard-as-callback@2.1.0: {}
 

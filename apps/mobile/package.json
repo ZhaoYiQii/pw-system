@@ -26,6 +26,7 @@
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@babel/preset-react": "7.29.7",
+    "@pmmmwh/react-refresh-webpack-plugin": "0.5.16",
     "@tarojs/cli": "4.2.1",
     "@tarojs/taro-loader": "4.2.1",
     "@tarojs/webpack5-runner": "4.2.1",
@@ -34,6 +35,7 @@
     "@types/webpack-env": "1.18.8",
     "babel-preset-taro": "4.2.1",
     "postcss": "8.5.28",
+    "react-refresh": "0.14.2",
     "tsconfig-paths-webpack-plugin": "4.2.0",
     "typescript": "5.9.3",
     "webpack": "5.91.0"
