@@ -33,6 +33,13 @@ docker compose "${ENV_FILE[@]}" run --rm pw-init \
 docker compose "${ENV_FILE[@]}" exec postgres \
   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "ALTER ROLE pw_runtime PASSWORD '$PW_RUNTIME_PASSWORD';"
 
+# 生产 owner 授权（首次建库/重建库必须；迁移内 ALTER DEFAULT PRIVILEGES FOR ROLE pw
+# 假定本地 owner 名为 pw，而生产 owner 是 pw_saas）：
+# 1) 若不存在 pw 角色则 CREATE ROLE pw NOLOGIN; 并 GRANT pw TO pw_saas;
+# 2) 对含 tenant_isolation_runtime 策略的全部表 GRANT DML TO pw_runtime；
+# 3) ALTER DEFAULT PRIVILEGES FOR ROLE pw_saas ... TO pw_runtime。
+# 完整 SQL 已保存为 /srv/pw-saas/backup/grant_runtime.sql（可用 psql -f 重放）。
+
 # 初始化演示数据（owner 连接；显式覆盖 DATABASE_URL 避免 RLS 拒绝）
 docker compose "${ENV_FILE[@]}" run --rm pw-init \
   sh -c 'DATABASE_URL=$DATABASE_MIGRATION_URL node /app/scripts/seed-prod.mjs'
