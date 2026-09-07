@@ -366,6 +366,7 @@ model Order {
   customerProfileId  String      @map("customer_profile_id") @db.Uuid
   scheduledStartAt   DateTime?   @map("scheduled_start_at") @db.Timestamptz
   status             OrderStatus @default(DRAFT)
+  processType        String      @default("CLASSIC") @map("process_type")
   remark             String?
   version            Int         @default(1)
   createdAt          DateTime    @default(now()) @map("created_at")
@@ -893,4 +894,195 @@ model TenantSubscription {
 
   @@index([tenantId, status])
   @@map("tenant_subscriptions")
+}
+
+// ===== 陪玩运营模块（Game Dispatch，Block1）=====
+// 模块化新流程：所有内容以新增表 + orders.process_type 承载，旧表/旧流程不删除。
+// 金额一律 BigInt 分；JSON 一律 JSONB；全部租户表沿用 RLS。
+
+model GameDispatchTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  enabled   Boolean  @default(true)
+  copyLines Json     @map("copy_lines")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, enabled])
+  @@map("game_dispatch_templates")
+}
+
+model GameDispatchTemplateField {
+  id         String  @id @default(uuid()) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  templateId String  @map("template_id") @db.Uuid
+  fieldKey   String  @map("field_key")
+  label      String
+  fieldType  String  @map("field_type")
+  required   Boolean @default(false)
+  options    Json    @default("[]")
+  placeholder String?
+  sortOrder  Int     @map("sort_order")
+  enabled    Boolean @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  version    Int     @default(1)
+
+  @@unique([tenantId, templateId, fieldKey])
+  @@index([tenantId, templateId, sortOrder])
+  @@map("game_dispatch_template_fields")
+}
+
+model GameDispatchPosition {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  templateId   String   @map("template_id") @db.Uuid
+  label        String
+  defaultCount Int      @default(1) @map("default_count")
+  enabled      Boolean  @default(true)
+  sortOrder    Int      @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  version      Int      @default(1)
+
+  @@unique([tenantId, templateId, label])
+  @@index([tenantId, templateId, sortOrder])
+  @@map("game_dispatch_positions")
+}
+
+model GameDispatchRankRule {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  templateId  String  @map("template_id") @db.Uuid
+  rankLabel   String  @map("rank_label")
+  addPriceFen BigInt  @map("add_price_fen") @db.BigInt
+  sortOrder   Int     @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  version     Int     @default(1)
+
+  @@unique([tenantId, templateId, rankLabel])
+  @@index([tenantId, templateId, sortOrder])
+  @@map("game_dispatch_rank_rules")
+}
+
+model GameDispatchTemplateSnapshot {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  orderId      String   @map("order_id") @db.Uuid
+  templateId   String?  @map("template_id") @db.Uuid
+  templateName String   @map("template_name")
+  fieldsJson   Json     @map("fields_json")
+  positionsJson Json    @map("positions_json")
+  rankRulesJson Json    @map("rank_rules_json")
+  copyLinesJson Json    @map("copy_lines_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  version      Int      @default(1)
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, templateId])
+  @@map("game_dispatch_template_snapshots")
+}
+
+model GameDispatchOrder {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  orderId           String    @map("order_id") @db.Uuid
+  snapshotId        String?   @map("snapshot_id") @db.Uuid
+  dispatchNo        String    @map("dispatch_no")
+  formValuesJson    Json      @map("form_values_json")
+  modeLabel         String?   @map("mode_label")
+  targetRankLabel   String?   @map("target_rank_label")
+  desiredStartAt    DateTime? @map("desired_start_at") @db.Timestamptz
+  durationMinutes   Int       @map("duration_minutes")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  version           Int       @default(1)
+
+  @@unique([tenantId, orderId])
+  @@unique([tenantId, dispatchNo])
+  @@map("game_dispatch_orders")
+}
+
+model GameDispatchLine {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  dispatchOrderId   String   @map("dispatch_order_id") @db.Uuid
+  orderId           String   @map("order_id") @db.Uuid
+  positionLabel     String   @map("position_label")
+  requiredCount     Int      @map("required_count")
+  sortOrder         Int      @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  version           Int      @default(1)
+
+  @@unique([tenantId, dispatchOrderId, positionLabel])
+  @@index([tenantId, orderId, sortOrder])
+  @@map("game_dispatch_lines")
+}
+
+model GameDispatchRound {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  dispatchOrderId String   @map("dispatch_order_id") @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  roundNo         Int      @map("round_no")
+  opensAt         DateTime @map("opens_at") @db.Timestamptz
+  closesAt        DateTime @map("closes_at") @db.Timestamptz
+  status          String   @default("OPEN")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  version         Int      @default(1)
+
+  @@unique([tenantId, dispatchOrderId, roundNo])
+  @@index([tenantId, orderId, status, closesAt])
+  @@map("game_dispatch_rounds")
+}
+
+model GameDispatchApplication {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  roundId       String    @map("round_id") @db.Uuid
+  lineId        String    @map("line_id") @db.Uuid
+  orderId       String    @map("order_id") @db.Uuid
+  playerId      String    @map("player_id") @db.Uuid
+  positionLabel String    @map("position_label")
+  status        String    @default("APPLIED")
+  playerNote    String?   @map("player_note")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  version       Int       @default(1)
+
+  @@unique([tenantId, roundId, lineId, playerId])
+  @@index([tenantId, orderId, lineId, status])
+  @@index([tenantId, playerId, status])
+  @@index([tenantId, roundId, status])
+  @@map("game_dispatch_applications")
+}
+
+model OrderSlot {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  orderId          String    @map("order_id") @db.Uuid
+  dispatchOrderId  String    @map("dispatch_order_id") @db.Uuid
+  lineId           String    @map("line_id") @db.Uuid
+  applicationId    String    @map("application_id") @db.Uuid
+  playerId         String    @map("player_id") @db.Uuid
+  positionLabel    String    @map("position_label")
+  unitPriceFen     BigInt    @map("unit_price_fen") @db.BigInt
+  status           String    @default("SELECTED")
+  createdBy        String?   @map("created_by") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
+
+  @@unique([tenantId, applicationId])
+  @@unique([tenantId, orderId, playerId])
+  @@index([tenantId, orderId, lineId])
+  @@index([tenantId, playerId, status])
+  @@map("order_slots")
 }
