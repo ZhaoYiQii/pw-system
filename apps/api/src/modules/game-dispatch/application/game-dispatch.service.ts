@@ -4,6 +4,7 @@ import type {
   DispatchApplicationView,
   DispatchCopyResult,
   DispatchDraftInput,
+  DispatchListRow,
   DispatchLineView,
   DispatchView,
 } from "../domain/dispatch.js";
@@ -248,6 +249,30 @@ export class GameDispatchService {
       return { orderId: order.id, dispatchOrderId: gd.id, dispatchNo };
     });
     return result;
+  }
+
+  async list(tenantId: string): Promise<DispatchListRow[]> {
+    const rows = await this.client.gameDispatchOrder.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    const out: DispatchListRow[] = [];
+    for (const row of rows) {
+      const order = await this.client.order.findFirst({
+        where: { tenantId, id: row.orderId },
+        select: { status: true },
+      });
+      out.push({
+        orderId: row.orderId,
+        dispatchNo: row.dispatchNo,
+        status: order?.status ?? "UNKNOWN",
+        durationMinutes: row.durationMinutes,
+        customerProfileId: row.tenantId,
+        createdAt: row.createdAt.toISOString(),
+      });
+    }
+    return out;
   }
 
   async publish(

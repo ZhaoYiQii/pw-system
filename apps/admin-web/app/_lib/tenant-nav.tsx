@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/players", label: "陪玩" },
   { href: "/catalog", label: "服务目录" },
   { href: "/game-templates", label: "陪玩模板" },
+  { href: "/game-dispatch", label: "派单管理" },
   { href: "/notifications", label: "通知" },
   { href: "/audit", label: "审计" },
   { href: "/disputes", label: "争议" },

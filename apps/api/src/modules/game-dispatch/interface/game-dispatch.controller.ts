@@ -48,6 +48,13 @@ export class GameDispatchController {
 
   @TenantScope()
   @Permissions("gameDispatch.manage")
+  @Get()
+  async list(@Req() req: AuthenticatedRequest) {
+    return { data: await this.dispatch.list(tenantIdOf(req)) };
+  }
+
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
   @Post("orders")
   async createDraft(
     @Req() req: AuthenticatedRequest,

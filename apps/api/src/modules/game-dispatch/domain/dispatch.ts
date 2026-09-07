@@ -50,6 +50,15 @@ export interface DispatchView {
   bossUrl: string;
 }
 
+export interface DispatchListRow {
+  orderId: string;
+  dispatchNo: string;
+  status: string;
+  durationMinutes: number;
+  customerProfileId: string;
+  createdAt: string;
+}
+
 export interface DispatchCopyResult {
   copyText: string;
   applyUrl: string;
