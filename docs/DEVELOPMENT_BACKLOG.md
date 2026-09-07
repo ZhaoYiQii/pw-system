@@ -36,9 +36,9 @@
 
 ## 二、工程与质量收尾
 
-- [ ] F2/F3：正式 Playwright E2E 入库并接入 CI `test:e2e`（09-06 已手工跑通关键路径，但根脚本 `test:e2e` 仍是 `not-implemented` 占位；CI 已跑 integration/isolation/coverage/format/openapi）。
+- [ ] F2/F3：E2E 已正式入库并替换根脚本 `test:e2e`（4/4 通过，commit `4b2251a`，2026-09-07）；仍待把 `test:e2e` 接入 CI 的浏览器/服务启动环境。
 - [ ] F4：容量基线（100 租户 / 100 万订单，只读 100 RPS、写 50 RPS、P95 达标记录）。
-- [ ] 覆盖率质量债：integration 全局 branches 门槛由 60 提升到 80（critical-domain 已达 100/100/100/100）。
+- [ ] 覆盖率质量债（已延后，2026-09-08）：`test:coverage` 已合并单元+集成，当前 branch 63.7%（目标 80%，critical-domain 已达 100/100/100/100）；用户决定额度优先延后，待 E2E/支付/部署等优先项推进后再补。
 - [ ] 可选：worker 崩溃注入测试与死信人工管理界面（outbox relay 已有租约回收/退避/死信/人工重放）。
 
 ## 三、发布与运维（阶段 H）
