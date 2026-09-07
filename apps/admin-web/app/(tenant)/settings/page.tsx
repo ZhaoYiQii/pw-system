@@ -1,10 +1,35 @@
 "use client";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ApiError, apiFetch } from "../../_lib/api";
 import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
-import { TenantNav } from "../../_lib/tenant-nav";
+import { TenantShell } from "../../_lib/tenant-shell";
 
 interface BrandConfig {
   primaryColor: string;
@@ -56,52 +81,36 @@ const DEFAULT_CONFIG: TenantConfigV1 = {
   storefront: { allowCustomerSelection: true, showServiceDuration: true },
 };
 
-type PageState =
-  | { phase: "loading" }
-  | { phase: "error"; message: string }
-  | { phase: "unauthenticated" }
-  | { phase: "ready" };
-
-export default function TenantSettingsPage() {
-  const [page, setPage] = useState<PageState>({ phase: "loading" });
-  const [effective, setEffective] = useState<EffectiveConfig | null>(null);
-  const [versions, setVersions] = useState<ConfigVersionRow[]>([]);
-  const [addons, setAddons] = useState<FeatureState[]>([]);
+function Inner() {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<TenantConfigV1>(DEFAULT_CONFIG);
-  const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setPage({ phase: "loading" });
-    try {
-      const [cfg, ver, feats] = await Promise.all([
-        apiFetch<EffectiveConfig>("/api/v1/tenant/config"),
-        apiFetch<ConfigVersionRow[]>("/api/v1/tenant/config/versions"),
-        apiFetch<FeatureState[]>("/api/v1/tenant/features"),
-      ]);
-      setEffective(cfg);
-      setVersions(ver);
-      setAddons(feats.filter((f) => !f.core));
-      if (cfg.config) setForm(cfg.config);
-      setPage({ phase: "ready" });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setPage({ phase: "unauthenticated" });
-      } else {
-        setPage({
-          phase: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-  }, []);
+  const effectiveQuery = useQuery({
+    queryKey: ["settings", "effective"],
+    queryFn: () => apiFetch<EffectiveConfig>("/api/v1/tenant/config"),
+  });
+  const versionsQuery = useQuery({
+    queryKey: ["settings", "versions"],
+    queryFn: () =>
+      apiFetch<ConfigVersionRow[]>("/api/v1/tenant/config/versions"),
+  });
+  const featuresQuery = useQuery({
+    queryKey: ["settings", "features"],
+    queryFn: () => apiFetch<FeatureState[]>("/api/v1/tenant/features"),
+  });
+
+  const effective = effectiveQuery.data ?? null;
+  const versions = versionsQuery.data ?? [];
+  const addons = (featuresQuery.data ?? []).filter((f) => !f.core);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!dirty && effective?.config) setForm(effective.config);
+  }, [dirty, effective]);
 
-  const validate = (): string | null => {
+  const invalidMessage = (): string | null => {
     if (!HEX_COLOR.test(form.brand.primaryColor))
       return "主色必须是 6 位十六进制颜色（如 #2f54eb）。";
     if (!HEX_COLOR.test(form.brand.accentColor))
@@ -115,346 +124,366 @@ export default function TenantSettingsPage() {
     return null;
   };
 
-  const applyEffective = (cfg: EffectiveConfig) => {
-    setEffective(cfg);
-    if (cfg.config) setForm(cfg.config);
-  };
+  const refresh = () =>
+    void queryClient.invalidateQueries({ queryKey: ["settings"] });
 
-  const refreshVersions = async () => {
-    const ver = await apiFetch<ConfigVersionRow[]>(
-      "/api/v1/tenant/config/versions",
-    );
-    setVersions(ver);
-  };
-
-  const save = async () => {
-    const invalid = validate();
-    setMessage(invalid);
-    if (invalid) return;
-    setBusy(true);
-    setNotice(null);
-    try {
-      const cfg = await apiFetch<EffectiveConfig>("/api/v1/tenant/config", {
+  const save = useMutation({
+    mutationFn: () =>
+      apiFetch<EffectiveConfig>("/api/v1/tenant/config", {
         method: "POST",
         body: JSON.stringify({ config: form }),
-      });
-      applyEffective(cfg);
-      await refreshVersions();
+      }),
+    onSuccess: (cfg) => {
+      setDirty(false);
       setNotice(`配置已保存并生效（版本 v${cfg.version}）。`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      refresh();
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
 
-  const rollback = async () => {
-    setBusy(true);
-    setMessage(null);
-    setNotice(null);
-    try {
-      const cfg = await apiFetch<EffectiveConfig>(
-        "/api/v1/tenant/config/rollback",
-        {
-          method: "POST",
-        },
-      );
-      applyEffective(cfg);
-      await refreshVersions();
+  const rollback = useMutation({
+    mutationFn: () =>
+      apiFetch<EffectiveConfig>("/api/v1/tenant/config/rollback", {
+        method: "POST",
+      }),
+    onSuccess: (cfg) => {
+      setDirty(false);
       setNotice(`已回滚到上一版本（当前 v${cfg.version}）。`);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
+      refresh();
+    },
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 409)
         setMessage("没有可回滚的上一版本。");
-      } else {
-        setMessage(error instanceof Error ? error.message : String(error));
-      }
-    } finally {
-      setBusy(false);
-    }
+      else setMessage(e instanceof Error ? e.message : String(e));
+    },
+  });
+
+  const submitSave = () => {
+    const invalid = invalidMessage();
+    setMessage(invalid);
+    if (invalid) return;
+    save.mutate();
   };
 
-  const configError = effective?.status === "CONFIG_ERROR";
-  const canRollback = versions.length > 1;
+  if (
+    effectiveQuery.error instanceof ApiError &&
+    effectiveQuery.error.status === 401
+  ) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>尚未登录门店账号</CardTitle>
+          <CardDescription>请先以门店角色登录。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <Link href="/store/login">去登录</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  if (page.phase === "loading") return <p className="page">加载中…</p>;
+  if (effectiveQuery.isPending || !effective) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">加载中…</p>
+    );
+  }
+
+  const configError = effective.status === "CONFIG_ERROR";
+  const canRollback = versions.length > 1;
+  const busy = save.isPending || rollback.isPending;
 
   return (
-    <main>
-      <TenantNav />
-      <div className="page">
-        <h1 className="page-title">门店设置</h1>
-        <p className="page-desc">
-          品牌主题仅允许受限 design token（hex 颜色 / 文字 / 圆角），不接收任意
-          HTML/CSS/JS。
+    <div className="flex flex-col gap-6">
+      {configError ? (
+        <p className="text-sm text-destructive">
+          当前配置异常（CONFIG_ERROR），门店前台暂不可用。请修正后保存，或回滚到上一有效版本。
         </p>
+      ) : null}
+      {message ? <p className="text-sm text-destructive">{message}</p> : null}
+      {notice ? <p className="text-sm text-emerald-600">{notice}</p> : null}
+      {effectiveQuery.isError ? (
+        <p className="text-sm text-destructive">
+          加载失败：
+          {effectiveQuery.error instanceof Error
+            ? effectiveQuery.error.message
+            : String(effectiveQuery.error)}
+        </p>
+      ) : null}
 
-        {page.phase === "unauthenticated" ? (
-          <div className="card">
-            <p>尚未登录门店账号。</p>
-            <Link className="btn btn-primary" href="/store/login">
-              去登录
-            </Link>
-          </div>
-        ) : null}
-        {page.phase === "error" ? (
-          <p className="banner banner-error">加载失败：{page.message}</p>
-        ) : null}
-
-        {page.phase === "ready" ? (
-          <>
-            {configError ? (
-              <p className="banner banner-error">
-                当前配置异常（CONFIG_ERROR），门店前台暂不可用。请修正后保存，或回滚到上一有效版本。
-              </p>
-            ) : null}
-            {message ? <p className="banner banner-error">{message}</p> : null}
-            {notice ? <p className="banner banner-success">{notice}</p> : null}
-
-            <div className="card">
-              <div
-                className="row-actions"
-                style={{ justifyContent: "space-between" }}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle>品牌与前台</CardTitle>
+              <CardDescription>
+                当前生效版本 v{effective.version}
+                {effective.hasSaved ? "" : "（默认配置，尚未保存）"}。
+                品牌主题仅允许受限 design token，不接收任意 HTML/CSS/JS。
+              </CardDescription>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                variant="outline"
+                disabled={busy || !canRollback}
+                title={canRollback ? "" : "需要至少两个版本"}
+                onClick={() => rollback.mutate()}
               >
-                <div>
-                  <h2 className="card-title">品牌与前台</h2>
-                  <p className="card-desc">
-                    当前生效版本 v{effective?.version ?? 0}
-                    {effective?.hasSaved ? "" : "（默认配置，尚未保存）"}
-                  </p>
-                </div>
-                <div className="row-actions">
-                  <button
-                    className="btn"
-                    disabled={busy || !canRollback}
-                    title={canRollback ? "" : "需要至少两个版本"}
-                    onClick={() => void rollback()}
-                  >
-                    回滚上一版本
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    disabled={busy}
-                    onClick={() => void save()}
-                  >
-                    {busy ? "处理中…" : "保存并生效"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="primaryColor">
-                    主色{" "}
-                    <span
-                      className="swatch-preview"
-                      style={{ backgroundColor: form.brand.primaryColor }}
-                    />
-                  </label>
-                  <input
-                    id="primaryColor"
-                    className="input"
-                    type="color"
-                    value={form.brand.primaryColor}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        brand: { ...form.brand, primaryColor: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="accentColor">
-                    辅色{" "}
-                    <span
-                      className="swatch-preview"
-                      style={{ backgroundColor: form.brand.accentColor }}
-                    />
-                  </label>
-                  <input
-                    id="accentColor"
-                    className="input"
-                    type="color"
-                    value={form.brand.accentColor}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        brand: { ...form.brand, accentColor: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="logoText">门店文字（1-40 字符）</label>
-                  <input
-                    id="logoText"
-                    className="input"
-                    maxLength={40}
-                    value={form.brand.logoText}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        brand: { ...form.brand, logoText: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="borderRadius">圆角（0-24 px）</label>
-                  <input
-                    id="borderRadius"
-                    className="input"
-                    type="number"
-                    min={0}
-                    max={24}
-                    step={1}
-                    value={form.brand.borderRadius}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        brand: {
-                          ...form.brand,
-                          borderRadius: Number(e.target.value),
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="field">
-                <label
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={form.storefront.allowCustomerSelection}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        storefront: {
-                          ...form.storefront,
-                          allowCustomerSelection: e.target.checked,
-                        },
-                      })
-                    }
-                  />
-                  前台允许客户自选陪玩
-                </label>
-              </div>
-              <div className="field">
-                <label
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={form.storefront.showServiceDuration}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        storefront: {
-                          ...form.storefront,
-                          showServiceDuration: e.target.checked,
-                        },
-                      })
-                    }
-                  />
-                  前台展示服务时长
-                </label>
+                回滚上一版本
+              </Button>
+              <Button disabled={busy} onClick={submitSave}>
+                {busy ? "处理中…" : "保存并生效"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="primaryColor">
+                主色
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="primaryColor"
+                  type="color"
+                  className="h-9 w-16 p-1"
+                  value={form.brand.primaryColor}
+                  onChange={(e) => {
+                    setDirty(true);
+                    setForm({
+                      ...form,
+                      brand: { ...form.brand, primaryColor: e.target.value },
+                    });
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {form.brand.primaryColor}
+                </span>
               </div>
             </div>
-
-            <div className="card">
-              <h2 className="card-title">配置版本历史</h2>
-              <p className="card-desc">
-                每次保存生成新版本；回滚将上一版本重新置为生效。
-              </p>
-              {versions.length === 0 ? (
-                <p className="muted">暂无保存记录（当前使用平台默认配置）。</p>
-              ) : (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>版本</th>
-                      <th>状态</th>
-                      <th>保存时间</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {versions.map((row) => (
-                      <tr key={row.id}>
-                        <td>v{row.version}</td>
-                        <td>
-                          <span
-                            className={
-                              row.status === "ACTIVE"
-                                ? "badge badge-active"
-                                : row.status === "CONFIG_ERROR"
-                                  ? "badge badge-error"
-                                  : "badge badge-inactive"
-                            }
-                          >
-                            {row.status === "ACTIVE"
-                              ? "当前生效"
-                              : row.status === "CONFIG_ERROR"
-                                ? "配置异常"
-                                : "历史版本"}
-                          </span>
-                        </td>
-                        <td className="muted">
-                          {new Date(row.createdAt).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="accentColor">
+                辅色
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="accentColor"
+                  type="color"
+                  className="h-9 w-16 p-1"
+                  value={form.brand.accentColor}
+                  onChange={(e) => {
+                    setDirty(true);
+                    setForm({
+                      ...form,
+                      brand: { ...form.brand, accentColor: e.target.value },
+                    });
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {form.brand.accentColor}
+                </span>
+              </div>
             </div>
-
-            <div className="card">
-              <h2 className="card-title">增值功能（只读）</h2>
-              <p className="card-desc">
-                增值功能由平台在「套餐与增值功能」中开通/关闭，这里仅展示当前状态。
-              </p>
-              {addons.length === 0 ? (
-                <p className="muted">加载中…</p>
-              ) : (
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>功能</th>
-                      <th>状态</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {addons.map((f) => (
-                      <tr key={f.featureKey}>
-                        <td>
-                          <strong>{featureLabel(f.featureKey)}</strong>
-                          <div className="muted">
-                            {featureDescription(f.featureKey)}
-                          </div>
-                        </td>
-                        <td>
-                          <span
-                            className={
-                              f.enabled
-                                ? "badge badge-active"
-                                : "badge badge-inactive"
-                            }
-                          >
-                            {f.enabled ? "已开通" : "未开通"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="logoText">
+                门店文字（1-40 字符）
+              </label>
+              <Input
+                id="logoText"
+                maxLength={40}
+                value={form.brand.logoText}
+                onChange={(e) => {
+                  setDirty(true);
+                  setForm({
+                    ...form,
+                    brand: { ...form.brand, logoText: e.target.value },
+                  });
+                }}
+              />
             </div>
-          </>
-        ) : null}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" htmlFor="borderRadius">
+                圆角（0-24 px）
+              </label>
+              <Input
+                id="borderRadius"
+                type="number"
+                min={0}
+                max={24}
+                step={1}
+                value={form.brand.borderRadius}
+                onChange={(e) => {
+                  setDirty(true);
+                  setForm({
+                    ...form,
+                    brand: {
+                      ...form.brand,
+                      borderRadius: Number(e.target.value),
+                    },
+                  });
+                }}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.storefront.allowCustomerSelection}
+              onChange={(e) => {
+                setDirty(true);
+                setForm({
+                  ...form,
+                  storefront: {
+                    ...form.storefront,
+                    allowCustomerSelection: e.target.checked,
+                  },
+                });
+              }}
+            />
+            前台允许客户自选陪玩
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.storefront.showServiceDuration}
+              onChange={(e) => {
+                setDirty(true);
+                setForm({
+                  ...form,
+                  storefront: {
+                    ...form.storefront,
+                    showServiceDuration: e.target.checked,
+                  },
+                });
+              }}
+            />
+            前台展示服务时长
+          </label>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>配置版本历史</CardTitle>
+          <CardDescription>
+            每次保存生成新版本；回滚将上一版本重新置为生效。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {versions.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              暂无保存记录（当前使用平台默认配置）。
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>版本</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>保存时间</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {versions.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>v{row.version}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          row.status === "ACTIVE"
+                            ? "default"
+                            : row.status === "CONFIG_ERROR"
+                              ? "destructive"
+                              : "outline"
+                        }
+                      >
+                        {row.status === "ACTIVE"
+                          ? "当前生效"
+                          : row.status === "CONFIG_ERROR"
+                            ? "配置异常"
+                            : "历史版本"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>增值功能（只读）</CardTitle>
+          <CardDescription>
+            增值功能由平台在「套餐与增值功能」中开通/关闭，这里仅展示当前状态。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {addons.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              暂无增值功能。
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>功能</TableHead>
+                  <TableHead>说明</TableHead>
+                  <TableHead>状态</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {addons.map((f) => (
+                  <TableRow key={f.featureKey}>
+                    <TableCell className="font-medium">
+                      {featureLabel(f.featureKey)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {featureDescription(f.featureKey)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={f.enabled ? "default" : "outline"}>
+                        {f.enabled ? "已开通" : "未开通"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function TenantSettingsPage() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <TenantShell>
+      <h1 className="text-2xl font-semibold tracking-tight">门店设置</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        品牌主题、前台选项与增值功能状态。
+      </p>
+      <div className="mt-6">
+        <QueryClientProvider client={queryClient}>
+          <Inner />
+        </QueryClientProvider>
       </div>
-    </main>
+    </TenantShell>
   );
 }
