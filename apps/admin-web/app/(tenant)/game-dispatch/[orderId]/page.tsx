@@ -89,6 +89,43 @@ function Inner({ orderId }: { orderId: string }) {
     onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
   });
 
+  const publish = useMutation({
+    mutationFn: () =>
+      apiFetch<DispatchDetail>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/publish`,
+        { method: "POST" },
+      ),
+    onSuccess: () => {
+      setMessage("派单已发布，报名通道开放 10 分钟。");
+      void queryClient.invalidateQueries({
+        queryKey: ["game-dispatch-detail", orderId],
+      });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+
+  const copySelected = async () => {
+    if (!data) return;
+    const selected = data.lines
+      .flatMap((l) =>
+        l.applications
+          .filter((a) => a.status === "SELECTED")
+          .map((a) => `${a.playerName}（${l.positionLabel}）`),
+      )
+      .join("、");
+    const text = selected
+      ? `已确认接单：${selected}；派单号：${data.dispatchNo}`
+      : "";
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage(
+        selected ? "已复制选定接单文案，可 @ 对应陪玩。" : "暂无已确认陪玩",
+      );
+    } catch {
+      setMessage("复制失败，请手动复制。");
+    }
+  };
+
   const copy = async () => {
     if (!data) return;
     try {
@@ -142,6 +179,17 @@ function Inner({ orderId }: { orderId: string }) {
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => void copy()}>复制群文案</Button>
+            <Button variant="outline" onClick={() => void copySelected()}>
+              复制已选定文案
+            </Button>
+            {["DRAFT", "CONFIRMED"].includes(data.status) ? (
+              <Button
+                onClick={() => publish.mutate()}
+                disabled={publish.isPending}
+              >
+                发布派单
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               onClick={() =>

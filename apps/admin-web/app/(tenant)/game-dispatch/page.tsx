@@ -64,7 +64,12 @@ function Inner() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>派单列表（{data?.length ?? 0}）</CardTitle>
+        <CardTitle className="flex items-center justify-between gap-4">
+          <span>派单列表（{data?.length ?? 0}）</span>
+          <Button asChild size="sm">
+            <Link href="/game-dispatch/new">新建派单</Link>
+          </Button>
+        </CardTitle>
         <CardDescription>
           进入详情可复制群文案、刷新报名并确认陪玩。
         </CardDescription>
