@@ -309,4 +309,25 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     expect(slots).toHaveLength(3);
     expect(slots.every((s) => s.unitPriceFen === BigInt(7000))).toBe(true);
   });
+
+  it("老板可自助查看模板并创建派单草稿", async () => {
+    const templateRes = await req(customerToken)
+      .get(`/api/v1/tenant/game-dispatch/customer/templates/${templateId}`)
+      .expect(200);
+    expect((templateRes.body as { data: { name: string } }).data.name).toBe(
+      "英雄联盟",
+    );
+
+    const draft = await req(customerToken)
+      .post("/api/v1/tenant/game-dispatch/customer/orders", {
+        templateId,
+        formValues: { region: "艾欧尼亚", rank: "钻石", mode: "排位" },
+        durationMinutes: 60,
+        lines: [{ positionLabel: "打野", requiredCount: 1 }],
+      })
+      .expect(201);
+    expect(
+      (draft.body as { data: { dispatchNo: string } }).data.dispatchNo,
+    ).toMatch(/^GD/);
+  });
 });

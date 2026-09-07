@@ -6,6 +6,7 @@ export default defineAppConfig({
     "pages/player/order-hall/index",
     "pages/player/game-signup/index",
     "pages/customer/candidates/index",
+    "pages/customer/game-order/index",
     "pages/customer/game-select/index",
   ],
   window: {

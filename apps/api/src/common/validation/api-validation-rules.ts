@@ -462,3 +462,21 @@ routeValidations.set(
     }),
   },
 );
+
+routeValidations.set("POST /api/v1/tenant/game-dispatch/customer/orders", {
+  body: z.strictObject({
+    templateId: z.string().uuid(),
+    formValues: z.record(z.string(), z.string().max(500)).optional(),
+    desiredStartAt: z.string().datetime({ offset: true }).nullable().optional(),
+    durationMinutes: z.number().int().min(1).max(1440),
+    lines: z
+      .array(
+        z.strictObject({
+          positionLabel: z.string().trim().min(1).max(40),
+          requiredCount: z.number().int().min(1).max(10),
+        }),
+      )
+      .min(1)
+      .max(50),
+  }),
+});

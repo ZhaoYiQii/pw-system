@@ -93,6 +93,77 @@ export class GameDispatchController {
   }
 
   @TenantScope()
+  @Permissions("order.manage")
+  @Post("customer/orders")
+  async customerCreateDraft(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, unknown>,
+  ) {
+    if (req.principal?.role !== "CUSTOMER") {
+      throw new HttpException("需要老板身份", HttpStatus.FORBIDDEN);
+    }
+    try {
+      const input: {
+        templateId: string;
+        formValues: Record<string, string>;
+        desiredStartAt?: string | null;
+        durationMinutes: number;
+        lines: { positionLabel: string; requiredCount: number }[];
+      } = {
+        templateId: body.templateId as string,
+        formValues: (body.formValues ?? {}) as Record<string, string>,
+        durationMinutes: body.durationMinutes as number,
+        lines: body.lines as {
+          positionLabel: string;
+          requiredCount: number;
+        }[],
+      };
+      if (body.desiredStartAt !== undefined)
+        input.desiredStartAt = body.desiredStartAt as string | null;
+      return {
+        data: await this.dispatch.customerCreateDraft(
+          tenantIdOf(req),
+          req.principal.sub,
+          input,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("order.manage")
+  @Get("customer/templates")
+  async customerTemplates(@Req() req: AuthenticatedRequest) {
+    if (req.principal?.role !== "CUSTOMER") {
+      throw new HttpException("需要老板身份", HttpStatus.FORBIDDEN);
+    }
+    return {
+      data: await this.dispatch.customerTemplates(tenantIdOf(req)),
+    };
+  }
+
+  @TenantScope()
+  @Permissions("order.manage")
+  @Get("customer/templates/:id")
+  async customerTemplate(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    if (req.principal?.role !== "CUSTOMER") {
+      throw new HttpException("需要老板身份", HttpStatus.FORBIDDEN);
+    }
+    try {
+      return {
+        data: await this.dispatch.customerTemplate(tenantIdOf(req), id),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
   @Permissions("gameDispatch.manage")
   @Get("orders/:orderId")
   async view(

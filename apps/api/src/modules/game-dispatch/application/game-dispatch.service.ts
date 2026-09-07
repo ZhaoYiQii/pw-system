@@ -437,6 +437,79 @@ export class GameDispatchService {
     return this.assign(tenantId, customerAccountId, orderId, applicationIds);
   }
 
+  async customerCreateDraft(
+    tenantId: string,
+    customerAccountId: string,
+    input: Omit<DispatchDraftInput, "customerProfileId">,
+  ): Promise<{ orderId: string; dispatchOrderId: string; dispatchNo: string }> {
+    const profile = await this.client.customerProfile.findFirst({
+      where: { tenantId, tenantAccountId: customerAccountId },
+    });
+    if (!profile) throw new DispatchNotFoundError("老板档案未绑定");
+    return this.createDraft(tenantId, customerAccountId, {
+      ...input,
+      customerProfileId: profile.id,
+    });
+  }
+
+  async customerTemplates(
+    tenantId: string,
+  ): Promise<Array<{ id: string; name: string }>> {
+    const rows = await this.client.gameDispatchTemplate.findMany({
+      where: { tenantId, enabled: true },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true },
+    });
+    return rows;
+  }
+
+  async customerTemplate(
+    tenantId: string,
+    id: string,
+  ): Promise<{
+    id: string;
+    name: string;
+    fields: Array<{
+      fieldKey: string;
+      label: string;
+      fieldType: string;
+      required: boolean;
+      options: string[];
+    }>;
+    positions: Array<{ id: string; label: string; defaultCount: number }>;
+  }> {
+    const template = await this.client.gameDispatchTemplate.findFirst({
+      where: { tenantId, id, enabled: true },
+    });
+    if (!template) throw new DispatchNotFoundError("模板不存在或已停用");
+    const [fields, positions] = await Promise.all([
+      this.client.gameDispatchTemplateField.findMany({
+        where: { tenantId, templateId: id, enabled: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+      this.client.gameDispatchPosition.findMany({
+        where: { tenantId, templateId: id, enabled: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+    ]);
+    return {
+      id: template.id,
+      name: template.name,
+      fields: fields.map((f) => ({
+        fieldKey: f.fieldKey,
+        label: f.label,
+        fieldType: f.fieldType,
+        required: f.required,
+        options: (f.options ?? []) as string[],
+      })),
+      positions: positions.map((p) => ({
+        id: p.id,
+        label: p.label,
+        defaultCount: p.defaultCount,
+      })),
+    };
+  }
+
   async apply(
     tenantId: string,
     playerAccountId: string,
