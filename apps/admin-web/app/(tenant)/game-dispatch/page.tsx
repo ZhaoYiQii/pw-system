@@ -44,10 +44,18 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function Inner() {
+  const [statusFilter, setStatusFilter] = useState("");
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["game-dispatch"],
     queryFn: () => apiFetch<DispatchRow[]>("/api/v1/tenant/game-dispatch"),
   });
+  const statuses = Array.from(
+    new Set((data ?? []).map((row) => row.status)),
+  ).sort();
+  const rows =
+    statusFilter === ""
+      ? (data ?? [])
+      : (data ?? []).filter((row) => row.status === statusFilter);
 
   if (isError) {
     return error instanceof ApiError && error.status === 401 ? (
@@ -75,17 +83,39 @@ function Inner() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!isPending && data && data.length > 0 ? (
+          <div className="mb-3 flex items-center justify-between">
+            <select
+              aria-label="按状态筛选派单"
+              className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">全部状态</option>
+              {statuses.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s] ?? s}
+                </option>
+              ))}
+            </select>
+            <span className="text-sm text-muted-foreground">
+              当前 {rows.length} 条
+            </span>
+          </div>
+        ) : null}
         {isPending ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             加载中…
           </p>
         ) : null}
-        {!isPending && data?.length === 0 ? (
+        {!isPending && rows.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            暂无派单。通过下单表单生成草稿后可在此发布。
+            {data && data.length > 0
+              ? "当前筛选条件下暂无派单。"
+              : "暂无派单。通过下单表单生成草稿后可在此发布。"}
           </p>
         ) : null}
-        {data && data.length > 0 ? (
+        {rows.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -97,7 +127,7 @@ function Inner() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((row) => (
+              {rows.map((row) => (
                 <TableRow key={row.orderId}>
                   <TableCell className="font-medium">
                     {row.dispatchNo}
