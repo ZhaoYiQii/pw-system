@@ -138,6 +138,9 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
 
   afterAll(async () => {
     if (client) {
+      await client.slotEvidence.deleteMany({ where: { tenantId } });
+      await client.slotSession.deleteMany({ where: { tenantId } });
+      await client.slotEarning.deleteMany({ where: { tenantId } });
       await client.orderSlot.deleteMany({ where: { tenantId } });
       await client.gameDispatchApplication.deleteMany({
         where: { tenantId },
@@ -320,6 +323,46 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     const slots = await client.orderSlot.findMany({ where: { tenantId } });
     expect(slots).toHaveLength(3);
     expect(slots.every((s) => s.unitPriceFen === BigInt(7000))).toBe(true);
+  });
+
+  it("被指派陪玩可开始档位、上传证据并结束", async () => {
+    const player = await client.playerProfile.findFirst({
+      where: { tenantId, name: "阿一" },
+    });
+    expect(player).toBeTruthy();
+    const slot = await client.orderSlot.findFirst({
+      where: { tenantId, orderId, playerId: player?.id },
+    });
+    expect(slot).toBeTruthy();
+
+    const start = await req(playerTokens.p1)
+      .post(`/api/v1/tenant/game-dispatch/slots/${slot?.id}/session/start`)
+      .expect(201);
+    expect((start.body as { data: { status: string } }).data.status).toBe(
+      "STARTED",
+    );
+
+    await req(playerTokens.p1)
+      .post(`/api/v1/tenant/game-dispatch/slots/${slot?.id}/session/end`)
+      .expect(409);
+
+    const png = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
+    await request(app.getHttpServer())
+      .post(`/api/v1/tenant/game-dispatch/slots/${slot?.id}/session/evidence`)
+      .set("authorization", `Bearer ${playerTokens.p1}`)
+      .set("x-file-name", "start.png")
+      .send(png)
+      .expect(201);
+
+    const end = await req(playerTokens.p1)
+      .post(`/api/v1/tenant/game-dispatch/slots/${slot?.id}/session/end`)
+      .expect(201);
+    expect(
+      (end.body as { data: { status: string; durationSeconds: number } }).data
+        .status,
+    ).toBe("ENDED");
   });
 
   it("老板可自助查看模板并创建派单草稿", async () => {

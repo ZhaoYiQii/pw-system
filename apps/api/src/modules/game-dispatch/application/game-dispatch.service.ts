@@ -516,6 +516,155 @@ export class GameDispatchService {
     };
   }
 
+  async serviceSlots(tenantId: string, accountId: string, orderId: string) {
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: accountId },
+    });
+    if (!player) throw new DispatchNotFoundError("陪玩档案未绑定");
+    const slots = await this.client.orderSlot.findMany({
+      where: { tenantId, orderId, playerId: player.id },
+      orderBy: { createdAt: "asc" },
+    });
+    const sessions = await this.client.slotSession.findMany({
+      where: { tenantId, orderId, playerId: player.id },
+    });
+    return {
+      orderId,
+      playerName: player.name,
+      slots: slots.map((slot) => {
+        const session = sessions.find((s) => s.orderSlotId === slot.id);
+        return {
+          orderSlotId: slot.id,
+          positionLabel: slot.positionLabel,
+          unitPriceFen: slot.unitPriceFen.toString(),
+          session: session
+            ? {
+                id: session.id,
+                status: session.status,
+                startedAt: session.startedAt?.toISOString() ?? null,
+                endedAt: session.endedAt?.toISOString() ?? null,
+                durationSeconds: session.durationSeconds ?? null,
+              }
+            : null,
+        };
+      }),
+    };
+  }
+
+  async startSlot(tenantId: string, actorId: string, slotId: string) {
+    return this.client.$transaction(async (tx) => {
+      const slot = await tx.orderSlot.findFirst({
+        where: { tenantId, id: slotId },
+      });
+      if (!slot) throw new DispatchNotFoundError("服务档位不存在");
+      const player = await tx.playerProfile.findFirst({
+        where: { tenantId, tenantAccountId: actorId },
+      });
+      if (!player || player.id !== slot.playerId)
+        throw new DispatchStateError("只能开始自己被指派的场次");
+      const now = new Date();
+      const session = await tx.slotSession.upsert({
+        where: {
+          tenantId_orderSlotId: { tenantId, orderSlotId: slot.id },
+        },
+        update: { status: "STARTED", startedAt: now },
+        create: {
+          tenantId,
+          orderSlotId: slot.id,
+          orderId: slot.orderId,
+          playerId: slot.playerId,
+          status: "STARTED",
+          startedAt: now,
+        },
+      });
+      const order = await tx.order.findFirst({
+        where: { tenantId, id: slot.orderId },
+      });
+      if (order && order.status === "ASSIGNED") {
+        await tx.order.update({
+          where: { id: slot.orderId },
+          data: { status: "IN_PROGRESS" },
+        });
+      }
+      return session;
+    });
+  }
+
+  async endSlot(tenantId: string, actorId: string, slotId: string) {
+    return this.client.$transaction(async (tx) => {
+      const slot = await tx.orderSlot.findFirst({
+        where: { tenantId, id: slotId },
+      });
+      if (!slot) throw new DispatchNotFoundError("服务档位不存在");
+      const player = await tx.playerProfile.findFirst({
+        where: { tenantId, tenantAccountId: actorId },
+      });
+      if (!player || player.id !== slot.playerId)
+        throw new DispatchStateError("只能结束自己被指派的场次");
+      const session = await tx.slotSession.findFirst({
+        where: { tenantId, orderSlotId: slot.id },
+      });
+      if (!session || session.status !== "STARTED")
+        throw new DispatchStateError("场次尚未开始或已结束");
+      const count = await tx.slotEvidence.count({
+        where: { tenantId, orderSlotId: slot.id },
+      });
+      if (count === 0) throw new DispatchStateError("结束前需要至少一份证据");
+      const now = new Date();
+      const durationSeconds = Math.max(
+        0,
+        Math.floor(
+          (now.getTime() - (session.startedAt?.getTime() ?? now.getTime())) /
+            1000,
+        ),
+      );
+      return tx.slotSession.update({
+        where: { id: session.id },
+        data: {
+          status: "ENDED",
+          endedAt: now,
+          durationSeconds,
+        },
+      });
+    });
+  }
+
+  async addSlotEvidence(
+    tenantId: string,
+    actorId: string,
+    slotId: string,
+    meta: {
+      objectKey: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      sha256: string;
+      evidenceType: string;
+    },
+  ) {
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: actorId },
+    });
+    const slot = await this.client.orderSlot.findFirst({
+      where: { tenantId, id: slotId },
+    });
+    if (!slot || !player || player.id !== slot.playerId)
+      throw new DispatchStateError("无权上传该档位证据");
+    const session = await this.client.slotSession.findFirst({
+      where: { tenantId, orderSlotId: slot.id },
+    });
+    if (!session) throw new DispatchStateError("请先开始场次再上传证据");
+    return this.client.slotEvidence.create({
+      data: {
+        tenantId,
+        sessionId: session.id,
+        orderSlotId: slot.id,
+        ...meta,
+        uploadedBy: actorId,
+      },
+    });
+  }
+
   async apply(
     tenantId: string,
     playerAccountId: string,
