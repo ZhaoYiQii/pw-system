@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { apiFetch, setAccessToken } from "../../../_lib/api";
 
 interface LoginResult {
@@ -41,59 +50,75 @@ export default function TenantLoginPage() {
   };
 
   return (
-    <main className="page" style={{ maxWidth: 460 }}>
-      <h1 className="page-title">门店登录</h1>
-      <p className="page-desc">门店后台（owner / 管理员 / 客服等）</p>
-      <div className="card">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          <div className="field">
-            <label htmlFor="tenantCode">门店 code</label>
-            <input
-              id="tenantCode"
-              className="input"
-              value={tenantCode}
-              onChange={(e) => setTenantCode(e.target.value)}
-              autoComplete="organization"
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="username">账号</label>
-            <input
-              id="username"
-              className="input"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">密码</label>
-            <input
-              id="password"
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </div>
-          {message ? <p className="banner banner-error">{message}</p> : null}
-          <button className="btn btn-primary" type="submit" disabled={busy}>
-            {busy ? "登录中…" : "登录"}
-          </button>
-        </form>
+    <main className="flex min-h-screen items-center justify-center bg-[#f4f5f7] px-4">
+      <div className="w-full max-w-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle>门店登录</CardTitle>
+            <CardDescription>
+              门店后台（owner / 管理员 / 客服等）
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium" htmlFor="tenant-code">
+                  门店 code
+                </label>
+                <Input
+                  id="tenant-code"
+                  value={tenantCode}
+                  onChange={(e) => setTenantCode(e.target.value)}
+                  autoComplete="organization"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium" htmlFor="username">
+                  账号
+                </label>
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium" htmlFor="password">
+                  密码
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              {message ? (
+                <p className="text-sm text-destructive">{message}</p>
+              ) : null}
+              <Button type="submit" disabled={busy}>
+                {busy ? "登录中…" : "登录"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          <Link href="/" className="hover:underline">
+            ← 返回首页
+          </Link>
+        </p>
       </div>
-      <p className="muted">
-        <Link href="/">← 返回首页</Link>
-      </p>
     </main>
   );
 }
