@@ -103,6 +103,7 @@ export class PlayersController {
       mobile?: unknown;
       intro?: unknown;
       acceptingOrders?: unknown;
+      basePricePerHourFen?: unknown;
     },
   ) {
     try {
@@ -111,6 +112,7 @@ export class PlayersController {
         mobile?: string | null;
         intro?: string | null;
         acceptingOrders?: boolean;
+        basePricePerHourFen?: string;
       } = {
         name: body.name as string,
       };
@@ -119,6 +121,8 @@ export class PlayersController {
       if (body.intro !== undefined) input.intro = body.intro as string | null;
       if (typeof body.acceptingOrders === "boolean")
         input.acceptingOrders = body.acceptingOrders;
+      if (typeof body.basePricePerHourFen === "string")
+        input.basePricePerHourFen = body.basePricePerHourFen;
       return { data: await this.players.create(tenantIdOf(req), input) };
     } catch (error) {
       this.mapError(error);

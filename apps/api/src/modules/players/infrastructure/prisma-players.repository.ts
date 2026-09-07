@@ -42,6 +42,7 @@ function mapPlayer(row: {
   intro: string | null;
   status: string;
   acceptingOrders: boolean;
+  basePricePerHourFen: bigint;
   createdAt: Date;
   updatedAt: Date;
 }): PlayerView {
@@ -53,6 +54,7 @@ function mapPlayer(row: {
     intro: row.intro,
     status: row.status as PlayerView["status"],
     acceptingOrders: row.acceptingOrders,
+    basePricePerHourFen: row.basePricePerHourFen.toString(),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -180,6 +182,9 @@ export class PrismaPlayerRepository implements PlayerRepository {
           ...(input.intro ? { intro: input.intro } : {}),
           status: input.status ?? "ACTIVE",
           acceptingOrders: input.acceptingOrders ?? true,
+          ...(input.basePricePerHourFen !== undefined
+            ? { basePricePerHourFen: BigInt(input.basePricePerHourFen) }
+            : {}),
         },
       });
       return mapPlayer(row);
@@ -219,6 +224,9 @@ export class PrismaPlayerRepository implements PlayerRepository {
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.acceptingOrders !== undefined
             ? { acceptingOrders: input.acceptingOrders }
+            : {}),
+          ...(input.basePricePerHourFen !== undefined
+            ? { basePricePerHourFen: BigInt(input.basePricePerHourFen) }
             : {}),
         },
       });

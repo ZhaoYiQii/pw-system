@@ -237,6 +237,7 @@ model PlayerProfile {
   intro           String?
   status          ActiveStatus @default(ACTIVE)
   acceptingOrders Boolean      @default(true) @map("accepting_orders")
+  basePricePerHourFen BigInt   @default(0) @map("base_price_per_hour_fen") @db.BigInt
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
   version         Int          @default(1)

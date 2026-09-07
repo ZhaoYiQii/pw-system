@@ -1,3 +1,5 @@
+import type { MoneyFen } from "../../../common/money.js";
+
 export type ActiveStatus = "ACTIVE" | "INACTIVE";
 
 export interface PlayerView {
@@ -8,6 +10,7 @@ export interface PlayerView {
   intro: string | null;
   status: ActiveStatus;
   acceptingOrders: boolean;
+  basePricePerHourFen: MoneyFen;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -67,6 +67,7 @@ routeValidations.set("POST /api/v1/tenant/players", {
     mobile: nullableText("mobile", 32),
     intro: nullableText("intro", 1000),
     acceptingOrders: z.boolean().optional(),
+    basePricePerHourFen: fenMoney("basePricePerHourFen").optional(),
   }),
 });
 
@@ -77,6 +78,7 @@ routeValidations.set("PATCH /api/v1/tenant/players/:id", {
     intro: nullableText("intro", 1000),
     status: statusEnum.optional(),
     acceptingOrders: z.boolean().optional(),
+    basePricePerHourFen: fenMoney("basePricePerHourFen").optional(),
   }),
 });
 

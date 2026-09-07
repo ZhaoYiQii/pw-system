@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
+import { fenToYuanText, yuanToFenString } from "../../_lib/money";
 import { TenantNav } from "../../_lib/tenant-nav";
 
 interface Player {
@@ -11,6 +12,7 @@ interface Player {
   mobile: string | null;
   status: "ACTIVE" | "INACTIVE";
   acceptingOrders: boolean;
+  basePricePerHourFen: string;
 }
 interface Game {
   id: string;
@@ -48,6 +50,7 @@ export default function PlayersPage() {
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newMobile, setNewMobile] = useState("");
+  const [newBasePriceYuan, setNewBasePriceYuan] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<PlayerDetail | null>(null);
   const [skillGameId, setSkillGameId] = useState("");
@@ -92,15 +95,29 @@ export default function PlayersPage() {
   };
 
   const create = async () => {
+    if (!newName.trim()) {
+      setMsg("请填写陪玩姓名");
+      return;
+    }
+    const baseFen = yuanToFenString(newBasePriceYuan);
+    if (baseFen === null) {
+      setMsg("基础小时价需为非负金额，例如 50 或 50.5");
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
       await apiFetch<Player>("/api/v1/tenant/players", {
         method: "POST",
-        body: JSON.stringify({ name: newName, mobile: newMobile || undefined }),
+        body: JSON.stringify({
+          name: newName,
+          mobile: newMobile || undefined,
+          basePricePerHourFen: baseFen,
+        }),
       });
       setNewName("");
       setNewMobile("");
+      setNewBasePriceYuan("");
       setOkMsg("已创建陪玩。");
       await load();
     } catch (error) {
@@ -282,9 +299,17 @@ export default function PlayersPage() {
                   onChange={(e) => setNewMobile(e.target.value)}
                   style={{ maxWidth: 200 }}
                 />
+                <input
+                  className="input"
+                  inputMode="decimal"
+                  placeholder="基础小时价(元)，如 50"
+                  value={newBasePriceYuan}
+                  onChange={(e) => setNewBasePriceYuan(e.target.value)}
+                  style={{ maxWidth: 200 }}
+                />
                 <button
                   className="btn btn-primary"
-                  disabled={busy}
+                  disabled={busy || !newName.trim() || !newBasePriceYuan.trim()}
                   onClick={() => void create()}
                 >
                   新建陪玩
@@ -298,6 +323,7 @@ export default function PlayersPage() {
                     <tr>
                       <th>姓名</th>
                       <th>手机</th>
+                      <th>基础小时价</th>
                       <th>接单</th>
                       <th>操作</th>
                     </tr>
@@ -307,6 +333,11 @@ export default function PlayersPage() {
                       <tr key={p.id}>
                         <td>{p.name}</td>
                         <td>{p.mobile ?? <span className="muted">-</span>}</td>
+                        <td>
+                          {p.basePricePerHourFen
+                            ? `${fenToYuanText(p.basePricePerHourFen)} 元/小时`
+                            : "0 元/小时"}
+                        </td>
                         <td>
                           <span
                             className={

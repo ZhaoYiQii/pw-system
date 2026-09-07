@@ -14,6 +14,8 @@ import {
   SkillAlreadyExistsError,
   SkillNotFoundError,
 } from "../domain/errors.js";
+import type { MoneyFen } from "../../../common/money.js";
+import { parseFenString } from "../../../common/money.js";
 
 export interface PlayerInput {
   name: string;
@@ -21,6 +23,7 @@ export interface PlayerInput {
   intro?: string | null;
   status?: "ACTIVE" | "INACTIVE";
   acceptingOrders?: boolean;
+  basePricePerHourFen?: MoneyFen;
 }
 
 export interface SkillInput {
@@ -116,6 +119,14 @@ function assertPlayerInput(input: Partial<PlayerInput>): void {
     input.intro.length > 500
   ) {
     throw new InvalidPlayerInputError("intro 超出 500 字符");
+  }
+  if (
+    input.basePricePerHourFen !== undefined &&
+    parseFenString(input.basePricePerHourFen, true) === null
+  ) {
+    throw new InvalidPlayerInputError(
+      "basePricePerHourFen 必须为非负整数十进制字符串（分）",
+    );
   }
 }
 
