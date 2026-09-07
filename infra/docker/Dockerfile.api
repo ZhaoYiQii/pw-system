@@ -44,7 +44,9 @@ WORKDIR /app
 # node_modules 保留 workspace 软链；packages 含源码/迁移/dist
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 

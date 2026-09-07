@@ -149,6 +149,11 @@ services:
       ADMIN_WEB_ORIGIN: ${ADMIN_WEB_ORIGIN}
       H5_ORIGIN: ${H5_ORIGIN}
       EVIDENCE_ROOT: /app/data/evidence
+      SEED_TENANT_CODE: ${SEED_TENANT_CODE}
+      SEED_TENANT_NAME: ${SEED_TENANT_NAME}
+      SEED_TENANT_HOSTS: ${SEED_TENANT_HOSTS}
+      SEED_PLATFORM_PASSWORD: ${SEED_PLATFORM_PASSWORD}
+      SEED_TENANT_PASSWORD: ${SEED_TENANT_PASSWORD}
     volumes:
       - evidence:/app/data/evidence
     depends_on:
