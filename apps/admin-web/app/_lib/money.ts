@@ -13,3 +13,19 @@ export function sumFen(values: readonly string[]): string {
     "0",
   );
 }
+
+/** 分（十进制字符串）→ 元文本（不用于业务计算）。 */
+export function fenToYuanText(fen: string): string {
+  if (!/^\d+$/.test(fen)) return "0.00";
+  const i = BigInt(fen);
+  return `${i / 100n}.${String(i % 100n).padStart(2, "0")}`;
+}
+
+/** 元文本 → 分（十进制字符串）；非法返回 null。 */
+export function yuanToFenString(text: string): string | null {
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(text.trim());
+  if (!m) return null;
+  const whole = BigInt(m[1] ?? "0");
+  const fraction = (m[2] ?? "").padEnd(2, "0") || "0";
+  return (whole * 100n + BigInt(fraction)).toString();
+}
