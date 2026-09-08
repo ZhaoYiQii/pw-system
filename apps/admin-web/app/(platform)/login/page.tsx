@@ -1,22 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { apiFetch, setAccessToken } from "../../_lib/api";
 
 interface LoginResult {
   accessToken: string;
-  principal?: { role?: string; username?: string };
 }
 
 export default function PlatformLoginPage() {
@@ -35,7 +24,7 @@ export default function PlatformLoginPage() {
         body: JSON.stringify({ kind: "platform", username, password }),
       });
       setAccessToken(data.accessToken);
-      router.push("/tenants");
+      router.replace("/overview");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -44,61 +33,88 @@ export default function PlatformLoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f4f5f7] px-4">
-      <div className="w-full max-w-sm">
-        <Card>
-          <CardHeader>
-            <CardTitle>平台登录</CardTitle>
-            <CardDescription>SaaS 运营后台（平台管理员/运营）</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              className="flex flex-col gap-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void submit();
-              }}
+    <div className="pw-platform">
+      <div className="pw-login-wrap">
+        <div className="pw-login-card">
+          <div
+            className="pw-brand"
+            style={{ padding: 0, color: "var(--pw-ink)" }}
+          >
+            <span className="pw-mark" style={{ color: "#fff" }}>
+              PL
+            </span>
+            <span>
+              <b style={{ color: "var(--pw-ink)" }}>陪玩门店 SaaS</b>
+              <small style={{ color: "var(--pw-muted)" }}>
+                PLATFORM CONSOLE
+              </small>
+            </span>
+          </div>
+          <h1>平台管理员登录</h1>
+          <p>SaaS 运营后台 · 超级管理员 / 平台运营</p>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
+          >
+            <div className="pw-field">
+              <label htmlFor="username">账号</label>
+              <input
+                id="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                autoComplete="username"
+                autoFocus
+                required
+              />
+            </div>
+            <div className="pw-field" style={{ marginTop: 10 }}>
+              <label htmlFor="password">密码</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            {message ? (
+              <div
+                className="pw-notice"
+                style={{
+                  background: "var(--pw-red-soft)",
+                  color: "var(--pw-red)",
+                  margin: "12px 0 0",
+                }}
+              >
+                {message}
+              </div>
+            ) : (
+              <div
+                className="pw-notice"
+                style={{
+                  background: "var(--pw-green-soft)",
+                  color: "var(--pw-green)",
+                  margin: "12px 0 0",
+                }}
+              >
+                本地演示：登录后进入平台运营控制台。
+              </div>
+            )}
+            <button
+              type="submit"
+              className="pw-btn pw-primary"
+              disabled={busy}
+              style={{ width: "100%", marginTop: 14 }}
             >
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" htmlFor="username">
-                  账号
-                </label>
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" htmlFor="password">
-                  密码
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-              {message ? (
-                <p className="text-sm text-destructive">{message}</p>
-              ) : null}
-              <Button type="submit" disabled={busy}>
-                {busy ? "登录中…" : "登录"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          <Link href="/" className="hover:underline">
-            ← 返回首页
-          </Link>
-        </p>
+              {busy ? "登录中…" : "登录"}
+            </button>
+          </form>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
+

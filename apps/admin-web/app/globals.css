@@ -61,6 +61,49 @@
   --ring: #91caff;
 }
 
+/* 平台端 v2 设计令牌：作用于 .pw-platform 作用域，不影响商家端页面 */
+.pw-platform {
+  --pw-bg: #f2f0e9;
+  --pw-paper: #fffdf8;
+  --pw-paper-2: #f8f6ef;
+  --pw-ink: #18231e;
+  --pw-muted: #6d746f;
+  --pw-line: #dedbd1;
+  --pw-side: #16231e;
+  --pw-side-2: #203029;
+  --pw-accent: #cf6040;
+  --pw-accent-soft: #f5e5de;
+  --pw-green: #2d7259;
+  --pw-green-soft: #e6f0ea;
+  --pw-amber: #a56b22;
+  --pw-amber-soft: #f5ead7;
+  --pw-blue: #496a83;
+  --pw-blue-soft: #e8eff3;
+  --pw-red: #a94d45;
+  --pw-red-soft: #f7e8e4;
+
+  --radius: 12px;
+  --background: var(--pw-bg);
+  --foreground: var(--pw-ink);
+  --card: var(--pw-paper);
+  --card-foreground: var(--pw-ink);
+  --popover: var(--pw-paper);
+  --popover-foreground: var(--pw-ink);
+  --primary: var(--pw-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--pw-paper-2);
+  --secondary-foreground: var(--pw-ink);
+  --muted: var(--pw-paper-2);
+  --muted-foreground: var(--pw-muted);
+  --accent: var(--pw-accent-soft);
+  --accent-foreground: var(--pw-accent);
+  --destructive: var(--pw-red);
+  --destructive-foreground: #ffffff;
+  --border: var(--pw-line);
+  --input: #d4d0c5;
+  --ring: #d9a797;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -75,3 +118,4 @@ body {
   font-size: 14px;
   line-height: 1.6;
 }
+

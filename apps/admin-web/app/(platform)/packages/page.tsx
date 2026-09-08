@@ -9,25 +9,11 @@ import {
 } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ApiError, apiFetch } from "../../_lib/api";
-import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
+import {
+  featureDescription,
+  featureLabel,
+} from "../../_lib/feature-catalog";
 import { PlatformShell } from "../../_lib/platform-shell";
 
 interface Tenant {
@@ -35,6 +21,13 @@ interface Tenant {
   code: string;
   name: string;
   status: string;
+}
+
+interface PackageDef {
+  code: string;
+  name: string;
+  addons: string[];
+  durationDays: number;
 }
 
 interface FeatureState {
@@ -53,7 +46,13 @@ function Inner() {
     queryKey: ["platform", "tenants"],
     queryFn: () => apiFetch<Tenant[]>("/api/v1/platform/tenants"),
   });
-  const featuresQuery = useQuery({
+
+  const packagesQuery = useQuery({
+    queryKey: ["platform", "packages"],
+    queryFn: () => apiFetch<PackageDef[]>("/api/v1/platform/packages"),
+  });
+
+  const entitlementsQuery = useQuery({
     queryKey: ["platform", "entitlements", tenantId],
     queryFn: () =>
       apiFetch<FeatureState[]>(
@@ -75,8 +74,31 @@ function Inner() {
     }
   }, [tenantsQuery.isPending, tenants, tenantId]);
 
+  const assign = useMutation({
+    mutationFn: ({ packageCode }: { packageCode: string }) =>
+      apiFetch<unknown>(`/api/v1/platform/tenants/${tenantId}/package`, {
+        method: "POST",
+        body: JSON.stringify({ packageCode }),
+      }),
+    onSuccess: () => {
+      setNotice("套餐已指派，增值功能已按套餐同步。");
+      setMessage(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["platform", "entitlements", tenantId],
+      });
+    },
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : String(error)),
+  });
+
   const toggle = useMutation({
-    mutationFn: ({ featureKey, next }: { featureKey: string; next: boolean }) =>
+    mutationFn: ({
+      featureKey,
+      next,
+    }: {
+      featureKey: string;
+      next: boolean;
+    }) =>
       apiFetch<FeatureState[]>(
         `/api/v1/platform/tenants/${tenantId}/entitlements`,
         {
@@ -84,176 +106,198 @@ function Inner() {
           body: JSON.stringify({ featureKey, enabled: next }),
         },
       ),
-    onSuccess: (_d, vars) => {
+    onSuccess: (_data, vars) => {
       setNotice(
         `已${vars.next ? "开启" : "关闭"} ${featureLabel(vars.featureKey)}。`,
       );
+      setMessage(null);
       void queryClient.invalidateQueries({
         queryKey: ["platform", "entitlements", tenantId],
       });
     },
-    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+    onError: (error) =>
+      setMessage(error instanceof Error ? error.message : String(error)),
   });
 
   const selectedTenant = tenants.find((t) => t.id === tenantId) ?? null;
-  const features = featuresQuery.data ?? null;
-  const core = (features ?? []).filter((f) => f.core);
-  const addons = (features ?? []).filter((f) => !f.core);
-
-  if (
+  const features = entitlementsQuery.data ?? [];
+  const addons = features.filter((f) => !f.core);
+  const is401 =
     tenantsQuery.error instanceof ApiError &&
-    tenantsQuery.error.status === 401
-  ) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>尚未登录平台账号</CardTitle>
-          <CardDescription>请先以平台管理员身份登录。</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <Link href="/login">去登录</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+    tenantsQuery.error.status === 401;
 
   return (
-    <div className="flex flex-col gap-6">
-      {notice ? <p className="text-sm text-emerald-600">{notice}</p> : null}
-      {message ? <p className="text-sm text-destructive">{message}</p> : null}
-      {tenantsQuery.isError ? (
-        <p className="text-sm text-destructive">
-          加载失败：
-          {tenantsQuery.error instanceof Error
-            ? tenantsQuery.error.message
-            : String(tenantsQuery.error)}
-        </p>
-      ) : null}
+    <PlatformShell>
+      {is401 ? (
+        <div className="pw-panel" style={{ maxWidth: 520, margin: "60px auto" }}>
+          <div className="pw-panel-body">
+            <h2 style={{ margin: "0 0 8px" }}>尚未登录平台账号</h2>
+            <Link className="pw-btn pw-primary" href="/login" style={{ marginTop: 12 }}>
+              去登录
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="pw-page-head">
+            <div>
+              <div className="pw-eyebrow">Platform / Packages</div>
+              <h1>套餐与增值功能</h1>
+              <p>随套餐或按门店逐个开通；关闭后入口隐藏且服务停用。</p>
+            </div>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>选择门店</CardTitle>
-          <CardDescription>为门店开通或关闭增值功能。</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {tenants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              暂无门店，请先在租户管理创建。
-            </p>
-          ) : (
-            <select
-              className="flex h-9 max-w-md rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-              value={tenantId ?? ""}
-              onChange={(e) => setTenantId(e.target.value || null)}
+          {notice ? (
+            <div
+              className="pw-notice"
+              style={{ background: "var(--pw-green-soft)", color: "var(--pw-green)" }}
             >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}（{t.code}）
-                </option>
-              ))}
-            </select>
-          )}
+              {notice}
+            </div>
+          ) : null}
+          {message ? (
+            <div
+              className="pw-notice"
+              style={{ background: "var(--pw-red-soft)", color: "var(--pw-red)" }}
+            >
+              {message}
+            </div>
+          ) : null}
+
+          <div className="pw-panel">
+            <div className="pw-panel-body" style={{ paddingTop: 12 }}>
+              <div className="pw-store-pick">
+                <span style={{ fontSize: 12, color: "var(--pw-muted)" }}>
+                  作用于门店
+                </span>
+                <select
+                  value={tenantId ?? ""}
+                  onChange={(event) => setTenantId(event.target.value || null)}
+                  aria-label="选择门店"
+                >
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="pw-pending">接口已就绪：packages / entitlements</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pw-panel">
+            <div className="pw-panel-head">
+              <h2>套餐定义</h2>
+              <p>
+                {(packagesQuery.data ?? []).map((p) => p.code).join(" / ")}
+              </p>
+            </div>
+            <div className="pw-panel-body" style={{ padding: 0 }}>
+              {(packagesQuery.data ?? []).length > 0 ? (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>套餐</th>
+                      <th>周期</th>
+                      <th>包含增值功能</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(packagesQuery.data ?? []).map((pkg) => (
+                      <tr key={pkg.code}>
+                        <td>
+                          <b>{pkg.name}</b>
+                          <span className="pw-mono" style={{ marginLeft: 8, color: "var(--pw-muted)" }}>
+                            {pkg.code}
+                          </span>
+                        </td>
+                        <td className="pw-mono">{pkg.durationDays} 天</td>
+                        <td style={{ color: "var(--pw-muted)" }}>
+                          {pkg.addons.length > 0
+                            ? pkg.addons.map((key) => featureLabel(key)).join(" · ")
+                            : "仅核心功能"}
+                        </td>
+                        <td>
+                          <span className="pw-status pw-ok">可选</span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="pw-btn pw-small pw-primary"
+                            disabled={!tenantId || assign.isPending}
+                            onClick={() => assign.mutate({ packageCode: pkg.code })}
+                          >
+                            {assign.isPending ? "指派中…" : "指派此套餐"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="pw-empty">加载套餐…</div>
+              )}
+            </div>
+          </div>
+
+          <div className="pw-panel">
+            <div className="pw-panel-head">
+              <h2>增值功能清单（addon）</h2>
+              <p>选中门店后开关</p>
+            </div>
+            <div className="pw-panel-body">
+              {!tenantId ? (
+                <div className="pw-empty">请先选择一家门店。</div>
+              ) : entitlementsQuery.isPending ? (
+                <div className="pw-empty">加载功能清单…</div>
+              ) : addons.length === 0 ? (
+                <div className="pw-empty">暂无增值功能数据。</div>
+              ) : (
+                addons.map((feature) => (
+                  <div className="pw-addon-row" key={feature.featureKey}>
+                    <span>
+                      <b>{featureLabel(feature.featureKey)}</b>
+                      <span
+                        style={{
+                          display: "block",
+                          color: "var(--pw-muted)",
+                          fontSize: 11,
+                        }}
+                      >
+                        {featureDescription(feature.featureKey)}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={feature.enabled}
+                      aria-label={`${featureLabel(feature.featureKey)}开关`}
+                      className={`pw-toggle ${feature.enabled ? "pw-on" : ""}`}
+                      disabled={toggle.isPending}
+                      onClick={() =>
+                        toggle.mutate({
+                          featureKey: feature.featureKey,
+                          next: !feature.enabled,
+                        })
+                      }
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
           {selectedTenant ? (
-            <p className="text-sm text-muted-foreground">
+            <p style={{ color: "var(--pw-muted)", fontSize: 11 }}>
               当前：{selectedTenant.name}（{selectedTenant.code}）· 状态{" "}
               {selectedTenant.status}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
-
-      {features === null && tenantId ? (
-        <p className="text-sm text-muted-foreground">加载功能清单…</p>
-      ) : null}
-
-      {features !== null ? (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>核心功能（永久启用）</CardTitle>
-              <CardDescription>随套餐长期提供，不可单独关闭。</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>功能</TableHead>
-                    <TableHead>说明</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {core.map((f) => (
-                    <TableRow key={f.featureKey}>
-                      <TableCell className="font-medium">
-                        {featureLabel(f.featureKey)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {featureDescription(f.featureKey)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>增值功能（可销售）</CardTitle>
-              <CardDescription>
-                按门店经营需要逐个开通；开启后商家后台出现对应入口。
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>状态</TableHead>
-                    <TableHead>功能</TableHead>
-                    <TableHead>说明</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {addons.map((f) => (
-                    <TableRow key={f.featureKey}>
-                      <TableCell>
-                        <Badge variant={f.enabled ? "default" : "outline"}>
-                          {f.enabled ? "已开启" : "已关闭"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {featureLabel(f.featureKey)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {featureDescription(f.featureKey)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={toggle.isPending}
-                          onClick={() =>
-                            toggle.mutate({
-                              featureKey: f.featureKey,
-                              next: !f.enabled,
-                            })
-                          }
-                        >
-                          {f.enabled ? "关闭" : "开启"}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
         </>
-      ) : null}
-    </div>
+      )}
+    </PlatformShell>
   );
 }
 
@@ -267,16 +311,9 @@ export default function PlatformPackagesPage() {
       }),
   );
   return (
-    <PlatformShell>
-      <h1 className="text-2xl font-semibold tracking-tight">套餐与增值功能</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        为门店开通或关闭增值功能；关闭后入口隐藏且服务停用。
-      </p>
-      <div className="mt-6">
-        <QueryClientProvider client={queryClient}>
-          <Inner />
-        </QueryClientProvider>
-      </div>
-    </PlatformShell>
+    <QueryClientProvider client={queryClient}>
+      <Inner />
+    </QueryClientProvider>
   );
 }
+
