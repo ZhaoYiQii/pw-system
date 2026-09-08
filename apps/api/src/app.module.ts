@@ -24,6 +24,8 @@ import { DisputesModule } from "./modules/disputes/disputes.module.js";
 import { NotificationsModule } from "./modules/notifications/notifications.module.js";
 import { AiAssistantModule } from "./modules/ai-assistant/ai.module.js";
 import { PlatformBillingModule } from "./modules/platform-billing/platform-billing.module.js";
+import { PlatformOpsModule } from "./modules/platform-ops/platform-ops.module.js";
+import { PlatformAccountsModule } from "./modules/platform-accounts/platform-accounts.module.js";
 import { GameDispatchModule } from "./modules/game-dispatch/game-dispatch.module.js";
 import { WalletModule } from "./modules/wallet/wallet.module.js";
 
@@ -46,6 +48,8 @@ import { WalletModule } from "./modules/wallet/wallet.module.js";
     NotificationsModule,
     AiAssistantModule,
     PlatformBillingModule,
+    PlatformOpsModule,
+    PlatformAccountsModule,
     GameDispatchModule,
     WalletModule,
   ],

@@ -1991,8 +1991,16 @@ paths:
                         example: "800"
                         description: 已支付金额（十进制字符串分，>=0）
                     description: 陪玩财务汇总
-      tags:
+      tags: &a11
         - PlayerFinance
+  /api/v1/tenant/player/income:
+    get:
+      operationId: playerFinance_income
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a11
   /api/v1/tenant/settlements:
     get:
       operationId: settlements_list
@@ -2000,7 +2008,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a11
+      tags: &a12
         - Settlements
     post:
       operationId: settlements_create
@@ -2008,7 +2016,28 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a11
+      tags: *a12
+  /api/v1/tenant/settlements/earnings:
+    get:
+      operationId: settlements_listEarnings
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a12
+  /api/v1/tenant/settlements/{id}:
+    get:
+      operationId: settlements_detail
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a12
   /api/v1/tenant/settlements/{id}/items:
     post:
       operationId: settlements_addItems
@@ -2021,7 +2050,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/settlements/{id}/review:
     post:
       operationId: settlements_review
@@ -2034,7 +2063,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/settlements/{id}/approve:
     post:
       operationId: settlements_approve
@@ -2047,7 +2076,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/settlements/{id}/pay:
     post:
       operationId: settlements_pay
@@ -2060,7 +2089,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/settlements/{id}/void:
     post:
       operationId: settlements_voidBatch
@@ -2073,7 +2102,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/players:
     get:
       operationId: players_list
@@ -2081,7 +2110,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a12
+      tags: &a13
         - Players
     post:
       operationId: players_create
@@ -2089,7 +2118,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/players/{id}:
     get:
       operationId: players_get
@@ -2102,7 +2131,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a12
+      tags: *a13
     patch:
       operationId: players_update
       parameters:
@@ -2114,7 +2143,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a12
+      tags: *a13
     delete:
       operationId: players_remove
       parameters:
@@ -2126,7 +2155,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/players/{id}/skills:
     post:
       operationId: players_addSkill
@@ -2139,7 +2168,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/players/{id}/skills/{skillId}:
     delete:
       operationId: players_removeSkill
@@ -2157,7 +2186,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/players/{id}/availability:
     post:
       operationId: players_addAvailability
@@ -2170,7 +2199,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/players/{id}/account:
     post:
       operationId: players_bind
@@ -2183,7 +2212,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/players/{id}/availability/{availabilityId}:
     delete:
       operationId: players_removeAvailability
@@ -2201,7 +2230,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/player/me:
     get:
       operationId: playerSelf_me
@@ -2209,7 +2238,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a13
+      tags: &a14
         - PlayerSelf
     patch:
       operationId: playerSelf_updateMe
@@ -2217,7 +2246,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a13
+      tags: *a14
   /api/v1/tenant/player/availability:
     post:
       operationId: playerSelf_addAvailability
@@ -2225,7 +2254,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a13
+      tags: *a14
   /api/v1/tenant/player/availability/{availabilityId}:
     delete:
       operationId: playerSelf_removeAvailability
@@ -2238,7 +2267,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a13
+      tags: *a14
   /api/v1/tenant/catalog/games:
     get:
       operationId: catalog_listGames
@@ -2246,7 +2275,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a14
+      tags: &a15
         - Catalog
     post:
       operationId: catalog_createGame
@@ -2254,7 +2283,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/games/{id}:
     patch:
       operationId: catalog_updateGame
@@ -2267,7 +2296,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
     delete:
       operationId: catalog_removeGame
       parameters:
@@ -2279,7 +2308,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/regions:
     get:
       operationId: catalog_listRegions
@@ -2287,7 +2316,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/games/{gameId}/regions:
     post:
       operationId: catalog_createRegion
@@ -2300,7 +2329,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/regions/{id}:
     patch:
       operationId: catalog_updateRegion
@@ -2313,7 +2342,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
     delete:
       operationId: catalog_removeRegion
       parameters:
@@ -2325,7 +2354,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/products:
     get:
       operationId: catalog_listProducts
@@ -2333,14 +2362,14 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
     post:
       operationId: catalog_createProduct
       parameters: []
       responses:
         "201":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/products/{id}:
     patch:
       operationId: catalog_updateProduct
@@ -2353,7 +2382,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
     delete:
       operationId: catalog_removeProduct
       parameters:
@@ -2365,7 +2394,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/products/{productId}/pricing:
     get:
       operationId: catalog_listRules
@@ -2437,7 +2466,7 @@ paths:
                           nullable: false
                           description: 更新时间
                       description: 价格规则（金额字段为十进制字符串分）
-      tags: *a14
+      tags: *a15
     post:
       operationId: catalog_createRule
       parameters:
@@ -2534,7 +2563,7 @@ paths:
                         nullable: false
                         description: 更新时间
                     description: 价格规则（金额字段为十进制字符串分）
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/catalog/pricing/{id}:
     patch:
       operationId: catalog_updateRule
@@ -2630,7 +2659,7 @@ paths:
                         nullable: false
                         description: 更新时间
                     description: 价格规则（金额字段为十进制字符串分）
-      tags: *a14
+      tags: *a15
     delete:
       operationId: catalog_removeRule
       parameters:
@@ -2642,7 +2671,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/orders/{id}/publish:
     post:
       operationId: dispatchAdmin_publish
@@ -2655,7 +2684,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a15
+      tags: &a16
         - DispatchAdmin
   /api/v1/tenant/orders/{id}/applications:
     get:
@@ -2669,7 +2698,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a15
+      tags: *a16
   /api/v1/tenant/orders/{id}/applications/{applicationId}/shortlist:
     post:
       operationId: dispatchAdmin_shortlist
@@ -2687,7 +2716,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a15
+      tags: *a16
   /api/v1/tenant/orders/{id}/assignment:
     post:
       operationId: dispatchAdmin_assign
@@ -2700,7 +2729,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a15
+      tags: *a16
   /api/v1/tenant/player/order-hall:
     get:
       operationId: dispatchPlayer_hall
@@ -2757,7 +2786,7 @@ paths:
                           nullable: false
                           description: 创建时间
                       description: 接单大厅订单
-      tags: &a16
+      tags: &a17
         - DispatchPlayer
   /api/v1/tenant/player/applications:
     get:
@@ -2766,7 +2795,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/player/orders/{orderId}/applications:
     post:
       operationId: dispatchPlayer_apply
@@ -2779,7 +2808,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/customer/orders/{orderId}/applications:
     get:
       operationId: dispatchCustomer_candidates
@@ -2792,7 +2821,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a17
+      tags: &a18
         - DispatchCustomer
   /api/v1/tenant/customer/orders/{orderId}/assignment:
     post:
@@ -2806,7 +2835,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/orders/{orderId}/session:
     get:
       operationId: sessions_session
@@ -2819,7 +2848,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a18
+      tags: &a19
         - Sessions
   /api/v1/tenant/orders/{orderId}/session/start:
     post:
@@ -2833,7 +2862,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/orders/{orderId}/session/end:
     post:
       operationId: sessions_end
@@ -2846,7 +2875,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/sessions/{sessionId}/adjustments:
     post:
       operationId: sessions_adjust
@@ -2859,7 +2888,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/sessions/{sessionId}/adjustments/{adjustmentId}/review:
     post:
       operationId: sessions_review
@@ -2877,7 +2906,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/sessions/{sessionId}/evidence:
     post:
       operationId: evidence_upload
@@ -2895,7 +2924,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a19
+      tags: &a20
         - Evidence
   /api/v1/tenant/sessions/{sessionId}/capture:
     post:
@@ -2914,7 +2943,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/evidence/{id}:
     get:
       operationId: evidence_download
@@ -2927,7 +2956,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/disputes:
     get:
       operationId: disputes_listAll
@@ -2935,7 +2964,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a20
+      tags: &a21
         - Disputes
   /api/v1/tenant/orders/{orderId}/disputes:
     get:
@@ -2949,7 +2978,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a21
     post:
       operationId: disputes_open
       parameters:
@@ -2961,7 +2990,23 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a21
+  /api/v1/tenant/player/disputes:
+    get:
+      operationId: disputes_playerMine
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a21
+  /api/v1/tenant/customer/disputes:
+    get:
+      operationId: disputes_customerMine
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a21
   /api/v1/tenant/disputes/{disputeId}/resolve:
     post:
       operationId: disputes_resolve
@@ -2974,7 +3019,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a21
   /api/v1/tenant/notifications:
     get:
       operationId: notifications_list
@@ -2982,7 +3027,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a21
+      tags: &a22
         - Notifications
   /api/v1/tenant/notifications/{id}/read:
     post:
@@ -2996,7 +3041,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a21
+      tags: *a22
   /api/v1/tenant/notifications/read-all:
     post:
       operationId: notifications_markAllRead
@@ -3004,7 +3049,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a21
+      tags: *a22
   /api/v1/tenant/ai/capabilities:
     get:
       operationId: ai_capabilities
@@ -3012,7 +3057,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a22
+      tags: &a23
         - Ai
   /api/v1/tenant/ai/parse-requirement:
     post:
@@ -3021,7 +3066,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a22
+      tags: *a23
   /api/v1/tenant/ai/orders/{orderId}/recommendations:
     get:
       operationId: ai_recommend
@@ -3034,7 +3079,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a22
+      tags: *a23
   /api/v1/platform/packages:
     get:
       operationId: platformBilling_packages
@@ -3042,7 +3087,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a23
+      tags: &a24
         - PlatformBilling
   /api/v1/platform/onboarding/tenants:
     post:
@@ -3051,7 +3096,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/platform/tenants/{tenantId}/package:
     post:
       operationId: platformBilling_assign
@@ -3064,7 +3109,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/platform/tenants/{tenantId}/activate:
     post:
       operationId: platformBilling_activate
@@ -3077,7 +3122,445 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
+  /api/v1/platform/overview:
+    get:
+      operationId: platformOps_overview
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a25
+        - PlatformOps
+  /api/v1/platform/subscriptions:
+    get:
+      operationId: platformOps_subscriptions
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a25
+  /api/v1/platform/tenants/{tenantId}/detail:
+    get:
+      operationId: platformOps_tenantDetail
+      parameters:
+        - name: tenantId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a25
+  /api/v1/platform/accounts:
+    get:
+      operationId: platformAccounts_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a26
+        - PlatformAccounts
+    post:
+      operationId: platformAccounts_create
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a26
+  /api/v1/platform/accounts/{id}/status:
+    patch:
+      operationId: platformAccounts_setStatus
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a26
+  /api/v1/platform/accounts/{id}/role:
+    patch:
+      operationId: platformAccounts_setRole
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a26
+  /api/v1/tenant/game-templates:
+    get:
+      operationId: gameTemplate_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a27
+        - GameTemplate
+    post:
+      operationId: gameTemplate_create
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a27
+  /api/v1/tenant/game-templates/{id}:
+    get:
+      operationId: gameTemplate_get
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a27
+    patch:
+      operationId: gameTemplate_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a27
+    delete:
+      operationId: gameTemplate_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a27
+  /api/v1/tenant/game-templates/{id}/copy:
+    post:
+      operationId: gameTemplate_copy
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a27
+  /api/v1/tenant/game-dispatch:
+    get:
+      operationId: gameDispatch_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a28
+        - GameDispatch
+  /api/v1/tenant/game-dispatch/orders:
+    post:
+      operationId: gameDispatch_createDraft
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/customer/orders:
+    post:
+      operationId: gameDispatch_customerCreateDraft
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/customer/templates:
+    get:
+      operationId: gameDispatch_customerTemplates
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/customer/templates/{id}:
+    get:
+      operationId: gameDispatch_customerTemplate
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}:
+    get:
+      operationId: gameDispatch_view
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}/applications:
+    get:
+      operationId: gameDispatch_applications
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/player/orders/{orderId}/signup:
+    get:
+      operationId: gameDispatch_playerSignup
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/customer/orders/{orderId}/select:
+    get:
+      operationId: gameDispatch_customerSelect
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/customer/orders/{orderId}/assignment:
+    post:
+      operationId: gameDispatch_customerAssign
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}/copy-text:
+    get:
+      operationId: gameDispatch_copy
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}/publish:
+    post:
+      operationId: gameDispatch_publish
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}/confirm-settlement:
+    post:
+      operationId: gameDispatch_confirmSettlement
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}/lines/{lineId}/applications:
+    post:
+      operationId: gameDispatch_apply
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: lineId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/applications/{id}/withdraw:
+    post:
+      operationId: gameDispatch_withdraw
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/applications/{id}:
+    delete:
+      operationId: gameDispatch_staffRemove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/orders/{orderId}/assignment:
+    post:
+      operationId: gameDispatch_assign
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a28
+  /api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots:
+    get:
+      operationId: slotSession_serviceSlots
+      parameters:
+        - name: orderId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags: &a29
+        - SlotSession
+  /api/v1/tenant/game-dispatch/slots/{slotId}/session/start:
+    post:
+      operationId: slotSession_start
+      parameters:
+        - name: slotId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a29
+  /api/v1/tenant/game-dispatch/slots/{slotId}/session/end:
+    post:
+      operationId: slotSession_end
+      parameters:
+        - name: slotId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a29
+  /api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence:
+    post:
+      operationId: slotSession_evidence
+      parameters:
+        - name: slotId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-file-name
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a29
+  /api/v1/tenant/game-dispatch/slots/{slotId}/session/capture:
+    post:
+      operationId: slotSession_capture
+      parameters:
+        - name: slotId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: x-file-name
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a29
+  /api/v1/boss/wallet:
+    get:
+      operationId: wallet_get
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a30
+        - Wallet
+  /api/v1/boss/wallet/recharge:
+    post:
+      operationId: wallet_recharge
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a30
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

@@ -106,6 +106,18 @@ model PlatformAccount {
   @@map("platform_accounts")
 }
 
+/// 平台级审计事件：平台账号管理/平台跨租户操作，不绑定租户。
+model PlatformAuditEvent {
+  id                     String   @id @default(uuid()) @db.Uuid
+  actorPlatformAccountId String   @map("actor_platform_account_id") @db.Uuid
+  action                 String
+  summary                String
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@index([actorPlatformAccountId, createdAt])
+  @@map("platform_audit_events")
+}
+
 /// 门店账号（店员/陪玩/客户）。租户级资源，启用 RLS（按 tenant_id）。
 model TenantAccount {
   id           String        @id @default(uuid()) @db.Uuid

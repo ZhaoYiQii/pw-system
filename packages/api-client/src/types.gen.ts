@@ -1708,6 +1708,17 @@ export type PlayerFinanceFinanceResponses = {
 
 export type PlayerFinanceFinanceResponse = PlayerFinanceFinanceResponses[keyof PlayerFinanceFinanceResponses];
 
+export type PlayerFinanceIncomeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/player/income';
+};
+
+export type PlayerFinanceIncomeResponses = {
+    200: unknown;
+};
+
 export type SettlementsListData = {
     body?: never;
     path?: never;
@@ -1728,6 +1739,30 @@ export type SettlementsCreateData = {
 
 export type SettlementsCreateResponses = {
     201: unknown;
+};
+
+export type SettlementsListEarningsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/settlements/earnings';
+};
+
+export type SettlementsListEarningsResponses = {
+    200: unknown;
+};
+
+export type SettlementsDetailData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/settlements/{id}';
+};
+
+export type SettlementsDetailResponses = {
+    200: unknown;
 };
 
 export type SettlementsAddItemsData = {
@@ -2631,6 +2666,28 @@ export type DisputesOpenResponses = {
     201: unknown;
 };
 
+export type DisputesPlayerMineData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/player/disputes';
+};
+
+export type DisputesPlayerMineResponses = {
+    200: unknown;
+};
+
+export type DisputesCustomerMineData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/customer/disputes';
+};
+
+export type DisputesCustomerMineResponses = {
+    200: unknown;
+};
+
 export type DisputesResolveData = {
     body?: never;
     path: {
@@ -2759,5 +2816,469 @@ export type PlatformBillingActivateData = {
 };
 
 export type PlatformBillingActivateResponses = {
+    201: unknown;
+};
+
+export type PlatformOpsOverviewData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/overview';
+};
+
+export type PlatformOpsOverviewResponses = {
+    200: unknown;
+};
+
+export type PlatformOpsSubscriptionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/subscriptions';
+};
+
+export type PlatformOpsSubscriptionsResponses = {
+    200: unknown;
+};
+
+export type PlatformOpsTenantDetailData = {
+    body?: never;
+    path: {
+        tenantId: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/tenants/{tenantId}/detail';
+};
+
+export type PlatformOpsTenantDetailResponses = {
+    200: unknown;
+};
+
+export type PlatformAccountsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/accounts';
+};
+
+export type PlatformAccountsListResponses = {
+    200: unknown;
+};
+
+export type PlatformAccountsCreateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/accounts';
+};
+
+export type PlatformAccountsCreateResponses = {
+    201: unknown;
+};
+
+export type PlatformAccountsSetStatusData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/accounts/{id}/status';
+};
+
+export type PlatformAccountsSetStatusResponses = {
+    200: unknown;
+};
+
+export type PlatformAccountsSetRoleData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/accounts/{id}/role';
+};
+
+export type PlatformAccountsSetRoleResponses = {
+    200: unknown;
+};
+
+export type GameTemplateListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-templates';
+};
+
+export type GameTemplateListResponses = {
+    200: unknown;
+};
+
+export type GameTemplateCreateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-templates';
+};
+
+export type GameTemplateCreateResponses = {
+    201: unknown;
+};
+
+export type GameTemplateRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-templates/{id}';
+};
+
+export type GameTemplateRemoveResponses = {
+    200: unknown;
+};
+
+export type GameTemplateGetData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-templates/{id}';
+};
+
+export type GameTemplateGetResponses = {
+    200: unknown;
+};
+
+export type GameTemplateUpdateData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-templates/{id}';
+};
+
+export type GameTemplateUpdateResponses = {
+    200: unknown;
+};
+
+export type GameTemplateCopyData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-templates/{id}/copy';
+};
+
+export type GameTemplateCopyResponses = {
+    201: unknown;
+};
+
+export type GameDispatchListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch';
+};
+
+export type GameDispatchListResponses = {
+    200: unknown;
+};
+
+export type GameDispatchCreateDraftData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders';
+};
+
+export type GameDispatchCreateDraftResponses = {
+    201: unknown;
+};
+
+export type GameDispatchCustomerCreateDraftData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/orders';
+};
+
+export type GameDispatchCustomerCreateDraftResponses = {
+    201: unknown;
+};
+
+export type GameDispatchCustomerTemplatesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/templates';
+};
+
+export type GameDispatchCustomerTemplatesResponses = {
+    200: unknown;
+};
+
+export type GameDispatchCustomerTemplateData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/templates/{id}';
+};
+
+export type GameDispatchCustomerTemplateResponses = {
+    200: unknown;
+};
+
+export type GameDispatchViewData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}';
+};
+
+export type GameDispatchViewResponses = {
+    200: unknown;
+};
+
+export type GameDispatchApplicationsData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/applications';
+};
+
+export type GameDispatchApplicationsResponses = {
+    200: unknown;
+};
+
+export type GameDispatchPlayerSignupData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/player/orders/{orderId}/signup';
+};
+
+export type GameDispatchPlayerSignupResponses = {
+    200: unknown;
+};
+
+export type GameDispatchCustomerSelectData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/orders/{orderId}/select';
+};
+
+export type GameDispatchCustomerSelectResponses = {
+    200: unknown;
+};
+
+export type GameDispatchCustomerAssignData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/orders/{orderId}/assignment';
+};
+
+export type GameDispatchCustomerAssignResponses = {
+    201: unknown;
+};
+
+export type GameDispatchCopyData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/copy-text';
+};
+
+export type GameDispatchCopyResponses = {
+    200: unknown;
+};
+
+export type GameDispatchPublishData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/publish';
+};
+
+export type GameDispatchPublishResponses = {
+    201: unknown;
+};
+
+export type GameDispatchConfirmSettlementData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/confirm-settlement';
+};
+
+export type GameDispatchConfirmSettlementResponses = {
+    201: unknown;
+};
+
+export type GameDispatchApplyData = {
+    body?: never;
+    path: {
+        orderId: string;
+        lineId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/lines/{lineId}/applications';
+};
+
+export type GameDispatchApplyResponses = {
+    201: unknown;
+};
+
+export type GameDispatchWithdrawData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/applications/{id}/withdraw';
+};
+
+export type GameDispatchWithdrawResponses = {
+    201: unknown;
+};
+
+export type GameDispatchStaffRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/applications/{id}';
+};
+
+export type GameDispatchStaffRemoveResponses = {
+    200: unknown;
+};
+
+export type GameDispatchAssignData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/assignment';
+};
+
+export type GameDispatchAssignResponses = {
+    201: unknown;
+};
+
+export type SlotSessionServiceSlotsData = {
+    body?: never;
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots';
+};
+
+export type SlotSessionServiceSlotsResponses = {
+    200: unknown;
+};
+
+export type SlotSessionStartData = {
+    body?: never;
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/session/start';
+};
+
+export type SlotSessionStartResponses = {
+    201: unknown;
+};
+
+export type SlotSessionEndData = {
+    body?: never;
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/session/end';
+};
+
+export type SlotSessionEndResponses = {
+    201: unknown;
+};
+
+export type SlotSessionEvidenceData = {
+    body?: never;
+    headers: {
+        'x-file-name': string;
+    };
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence';
+};
+
+export type SlotSessionEvidenceResponses = {
+    201: unknown;
+};
+
+export type SlotSessionCaptureData = {
+    body?: never;
+    headers: {
+        'x-file-name': string;
+    };
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/session/capture';
+};
+
+export type SlotSessionCaptureResponses = {
+    201: unknown;
+};
+
+export type WalletGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/boss/wallet';
+};
+
+export type WalletGetResponses = {
+    200: unknown;
+};
+
+export type WalletRechargeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/boss/wallet/recharge';
+};
+
+export type WalletRechargeResponses = {
     201: unknown;
 };

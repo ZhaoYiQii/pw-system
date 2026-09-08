@@ -2760,6 +2760,20 @@
         ]
       }
     },
+    "/api/v1/tenant/player/income": {
+      "get": {
+        "operationId": "playerFinance_income",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerFinance"
+        ]
+      }
+    },
     "/api/v1/tenant/settlements": {
       "get": {
         "operationId": "settlements_list",
@@ -2778,6 +2792,43 @@
         "parameters": [],
         "responses": {
           "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/earnings": {
+      "get": {
+        "operationId": "settlements_listEarnings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/settlements/{id}": {
+      "get": {
+        "operationId": "settlements_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": ""
           }
         },
@@ -4321,6 +4372,34 @@
         ]
       }
     },
+    "/api/v1/tenant/player/disputes": {
+      "get": {
+        "operationId": "disputes_playerMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Disputes"
+        ]
+      }
+    },
+    "/api/v1/tenant/customer/disputes": {
+      "get": {
+        "operationId": "disputes_customerMine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Disputes"
+        ]
+      }
+    },
     "/api/v1/tenant/disputes/{disputeId}/resolve": {
       "post": {
         "operationId": "disputes_resolve",
@@ -4517,6 +4596,765 @@
         },
         "tags": [
           "PlatformBilling"
+        ]
+      }
+    },
+    "/api/v1/platform/overview": {
+      "get": {
+        "operationId": "platformOps_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformOps"
+        ]
+      }
+    },
+    "/api/v1/platform/subscriptions": {
+      "get": {
+        "operationId": "platformOps_subscriptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformOps"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenantId}/detail": {
+      "get": {
+        "operationId": "platformOps_tenantDetail",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformOps"
+        ]
+      }
+    },
+    "/api/v1/platform/accounts": {
+      "get": {
+        "operationId": "platformAccounts_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      },
+      "post": {
+        "operationId": "platformAccounts_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      }
+    },
+    "/api/v1/platform/accounts/{id}/status": {
+      "patch": {
+        "operationId": "platformAccounts_setStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      }
+    },
+    "/api/v1/platform/accounts/{id}/role": {
+      "patch": {
+        "operationId": "platformAccounts_setRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-templates": {
+      "get": {
+        "operationId": "gameTemplate_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameTemplate"
+        ]
+      },
+      "post": {
+        "operationId": "gameTemplate_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameTemplate"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-templates/{id}": {
+      "get": {
+        "operationId": "gameTemplate_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameTemplate"
+        ]
+      },
+      "patch": {
+        "operationId": "gameTemplate_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameTemplate"
+        ]
+      },
+      "delete": {
+        "operationId": "gameTemplate_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameTemplate"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-templates/{id}/copy": {
+      "post": {
+        "operationId": "gameTemplate_copy",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameTemplate"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch": {
+      "get": {
+        "operationId": "gameDispatch_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders": {
+      "post": {
+        "operationId": "gameDispatch_createDraft",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/customer/orders": {
+      "post": {
+        "operationId": "gameDispatch_customerCreateDraft",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/customer/templates": {
+      "get": {
+        "operationId": "gameDispatch_customerTemplates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/customer/templates/{id}": {
+      "get": {
+        "operationId": "gameDispatch_customerTemplate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}": {
+      "get": {
+        "operationId": "gameDispatch_view",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/applications": {
+      "get": {
+        "operationId": "gameDispatch_applications",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/player/orders/{orderId}/signup": {
+      "get": {
+        "operationId": "gameDispatch_playerSignup",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/customer/orders/{orderId}/select": {
+      "get": {
+        "operationId": "gameDispatch_customerSelect",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/customer/orders/{orderId}/assignment": {
+      "post": {
+        "operationId": "gameDispatch_customerAssign",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/copy-text": {
+      "get": {
+        "operationId": "gameDispatch_copy",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/publish": {
+      "post": {
+        "operationId": "gameDispatch_publish",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/confirm-settlement": {
+      "post": {
+        "operationId": "gameDispatch_confirmSettlement",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/lines/{lineId}/applications": {
+      "post": {
+        "operationId": "gameDispatch_apply",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lineId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/applications/{id}/withdraw": {
+      "post": {
+        "operationId": "gameDispatch_withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/applications/{id}": {
+      "delete": {
+        "operationId": "gameDispatch_staffRemove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/assignment": {
+      "post": {
+        "operationId": "gameDispatch_assign",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots": {
+      "get": {
+        "operationId": "slotSession_serviceSlots",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SlotSession"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/slots/{slotId}/session/start": {
+      "post": {
+        "operationId": "slotSession_start",
+        "parameters": [
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SlotSession"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/slots/{slotId}/session/end": {
+      "post": {
+        "operationId": "slotSession_end",
+        "parameters": [
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SlotSession"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence": {
+      "post": {
+        "operationId": "slotSession_evidence",
+        "parameters": [
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-file-name",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SlotSession"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/slots/{slotId}/session/capture": {
+      "post": {
+        "operationId": "slotSession_capture",
+        "parameters": [
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-file-name",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SlotSession"
+        ]
+      }
+    },
+    "/api/v1/boss/wallet": {
+      "get": {
+        "operationId": "wallet_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Wallet"
+        ]
+      }
+    },
+    "/api/v1/boss/wallet/recharge": {
+      "post": {
+        "operationId": "wallet_recharge",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Wallet"
         ]
       }
     }
