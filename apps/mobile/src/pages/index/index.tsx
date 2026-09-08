@@ -1,12 +1,14 @@
 import { Button, Text, View } from "@tarojs/components";
-import { useLoad } from "@tarojs/taro";
+import Taro, { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { tenantLocator } from "@platform-locator";
 import { runtimeConfig } from "@platform-runtime-config";
-import { runtimeInfo } from "@platform-runtime";
 import type { ResolvedTenantInfo } from "../../platform/contracts/tenant-locator";
 import type { StorefrontInfo } from "../../platform/contracts/runtime-config";
 import "./index.css";
+
+const FALLBACK_PRIMARY = "#2f54eb";
+const FALLBACK_ACCENT = "#fa8c16";
 
 export default function Index() {
   const [info, setInfo] = useState<ResolvedTenantInfo | null>(null);
@@ -27,97 +29,120 @@ export default function Index() {
     void load();
   });
 
-  return (
-    <View className="index">
-      <Text className="meta">
-        runtime={runtimeInfo.kind} adapter={runtimeInfo.label}
-      </Text>
+  const primaryColor =
+    storefront?.state === "ok" && storefront.brand
+      ? storefront.brand.primaryColor
+      : FALLBACK_PRIMARY;
+  const accentColor =
+    storefront?.state === "ok" && storefront.brand
+      ? storefront.brand.accentColor
+      : FALLBACK_ACCENT;
+  const logoText =
+    storefront?.state === "ok" && storefront.brand
+      ? storefront.brand.logoText
+      : (info?.tenant?.name ?? "");
 
-      {info === null ? <Text>加载门店中…</Text> : null}
+  const openPlayer = () => {
+    void Taro.navigateTo({ url: "/pages/player/order-hall/index" });
+  };
+
+  const openBoss = () => {
+    void Taro.navigateTo({ url: "/pages/customer/game-order/index" });
+  };
+
+  return (
+    <View className="portal">
+      {info === null ? (
+        <View className="portal-loading">正在打开门店…</View>
+      ) : null}
 
       {info?.state === "ok" && info.tenant ? (
-        <View>
-          <Text className="tenant-name">门店：{info.tenant.name}</Text>
-          <Text className="meta">状态：{info.tenant.status}</Text>
-
-          {storefront === null ? <Text>加载品牌配置中…</Text> : null}
-
-          {storefront?.state === "ok" && storefront.brand ? (
-            <View>
-              <View
-                className="brand-card"
-                style={{
-                  backgroundColor: storefront.brand.primaryColor,
-                  borderRadius: `${storefront.brand.borderRadius}px`,
-                }}
-              >
-                <Text className="brand-logo">{storefront.brand.logoText}</Text>
-                <Text className="brand-sub">{storefront.tenant?.name}</Text>
-              </View>
-              <View className="swatch-row">
-                <View
-                  className="swatch"
-                  style={{ backgroundColor: storefront.brand.primaryColor }}
+        <View className="portal-body">
+          <View
+            className="portal-hero"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Text className="portal-store">{info.tenant.name}</Text>
+            {logoText ? (
+              <Text className="portal-logo">
+                {logoText}
+                <Text
+                  className="portal-logo-dot"
+                  style={{ backgroundColor: accentColor }}
                 />
-                <View
-                  className="swatch"
-                  style={{ backgroundColor: storefront.brand.accentColor }}
-                />
-                <Text className="meta">
-                  主色 {storefront.brand.primaryColor} · 辅色{" "}
-                  {storefront.brand.accentColor}
+              </Text>
+            ) : null}
+            <Text className="portal-welcome">欢迎光临，选择你的身份开始</Text>
+          </View>
+
+          <Text className="portal-section-title">选择入口</Text>
+
+          <View className="role-card">
+            <View className="role-head">
+              <Text className="role-badge" style={{ color: primaryColor }}>
+                陪玩
+              </Text>
+              <View className="role-copy">
+                <Text className="role-title">我是陪玩</Text>
+                <Text className="role-desc">
+                  查看可接订单、报名、开始与结束服务
                 </Text>
               </View>
-              <Text className="meta">
-                圆角 {storefront.brand.borderRadius}px · 配置版本 v
-                {storefront.version ?? 0}
+            </View>
+            <Button className="role-btn" onClick={openPlayer}>
+              进入陪玩端
+            </Button>
+          </View>
+
+          <View className="role-card">
+            <View className="role-head">
+              <Text className="role-badge" style={{ color: accentColor }}>
+                老板
               </Text>
+              <View className="role-copy">
+                <Text className="role-title">我是老板</Text>
+                <Text className="role-desc">
+                  自助下单、选人确认、钱包结算与查看争议
+                </Text>
+              </View>
             </View>
-          ) : null}
-
-          {storefront?.state === "config_error" ? (
-            <View className="unavailable">
-              <Text>门店配置异常，当前暂不可用（CONFIG_ERROR）。</Text>
-            </View>
-          ) : null}
-
-          {storefront?.state === "not_found" ? (
-            <View className="unavailable">
-              <Text>未找到门店前台配置。</Text>
-            </View>
-          ) : null}
-
-          {storefront?.state === "error" ? (
-            <View className="unavailable">
-              <Text>品牌配置加载失败。</Text>
-              <Button onClick={() => void load()}>重试</Button>
-            </View>
-          ) : null}
+            <Button className="role-btn" onClick={openBoss}>
+              进入老板端
+            </Button>
+          </View>
         </View>
       ) : null}
 
       {info?.state === "inactive" ? (
-        <View className="unavailable">
+        <View className="portal-unavailable">
           <Text>该门店已停用，暂不可用。</Text>
+          <Button className="retry-btn" onClick={() => void load()}>
+            重试
+          </Button>
         </View>
       ) : null}
 
       {info?.state === "not_found" ? (
-        <View className="unavailable">
-          <Text>未找到对应门店。</Text>
+        <View className="portal-unavailable">
+          <Text>未找到对应门店，请确认访问的域名正确。</Text>
+          <Button className="retry-btn" onClick={() => void load()}>
+            重试
+          </Button>
         </View>
       ) : null}
 
       {info?.state === "error" ? (
-        <View className="unavailable">
-          <Text>门店加载失败。</Text>
-          <Button onClick={() => void load()}>重试</Button>
+        <View className="portal-unavailable">
+          <Text>门店加载失败，请检查网络后重试。</Text>
+          <Button className="retry-btn" onClick={() => void load()}>
+            重试
+          </Button>
         </View>
       ) : null}
 
       {info?.state === "unconfigured" ? (
-        <View>
-          <Text>当前平台未配置租户定位（小程序适配暂缓）。</Text>
+        <View className="portal-unavailable">
+          <Text>当前域名未绑定门店，请联系商家确认访问入口。</Text>
         </View>
       ) : null}
     </View>

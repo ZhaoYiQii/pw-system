@@ -1,54 +1,153 @@
-.index {
+.portal {
+  min-height: 100vh;
+  background: #f7f8fa;
   padding: 24px;
+  box-sizing: border-box;
+}
+
+.portal-loading {
+  padding-top: 180px;
+  text-align: center;
+  color: #8a919f;
+  font-size: 28px;
+}
+
+.portal-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-.meta {
-  font-size: 24px;
-  color: #888888;
+.portal-hero {
+  border-radius: 24px;
+  padding: 44px 36px 40px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 12px 28px rgba(47, 84, 235, 0.18);
 }
 
-.tenant-name {
-  font-size: 32px;
+.portal-store {
+  font-size: 30px;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+.portal-logo {
+  font-size: 52px;
+  line-height: 1.15;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.portal-logo-dot {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-left: 10px;
+}
+
+.portal-welcome {
+  font-size: 26px;
+  opacity: 0.9;
+  margin-top: 8px;
+}
+
+.portal-section-title {
+  margin: 44px 8px 20px;
+  color: #454c59;
+  font-size: 30px;
   font-weight: 600;
 }
 
-.unavailable {
-  padding: 24px;
-  background-color: #fff1f0;
-  color: #cf1322;
-}
-
-.brand-card {
-  padding: 28px 24px;
+.role-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 22px;
+  box-shadow: 0 6px 18px rgba(31, 41, 55, 0.06);
 }
 
-.brand-logo {
-  color: #ffffff;
-  font-size: 40px;
+.role-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.role-badge {
+  min-width: 88px;
+  height: 44px;
+  line-height: 44px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(47, 84, 235, 0.08);
+  font-size: 28px;
   font-weight: 700;
 }
 
-.brand-sub {
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 26px;
-}
-
-.swatch-row {
+.role-copy {
+  flex: 1;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
-.swatch {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid #e5e6eb;
+.role-title {
+  font-size: 34px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.role-desc {
+  font-size: 24px;
+  color: #8a919f;
+  line-height: 1.5;
+}
+
+.role-btn {
+  height: 88px;
+  line-height: 88px;
+  border-radius: 16px;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 600;
+  border: none;
+}
+
+.role-btn::after {
+  border: none;
+}
+
+.portal-unavailable {
+  margin-top: 120px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 44px 32px;
+  color: #6b7280;
+  font-size: 28px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.retry-btn {
+  width: 220px;
+  height: 76px;
+  line-height: 76px;
+  border-radius: 14px;
+  background: #2f54eb;
+  color: #ffffff;
+  font-size: 28px;
+}
+
+.retry-btn::after {
+  border: none;
 }
