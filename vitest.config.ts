@@ -8,6 +8,7 @@ export default defineConfig({
       "apps/worker/src/**/*.spec.ts",
       "packages/config-schema/src/**/*.spec.ts",
       "apps/mobile/src/features/**/*.spec.ts",
+      "apps/admin-web/app/_lib/merchant-console/**/*.spec.ts",
     ],
     env: {
       SESSION_SECRET:
