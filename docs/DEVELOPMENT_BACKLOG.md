@@ -34,6 +34,22 @@
 - [ ] mobile：H5 首页域名定位打通（本地无 `tenant_domains` 映射，随 H5 真实域名部署一起验证）。
 - [ ] G4 渐进迁移剩余：admin 旧页面继续“改到即迁”至 Tailwind v4 + shadcn/ui + TanStack Query（新页面已是新栈）。
 
+### 4. 平台端账号/权限补全（2026-09-08 新增）
+
+- [~] P-B2a 平台账号管理：列表/创建/启停/改角色 + 平台审计（已完成本地实现与测试，待提交）。
+- [ ] P-B2b-1 临时跨租户授权后端：新增 `platform_access_grants` 表与迁移；授权创建/撤销/列表 API；每次授权与撤销写 `platform_audit_events`。
+- [ ] P-B2b-2 授权执行与 UI：对 `detail / entitlements / audit` 平台读取接口加授权守卫（support 必须有未过期授权 + reason，超管放行）；`/accounts` 增加临时授权面板（选账号/门店/原因/时长）；聚合总览与订阅仅超管可看待确认。
+- [ ] P-B3 平台级审计：`GET /api/v1/platform/audit` 跨租户汇总 + 导出；平台审计页从“单店查询”升级为汇总视图。
+
+完成标志（P-B2b）：support 无授权访问目标门店返回 403；授权后带 reason 可读且每次写入平台审计；过期/撤销立即失效；越权与过期均有集成测试。
+
+### 5. 平台端剩余接线/收尾（2026-09-08 待下次补全）
+
+- [ ] 平台费率管理：平台端接入 `GET/PATCH /platform/tenants/:tenantId/finance-rules`（门店详情只读之外增加“平台费率调整”入口与操作）。
+- [ ] 会话收敛：退出登录先调 `POST /auth/logout` 撤销 refresh session；评估接入 `POST /auth/refresh` 做 token 续期（平台/门店共用）。
+- [ ] 订阅续费动作：`/subscriptions` 当前数据已接通但“续费”按钮仍占位，需先定义并实现续费接口，再接 UI。
+- [ ] P-B3 汇总审计落地前复核：`platform_audit_events` 与 `audit_logs` 的字段口径、脱敏与导出列是否足够支撑平台审计页。
+
 ## 二、工程与质量收尾
 
 - [ ] F2/F3：E2E 已正式入库并替换根脚本 `test:e2e`（4/4 通过，commit `4b2251a`，2026-09-07）；仍待把 `test:e2e` 接入 CI 的浏览器/服务启动环境。
