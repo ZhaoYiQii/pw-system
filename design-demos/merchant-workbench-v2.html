@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>星尘 · 店铺工作台 v2（高级独立工作室质感）</title>
+<style>
+  /* ============================================================
+     v2 方向：个人工作台 × 店铺工作室 / 高级独立工作室材质感
+     设计假设（如需调整请指出）：
+     1. 把「门店」当作一间工作室来经营：首页不再堆表格，而是
+        一屏回答「店里现在在发生什么、接下来要处理什么」。
+     2. 材质基调 = 石灰岩纸面 + 暖石墨 + 松木绿 + 黄铜点；
+        细颗粒噪点做触感，克制不用渐变/霓虹。
+     3. 顶部只留三个空间：工作台 / 记录台 / 监控台（保留已确认的
+        三台架构），二级页面以后逐台展开。
+     4. 门店名/Logo 仍是占位；数据全部为演示数据，未接接口。
+     ============================================================ */
+  :root {
+    --paper: #e9eae4;
+    --surface: #f6f6f1;
+    --raise: #ffffff;
+    --ink: #1a211c;
+    --ink-2: #4f5a52;
+    --muted: #77817a;
+    --line: rgba(26,33,28,.12);
+    --line-2: rgba(26,33,28,.22);
+    --night: #161c18;
+    --night-2: #202a24;
+    --pine: #24543f;
+    --pine-soft: #e3ece6;
+    --brass: #a97b4c;
+    --brass-soft: #efe4d4;
+    --clay: #b05734;
+    --clay-soft: #f4e4dc;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow-soft: 0 1px 1px rgba(22,28,24,.03), 0 8px 24px -14px rgba(22,28,24,.18);
+    --shadow-float: 0 2px 3px rgba(22,28,24,.05), 0 20px 48px -22px rgba(22,28,24,.30);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .32;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.22'/></svg>");
+    mix-blend-mode: multiply;
+  }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; border-radius: 6px; }
+  .num { font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .app { position: relative; z-index: 1; min-height: 100vh; }
+
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    height: 68px; background: rgba(246,246,241,.88); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 28px; padding: 0 36px;
+  }
+  .wordmark { display: flex; align-items: center; gap: 12px; }
+  .wordmark-mark {
+    width: 34px; height: 34px; border-radius: 11px; background: var(--night);
+    color: #e8e4d8; display: grid; place-items: center; font-size: 15px; font-weight: 700;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  .wordmark-name { font-weight: 700; font-size: 14px; letter-spacing: .01em; }
+  .wordmark-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .spaces { display: flex; gap: 4px; background: rgba(26,33,28,.05); padding: 4px; border-radius: 12px; }
+  .space {
+    border: 0; background: transparent; padding: 7px 18px; border-radius: 9px;
+    font-size: 13px; font-weight: 600; color: var(--ink-2);
+  }
+  .space:hover { color: var(--ink); }
+  .space.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(22,28,24,.08); }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .cmd {
+    display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 13px;
+    background: var(--raise); border: 1px solid var(--line-2); border-radius: 999px;
+    color: var(--muted); font-size: 12px; min-width: 220px;
+  }
+  .cmd .k { margin-left: auto; font-size: 10px; border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 6px; }
+  .dot-brass { width: 7px; height: 7px; border-radius: 50%; background: var(--brass); display: inline-block; flex: none; }
+  .dot-pine { width: 7px; height: 7px; border-radius: 50%; background: var(--pine); display: inline-block; flex: none; }
+  .dot-clay { width: 7px; height: 7px; border-radius: 50%; background: var(--clay); display: inline-block; flex: none; }
+  .dot-line { width: 7px; height: 7px; border-radius: 50%; background: #c7ccc7; display: inline-block; flex: none; }
+  .userline { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--night); color: #e8e4d8;
+    display: grid; place-items: center; font-size: 12px; font-weight: 600;
+  }
+  .user-txt { line-height: 1.25; }
+  .user-txt b { display: block; font-size: 12px; font-weight: 600; }
+  .user-txt span { font-size: 10px; color: var(--muted); }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 40px 36px 72px; }
+  .hello { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+  .eyebrow { font-size: 11px; letter-spacing: .22em; color: var(--muted); text-transform: uppercase; }
+  .hello h1 {
+    font-size: 34px; line-height: 1.18; margin: 10px 0 0; font-weight: 680; letter-spacing: -.015em;
+    max-width: 640px;
+  }
+  .hello h1 em { font-style: normal; color: var(--pine); }
+  .hello-actions { display: flex; gap: 10px; flex: none; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 40px; padding: 0 16px; border-radius: 11px; border: 1px solid transparent;
+    font-weight: 600; font-size: 13px; white-space: nowrap;
+  }
+  .btn-dark { background: var(--night); color: #f3f1e9; }
+  .btn-dark:hover { background: #000; }
+  .btn-ghost { background: transparent; border-color: var(--line-2); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--ink); background: rgba(26,33,28,.04); }
+  .btn-sm { height: 30px; padding: 0 12px; border-radius: 9px; font-size: 12px; }
+
+  .grid-main { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: 22px; align-items: start; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow-soft); overflow: hidden;
+  }
+  .panel-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 0; }
+  .panel-title { font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+  .panel-kicker { font-size: 10px; letter-spacing: .18em; color: var(--muted); text-transform: uppercase; }
+  .panel-meta { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+  /* 正在进行 —— 深色"场地"面板，材质对比点 */
+  .live {
+    background: linear-gradient(180deg, #191f1b, #131915); color: #e6e4da;
+    border: 1px solid rgba(255,255,255,.08); border-radius: var(--radius);
+    box-shadow: var(--shadow-float);
+  }
+  .live .panel-head { color: #f0eee5; }
+  .live .panel-kicker { color: rgba(240,238,229,.55); }
+  .live .panel-title { color: #f0eee5; }
+  .live .panel-meta { color: rgba(240,238,229,.5); }
+  .live-pulse { position: relative; width: 8px; height: 8px; }
+  .live-pulse::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--brass); }
+  .live-pulse::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid rgba(169,123,76,.55); animation: pulse 1.8s ease-out infinite; }
+  @keyframes pulse { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.35); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .live-pulse::after { animation: none; } }
+  .live-list { padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 6px; }
+  .session {
+    border: 1px solid rgba(255,255,255,.09); border-radius: 13px; padding: 13px 14px;
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; align-items: center;
+    background: rgba(255,255,255,.025);
+  }
+  .session .s-who { font-size: 15px; font-weight: 650; }
+  .session .s-what { font-size: 12px; color: rgba(230,228,218,.62); margin-top: 2px; }
+  .session .s-time { text-align: right; }
+  .session .s-now { font-size: 23px; font-weight: 720; letter-spacing: -.01em; color: #efe4d4; }
+  .session .s-due { font-size: 11px; color: rgba(230,228,218,.5); margin-top: 1px; }
+  .runline { grid-column: 1 / -1; margin-top: 9px; }
+  .runs { list-style: none; margin: 0; padding: 0; display: flex; gap: 0; }
+  .runs li { display: flex; align-items: center; font-size: 11px; color: rgba(230,228,218,.55); }
+  .runs .nd { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.24); margin-right: 7px; flex: none; }
+  .runs li.done { color: rgba(230,228,218,.8); }
+  .runs li.done .nd { background: var(--pine); }
+  .runs li.now { color: #efe4d4; font-weight: 600; }
+  .runs li.now .nd { background: var(--brass); box-shadow: 0 0 0 3px rgba(169,123,76,.22); }
+  .runs li::after { content: ""; width: 18px; height: 1px; background: rgba(255,255,255,.18); margin: 0 8px; }
+  .runs li:last-child::after { display: none; }
+  .session-actions { grid-column: 1/-1; display: flex; gap: 8px; margin-top: 6px; }
+  .link-btn { background: transparent; border: 0; color: rgba(240,238,229,.72); font-size: 12px; padding: 4px 2px; }
+  .link-btn:hover { color: #fff; text-decoration: underline; }
+
+  .queue { display: flex; flex-direction: column; }
+  .queue-list { padding: 6px 14px 14px; }
+  .queue-row {
+    display: grid; grid-template-columns: 22px minmax(0,1fr) auto; gap: 8px; align-items: center;
+    padding: 11px 8px; border-bottom: 1px solid var(--line); position: relative;
+  }
+  .queue-row:last-child { border-bottom: 0; }
+  .queue-row .q-state { justify-self: center; }
+  .q-name { font-weight: 600; font-size: 13px; }
+  .q-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .q-sub b { color: var(--ink-2); font-weight: 600; }
+  .q-act { text-align: right; white-space: nowrap; }
+  .q-when { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .empty-note { padding: 12px 8px; font-size: 12px; color: var(--muted); }
+
+  .grid-bottom { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 22px; margin-top: 22px; }
+  .metric-line { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+  .metric-line:last-child { border-bottom: 0; }
+  .metric-line .k { color: var(--ink-2); font-size: 13px; }
+  .metric-line .v { font-size: 21px; font-weight: 720; letter-spacing: -.02em; }
+  .metric-line .v small { font-size: 12px; color: var(--muted); font-weight: 500; margin-left: 2px; }
+  .quick { display: flex; flex-direction: column; }
+  .quick a { display: flex; align-items: center; justify-content: space-between; padding: 11px 2px; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .quick a:last-child { border-bottom: 0; }
+  .quick a:hover { color: var(--pine); }
+  .quick .ar { color: var(--muted); font-size: 15px; }
+  .note-row { display: grid; grid-template-columns: 8px 1fr auto; gap: 10px; align-items: baseline; padding: 10px 2px; border-bottom: 1px dashed var(--line); }
+  .note-row:last-child { border-bottom: 0; }
+  .note-row .t { font-size: 13px; color: var(--ink-2); }
+  .note-row .g { font-size: 12px; color: var(--pine); cursor: pointer; }
+
+  .modal-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(16,20,17,.42); display: grid; place-items: center; }
+  .modal-backdrop.hidden { display: none; }
+  .modal { width: min(660px, calc(100vw - 48px)); background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-float); max-height: calc(100vh - 70px); overflow: auto; }
+  .modal-head { padding: 22px 24px 0; }
+  .modal-head h2 { margin: 4px 0 0; font-size: 20px; font-weight: 700; }
+  .modal-head p { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+  .seg { display: flex; gap: 4px; margin-top: 16px; background: rgba(26,33,28,.05); padding: 4px; border-radius: 11px; width: max-content; }
+  .seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(22,28,24,.08); }
+  .modal-body { padding: 18px 24px 22px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 14px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 5px; }
+  .field input, .field select, .field textarea { width: 100%; background: var(--raise); border: 1px solid var(--line-2); border-radius: 10px; height: 36px; padding: 0 11px; font-size: 13px; }
+  .field textarea { height: 84px; padding: 9px 11px; resize: vertical; }
+  .field.full { grid-column: 1 / -1; }
+  .parse-preview { background: var(--raise); border: 1px solid var(--line); border-radius: 13px; padding: 13px 14px; margin-top: 12px; }
+  .parse-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag { background: var(--pine-soft); color: var(--pine); font-size: 12px; border-radius: 999px; padding: 3px 9px; }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 20px; }
+  .toast { position: fixed; right: 22px; bottom: 20px; z-index: 80; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .toast-item { background: var(--night); color: #eef0e9; padding: 10px 15px; border-radius: 12px; font-size: 12px; box-shadow: var(--shadow-float); }
+  .footnote { margin-top: 26px; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="wordmark">
+      <div class="wordmark-mark">星</div>
+      <div><div class="wordmark-name">星尘电竞 <span style="color:var(--muted);font-weight:500">· 门店工作台</span></div><div class="wordmark-sub">演示环境 · 数据未接接口</div></div>
+    </div>
+    <nav class="spaces" aria-label="三个空间">
+      <button class="space on">工作台</button>
+      <button class="space" data-nav="记录台">记录台</button>
+      <button class="space" data-nav="监控台">监控台</button>
+    </nav>
+    <div class="top-right">
+      <div class="cmd" id="cmdBox" role="search"><span>搜索订单、客户、陪玩…</span><span class="k">⌘ K</span></div>
+      <div class="userline">
+        <div class="avatar">林</div>
+        <div class="user-txt"><b>林一</b><span>店长 · 9月8日 周二</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hello">
+      <div>
+        <div class="eyebrow">Tue · Sep 8 · 14:32</div>
+        <h1>下午好，林一。<br />店里现在有 <em>2 场</em>正在进行，还有 <em>5 笔</em>需要你处理。</h1>
+      </div>
+      <div class="hello-actions">
+        <button class="btn btn-ghost" id="aiBtn">粘贴需求 · AI 解析</button>
+        <button class="btn btn-dark" id="newBtn">+ 新建订单</button>
+      </div>
+    </section>
+
+    <section class="grid-main">
+      <div class="panel live">
+        <div class="panel-head">
+          <span class="live-pulse"></span>
+          <div><div class="panel-kicker">On the floor</div><div class="panel-title" style="margin-top:2px">正在进行的场次</div></div>
+          <div class="panel-meta num">服务端计时 · 每 30 秒刷新</div>
+        </div>
+        <div class="live-list">
+          <div class="session">
+            <div><div class="s-who">阿凯 × 小北</div><div class="s-what">王者荣耀 · 巅峰赛双排 · 客服：小满</div></div>
+            <div class="s-time"><div class="s-now num">42:16</div><div class="s-due">计划 21:00 结束</div></div>
+            <div class="runline">
+              <ol class="runs" aria-label="场次进度">
+                <li class="done"><span class="nd"></span>已确认<time class="num"> 14:05</time></li>
+                <li class="done"><span class="nd"></span>已开玩<time class="num"> 19:00</time></li>
+                <li class="now"><span class="nd"></span>进行中<time class="num"> 42:16</time></li>
+              </ol>
+            </div>
+            <div class="session-actions"><button class="link-btn" data-action="watch">去盯场</button><button class="link-btn" data-action="proxy">代操作</button></div>
+          </div>
+          <div class="session">
+            <div><div class="s-who">Momo × 十一</div><div class="s-what">永劫无间 · 双排上分 · 接近计划结束</div></div>
+            <div class="s-time"><div class="s-now num">52:30</div><div class="s-due">计划 20:00 结束</div></div>
+            <div class="runline">
+              <ol class="runs" aria-label="场次进度">
+                <li class="done"><span class="nd"></span>已开玩<time class="num"> 18:30</time></li>
+                <li class="now"><span class="nd"></span>进行中<time class="num"> 52:30</time></li>
+              </ol>
+            </div>
+            <div class="session-actions"><button class="link-btn" data-action="watch">去盯场</button><button class="link-btn" data-action="evidence">查结束证据</button></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel queue">
+        <div class="panel-head"><span class="dot-brass"></span><span class="panel-title">需要你处理</span><span class="panel-meta num">5</span></div>
+        <div class="queue-list">
+          <div class="queue-row" data-queue="todo" data-t="阿凯 王者荣耀 120">
+            <span class="dot-brass q-state"></span>
+            <div><div class="q-name">阿凯 · 王者荣耀 双排</div><div class="q-sub"><b class="num">¥120</b> · 今天 19:00 · 需求已录入</div></div>
+            <div class="q-act"><button class="btn btn-dark btn-sm" data-action="confirm">确认需求</button><div class="q-when num">14:02</div></div>
+          </div>
+          <div class="queue-row" data-queue="todo" data-t="Momo 原神 150">
+            <span class="dot-brass q-state"></span>
+            <div><div class="q-name">Momo · 原神 深渊陪打</div><div class="q-sub"><b class="num">¥150</b> · 明天 15:00 · AI 解析</div></div>
+            <div class="q-act"><button class="btn btn-dark btn-sm" data-action="confirm">确认需求</button><div class="q-when num">14:18</div></div>
+          </div>
+          <div class="queue-row" data-queue="todo" data-t="阿峰 永劫无间 90">
+            <span class="dot-brass q-state"></span>
+            <div><div class="q-name">阿峰 · 永劫无间 双排</div><div class="q-sub"><b class="num">¥90</b> · 今天 20:00 · 需求已录入</div></div>
+            <div class="q-act"><button class="btn btn-dark btn-sm" data-action="confirm">确认需求</button><div class="q-when num">14:26</div></div>
+          </div>
+          <div class="queue-row" data-queue="todo" data-t="阿凯 派单 19:00">
+            <span class="dot-pine q-state"></span>
+            <div><div class="q-name">阿凯 · 待派单</div><div class="q-sub">匹配建议 <b>3 位空闲</b> · 提前 30 分钟发布</div></div>
+            <div class="q-act"><button class="btn btn-ghost btn-sm" data-action="dispatch">去派单</button><div class="q-when num">14:05</div></div>
+          </div>
+          <div class="queue-row" data-queue="todo" data-t="Momo 派单 明天">
+            <span class="dot-pine q-state"></span>
+            <div><div class="q-name">Momo · 待派单</div><div class="q-sub">AI 候选 <b>3 人已排序</b></div></div>
+            <div class="q-act"><button class="btn btn-ghost btn-sm" data-action="dispatch">去派单</button><div class="q-when num">14:12</div></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid-bottom">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">今日节奏</span></div>
+        <div style="padding:2px 20px 14px">
+          <div class="metric-line"><span class="k">需要处理</span><span class="v num">11</span></div>
+          <div class="metric-line"><span class="k">进行中场次</span><span class="v num">2</span></div>
+          <div class="metric-line"><span class="k">今日完成</span><span class="v num">8</span></div>
+          <div class="metric-line"><span class="k">今日流水</span><span class="v num"><small>¥</small>1,286.00</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">常用动作</span></div>
+        <div class="quick" style="padding:6px 20px 14px">
+          <a href="#" data-nav="客户">新建客户档案<span class="ar">→</span></a>
+          <a href="#" data-nav="陪玩">新建陪玩档案<span class="ar">→</span></a>
+          <a href="#" data-nav="目录">服务目录与定价<span class="ar">→</span></a>
+          <a href="#" data-nav="结算">结算批次<span class="ar">→</span></a>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="dot-clay"></span><span class="panel-title">需要留意</span></div>
+        <div style="padding:4px 20px 14px">
+          <div class="note-row"><span class="dot-brass"></span><span class="t">19:30 后 2 单需收结束证据</span><span class="g" data-nav="x">处理</span></div>
+          <div class="note-row"><span class="dot-brass"></span><span class="t">1 笔结算待复核 · ¥860.00</span><span class="g" data-nav="x">去复核</span></div>
+          <div class="note-row"><span class="dot-line"></span><span class="t">短信通道未配置 · 通知降级</span><span class="g" data-nav="x">配置</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footnote"><span class="dot-line"></span> v2 为方向探索：工作室材质 + 个人工作台形态；记录台 / 监控台是顶部两个空间，二级页面待后续逐台展开。</div>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="eyebrow">New order</div>
+      <h2 id="modalTitle">新建订单</h2>
+      <p>高保真演示：只产生提示，不写入任何数据。</p>
+      <div class="seg">
+        <button type="button" class="on" data-seg="manual">手动录入</button>
+        <button type="button" data-seg="ai">粘贴需求 · AI 解析</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div data-pane="manual">
+        <div class="form">
+          <div class="field"><label>客户</label><input placeholder="姓名或手机号后四位" /></div>
+          <div class="field"><label>游戏</label><select><option>王者荣耀</option><option>原神</option><option>永劫无间</option></select></div>
+          <div class="field"><label>区服</label><input placeholder="微信区 / 官服…" /></div>
+          <div class="field"><label>服务</label><select><option>双排上分</option><option>巅峰赛双排</option><option>深渊陪打</option></select></div>
+          <div class="field"><label>开始时间</label><input type="datetime-local" /></div>
+          <div class="field"><label>预算（元）</label><input type="number" placeholder="120" /></div>
+          <div class="field full"><label>备注</label><textarea placeholder="补充需求，例如段位、是否上麦…"></textarea></div>
+        </div>
+      </div>
+      <div data-pane="ai" hidden>
+        <div class="field"><label>粘贴客户发来的需求</label><textarea style="grid-column:auto" placeholder="例：今晚 7 点，王者 40 星双排两小时，预算 120，微信区，能上麦优先"></textarea></div>
+        <div class="parse-preview">
+          <div style="font-weight:700;font-size:13px">AI 解析建议（演示）</div>
+          <div class="parse-tags"><span class="tag">王者荣耀</span><span class="tag">微信区</span><span class="tag">巅峰赛双排</span><span class="tag">19:00–21:00</span><span class="tag">2 人</span><span class="tag">¥120</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:9px">AI 只填字段，价格与确认由你完成。</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close>取消</button>
+      <button class="btn btn-dark" id="saveBtn">保存草稿</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<script>
+(function () {
+  var toastBox = document.getElementById('toast');
+  function show(msg, ok) {
+    var el = document.createElement('div');
+    el.className = 'toast-item';
+    el.textContent = msg;
+    toastBox.appendChild(el);
+    setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .25s'; }, 2400);
+    setTimeout(function () { el.remove(); }, 2800);
+  }
+  function recount() {
+    var rows = document.querySelectorAll('.queue-row:not(.gone)');
+    var meta = document.querySelector('.queue .panel-meta');
+    if (meta) meta.textContent = rows.length;
+  }
+  document.addEventListener('click', function (e) {
+    var nav = e.target.closest('[data-nav]');
+    if (nav) { show('原型提示：' + nav.dataset.nav + ' 空间将在下一轮逐台展开。'); return; }
+    var act = e.target.closest('[data-action]');
+    if (act) {
+      var row = act.closest('.queue-row');
+      if (row) {
+        row.classList.add('gone'); row.style.display = 'none'; recount();
+        show(act.dataset.action === 'confirm' ? '已确认需求（演示）' : '已进入派单流程（演示）');
+      } else {
+        show('原型提示：「' + act.textContent.trim() + '」动作待实现。');
+      }
+      return;
+    }
+  });
+  var modal = document.getElementById('modal');
+  function seg(mode) {
+    modal.querySelectorAll('[data-seg]').forEach(function (b) { b.classList.toggle('on', b.dataset.seg === mode); });
+    modal.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = p.dataset.pane !== mode; });
+  }
+  function open(mode) { modal.classList.remove('hidden'); seg(mode || 'manual'); document.body.style.overflow = 'hidden'; }
+  function close() { modal.classList.add('hidden'); document.body.style.overflow = ''; }
+  document.getElementById('newBtn').addEventListener('click', function () { open('manual'); });
+  document.getElementById('aiBtn').addEventListener('click', function () { open('ai'); });
+  modal.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', close); });
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+  modal.querySelectorAll('[data-seg]').forEach(function (b) { b.addEventListener('click', function () { seg(b.dataset.seg); }); });
+  document.getElementById('saveBtn').addEventListener('click', function () { close(); show('演示：已保存草稿，未写入任何数据。'); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') close();
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      var box = document.getElementById('cmdBox');
+      show('全局搜索（⌘K）将在接入真实数据后生效。');
+    }
+  });
+})();
+</script>
+</body>
+</html>

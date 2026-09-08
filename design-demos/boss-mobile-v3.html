@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>老板端 · H5 高保真原型 v3（补齐争议与空状态）</title>
+<style>
+  /* 陪玩端移动高保真 v1
+     假设：H5/weapp 通用页面；登录先用演示账号；
+     门店品牌 token 运行时覆盖主色；数据为演示并标注。
+     导航：接单大厅 / 服务中 / 收入 / 我的 */
+  :root{--paper:#f5f2ea;--card:#fffdf8;--ink:#18231e;--muted:#71766f;--line:#e3ded2;--primary:#cf6040;--primary-soft:#f6e3db;--pine:#24543f;--pine-soft:#e5efe8;--amber:#a56b22;--amber-soft:#f5ead7;--radius:18px}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:#d8d4c9;font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .stage{display:flex;flex-wrap:wrap;gap:34px;padding:42px;justify-content:center}
+  .frame-card{width:392px}
+  .frame-label{font-size:12px;color:#555;margin:0 0 10px;font-style:italic}
+  .frame-label b{display:block;font-style:normal;font-size:14px;color:#222;margin-bottom:2px}
+  .device{background:#0d120f;border-radius:46px;padding:11px;box-shadow:0 30px 70px rgba(20,26,22,.25)}
+  .phone{width:370px;height:760px;background:var(--paper);border-radius:36px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .status{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:11px;font-weight:600}
+  .appbar{display:flex;align-items:center;gap:10px;padding:8px 18px 10px;flex:none}
+  .appbar h1{font-size:20px;margin:0;font-weight:750;letter-spacing:-.2px}
+  .appbar .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .chip{font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;background:#efeae0;color:var(--muted);margin-left:auto}
+  .chip.live{background:var(--pine-soft);color:var(--pine)}
+  .scroll{flex:1;overflow:hidden;padding:4px 16px 92px}
+  .tabs{display:flex;gap:8px;overflow:hidden;margin:0 0 12px}
+  .tab{flex:1;text-align:center;padding:9px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--muted);font-size:12px;font-weight:600}
+  .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:11px}
+  .card h3{margin:0;font-size:15px}
+  .meta{color:var(--muted);font-size:12px;margin-top:3px}
+  .row{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+  .price{font:800 18px ui-monospace,SFMono-Regular,Consolas,monospace}
+  .btn{display:flex;align-items:center;justify-content:center;border:0;border-radius:14px;font-weight:700;font-size:15px;height:48px;padding:0 16px}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.dark{background:var(--ink);color:#fff}
+  .btn.soft{background:var(--primary-soft);color:var(--primary)}
+  .btn.green{background:var(--pine);color:#fff}
+  .btn.small{height:34px;font-size:12px;border-radius:10px;padding:0 12px}
+  .bottom{position:absolute;left:0;right:0;bottom:0;background:rgba(255,253,248,.96);border-top:1px solid var(--line);display:flex;padding:10px 12px 14px;gap:4px}
+  .nav{flex:1;text-align:center;font-size:10px;color:var(--muted);padding:4px 0;border-radius:10px}
+  .nav.on{color:var(--primary);font-weight:700;background:var(--primary-soft)}
+  .nav b{display:block;font-size:18px;font-weight:500;line-height:1}
+  .statcard{background:var(--pine);color:#fff;border-radius:20px;padding:16px;margin-bottom:12px}
+  .statcard .lbl{font-size:11px;opacity:.8}
+  .statcard .val{font:800 26px ui-monospace,Consolas,monospace;margin-top:2px}
+  .statcard .note{font-size:11px;opacity:.85;margin-top:5px}
+  .money-line{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .money-line:last-child{border-bottom:0}
+  .money-line b{font-family:ui-monospace,Consolas,monospace}
+  .state{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--pine);background:var(--pine-soft);border-radius:999px;padding:3px 9px;font-weight:600}
+  .state.wait{color:var(--amber);background:var(--amber-soft)}
+  .menu{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:1px solid var(--line);font-size:14px}
+  .menu small{color:var(--muted);font-size:11px}
+  .menu span{color:var(--primary)}
+  .avatar{width:58px;height:58px;border-radius:50%;background:#d7d2c6;color:#554f45;display:grid;place-items:center;font-weight:700;font-size:19px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-size:11px;background:#efeae0;border-radius:999px;padding:4px 10px;color:#4b4f49}
+  .timer{font:800 30px ui-monospace,Consolas,monospace;letter-spacing:1px}
+  .demo{position:fixed;left:18px;bottom:14px;background:#101713;color:#d8e0db;font-size:11px;border-radius:8px;padding:8px 12px;z-index:20}
+  .empty{color:var(--muted);text-align:center;padding:34px 10px;font-size:13px}
+.statcard{background:var(--primary)}.phone input,.phone textarea{width:100%;min-width:0;max-width:100%;box-sizing:border-box}.phone .scroll{overflow-y:auto}.phone .card input{width:100%}</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 1 登录 / 身份 -->
+  <div class="frame-card"><div class="frame-label"><b>01 登录 / 身份</b>门店定位 + 账号/微信登录</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div style="padding:34px 24px 8px"><div style="font-size:26px;font-weight:800;line-height:1.2">星尘电竞</div><div style="color:var(--muted);font-size:12px;margin-top:3px">老板端 · 演示门店</div></div>
+      <div style="padding:26px 20px">
+        <div class="statcard"><div class="lbl">我的订单</div><div class="val">1 场进行中</div><div class="note">下一场 · 王者双排 19:00</div></div>
+        <div style="margin:16px 0 8px;font-size:12px;color:var(--muted)">登录方式</div>
+        <button class="btn dark" style="width:100%">微信一键登录（H5）</button>
+        <button class="btn" style="width:100%;margin-top:10px;background:var(--card);border:1px solid var(--line)">账号密码登录</button>
+      </div>
+      <div class="bottom"><div class="nav on">首页</div><div class="nav">下单</div><div class="nav">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 2 首页 / 我的订单 -->
+  <div class="frame-card"><div class="frame-label"><b>02 首页 · 我的订单</b>订单状态 + 该做什么下一步</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><div><h1>我的订单</h1><div class="sub">老板 阿凯 · 老板编号 B-008</div></div></div>
+      <div class="scroll">
+        <div class="tabs"><div class="tab on">全部</div><div class="tab">进行中</div><div class="tab">待确认</div><div class="tab">已完成</div></div>
+        <div class="card"><div class="row"><b>王者荣耀 · 巅峰赛双排</b><span class="state">进行中</span></div><div class="meta">陪玩 小北 · 19:00 开始 · 预计 21:00 结束</div><div class="meta" style="margin-top:6px">已进行 42:16（服务器计时）</div><button class="btn dark small" style="margin-top:11px" data-action="go-detail">查看订单 / 确认完成</button></div>
+        <div class="card"><div class="row"><b>原神 · 深渊 12 层</b><span class="state wait">待门店确认</span></div><div class="meta">今天 15:00 下单 · 等待确认后可选人</div></div>
+        <div class="card"><div class="row"><b>永劫无间 · 双排上分</b><span class="state">已完成</span></div><div class="meta">昨日 20:00 · ¥90 · 收入已核算</div></div>
+      </div>
+      <div class="bottom"><div class="nav on">首页</div><div class="nav">下单</div><div class="nav">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 3 下单 -->
+  <div class="frame-card"><div class="frame-label"><b>03 老板自助下单</b>game-order：模板 + 需求字段 + 岗位人数 + 时长</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>自助下单</h1><span class="chip">可选模板 3</span></div>
+      <div class="scroll">
+        <div class="tabs"><div class="tab on">王者荣耀</div><div class="tab">原神</div><div class="tab">永劫无间</div></div>
+        <div class="card"><h3>巅峰赛双排模板</h3><div class="meta">微信区 · 40 星以上 · 可上麦</div>
+          <div style="margin-top:10px;display:grid;gap:9px">
+            <input placeholder="段位要求（选填）" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)">
+            <div style="display:flex;gap:8px"><input placeholder="打野 人数" value="1" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)"><input placeholder="辅助 人数" value="1" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)"></div>
+            <input placeholder="时长（分钟）" value="120" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)">
+          </div>
+        </div>
+        <button class="btn primary" style="width:100%" data-action="submit-order">提交订单（等待门店确认）</button>
+        <div class="empty" style="padding:16px 0 0">提交后可在首页看到订单状态；门店确认后开放选人。</div>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav on">下单</div><div class="nav">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 4 选人 -->
+  <div class="frame-card"><div class="frame-label"><b>04 选择陪玩</b>game-select：按岗位看候选并选择</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><div><h1>选择陪玩</h1><div class="sub">GD-0908-028 · 巅峰赛双排</div></div><span class="chip live">已选 1/2</span></div>
+      <div class="scroll">
+        <div class="card"><div class="row"><b>打野 · 需 1 人</b><span class="state">已选</span></div><div style="display:flex;align-items:center;gap:10px;margin-top:10px"><div class="avatar" style="width:40px;height:40px;font-size:14px">小</div><div><b>小北</b><div class="meta">王者 40 星 · 微信区</div></div><button class="btn soft small" style="margin-left:auto" data-action="pick">已选</button></div></div>
+        <div class="card"><div class="row"><b>辅助 · 需 1 人</b><span class="state wait">待选</span></div><div style="display:flex;align-items:center;gap:10px;margin-top:10px"><div class="avatar" style="width:40px;height:40px;font-size:14px">十</div><div><b>十一</b><div class="meta">王者 30 星 · 可上麦</div></div><button class="btn small" style="margin-left:auto;background:var(--card);border:1px solid var(--line)" data-action="pick">选择</button></div><div style="display:flex;align-items:center;gap:10px;margin-top:10px"><div class="avatar" style="width:40px;height:40px;font-size:14px">和</div><div><b>和声</b><div class="meta">王者 25 星 · 语音清楚</div></div><button class="btn small" style="margin-left:auto;background:var(--card);border:1px solid var(--line)" data-action="pick">选择</button></div></div>
+        <button class="btn primary" style="width:100%" data-action="confirm-pick">确认陪玩</button>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav on">下单</div><div class="nav">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 5 订单详情 / 确认完成 -->
+  <div class="frame-card"><div class="frame-label"><b>05 订单详情 · 进行中</b>确认完成与争议入口</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>19:42</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><div><h1>订单详情</h1><div class="sub">GD-0908-028 · 王者双排</div></div><span class="chip live">服务中</span></div>
+      <div class="scroll">
+        <div class="card"><h3>阿凯 × 小北</h3><div class="meta">开始 19:00 · 计划 21:00 · 已进行 <b>42:16</b></div><div class="row"><span>开始照片</span><span class="state">已保存</span></div><button class="btn green" style="width:100%;margin-top:14px" data-action="confirm-complete">服务结束 · 确认完成</button><button class="btn" style="width:100%;margin-top:9px;background:var(--card);border:1px solid var(--line)" data-action="open-dispute">有问题 · 发起争议</button></div>
+        <div class="card" style="padding:6px 14px"><div class="menu"><span>费用明细</span><small>按服务端实际时长核算</small><span>›</span></div><div class="menu" style="border-bottom:0"><span>查看证据</span><small>开始/结束照片</small><span>›</span></div></div>
+      </div>
+      <div class="bottom"><div class="nav on">首页</div><div class="nav">下单</div><div class="nav">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 6 钱包 -->
+  <div class="frame-card"><div class="frame-label"><b>06 我的钱包</b>余额 + 模拟充值 + 消费/充值流水</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>我的钱包</h1><span class="chip">B-008</span></div>
+      <div class="scroll">
+        <div class="statcard"><div class="lbl">账户余额</div><div class="val">¥380.00</div><div class="note">本地模拟支付 · 真实渠道后接</div></div>
+        <div class="card" style="display:flex;gap:8px;align-items:center"><input value="100" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)"><button class="btn dark small" data-action="recharge">充值</button></div>
+        <div class="card"><div class="money-line"><span>充值 + ¥100.00</span><b>今日 14:02</b></div><div class="money-line"><span>扣费 - ¥120.00</span><b>王者双排</b></div><div class="money-line"><span>扣费 - ¥90.00</span><b>永劫双排</b></div></div>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav">下单</div><div class="nav on">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 7 我的 / 争议 -->
+  <div class="frame-card"><div class="frame-label"><b>07 我的 · 争议入口</b>老板资料 / 争议 / 我的订单</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>我的</h1></div>
+      <div class="scroll">
+        <div style="display:flex;gap:14px;align-items:center;padding:4px 0 14px"><div class="avatar">阿</div><div><div style="font-weight:750;font-size:17px">阿凯</div><div style="color:var(--muted);font-size:12px">老板编号 B-008 · 常用微信区</div></div></div>
+        <div class="card" style="padding:4px 14px">
+          <div class="menu"><span>我的订单</span><small>1 场进行中</small><span>›</span></div>
+          <div class="menu"><span>我的争议</span><small>1 条处理中</small><span>›</span></div>
+          <div class="menu"><span>常用服务</span><small>王者双排 / 原神深渊</small><span>›</span></div>
+          <div class="menu" style="border-bottom:0"><span>退出登录</span><small style="color:var(--primary)">安全退出</small><span>›</span></div>
+        </div>
+        <div class="card"><h3>争议状态</h3><div class="row"><b>订单 021 · 时长争议</b><span class="state wait">处理中</span></div><button class="btn small" style="margin-top:10px;background:var(--card);border:1px solid var(--line)" data-action="goto-dispute">查看进度</button></div>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav">下单</div><div class="nav">钱包</div><div class="nav on">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 8 我的争议 -->
+  <div class="frame-card"><div class="frame-label"><b>08 我的争议</b>争议列表 + 处理进度 + 状态</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>我的争议</h1><span class="chip">2 条记录</span></div>
+      <div class="scroll">
+        <div class="card"><div class="row"><b>订单 021 · 时长争议</b><span class="state wait">处理中</span></div><div class="meta">原因：实际时长与截图时间不一致 · 已提交截图</div><div class="meta" style="margin-top:5px">最新回复：门店已复核，等待财务确认</div><button class="btn small" style="margin-top:10px;background:var(--card);border:1px solid var(--line)" data-action="view-dispute">查看处理进度</button></div>
+        <div class="card"><div class="row"><b>订单 015 · 已解决</b><span class="state">已处理</span></div><div class="meta">结果：费用按服务端时长调整并退款</div><button class="btn small" style="margin-top:10px;background:var(--card);border:1px solid var(--line)" data-action="view-dispute">查看记录</button></div>
+        <div class="empty">没有其他争议。争议需绑定具体订单，仅处理真实异常。</div>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav">下单</div><div class="nav">钱包</div><div class="nav on">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 9 发起争议 -->
+  <div class="frame-card"><div class="frame-label"><b>09 发起争议</b>选择订单 + 填写原因 + 提交</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>发起争议</h1><span class="chip">限已结束订单</span></div>
+      <div class="scroll">
+        <div class="card"><h3>选择订单</h3>
+          <div class="tabs" style="margin:12px 0 0"><div class="tab on">订单 021</div><div class="tab">订单 015</div></div>
+          <div class="meta" style="margin-top:9px">永劫双排 · 昨日 20:00 · ¥90</div>
+        </div>
+        <div class="card"><h3>争议原因</h3>
+          <textarea placeholder="说明实际情况，例如：实际服务时长与结束时间不一致、陪玩提前离开…" style="width:100%;min-height:100px;margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:11px;background:var(--card);resize:none"></textarea>
+          <div class="meta" style="margin-top:8px">如有时长或扣费疑问，建议附上服务端时间截图。</div>
+        </div>
+        <button class="btn primary" style="width:100%" data-action="submit-dispute">提交争议</button>
+        <div class="empty" style="padding:14px 0 0">提交后门店与平台可见，争议期间关联结算会被冻结。</div>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav">下单</div><div class="nav">钱包</div><div class="nav on">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 10 自助服务未开通 -->
+  <div class="frame-card"><div class="frame-label"><b>10 未开通 · 空状态</b>addon.customer_self_service 未开启时的下单页</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>自助下单</h1></div>
+      <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;padding-bottom:110px">
+        <div class="empty" style="padding:28px 20px"><div style="width:58px;height:58px;margin:0 auto 14px;border:1px dashed var(--line);border-radius:18px;display:grid;place-items:center;color:var(--muted);font-size:12px">OFF</div><h3 style="margin:0 0 6px;color:var(--ink)">自助下单未开通</h3><p style="margin:0;color:var(--muted);font-size:13px">这家门店暂未开启老板自助服务。<br>你可以联系门店客服下单，开通后即可自助下单与选人。</p><button class="btn dark" style="width:100%;margin-top:18px" data-action="contact-store">联系门店</button></div>
+      </div>
+      <div class="bottom"><div class="nav">首页</div><div class="nav on">下单</div><div class="nav">钱包</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+</div>
+
+<div class="demo">老板端 · H5 UI v3 · 演示数据 · 未接接口</div>
+<script>
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;var a=b.dataset&&b.dataset.action;
+  if(a==='go-detail'){alert('演示：跳转到订单详情/确认完成页。');}
+  if(a==='submit-order'){b.textContent='已提交（演示）';b.disabled=true;}
+  if(a==='pick'){if(b.textContent.indexOf('已选')===0){b.textContent='选择';b.className='btn small';b.style.background='var(--card)';b.style.border='1px solid var(--line)';}else{b.textContent='已选';b.className='btn soft small';}}
+  if(a==='confirm-pick'){b.textContent='已确认所选陪玩（演示）';b.disabled=true;}
+  if(a==='confirm-complete'){alert('演示：服务结束后确认完成，进入费用核算。');}
+  if(a==='open-dispute'){alert('演示：发起争议需选择订单并填写原因。');}
+  if(a==='recharge'){b.textContent='充值中…（本地模拟）';setTimeout(function(){b.textContent='充值成功';},500);}
+  if(a==='goto-dispute'){alert('演示：跳转到争议处理进度。');}
+});
+</script></script>
+
+<script>
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;var a=b.dataset&&b.dataset.action;
+  if(a==='view-dispute'){alert('演示：跳转到该争议的处理时间线。');}
+  if(a==='submit-dispute'){b.textContent='已提交（演示）';b.disabled=true;}
+  if(a==='contact-store'){alert('演示：联系门店（展示门店电话/客服入口）。');}
+});
+</script>
+</body>
+</html>

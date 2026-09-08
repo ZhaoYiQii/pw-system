@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>陪玩端 · H5 高保真原型 v1</title>
+<style>
+  /* 陪玩端移动高保真 v1
+     假设：H5/weapp 通用页面；登录先用演示账号；
+     门店品牌 token 运行时覆盖主色；数据为演示并标注。
+     导航：接单大厅 / 服务中 / 收入 / 我的 */
+  :root{--paper:#f5f2ea;--card:#fffdf8;--ink:#18231e;--muted:#71766f;--line:#e3ded2;--primary:#cf6040;--primary-soft:#f6e3db;--pine:#24543f;--pine-soft:#e5efe8;--amber:#a56b22;--amber-soft:#f5ead7;--radius:18px}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:#d8d4c9;font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .stage{display:flex;flex-wrap:wrap;gap:34px;padding:42px;justify-content:center}
+  .frame-card{width:392px}
+  .frame-label{font-size:12px;color:#555;margin:0 0 10px;font-style:italic}
+  .frame-label b{display:block;font-style:normal;font-size:14px;color:#222;margin-bottom:2px}
+  .device{background:#0d120f;border-radius:46px;padding:11px;box-shadow:0 30px 70px rgba(20,26,22,.25)}
+  .phone{width:370px;height:760px;background:var(--paper);border-radius:36px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .status{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:11px;font-weight:600}
+  .appbar{display:flex;align-items:center;gap:10px;padding:8px 18px 10px;flex:none}
+  .appbar h1{font-size:20px;margin:0;font-weight:750;letter-spacing:-.2px}
+  .appbar .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .chip{font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;background:#efeae0;color:var(--muted);margin-left:auto}
+  .chip.live{background:var(--pine-soft);color:var(--pine)}
+  .scroll{flex:1;overflow:hidden;padding:4px 16px 92px}
+  .tabs{display:flex;gap:8px;overflow:hidden;margin:0 0 12px}
+  .tab{flex:1;text-align:center;padding:9px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--muted);font-size:12px;font-weight:600}
+  .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:11px}
+  .card h3{margin:0;font-size:15px}
+  .meta{color:var(--muted);font-size:12px;margin-top:3px}
+  .row{display:flex;justify-content:space-between;align-items:center;margin-top:9px}
+  .price{font:800 18px ui-monospace,SFMono-Regular,Consolas,monospace}
+  .btn{display:flex;align-items:center;justify-content:center;border:0;border-radius:14px;font-weight:700;font-size:15px;height:48px;padding:0 16px}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.dark{background:var(--ink);color:#fff}
+  .btn.soft{background:var(--primary-soft);color:var(--primary)}
+  .btn.green{background:var(--pine);color:#fff}
+  .btn.small{height:34px;font-size:12px;border-radius:10px;padding:0 12px}
+  .bottom{position:absolute;left:0;right:0;bottom:0;background:rgba(255,253,248,.96);border-top:1px solid var(--line);display:flex;padding:10px 12px 14px;gap:4px}
+  .nav{flex:1;text-align:center;font-size:10px;color:var(--muted);padding:4px 0;border-radius:10px}
+  .nav.on{color:var(--primary);font-weight:700;background:var(--primary-soft)}
+  .nav b{display:block;font-size:18px;font-weight:500;line-height:1}
+  .statcard{background:var(--pine);color:#fff;border-radius:20px;padding:16px;margin-bottom:12px}
+  .statcard .lbl{font-size:11px;opacity:.8}
+  .statcard .val{font:800 26px ui-monospace,Consolas,monospace;margin-top:2px}
+  .statcard .note{font-size:11px;opacity:.85;margin-top:5px}
+  .money-line{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .money-line:last-child{border-bottom:0}
+  .money-line b{font-family:ui-monospace,Consolas,monospace}
+  .state{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--pine);background:var(--pine-soft);border-radius:999px;padding:3px 9px;font-weight:600}
+  .state.wait{color:var(--amber);background:var(--amber-soft)}
+  .menu{display:flex;align-items:center;justify-content:space-between;padding:13px 2px;border-bottom:1px solid var(--line);font-size:14px}
+  .menu small{color:var(--muted);font-size:11px}
+  .menu span{color:var(--primary)}
+  .avatar{width:58px;height:58px;border-radius:50%;background:#d7d2c6;color:#554f45;display:grid;place-items:center;font-weight:700;font-size:19px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-size:11px;background:#efeae0;border-radius:999px;padding:4px 10px;color:#4b4f49}
+  .timer{font:800 30px ui-monospace,Consolas,monospace;letter-spacing:1px}
+  .demo{position:fixed;left:18px;bottom:14px;background:#101713;color:#d8e0db;font-size:11px;border-radius:8px;padding:8px 12px;z-index:20}
+  .empty{color:var(--muted);text-align:center;padding:34px 10px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 1 登录 -->
+  <div class="frame-card"><div class="frame-label"><b>01 登录 / 身份</b>门店定位 + 账号/微信登录</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div style="padding:34px 24px 8px">
+        <div style="font-size:26px;font-weight:800;line-height:1.2">星尘电竞</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:3px">陪玩工作台 · 演示门店</div>
+      </div>
+      <div style="padding:26px 20px">
+        <div class="statcard"><div class="lbl">今日大厅</div><div class="val">3 单可接</div><div class="note">王者 / 原神 / 永劫均已开放</div></div>
+        <div style="margin:16px 0 8px;font-size:12px;color:var(--muted)">登录方式</div>
+        <button class="btn dark" style="width:100%">微信一键登录（H5）</button>
+        <button class="btn" style="width:100%;margin-top:10px;background:var(--card);border:1px solid var(--line)">账号密码登录</button>
+        <div class="empty" style="padding:18px 0 0">当前为本地可跑登录形态；真实微信/验证码登录后续接入。</div>
+      </div>
+      <div class="bottom"><div class="nav on">接单</div><div class="nav">服务</div><div class="nav">收入</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 2 接单大厅 -->
+  <div class="frame-card"><div class="frame-label"><b>02 接单大厅</b>可接订单、报名与大厅开关</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><div><h1>接单大厅</h1><div class="sub">小北 · 空闲可接单</div></div><span class="chip live">可接单</span></div>
+      <div class="scroll">
+        <div class="tabs"><div class="tab on">全部</div><div class="tab">王者荣耀</div><div class="tab">原神</div><div class="tab">永劫无间</div></div>
+        <div class="card"><h3>王者荣耀 · 巅峰赛双排</h3><div class="meta">客户 阿凯 · 今晚 19:00 · 2 小时</div><div class="row"><span class="price">¥120</span><button class="btn soft small" data-action="apply">报名</button></div></div>
+        <div class="card"><h3>原神 · 深渊 12 层</h3><div class="meta">客户 Momo · 明天 15:00 · 2 小时</div><div class="row"><span class="price">¥150</span><button class="btn soft small" data-action="apply">报名</button></div></div>
+        <div class="card"><h3>永劫无间 · 双排上分</h3><div class="meta">客户 阿峰 · 今天 20:00 · 1.5 小时</div><div class="row"><span class="price">¥90</span><button class="btn soft small" data-action="apply">报名</button></div></div>
+        <div class="empty">门店未开通大厅时，此页显示“请联系门店开通接单大厅”。</div>
+      </div>
+      <div class="bottom"><div class="nav on">接单</div><div class="nav">服务</div><div class="nav">收入</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 3 服务中 / 场次 -->
+  <div class="frame-card"><div class="frame-label"><b>03 服务中 · 场次控制</b>开始/结束 + 拍照留证</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>19:42</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><div><h1>服务中</h1><div class="sub">按订单状态给唯一主动作</div></div><span class="chip live">● 进行中</span></div>
+      <div class="scroll">
+        <div class="statcard"><div class="lbl">当前场次 · 阿凯 × 小北</div><div class="val" style="font-size:22px">王者荣耀 · 双排</div><div class="note" style="font-family:ui-monospace,Consolas,monospace;font-size:18px">42:16</div></div>
+        <div class="card"><div class="row"><span>开始时间（服务器）</span><b style="font-family:ui-monospace,Consolas,monospace">19:00</b></div><div class="row"><span>计划结束</span><b style="font-family:ui-monospace,Consolas,monospace">21:00</b></div><div class="row"><span>开始照片</span><span class="state">已保存</span></div><button class="btn green" style="width:100%;margin-top:14px" data-action="end">结束服务（需先拍照/录像）</button></div>
+        <div class="card"><h3>待开始 · 明天 15:00</h3><div class="meta">Momo × 十一 · 原神深渊</div><button class="btn primary" style="width:100%;margin-top:12px" data-action="start">开始服务（拍照留证）</button></div>
+      </div>
+      <div class="bottom"><div class="nav">接单</div><div class="nav on">服务</div><div class="nav">收入</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 4 报名/我的接单 -->
+  <div class="frame-card"><div class="frame-label"><b>04 报名与接单状态</b>我的报名/被选/可开始</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>我的接单</h1><span class="chip">2 进行中 · 1 已报名</span></div>
+      <div class="scroll">
+        <div class="card"><div class="row"><b>王者荣耀 · 巅峰赛双排</b><span class="state">已被选</span></div><div class="meta">阿凯 · 今晚 19:00 · ¥120</div><button class="btn dark small" style="margin-top:11px" data-action="goto-start">查看场次</button></div>
+        <div class="card"><div class="row"><b>永劫无间 · 双排上分</b><span class="state wait">报名待选</span></div><div class="meta">阿峰 · 20:00 · ¥90</div><button class="btn small" style="margin-top:11px;background:var(--card);border:1px solid var(--line)" data-action="cancel">取消报名</button></div>
+        <div class="card"><h3>订单详情</h3><div class="meta">报名后将展示：游戏/区服/需求/预算/计划时间</div><button class="btn primary small" style="margin-top:11px" data-action="apply-detail">确认报名</button></div>
+      </div>
+      <div class="bottom"><div class="nav">接单</div><div class="nav on">服务</div><div class="nav">收入</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 5 收入 -->
+  <div class="frame-card"><div class="frame-label"><b>05 我的收入</b>待结算 / 结算中 / 已结算明细</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>我的收入</h1><span class="chip">商家结算中</span></div>
+      <div class="scroll">
+        <div class="statcard"><div class="lbl">待结算金额</div><div class="val">¥240.00</div><div class="note">含 1 笔已核算应收</div></div>
+        <div class="card"><div class="money-line"><span>订单 028 · 档位收入</span><b>¥240</b></div><div class="money-line"><span>订单 021 · 已入结算批次</span><b>¥180</b></div><div class="money-line"><span>订单 015 · 已结算待打款</span><b>¥150</b></div><div class="empty" style="padding:16px 0 0">金额与状态以服务端结果为准。</div></div>
+      </div>
+      <div class="bottom"><div class="nav">接单</div><div class="nav">服务</div><div class="nav on">收入</div><div class="nav">我的</div></div>
+    </div></div>
+  </div>
+
+  <!-- 6 我的 -->
+  <div class="frame-card"><div class="frame-label"><b>06 我的</b>资料/技能/接单时间/争议/收入入口</div>
+    <div class="device"><div class="phone">
+      <div class="status"><span>9:41</span><span style="letter-spacing:2px">•••</span></div>
+      <div class="appbar"><h1>我的</h1></div>
+      <div class="scroll">
+        <div style="display:flex;gap:14px;align-items:center;padding:4px 0 14px"><div class="avatar">小</div><div><div style="font-weight:750;font-size:17px">小北</div><div style="color:var(--muted);font-size:12px">王者 40 星 · 空闲</div><div class="tags"><span class="tag">巅峰赛</span><span class="tag">双排</span><span class="tag">可上麦</span></div></div></div>
+        <div class="card" style="padding:4px 14px">
+          <div class="menu"><span>我的资料</span><small>技能与标签</small><span>›</span></div>
+          <div class="menu"><span>接单时间</span><small>每周可接时段</small><span>›</span></div>
+          <div class="menu"><span>收入详情</span><small>待结算 ¥240</small><span>›</span></div>
+          <div class="menu"><span>我的争议</span><small>1 条处理中</small><span>›</span></div>
+          <div class="menu" style="border-bottom:0"><span>退出登录</span><small style="color:var(--primary)">安全退出</small><span>›</span></div>
+        </div>
+      </div>
+      <div class="bottom"><div class="nav">接单</div><div class="nav">服务</div><div class="nav">收入</div><div class="nav on">我的</div></div>
+    </div></div>
+  </div>
+</div>
+<div class="demo">陪玩端 · H5 UI v1 · 演示数据 · 未接接口</div>
+<script>
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var a=b.dataset&&b.dataset.action;
+  if(a==='apply'){b.textContent='已报名';b.disabled=true;}
+  if(a==='end'){alert('演示：将先唤起拍照/录像，再调用场次结束接口。');}
+  if(a==='start'){alert('演示：开始场次需先保存开始照片/录像。');}
+  if(a==='goto-start'){alert('演示：跳转到“服务中”场次页。');}
+  if(a==='apply-detail'){b.textContent='报名已提交';b.disabled=true;}
+  if(a==='cancel'){b.textContent='已取消';b.disabled=true;}
+  if(!a&&b.closest('.bottom')){}
+});
+</script>
+</body>
+</html>
