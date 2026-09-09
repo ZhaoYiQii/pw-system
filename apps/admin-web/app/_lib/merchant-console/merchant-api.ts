@@ -41,10 +41,17 @@ export const STATUS_TEXT: Record<string, string> = {
   DISABLED: "停用",
   // 通知
   READ: "已读",
+  // 陪玩申请
+  PENDING: "待审核",
+  REJECTED: "已拒绝",
 };
 
 export function toneFor(status: string): MerchantStatusTone {
-  if (["DRAFT", "PENDING_CONFIRMATION", "ADJUSTMENT_PENDING"].includes(status))
+  if (
+    ["DRAFT", "PENDING_CONFIRMATION", "ADJUSTMENT_PENDING", "PENDING"].includes(
+      status,
+    )
+  )
     return "pending";
   if (status === "CONFIRMED") return "pending";
   if (status === "DISPATCHING" || status === "OPEN") return "dispatch";
@@ -52,12 +59,19 @@ export function toneFor(status: string): MerchantStatusTone {
   if (["IN_PROGRESS", "STARTED", "SCHEDULED", "NOT_STARTED"].includes(status))
     return "running";
   if (
-    ["COMPLETED", "PAID", "RESOLVED", "APPROVED", "ACTIVE", "CONFIRMED_SESSION"].includes(
-      status,
-    )
+    [
+      "COMPLETED",
+      "PAID",
+      "RESOLVED",
+      "APPROVED",
+      "ACTIVE",
+      "CONFIRMED_SESSION",
+    ].includes(status)
   )
     return "done";
-  if (["CANCELLED", "VOID", "INACTIVE", "DISABLED"].includes(status))
+  if (
+    ["CANCELLED", "VOID", "INACTIVE", "DISABLED", "REJECTED"].includes(status)
+  )
     return "cancelled";
   return "muted";
 }

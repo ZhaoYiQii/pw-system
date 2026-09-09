@@ -13,7 +13,7 @@ import {
   formatFenYuan,
   yuanToFenString,
 } from "../money";
-import { DemoEmptyState } from "./demo-ui";
+import { DemoDialog, DemoEmptyState, useDemoToast } from "./demo-ui";
 import {
   type AuditRow,
   type CatalogGame,
@@ -51,6 +51,163 @@ export function ModuleHeader({
         <p>{description}</p>
       </div>
       {children ? <div className="mc-button-row">{children}</div> : null}
+    </div>
+  );
+}
+
+interface PlayerApplicationRow {
+  id: string;
+  accountId: string;
+  customerProfileId: string;
+  customerName?: string;
+  accountUsername?: string;
+  status: string;
+  intro: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+}
+
+export function PlayerApplicationsModuleView() {
+  const queryClient = useQueryClient();
+  const { showToast } = useDemoToast();
+  const [rejectTarget, setRejectTarget] = useState<{
+    id: string;
+    reason: string;
+  } | null>(null);
+  const query = useQuery({
+    queryKey: ["merchant", "player-applications"],
+    queryFn: () =>
+      apiFetch<PlayerApplicationRow[]>(
+        "/api/v1/tenant/player-applications",
+      ),
+  });
+  const approve = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<PlayerApplicationRow>(
+        `/api/v1/tenant/player-applications/${id}/approve`,
+        { method: "POST", body: JSON.stringify({}) },
+      ),
+    onSuccess: () => {
+      showToast("已批准，陪玩端已开通。");
+      void queryClient.invalidateQueries({
+        queryKey: ["merchant", "player-applications"],
+      });
+    },
+  });
+  const reject = useMutation({
+    mutationFn: () => {
+      if (!rejectTarget) throw new Error("缺少申请");
+      return apiFetch<PlayerApplicationRow>(
+        `/api/v1/tenant/player-applications/${rejectTarget.id}/reject`,
+        {
+          method: "POST",
+          body: JSON.stringify({ reason: rejectTarget.reason.trim() }),
+        },
+      );
+    },
+    onSuccess: () => {
+      showToast("已拒绝该申请。");
+      setRejectTarget(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["merchant", "player-applications"],
+      });
+    },
+  });
+  const rows = query.data ?? [];
+  return (
+    <div>
+      <ModuleHeader
+        kicker="RECORDS / PLAYER APPLICATIONS"
+        title="陪玩申请"
+        description="老板端申请成为陪玩；批准后自动建档并追加 PLAYER 权限。"
+      />
+      <section className="mc-panel">
+        {rows.length ? (
+          <div className="mc-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>申请人</th>
+                  <th>申请说明</th>
+                  <th>状态</th>
+                  <th>提交时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <b>{row.customerName ?? "-"}</b>
+                      <div className="mc-muted">
+                        {row.accountUsername ?? row.accountId}
+                      </div>
+                    </td>
+                    <td>
+                      {row.intro ?? "-"}
+                      {row.reviewNote ? (
+                        <div className="mc-muted">拒绝原因：{row.reviewNote}</div>
+                      ) : null}
+                    </td>
+                    <td>
+                      <Badge status={row.status} />
+                    </td>
+                    <td>{dateTime(row.createdAt)}</td>
+                    <td>
+                      {row.status === "PENDING" ? (
+                        <div className="mc-button-row">
+                          <button
+                            type="button"
+                            className="mc-btn mc-btn-small"
+                            disabled={approve.isPending}
+                            onClick={() => approve.mutate(row.id)}
+                          >
+                            批准
+                          </button>
+                          <button
+                            type="button"
+                            className="mc-btn mc-btn-ghost mc-btn-small"
+                            onClick={() =>
+                              setRejectTarget({ id: row.id, reason: "" })
+                            }
+                          >
+                            拒绝
+                          </button>
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <DemoEmptyState
+            title="暂无陪玩申请"
+            description="老板在 H5 提交“申请成为陪玩”后会出现在这里。"
+          />
+        )}
+      </section>
+      <DemoDialog
+        open={rejectTarget !== null}
+        title="拒绝陪玩申请"
+        confirmLabel={reject.isPending ? "提交中…" : "确认拒绝"}
+        onCancel={() => setRejectTarget(null)}
+        onConfirm={() => reject.mutate()}
+      >
+        <label className="mc-field">
+          <span>拒绝原因 *</span>
+          <textarea
+            className="mc-input"
+            value={rejectTarget?.reason ?? ""}
+            onChange={(event) =>
+              setRejectTarget((prev) =>
+                prev ? { ...prev, reason: event.target.value } : prev,
+              )
+            }
+          />
+        </label>
+      </DemoDialog>
     </div>
   );
 }

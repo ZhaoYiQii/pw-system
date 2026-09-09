@@ -34,6 +34,8 @@ model Tenant {
   appBindings  TenantAppBinding[]
   accounts      TenantAccount[]
   accountRoles  TenantAccountRole[]
+  phoneVerificationCodes PhoneVerificationCode[]
+  playerApplications PlayerApplication[]
   configVersions TenantConfigVersion[]
   entitlements   TenantEntitlement[]
 
@@ -150,6 +152,8 @@ model TenantAccount {
   tenantId     String        @map("tenant_id") @db.Uuid
   username     String
   passwordHash String        @map("password_hash")
+  phoneEnc     String?       @map("phone_enc")
+  phoneHash    String?       @map("phone_hash")
   status       AccountStatus @default(ACTIVE)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
@@ -159,8 +163,49 @@ model TenantAccount {
   roles  TenantAccountRole[]
 
   @@unique([tenantId, username])
+  @@unique([tenantId, phoneHash])
   @@index([tenantId])
   @@map("tenant_accounts")
+}
+
+/// 手机号短信验证码（P-1）。租户级资源，启用 RLS；只保存哈希与尾号。
+model PhoneVerificationCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  phoneHash String   @map("phone_hash")
+  phoneTail String   @map("phone_tail")
+  scene     String   @default("register_login")
+  codeHash  String   @map("code_hash")
+  attempts  Int      @default(0)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, phoneHash, createdAt])
+  @@map("phone_verification_codes")
+}
+
+/// 陪玩申请（P-3）：已注册 CUSTOMER 向门店申请追加 PLAYER 能力；门店审核后建档并追加角色。
+model PlayerApplication {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  accountId         String    @map("account_id") @db.Uuid
+  customerProfileId String    @map("customer_profile_id") @db.Uuid
+  status            String    @default("PENDING")
+  intro             String?
+  reviewNote        String?   @map("review_note")
+  reviewedBy        String?   @map("reviewed_by") @db.Uuid
+  reviewedAt        DateTime? @map("reviewed_at") @db.Timestamptz
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  version           Int       @default(1)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status, createdAt])
+  @@map("player_applications")
 }
 
 /// 门店账号-角色。租户级资源，启用 RLS。

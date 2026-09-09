@@ -12,6 +12,7 @@ import {
   DisputesModuleView,
   AuditModuleView,
   CatalogModuleView,
+  PlayerApplicationsModuleView,
 } from "./module-views";
 import { getMonitorModule } from "./monitor-data";
 import { MonitorModuleView } from "./monitor-view";
@@ -31,6 +32,8 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
       return record(moduleId, <CustomersModuleView />);
     case "players":
       return record(moduleId, <PlayersModuleView />);
+    case "player-applications":
+      return record(moduleId, <PlayerApplicationsModuleView />);
     case "catalog":
       return record(moduleId, <CatalogModuleView />);
     case "sessions":

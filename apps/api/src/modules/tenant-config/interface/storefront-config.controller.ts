@@ -41,14 +41,25 @@ export class StorefrontConfigController {
 
   @Public()
   @Get("config")
-  async getConfig(@Req() req: Request, @Query("host") hostQuery?: unknown) {
+  async getConfig(
+    @Req() req: Request,
+    @Query("host") hostQuery?: unknown,
+    @Query("code") codeQuery?: unknown,
+  ) {
+    const code =
+      typeof codeQuery === "string" && codeQuery.length > 0
+        ? codeQuery
+        : "";
     const host =
       typeof hostQuery === "string" && hostQuery.length > 0
         ? hostQuery
         : (req.headers.host ?? "");
     let tenant;
     try {
-      tenant = await this.tenancy.resolveByHost(host);
+      tenant =
+        code.length > 0
+          ? await this.tenancy.resolveByCode(code)
+          : await this.tenancy.resolveByHost(host);
     } catch (error) {
       if (error instanceof TenantNotFoundError) {
         throw new HttpException("tenant not found", HttpStatus.NOT_FOUND);

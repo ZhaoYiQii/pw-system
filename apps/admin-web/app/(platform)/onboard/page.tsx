@@ -12,6 +12,11 @@ import { useState, type ReactNode } from "react";
 import { apiFetch } from "../../_lib/api";
 import { featureLabel } from "../../_lib/feature-catalog";
 import { PlatformShell } from "../../_lib/platform-shell";
+import {
+  buildDeliveryText,
+  resolveDeliveryUrls,
+  type OnboardDeliveryInfo,
+} from "../../_lib/onboard-delivery";
 
 const tenantHostSuffix = (
   process.env.NEXT_PUBLIC_TENANT_HOST_SUFFIX ?? "17ai.club"
@@ -27,6 +32,7 @@ interface PackageOption {
 interface OnboardResult {
   tenantId: string;
   tenantCode: string;
+  primaryHost: string;
 }
 
 const WIZARD_STEPS = ["基本信息", "品牌与域名", "店主账号", "套餐开通", "确认开通"];
@@ -67,6 +73,7 @@ function Inner() {
   const [step, setStep] = useState(0);
   const [created, setCreated] = useState<OnboardResult | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -175,6 +182,31 @@ function Inner() {
   };
 
   if (created) {
+    const deliveryInfo: OnboardDeliveryInfo = {
+      tenantId: created.tenantId,
+      tenantCode: created.tenantCode,
+      primaryHost: created.primaryHost,
+      tenantName: name.trim(),
+      ownerUsername: ownerUsername.trim(),
+      ownerPassword,
+      packageLabel: `${selectedPackage?.name ?? packageCode}（${
+        selectedPackage?.durationDays ?? "—"
+      } 天）`,
+    };
+    const urls = resolveDeliveryUrls(deliveryInfo, {
+      wildcardRoot: process.env.NEXT_PUBLIC_WILDCARD_ROOT ?? "",
+      h5Origin: process.env.NEXT_PUBLIC_H5_ORIGIN ?? "",
+      consoleOrigin: "",
+    });
+    const copyDelivery = () => {
+      setCopied(false);
+      const text = buildDeliveryText(deliveryInfo, urls);
+      void navigator.clipboard
+        .writeText(text)
+        .then(() => setCopied(true))
+        .catch(() => setCopied(false));
+    };
+
     return (
       <PlatformShell>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
@@ -197,33 +229,45 @@ function Inner() {
                   <input value={`${name.trim()}（${created.tenantCode}）`} readOnly />
                 </div>
                 <div className="pw-field">
-                  <label>H5 主域名</label>
-                  <input value={resolvedHost} readOnly />
+                  <label>品牌 H5 门面</label>
+                  <a href={urls.h5.href} target="_blank" rel="noreferrer">
+                    {urls.h5.label}
+                  </a>
                 </div>
                 <div className="pw-field">
                   <label>店主账号</label>
                   <input value={ownerUsername.trim()} readOnly />
                 </div>
                 <div className="pw-field">
+                  <label>临时密码（仅本次显示）</label>
+                  <input value={ownerPassword} readOnly />
+                </div>
+                <div className="pw-field">
                   <label>开通套餐</label>
-                  <input
-                    value={`${selectedPackage?.name ?? packageCode}（${
-                      selectedPackage?.durationDays ?? "—"
-                    } 天）`}
-                    readOnly
-                  />
+                  <input value={deliveryInfo.packageLabel} readOnly />
                 </div>
               </div>
               <div className="pw-notice">
-                临时密码仅本次交付店主；平台不留存明文。请继续为门店配置增值功能。
+                临时密码仅本次交付店主；平台不留存明文。请把 H5 门面与店主账号交付给门店。
               </div>
               <div style={{ display: "flex", gap: 10 }}>
-                <Link
+                <a
                   className="pw-btn pw-primary"
-                  href={`/packages?tenantId=${encodeURIComponent(created.tenantId)}`}
+                  href={urls.h5.href}
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  进入套餐配置
+                  打开 H5 门面
+                </a>
+                <Link
+                  className="pw-btn"
+                  href="/store/login"
+                >
+                  登录商家端
                 </Link>
+                <button type="button" className="pw-btn" onClick={copyDelivery}>
+                  {copied ? "已复制开通信息" : "复制开通信息"}
+                </button>
                 <Link className="pw-btn" href="/tenants">
                   返回门店管理
                 </Link>
@@ -531,4 +575,3 @@ export default function PlatformOnboardPage() {
     </QueryClientProvider>
   );
 }
-

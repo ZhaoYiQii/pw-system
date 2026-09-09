@@ -5,136 +5,204 @@ import { useMemo } from "react";
 import { ArrowRight, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../api";
+import { formatFenYuan } from "../money";
 import { DemoEmptyState } from "./demo-ui";
-import {
-  type DispatchRow,
-  type OrderRow,
-  statusLabel,
-} from "./merchant-api";
+import type { MerchantRole } from "./modules";
 import { useMerchantRole } from "./role-context";
+import {
+  actionLabel,
+  attentionHref,
+  canSeeFinance,
+  dashboardTiles,
+  financeCards,
+  riskHref,
+  type DashboardAttentionItem,
+  type DashboardRiskItem,
+  type DashboardSummaryData,
+} from "./workbench-data";
 
-interface UnifiedOrder {
-  key: string;
-  id: string;
-  kind: "CLASSIC" | "GD";
-  no: string;
-  customerName: string;
-  status: string;
-  createdAt: string;
+function RoleNotice({ role }: { role: MerchantRole }) {
+  const label =
+    role === "OWNER"
+      ? "店老板"
+      : role === "ADMIN"
+        ? "店长"
+        : role === "FINANCE"
+          ? "财务"
+          : "客服";
+  return (
+    <p>
+      当前角色：{label} · 只呈现能采取行动的真实状态。
+    </p>
+  );
 }
 
-const TODO_STATUSES = ["DRAFT", "CONFIRMED", "DISPATCHING", "PENDING_CONFIRMATION"];
+function AttentionRow({
+  item,
+  index,
+}: {
+  item: DashboardAttentionItem;
+  index: number;
+}) {
+  return (
+    <article className="mc-task" key={item.id}>
+      <span className="mc-task-index">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <div className="mc-task-main">
+        <strong>{item.title}</strong>
+        <p>{item.subtitle ?? item.refNo}</p>
+        <p className="mc-task-hint">
+          {item.priority === "HIGH" ? "高优先级 · " : "常规 · "}
+          点击进入对应记录处理
+        </p>
+      </div>
+      <div className="mc-task-time">
+        <Link
+          href={attentionHref(item)}
+          className="mc-btn mc-btn-small"
+        >
+          {actionLabel(item.action)}
+          <ArrowRight size={13} />
+        </Link>
+      </div>
+    </article>
+  );
+}
 
-const FILTERS = [
-  { id: "ALL", label: "全部" },
-  { id: "DRAFT", label: "待发布" },
-  { id: "DISPATCHING", label: "待选人" },
-  { id: "PENDING_CONFIRMATION", label: "待核算" },
-];
-
-function isTodo(status: string): boolean {
-  return TODO_STATUSES.includes(status);
+function RiskRow({ item }: { item: DashboardRiskItem }) {
+  return (
+    <Link className="mc-agenda-row" href={riskHref(item)}>
+      <time className="mc-mono">
+        {item.kind === "SETTLEMENT_TODO"
+          ? "结算"
+          : item.kind === "DISPUTE_TODO"
+            ? "争议"
+            : "调整"}
+      </time>
+      <span>
+        <b>{item.title}</b>
+        <p>
+          {item.amountFen === undefined
+            ? "需要人工处理"
+            : `${formatFenYuan(item.amountFen)} · 需要人工处理`}
+        </p>
+      </span>
+    </Link>
+  );
 }
 
 export function WorkView() {
-  const { principal } = useMerchantRole();
-  const ordersQuery = useQuery({
-    queryKey: ["merchant", "work", "orders"],
-    queryFn: () => apiFetch<OrderRow[]>("/api/v1/tenant/orders"),
-  });
-  const gdQuery = useQuery({
-    queryKey: ["merchant", "work", "gd"],
-    queryFn: () => apiFetch<DispatchRow[]>("/api/v1/tenant/game-dispatch"),
+  const { principal, role } = useMerchantRole();
+  const summaryQuery = useQuery({
+    queryKey: ["merchant", "dashboard-summary"],
+    queryFn: () =>
+      apiFetch<DashboardSummaryData>("/api/v1/tenant/dashboard/summary"),
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
   });
 
-  const orders = useMemo<UnifiedOrder[]>(() => {
-    const classic: UnifiedOrder[] = (ordersQuery.data ?? []).map((row) => ({
-      key: `c-${row.id}`,
-      id: row.id,
-      kind: "CLASSIC",
-      no: row.orderNo,
-      customerName: row.customerName,
-      status: row.status,
-      createdAt: row.createdAt,
-    }));
-    const gd: UnifiedOrder[] = (gdQuery.data ?? []).map((row) => ({
-      key: `g-${row.orderId}`,
-      id: row.orderId,
-      kind: "GD",
-      no: row.dispatchNo,
-      customerName: "老板订单",
-      status: row.status,
-      createdAt: row.createdAt,
-    }));
-    return [...classic, ...gd].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
+  const summary = summaryQuery.data;
+  const dateLabel = useMemo(() => {
+    if (!summary) return "";
+    return summary.day.date.replace(/-/g, "/");
+  }, [summary]);
+
+  if (summaryQuery.isPending) {
+    return (
+      <section className="mc-panel">
+        <div className="mc-loading-text">经营工作台加载中…</div>
+      </section>
     );
-  }, [ordersQuery.data, gdQuery.data]);
+  }
 
-  const todoOrders = orders.filter((order) => isTodo(order.status));
-  const pulse = ["DRAFT", "DISPATCHING", "PENDING_CONFIRMATION", "IN_PROGRESS"];
-  const agenda = orders
-    .filter((order) =>
-      ["DRAFT", "ASSIGNED", "IN_PROGRESS"].includes(order.status),
-    )
-    .slice(0, 5);
-  const now = new Date();
-  const todayLabel = `${now.getMonth() + 1}/${String(now.getDate()).padStart(2, "0")}`;
-  const greeting =
-    now.getHours() < 6
-      ? "凌晨好"
-      : now.getHours() < 12
-        ? "上午好"
-        : now.getHours() < 18
-          ? "下午好"
-          : "晚上好";
+  if (summaryQuery.isError || !summary) {
+    return (
+      <div className="mc-notice">
+        经营工作台数据加载失败：
+        {summaryQuery.error instanceof Error
+          ? summaryQuery.error.message
+          : "未知错误"}
+      </div>
+    );
+  }
+
+  const metrics = summary.metrics;
+  const tiles = dashboardTiles(role, metrics);
+  const cards = financeCards(role, metrics);
 
   return (
     <div>
       <div className="mc-pagehead">
         <div>
-          <div className="mc-kicker">TODAY · {todayLabel}</div>
-          <h1>
-            {greeting}，{principal?.username ?? "商家员工"}
-          </h1>
-          <p>来自真实订单/派单接口：先处理阻塞营业的订单，再安排服务。</p>
+          <div className="mc-kicker">WORKBENCH · {dateLabel}</div>
+          <h1>经营工作台</h1>
+          <p>
+            今日已服务 {metrics.todayServiceCount} 单 · 进行中{" "}
+            {metrics.liveSessions} 场
+          </p>
+          <RoleNotice role={role} />
         </div>
-        <Link
-          href="/merchant-console/dispatch/new"
-          className="mc-btn mc-btn-primary"
-        >
-          <Plus size={15} />
-          新建派单
-        </Link>
+        <div className="mc-button-row">
+          <Link href="/merchant-console/ai" className="mc-btn">
+            AI 录单
+          </Link>
+          <Link
+            href="/merchant-console/dispatch/new"
+            className="mc-btn mc-btn-primary"
+          >
+            <Plus size={15} />
+            新建派单
+          </Link>
+        </div>
       </div>
 
-      {ordersQuery.isError || gdQuery.isError ? (
-        <div className="mc-notice">
-          订单数据加载失败：
-          {ordersQuery.error instanceof Error
-            ? ordersQuery.error.message
-            : gdQuery.error instanceof Error
-              ? gdQuery.error.message
-              : "未知错误"}
+      {cards.length > 0 ? (
+        <div className="mc-monitor-metrics">
+          {cards.map((card) =>
+            card.href ? (
+              <Link
+                key={card.id}
+                href={card.href}
+                className="mc-metric-tile"
+              >
+                <span>{card.label}</span>
+                <b>{card.value}</b>
+                <em>
+                  查看结算 <ArrowRight size={12} />
+                </em>
+              </Link>
+            ) : (
+              <div
+                key={card.id}
+                className="mc-metric-tile"
+                style={{ opacity: 0.72 }}
+                aria-disabled="true"
+              >
+                <span>{card.label}</span>
+                <b>{card.value}</b>
+                <em>门店收入账本后续切片接入</em>
+              </div>
+            ),
+          )}
         </div>
       ) : null}
 
-      <div className="mc-pulse">
-        <div className="mc-pulse-intro">
-          <small>今日运营脉搏</small>
-          <strong>{todoOrders.length} 件待办</strong>
-        </div>
-        {pulse.map((item) => (
-          <Link
-            key={item}
-            href={`/merchant-console/dispatch?status=${item}`}
-            className="mc-pulse-item"
-          >
-            <span>{statusLabel(item)}</span>
-            <b>{orders.filter((order) => order.status === item).length}</b>
-            <em>查看订单</em>
+      <div className="mc-monitor-metrics">
+        {tiles.map((tile) => (
+          <Link key={tile.id} href={tile.href} className="mc-metric-tile">
+            <span>{tile.label}</span>
+            <b>{tile.value}</b>
+            <em>
+              去处理 <ArrowRight size={12} />
+            </em>
           </Link>
         ))}
+        <div className="mc-metric-tile">
+          <span>风险提醒</span>
+          <b>{metrics.riskAlerts}</b>
+          <em>来自真实状态推导</em>
+        </div>
       </div>
 
       <div className="mc-workgrid">
@@ -142,71 +210,18 @@ export function WorkView() {
           <div className="mc-section-head">
             <div>
               <h2>需要处理</h2>
-              <p>按创建时间倒序 · 来自订单/派单台账</p>
+              <p>订单 / 场次 / 结算 / 争议按时间倒序</p>
             </div>
-            <span>{todoOrders.length} 单</span>
+            <span>{summary.attention.length} 项</span>
           </div>
-          <div className="mc-task-tabs" role="tablist" aria-label="待办分组">
-            {FILTERS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={tab.id === "ALL"}
-                className={tab.id === "ALL" ? "active" : undefined}
-                onClick={() => {
-                  const params = new URLSearchParams(window.location.search);
-                  if (tab.id === "ALL") params.delete("status");
-                  else params.set("status", tab.id);
-                  window.location.href = `/merchant-console/dispatch?${params.toString()}`;
-                }}
-              >
-                {tab.label}
-                <span className="mc-tab-count">
-                  {tab.id === "ALL"
-                    ? todoOrders.length
-                    : todoOrders.filter((o) => o.status === tab.id).length}
-                </span>
-              </button>
-            ))}
-          </div>
-          {todoOrders.length ? (
-            todoOrders.slice(0, 8).map((order, index) => (
-              <article className="mc-task" key={order.key}>
-                <span className="mc-task-index">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div className="mc-task-main">
-                  <strong>
-                    {order.kind} · {order.no}
-                  </strong>
-                  <p>
-                    {order.customerName} · {statusLabel(order.status)}
-                  </p>
-                  <p className="mc-task-hint">
-                    查看详情并执行下一步操作
-                  </p>
-                </div>
-                <div className="mc-task-time">
-                  <b>{new Date(order.createdAt).toLocaleDateString("zh-CN")}</b>
-                  <Link
-                    href={`/merchant-console/dispatch/${order.id}?kind=${order.kind}`}
-                    className="mc-btn mc-btn-small"
-                  >
-                    {order.status === "DRAFT" || order.status === "CONFIRMED"
-                      ? "去发布"
-                      : order.status === "DISPATCHING"
-                        ? "去选人"
-                        : "去核算"}
-                    <ArrowRight size={13} />
-                  </Link>
-                </div>
-              </article>
+          {summary.attention.length > 0 ? (
+            summary.attention.slice(0, 8).map((item, index) => (
+              <AttentionRow key={item.id} item={item} index={index} />
             ))
           ) : (
             <DemoEmptyState
-              title="当前没有此类待办"
-              description="全部订单均已处理，或当前角色看不到待办状态。"
+              title="当前没有待办"
+              description="全部订单、场次与结算均已处理。"
             />
           )}
         </section>
@@ -215,39 +230,56 @@ export function WorkView() {
           <section className="mc-panel">
             <div className="mc-section-head">
               <div>
-                <h2>待服务排班</h2>
-                <p>草稿 / 已选定 / 服务中的订单</p>
+                <h2>风险与提醒</h2>
+                <p>调整待复核 / 结算 / 争议</p>
               </div>
-              <span>{agenda.length} 单</span>
+              <span>{summary.riskFeed.length} 项</span>
             </div>
-            <div className="mc-agenda">
-              {agenda.length ? (
-                agenda.map((order) => (
-                  <Link
-                    key={order.key}
-                    className="mc-agenda-row"
-                    href={`/merchant-console/dispatch/${order.id}?kind=${order.kind}`}
-                  >
-                    <time>{statusLabel(order.status)}</time>
-                    <span>
-                      <b>
-                        {order.kind} · {order.no}
-                      </b>
-                      <p>{order.customerName}</p>
-                    </span>
+            {summary.riskFeed.length > 0 ? (
+              <div className="mc-agenda">
+                {summary.riskFeed.slice(0, 5).map((item) => (
+                  <RiskRow key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <DemoEmptyState
+                title="暂无风险提醒"
+                description="当前没有需要留意的经营异常。"
+              />
+            )}
+          </section>
+
+          <section className="mc-panel">
+            <div className="mc-section-head">
+              <div>
+                <h2>快捷动作</h2>
+                <p>高频经营入口</p>
+              </div>
+            </div>
+            <div className="mc-button-row">
+              <Link href="/merchant-console/ai" className="mc-btn">
+                AI 录单
+              </Link>
+              {canSeeFinance(role) ? (
+                <>
+                  <Link href="/merchant-console/settlements" className="mc-btn">
+                    结算批次
                   </Link>
-                ))
-              ) : (
-                <DemoEmptyState
-                  title="暂无待服务订单"
-                  description="新建派单并发布后，订单会出现在这里。"
-                />
-              )}
+                  <Link href="/merchant-console/finrisk" className="mc-btn">
+                    财务风险
+                  </Link>
+                </>
+              ) : null}
+              <Link href="/merchant-console/disputes" className="mc-btn">
+                争议处理
+              </Link>
             </div>
           </section>
+
           <div className="mc-quiet-note">
-            <b>工作台原则</b>
-            只呈现能采取行动的真实状态；营收与在线人数等指标由对应聚合接口提供。
+            <b>经营工作台原则</b>
+            所有数字都是记录台/监控台的真实状态投影；点击后到对应页面完成动作。
+            {principal?.username ? ` 当前账号：${principal.username}` : ""}
           </div>
         </aside>
       </div>

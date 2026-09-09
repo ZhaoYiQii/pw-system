@@ -105,13 +105,26 @@ export class TenancyController {
   // 公开解析（预认证）：H5 依据已验证域名/短码加载门店（主规格 8.1）。
   @Public()
   @Get("public/tenant-resolve")
-  async resolveTenant(@Req() req: Request, @Query("host") hostQuery?: unknown) {
+  async resolveTenant(
+    @Req() req: Request,
+    @Query("host") hostQuery?: unknown,
+    @Query("code") codeQuery?: unknown,
+  ) {
+    const code =
+      typeof codeQuery === "string" && codeQuery.length > 0
+        ? codeQuery
+        : "";
     const host =
       typeof hostQuery === "string" && hostQuery.length > 0
         ? hostQuery
         : (req.headers.host ?? "");
     try {
-      return { data: await this.tenancy.resolveByHost(host) };
+      return {
+        data:
+          code.length > 0
+            ? await this.tenancy.resolveByCode(code)
+            : await this.tenancy.resolveByHost(host),
+      };
     } catch (error) {
       if (error instanceof TenantNotFoundError) {
         throw new HttpException("tenant not found", HttpStatus.NOT_FOUND);

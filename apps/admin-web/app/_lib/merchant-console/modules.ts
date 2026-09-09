@@ -20,13 +20,13 @@ export const MERCHANT_MODULES = [
   {
     id: "work",
     group: "workbench",
-    label: "今日工作",
+    label: "经营工作台",
     kicker: "WORKBENCH / TODAY",
-    description: "先处理阻塞营业的订单，再安排今晚服务。",
+    description: "处理阻塞营业的订单、结算与风险，先看影响再给动作。",
     features: [
-      "今日运营脉搏与待办分组",
-      "今晚服务与快捷动作",
-      "按状态直达订单台账",
+      "今日待办 / 场次 / 结算 / 风险",
+      "角色裁剪的财务与风险卡",
+      "按状态深链记录台账",
     ],
   },
   {
@@ -80,6 +80,14 @@ export const MERCHANT_MODULES = [
     kicker: "RECORDS / PLAYERS",
     description: "陪玩资料、接单状态、技能标签与结算信息。",
     features: ["陪玩列表与审核", "服务能力与状态", "收入及结算记录"],
+  },
+  {
+    id: "player-applications",
+    group: "records",
+    label: "陪玩申请",
+    kicker: "RECORDS / PLAYER APPLICATIONS",
+    description: "老板端申请成为陪玩的待审列表，审核通过后自动建档并开通陪玩端。",
+    features: ["待审申请", "批准 / 拒绝", "审核后自动追加 PLAYER"],
   },
   {
     id: "catalog",
@@ -196,6 +204,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "sessions",
     "customers",
     "players",
+    "player-applications",
     "catalog",
     "finance",
     "settlements",
@@ -215,6 +224,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "sessions",
     "customers",
     "players",
+    "player-applications",
     "catalog",
     "finance",
     "settlements",
@@ -237,6 +247,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "risk",
   ],
   FINANCE: [
+    "work",
     "dispatch",
     "sessions",
     "finance",

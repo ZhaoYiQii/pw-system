@@ -16,6 +16,14 @@ export interface TenantAccountRecord {
   roles: readonly string[];
 }
 
+export interface RegisterPhoneCustomerInput {
+  username: string;
+  passwordHash: string;
+  phoneEnc: string;
+  phoneHash: string;
+  displayName: string;
+}
+
 export interface RefreshSessionRecord {
   id: string;
   subjectType: string;
@@ -53,6 +61,15 @@ export interface AuthRepository {
     tenantCode: string,
     username: string,
   ): Promise<TenantAccountRecord | null>;
+  findTenantIdByCode(tenantCode: string): Promise<string | null>;
+  findTenantAccountByPhoneHash(
+    tenantId: string,
+    phoneHash: string,
+  ): Promise<TenantAccountRecord | null>;
+  registerPhoneCustomer(
+    tenantId: string,
+    input: RegisterPhoneCustomerInput,
+  ): Promise<TenantAccountRecord>;
   findTenantAccountById(
     accountId: string,
     tenantId?: string | null,

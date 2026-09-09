@@ -9,5 +9,6 @@ export interface TenantRepository {
   listTenants(): Promise<TenantView[]>;
   findById(id: string): Promise<TenantView | null>;
   findByHost(host: string): Promise<ResolvedTenant | null>;
+  findByCode(code: string): Promise<ResolvedTenant | null>;
   deactivate(id: string): Promise<TenantView>;
 }

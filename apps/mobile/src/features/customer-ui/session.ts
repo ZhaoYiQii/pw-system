@@ -1,6 +1,44 @@
 import { identityAdapter } from "@platform-identity";
 import { tenantLocator } from "@platform-locator";
+import { apiAdapter } from "@platform-api";
 import { session } from "@platform-session";
+
+export interface PhoneCodeResult {
+  debugCode?: string;
+  expiresInSeconds: number;
+  resendAfterSeconds: number;
+}
+
+export async function sendPhoneCode(
+  tenantCode: string,
+  phone: string,
+): Promise<PhoneCodeResult> {
+  return apiAdapter.request<PhoneCodeResult>(
+    "/api/v1/auth/phone-verification-code",
+    {
+      method: "POST",
+      body: { tenantCode, phone },
+    },
+  );
+}
+
+export async function phoneLogin(
+  tenantCode: string,
+  phone: string,
+  code: string,
+): Promise<string> {
+  const result = await apiAdapter.request<{
+    accessToken: string;
+    csrfToken?: string;
+    expiresInSeconds: number;
+  }>("/api/v1/auth/phone-login", {
+    method: "POST",
+    body: { tenantCode, phone, code },
+  });
+  session.setToken(result.accessToken);
+  if (result.csrfToken) session.setCsrf(result.csrfToken);
+  return result.accessToken;
+}
 
 export async function customerLogin(
   tenantCode: string,

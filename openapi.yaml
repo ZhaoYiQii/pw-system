@@ -175,6 +175,14 @@ paths:
           description: ""
       tags: &a5
         - Auth
+  /api/v1/auth/phone-login:
+    post:
+      operationId: auth_phoneLogin
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a5
   /api/v1/auth/refresh:
     post:
       operationId: auth_refresh
@@ -258,6 +266,15 @@ paths:
         "200":
           description: ""
       tags: *a7
+  /api/v1/auth/phone-verification-code:
+    post:
+      operationId: phoneVerification_sendCode
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags:
+        - PhoneVerification
   /api/v1/tenant/features:
     get:
       operationId: entitlements_listTenantFeatures
@@ -3770,6 +3787,57 @@ paths:
         "201":
           description: ""
       tags: *a33
+  /api/v1/tenant/dashboard/summary:
+    get:
+      operationId: dashboardSummary_summary
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - DashboardSummary
+  /api/v1/tenant/player-applications:
+    post:
+      operationId: playerApplications_apply
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: &a34
+        - PlayerApplications
+    get:
+      operationId: playerApplications_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: *a34
+  /api/v1/tenant/player-applications/{id}/approve:
+    post:
+      operationId: playerApplications_approve
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a34
+  /api/v1/tenant/player-applications/{id}/reject:
+    post:
+      operationId: playerApplications_reject
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a34
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

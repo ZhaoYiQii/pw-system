@@ -100,6 +100,17 @@ export class PrismaTenantRepository implements TenantRepository {
     };
   }
 
+  async findByCode(code: string): Promise<ResolvedTenant | null> {
+    const row = await this.client.tenant.findUnique({ where: { code } });
+    if (!row) return null;
+    return {
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      status: row.status as ResolvedTenant["status"],
+    };
+  }
+
   async deactivate(id: string): Promise<TenantView> {
     return this.client.$transaction(async (tx) => {
       const row = await tx.tenant.update({

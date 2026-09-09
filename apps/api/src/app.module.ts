@@ -28,6 +28,8 @@ import { PlatformOpsModule } from "./modules/platform-ops/platform-ops.module.js
 import { PlatformAccountsModule } from "./modules/platform-accounts/platform-accounts.module.js";
 import { GameDispatchModule } from "./modules/game-dispatch/game-dispatch.module.js";
 import { WalletModule } from "./modules/wallet/wallet.module.js";
+import { ReportingModule } from "./modules/reporting/reporting.module.js";
+import { PlayerApplicationsModule } from "./modules/player-applications/player-applications.module.js";
 
 @Module({
   controllers: [HealthController, ReadyController],
@@ -52,6 +54,8 @@ import { WalletModule } from "./modules/wallet/wallet.module.js";
     PlatformAccountsModule,
     GameDispatchModule,
     WalletModule,
+    ReportingModule,
+    PlayerApplicationsModule,
   ],
   providers: [
     HealthService,

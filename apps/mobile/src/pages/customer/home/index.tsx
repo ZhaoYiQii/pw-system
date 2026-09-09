@@ -5,14 +5,15 @@ import { apiAdapter } from "@platform-api";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
 import {
-  CustomerLoginCard,
   CustomerMessage,
+  CustomerPhoneLoginCard,
   CustomerShell,
   goCustomer,
 } from "../../../components/customer-ui";
 import {
-  customerLogin,
+  phoneLogin,
   resolveTenantCode,
+  sendPhoneCode,
 } from "../../../features/customer-ui/session";
 
 interface CustomerMe {
@@ -26,8 +27,10 @@ export default function CustomerHomePage() {
   const [token, setToken] = useState<string | null>(session.getToken());
   const [tenantCode, setTenantCode] = useState("");
   const [storeName, setStoreName] = useState("陪玩门店");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [code, setCode] = useState("");
+  const [debugCode, setDebugCode] = useState("");
+  const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [me, setMe] = useState<CustomerMe | null>(null);
   const [msg, setMsg] = useState<{
@@ -73,9 +76,10 @@ export default function CustomerHomePage() {
     setBusy(true);
     setMsg(null);
     try {
-      const accessToken = await customerLogin(tenantCode, username, password);
+      const accessToken = await phoneLogin(tenantCode, phone, code);
       setToken(accessToken);
-      setPassword("");
+      setCode("");
+      setDebugCode("");
       await loadMe(accessToken);
     } catch (error) {
       setMsg({
@@ -84,6 +88,22 @@ export default function CustomerHomePage() {
       });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const sendCode = async () => {
+    setSending(true);
+    setMsg(null);
+    try {
+      const result = await sendPhoneCode(tenantCode, phone);
+      setDebugCode(result.debugCode ?? "");
+    } catch (error) {
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -97,15 +117,17 @@ export default function CustomerHomePage() {
               {storeName} · 登录后下单、选人与管理钱包
             </Text>
           </View>
-          <CustomerLoginCard
+          <CustomerPhoneLoginCard
             tenantCode={tenantCode}
-            username={username}
-            password={password}
+            phone={phone}
+            code={code}
+            debugCode={debugCode}
             busy={busy}
-            actionLabel="登录老板端"
+            sending={sending}
             onTenantCode={setTenantCode}
-            onUsername={setUsername}
-            onPassword={setPassword}
+            onPhone={setPhone}
+            onCode={setCode}
+            onSend={() => void sendCode()}
             onLogin={() => void login()}
           />
         </>

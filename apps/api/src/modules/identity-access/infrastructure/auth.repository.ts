@@ -6,6 +6,7 @@ import type {
   NewRefreshSession,
   PlatformAccountRecord,
   RefreshSessionRecord,
+  RegisterPhoneCustomerInput,
   TenantAccountRecord,
 } from "../application/auth-ports.js";
 
@@ -95,6 +96,85 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: row.passwordHash,
           status: row.status,
           roles: row.roles,
+        });
+      },
+    );
+  }
+
+  async findTenantIdByCode(tenantCode: string): Promise<string | null> {
+    const tenant = await this.runtime.tenant.findUnique({
+      where: { code: tenantCode },
+      select: { id: true },
+    });
+    return tenant?.id ?? null;
+  }
+
+  async findTenantAccountByPhoneHash(
+    tenantId: string,
+    phoneHashValue: string,
+  ): Promise<TenantAccountRecord | null> {
+    return withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const row = await tx.tenantAccount.findFirst({
+          where: { tenantId, phoneHash: phoneHashValue },
+          include: { roles: true, tenant: { select: { status: true } } },
+        });
+        if (!row) return null;
+        return mapTenant({
+          id: row.id,
+          tenantId: row.tenantId,
+          tenantStatus: row.tenant.status,
+          username: row.username,
+          passwordHash: row.passwordHash,
+          status: row.status,
+          roles: row.roles,
+        });
+      },
+    );
+  }
+
+  async registerPhoneCustomer(
+    tenantId: string,
+    input: RegisterPhoneCustomerInput,
+  ): Promise<TenantAccountRecord> {
+    return withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const account = await tx.tenantAccount.create({
+          data: {
+            tenantId,
+            username: input.username,
+            passwordHash: input.passwordHash,
+            phoneEnc: input.phoneEnc,
+            phoneHash: input.phoneHash,
+            roles: { create: [{ tenantId, role: "CUSTOMER" }] },
+          },
+          include: { roles: true },
+        });
+        await tx.customerProfile.create({
+          data: {
+            tenantId,
+            tenantAccountId: account.id,
+            name: input.displayName,
+            mobileEnc: input.phoneEnc,
+            mobileHash: input.phoneHash,
+          },
+        });
+        const tenant = await tx.tenant.findUnique({
+          where: { id: tenantId },
+          select: { status: true },
+        });
+        return mapTenant({
+          id: account.id,
+          tenantId: account.tenantId,
+          tenantStatus: tenant?.status ?? "ACTIVE",
+          username: account.username,
+          passwordHash: account.passwordHash,
+          status: account.status,
+          roles: account.roles,
         });
       },
     );

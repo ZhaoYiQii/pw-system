@@ -2,6 +2,7 @@ import type {
   ResolvedTenantInfo,
   TenantLocatorAdapter,
 } from "../contracts/tenant-locator";
+import { resolveLocatorParam } from "../../features/tenant-locator/locator";
 
 function apiBase(): string {
   // H5 运行时无 Node `process`；仅在存在时读取，避免 ReferenceError。
@@ -16,11 +17,14 @@ function apiBase(): string {
 export const tenantLocator: TenantLocatorAdapter = {
   async resolveTenant(): Promise<ResolvedTenantInfo> {
     try {
+      const search =
+        typeof location !== "undefined" ? location.search : "";
       const host = typeof location !== "undefined" ? location.host : "";
       const base = apiBase();
-      if (!host || !base) return { state: "unconfigured" };
+      const target = resolveLocatorParam(search, host);
+      if (!target || !base) return { state: "unconfigured" };
       const res = await fetch(
-        `${base}/api/v1/public/tenant-resolve?host=${encodeURIComponent(host)}`,
+        `${base}/api/v1/public/tenant-resolve?${target.name}=${encodeURIComponent(target.value)}`,
       );
       if (res.status === 404) return { state: "not_found" };
       if (!res.ok) return { state: "error" };

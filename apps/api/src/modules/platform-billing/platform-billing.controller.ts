@@ -12,6 +12,10 @@ import {
 import { PlatformBillingService } from "./platform-billing.service.js";
 import { PlatformScope, Permissions } from "../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
+import {
+  HostTakenError,
+  TenantCodeTakenError,
+} from "./domain/errors.js";
 
 function bad(error: unknown): never {
   throw new HttpException(
@@ -73,6 +77,15 @@ export class PlatformBillingController {
         data: await this.svc.onboard(input, req.principal?.sub ?? "platform"),
       };
     } catch (error) {
+      if (
+        error instanceof TenantCodeTakenError ||
+        error instanceof HostTakenError
+      ) {
+        throw new HttpException(
+          { message: error.message, code: error.problemCode },
+          HttpStatus.CONFLICT,
+        );
+      }
       bad(error);
     }
   }

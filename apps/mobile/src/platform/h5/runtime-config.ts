@@ -3,6 +3,7 @@ import type {
   StorefrontInfo,
   RuntimeConfigAdapter,
 } from "../contracts/runtime-config";
+import { resolveLocatorParam } from "../../features/tenant-locator/locator";
 
 function apiBase(): string {
   // H5 运行时无 Node `process`；仅在存在时读取，避免 ReferenceError。
@@ -17,9 +18,12 @@ function apiBase(): string {
 export const runtimeConfig: RuntimeConfigAdapter = {
   async loadStorefrontConfig(): Promise<StorefrontInfo> {
     try {
+      const search =
+        typeof location !== "undefined" ? location.search : "";
       const host = typeof location !== "undefined" ? location.host : "";
       const base = apiBase();
-      if (!host || !base) {
+      const target = resolveLocatorParam(search, host);
+      if (!target || !base) {
         return {
           state: "unconfigured",
           tenant: null,
@@ -29,7 +33,7 @@ export const runtimeConfig: RuntimeConfigAdapter = {
         };
       }
       const res = await fetch(
-        `${base}/api/v1/public/storefront/config?host=${encodeURIComponent(host)}`,
+        `${base}/api/v1/public/storefront/config?${target.name}=${encodeURIComponent(target.value)}`,
       );
       if (res.status === 404) {
         return {

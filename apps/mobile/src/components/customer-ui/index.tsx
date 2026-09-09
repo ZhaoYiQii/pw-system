@@ -133,6 +133,89 @@ export function CustomerLoginCard({
   );
 }
 
+export function CustomerPhoneLoginCard({
+  tenantCode,
+  phone,
+  code,
+  debugCode,
+  busy = false,
+  sending = false,
+  onTenantCode,
+  onPhone,
+  onCode,
+  onSend,
+  onLogin,
+}: {
+  tenantCode: string;
+  phone: string;
+  code: string;
+  debugCode?: string;
+  busy?: boolean;
+  sending?: boolean;
+  onTenantCode: (value: string) => void;
+  onPhone: (value: string) => void;
+  onCode: (value: string) => void;
+  onSend: () => void;
+  onLogin: () => void;
+}) {
+  return (
+    <View className="cu-card cu-login-card">
+      <Text className="cu-section-label">手机号登录 / 注册</Text>
+      <View className="cu-field">
+        <Text className="cu-label">门店 code</Text>
+        <Input
+          className="cu-input"
+          value={tenantCode}
+          onInput={(event) => onTenantCode(event.detail.value)}
+          placeholder="demo"
+        />
+      </View>
+      <View className="cu-field">
+        <Text className="cu-label">手机号</Text>
+        <Input
+          className="cu-input"
+          type="number"
+          value={phone}
+          onInput={(event) => onPhone(event.detail.value)}
+          placeholder="请输入手机号"
+        />
+      </View>
+      <View className="cu-field">
+        <Text className="cu-label">验证码</Text>
+        <Input
+          className="cu-input"
+          type="number"
+          value={code}
+          onInput={(event) => onCode(event.detail.value)}
+          placeholder="6 位验证码"
+        />
+        <Button
+          className="cu-button cu-button-outline cu-button-small"
+          disabled={sending || !/^1\d{10}$/.test(phone)}
+          onClick={onSend}
+        >
+          {sending ? "发送中…" : "获取验证码"}
+        </Button>
+      </View>
+      {debugCode ? (
+        <Text className="cu-footnote">
+          本地调试验证码：{debugCode}（正式环境不会显示）
+        </Text>
+      ) : null}
+      <Button
+        className="cu-button cu-button-primary cu-button-full"
+        disabled={busy}
+        onClick={onLogin}
+      >
+        {busy ? "正在登录…" : "登录老板端"}
+      </Button>
+      <Text className="cu-footnote">
+        首次登录会自动创建本店老板账号与客户档案。
+      </Text>
+    </View>
+  );
+}
+
 export function CustomerMessage({
   children,
   tone = "error",

@@ -50,6 +50,12 @@ export class TenancyService {
     return resolved;
   }
 
+  async resolveByCode(code: string): Promise<ResolvedTenant> {
+    const resolved = await this.repository.findByCode(code);
+    if (!resolved) throw new TenantNotFoundError(code);
+    return resolved;
+  }
+
   /**
    * 主规格 8.1：请求 Body/Query/Header 中客户端自由传入的 tenantId 不能决定租户。
    * 服务端必须根据可信来源（host/短码/会话）生成 TenantContext。

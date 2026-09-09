@@ -12,7 +12,18 @@ import {
 import type { Request, Response } from "express";
 import { randomBytes } from "node:crypto";
 import { AuthService } from "../application/auth.service.js";
-import { Public } from "../../../common/auth/decorators.js";
+import { PhoneVerificationService } from "../application/phone-verification.service.js";
+import {
+  PhoneVerificationCodeMismatchError,
+  PhoneVerificationConsumedError,
+  PhoneVerificationExpiredError,
+  PhoneVerificationInputError,
+} from "../application/phone-verification.errors.js";
+import {
+  Permissions,
+  Public,
+  TenantScope,
+} from "../../../common/auth/decorators.js";
 import { RateLimitService } from "../../../common/auth/rate-limit.service.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import {
@@ -47,6 +58,16 @@ function requiredString(value: unknown, field: string): string {
     throw new HttpException(field + " is required", HttpStatus.BAD_REQUEST);
   }
   return value;
+}
+
+function tenantIdOf(req: AuthenticatedRequest): string {
+  const id = req.principal?.tenantId;
+  if (!id)
+    throw new HttpException(
+      "tenant context missing",
+      HttpStatus.UNAUTHORIZED,
+    );
+  return id;
 }
 
 function readCookie(req: Request, name: string): string | undefined {
@@ -115,6 +136,8 @@ export class AuthController {
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(RateLimitService) private readonly rateLimit: RateLimitService,
+    @Inject(PhoneVerificationService)
+    private readonly phoneVerification: PhoneVerificationService,
   ) {}
 
   @Public()
@@ -184,6 +207,100 @@ export class AuthController {
       }
       throw error;
     }
+  }
+
+  @Public()
+  @Post("phone-login")
+  async phoneLogin(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: { tenantCode?: unknown; phone?: unknown; code?: unknown },
+  ) {
+    const tenantCode = requiredString(body.tenantCode, "tenantCode");
+    const phone = requiredString(body.phone, "phone");
+    const code = requiredString(body.code, "code");
+    const rateKey =
+      (req.ip ?? "unknown") + ":phone-login:" + phone + ":" + tenantCode;
+    if (
+      await this.rateLimit.isBlocked(
+        rateKey,
+        LOGIN_MAX_FAILURES,
+        LOGIN_WINDOW_MS,
+      )
+    ) {
+      throw new HttpException(
+        "尝试次数过多",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    const tenantId = await this.auth.resolveTenantId(tenantCode);
+    if (!tenantId) {
+      throw new HttpException("门店不存在", HttpStatus.NOT_FOUND);
+    }
+    try {
+      await this.phoneVerification.consumeCode(
+        tenantId,
+        phone,
+        code,
+        "register_login",
+      );
+    } catch (error) {
+      if (
+        error instanceof PhoneVerificationInputError ||
+        error instanceof PhoneVerificationExpiredError ||
+        error instanceof PhoneVerificationCodeMismatchError ||
+        error instanceof PhoneVerificationConsumedError
+      ) {
+        await this.rateLimit.recordFailure(rateKey, LOGIN_WINDOW_MS);
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw error;
+    }
+    const bundle = await this.auth.phoneCustomerLogin(tenantId, phone);
+    await this.rateLimit.reset(rateKey);
+    setRefreshCookie(res, bundle.refreshToken);
+    const csrfToken = setCsrfCookie(res);
+    return {
+      data: {
+        accessToken: bundle.accessToken,
+        principal: bundle.principal,
+        expiresInSeconds: bundle.expiresInSeconds,
+        csrfToken,
+      },
+    };
+  }
+
+  @TenantScope()
+  @Permissions("tenant.view")
+  @Post("switch-context")
+  async switchContext(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: { context?: unknown },
+  ) {
+    const context = String(body.context ?? "");
+    if (context !== "CUSTOMER" && context !== "PLAYER") {
+      throw new HttpException(
+        "context must be CUSTOMER|PLAYER",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const tenantId = tenantIdOf(req);
+    const bundle = await this.auth.switchTenantContext(
+      tenantId,
+      req.principal?.sub ?? "",
+      context,
+    );
+    setRefreshCookie(res, bundle.refreshToken);
+    const csrfToken = setCsrfCookie(res);
+    return {
+      data: {
+        accessToken: bundle.accessToken,
+        principal: bundle.principal,
+        expiresInSeconds: bundle.expiresInSeconds,
+        csrfToken,
+      },
+    };
   }
 
   @Public()

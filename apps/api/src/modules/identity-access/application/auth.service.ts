@@ -4,9 +4,11 @@ import {
   InvalidRefreshTokenError,
   TenantInactiveError,
 } from "../domain/errors.js";
+import { randomBytes } from "node:crypto";
+import { encryptPhone } from "../../../common/pii/phone.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
 import type { RoleKey } from "../domain/roles.js";
-import { verifyPassword } from "../infrastructure/password.js";
+import { hashPassword, verifyPassword } from "../infrastructure/password.js";
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
@@ -40,8 +42,12 @@ export class AuthService {
     };
   }
 
-  private tenantPrincipal(account: TenantAccountRecord): AccessPrincipal {
-    const role = (account.roles[0] ?? "CUSTOMER") as RoleKey;
+  private tenantPrincipal(
+    account: TenantAccountRecord,
+    overrideRole?: RoleKey,
+  ): AccessPrincipal {
+    const role =
+      overrideRole ?? ((account.roles[0] ?? "CUSTOMER") as RoleKey);
     return {
       sub: account.id,
       scope: "tenant",
@@ -114,6 +120,78 @@ export class AuthService {
       resourceType: "tenant_account",
       resourceId: bundle.principal.sub,
       summary: `门店登录成功：${username}`,
+    });
+    return bundle;
+  }
+
+  async resolveTenantId(tenantCode: string): Promise<string | null> {
+    return this.repository.findTenantIdByCode(tenantCode);
+  }
+
+  async phoneCustomerLogin(
+    tenantId: string,
+    phone: string,
+  ): Promise<SessionBundle> {
+    const phoneCipher = encryptPhone(tenantId, phone);
+    let account = await this.repository.findTenantAccountByPhoneHash(
+      tenantId,
+      phoneCipher.mobileHash,
+    );
+    if (!account) {
+      const randomPassword = randomBytes(18).toString("base64url");
+      const passwordHash = await hashPassword(randomPassword);
+      account = await this.repository.registerPhoneCustomer(tenantId, {
+        username: `p${phoneCipher.mobileHash.slice(0, 16)}`,
+        passwordHash,
+        phoneEnc: phoneCipher.mobileEnc,
+        phoneHash: phoneCipher.mobileHash,
+        displayName: `用户${phone.slice(-4)}`,
+      });
+    }
+    if (account.tenantStatus !== "ACTIVE") throw new TenantInactiveError();
+    if (account.status !== "ACTIVE") throw new AccountDisabledError();
+    if (!account.roles.includes("CUSTOMER")) {
+      throw new InvalidCredentialsError();
+    }
+    const bundle = await this.issue(
+      this.tenantPrincipal(account, "CUSTOMER"),
+    );
+    await this.repository.recordAudit({
+      tenantId: account.tenantId,
+      actorType: "tenant_account",
+      actorId: bundle.principal.sub,
+      action: "auth.phone_login",
+      resourceType: "tenant_account",
+      resourceId: bundle.principal.sub,
+      summary: `手机号登录/注册成功：${account.username}`,
+    });
+    return bundle;
+  }
+
+  async switchTenantContext(
+    tenantId: string,
+    accountId: string,
+    context: RoleKey,
+  ): Promise<SessionBundle> {
+    const account = await this.repository.findTenantAccountById(
+      accountId,
+      tenantId,
+    );
+    if (!account) throw new InvalidCredentialsError();
+    if (account.tenantStatus !== "ACTIVE") throw new TenantInactiveError();
+    if (account.status !== "ACTIVE") throw new AccountDisabledError();
+    if (!account.roles.includes(context)) {
+      throw new InvalidCredentialsError();
+    }
+    const bundle = await this.issue(this.tenantPrincipal(account, context));
+    await this.repository.recordAudit({
+      tenantId: account.tenantId,
+      actorType: "tenant_account",
+      actorId: bundle.principal.sub,
+      action: "auth.switch_context",
+      resourceType: "tenant_account",
+      resourceId: bundle.principal.sub,
+      summary: `切换到 ${context}`,
     });
     return bundle;
   }

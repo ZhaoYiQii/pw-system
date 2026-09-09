@@ -1,6 +1,10 @@
 import { randomBytes, scrypt as scryptCb } from "node:crypto";
 import type { DbTransaction, PrismaClient } from "@pw/database";
 import { PACKAGES, packageByCode } from "./packages.js";
+import {
+  HostTakenError,
+  TenantCodeTakenError,
+} from "./domain/errors.js";
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
@@ -45,6 +49,17 @@ export class PlatformBillingService {
     const storeCutBp = input.storeCutBp ?? 2000;
     if (storeCutBp < 0 || storeCutBp + 300 > 10000)
       throw new Error("门店抽成非法");
+
+    const existingCode = await this.client.tenant.findUnique({
+      where: { code: input.code },
+      select: { id: true },
+    });
+    if (existingCode) throw new TenantCodeTakenError(input.code);
+    const existingHost = await this.client.tenantDomain.findFirst({
+      where: { host: input.host },
+      select: { id: true },
+    });
+    if (existingHost) throw new HostTakenError(input.host);
 
     const created = await this.client.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
@@ -110,9 +125,13 @@ export class PlatformBillingService {
         "tenant.onboard",
         `平台开通门店 ${tenant.code}（套餐 ${pkg.code}）`,
       );
-      return tenant;
+      return { tenant, primaryHost: input.host };
     });
-    return { tenantId: created.id, tenantCode: created.code };
+    return {
+      tenantId: created.tenant.id,
+      tenantCode: created.tenant.code,
+      primaryHost: created.primaryHost,
+    };
   }
 
   async assignPackage(tenantId: string, packageCode: string, actorId: string) {

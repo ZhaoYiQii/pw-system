@@ -7,6 +7,7 @@ import {
   Check,
   Image,
   Plus,
+  UserPlus,
   X,
 } from "lucide-react";
 import {
@@ -28,6 +29,7 @@ import {
   type PlayerRow,
   type SessionDetail,
   type SettlementBatchDetail,
+  type TenantAccount,
   dateTime,
   formatDuration,
   statusLabel,
@@ -85,6 +87,138 @@ function Back({ href, label }: { href: string; label: string }) {
     <Link href={href} className="mc-back">
       <ArrowLeft size={15} /> 返回{label}
     </Link>
+  );
+}
+
+function LoginAccountSetup({
+  roleLabel,
+  role,
+  bindUrl,
+  onBound,
+}: {
+  roleLabel: string;
+  role: "CUSTOMER" | "PLAYER";
+  bindUrl: string;
+  onBound: () => void;
+}) {
+  const { toast, showToast } = useDemoToast();
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [last, setLast] = useState<{
+    username: string;
+    password: string;
+  } | null>(null);
+
+  const create = useMutation({
+    mutationFn: async () => {
+      setMsg(null);
+      if (!/^[a-zA-Z0-9_-]{2,64}$/.test(username.trim())) {
+        throw new Error("用户名需为 2-64 位字母/数字/_/-");
+      }
+      if (password.length < 8) throw new Error("初始密码至少 8 位");
+      const account = await apiFetch<TenantAccount>(
+        "/api/v1/tenant/accounts",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            username: username.trim(),
+            password,
+            roles: [role],
+          }),
+        },
+      );
+      try {
+        await apiFetch(bindUrl, {
+          method: "POST",
+          body: JSON.stringify({ accountId: account.id }),
+        });
+      } catch {
+        throw new Error(
+          `账号 ${account.username} 已创建，但绑定${roleLabel}档案失败；请先确认该档案未绑定其他账号。`,
+        );
+      }
+      return account.username;
+    },
+    onSuccess: (createdUsername) => {
+      setLast({ username: createdUsername, password });
+      setOpen(false);
+      setUsername("");
+      setPassword("");
+      onBound();
+      showToast(`已创建并绑定${roleLabel}登录账号 ${createdUsername}`);
+    },
+    onError: (error) =>
+      setMsg(error instanceof Error ? error.message : String(error)),
+  });
+
+  const copyCredential = () => {
+    if (!last) return;
+    void navigator.clipboard
+      .writeText(`登录账号：${last.username}\n临时密码：${last.password}`)
+      .then(() => showToast("账号信息已复制。"))
+      .catch(() => showToast("复制失败，请手动复制。"));
+  };
+
+  return (
+    <div>
+      <button
+        type="button"
+        className="mc-btn"
+        onClick={() => {
+          setMsg(null);
+          setOpen(true);
+        }}
+      >
+        <UserPlus size={14} /> 创建{roleLabel}登录账号
+      </button>
+
+      {last ? (
+        <div className="mc-notice" style={{ marginTop: 10 }}>
+          <b>{roleLabel}登录账号</b>
+          <div className="mc-mono">账号：{last.username}</div>
+          <div className="mc-mono">临时密码：{last.password}</div>
+          <button
+            type="button"
+            className="mc-btn mc-btn-small"
+            onClick={copyCredential}
+          >
+            复制账号信息
+          </button>
+        </div>
+      ) : null}
+
+      <DemoDialog
+        open={open}
+        title={`创建${roleLabel}登录账号`}
+        confirmLabel={create.isPending ? "创建中…" : "创建并绑定"}
+        onCancel={() => setOpen(false)}
+        onConfirm={() => create.mutate()}
+      >
+        {msg ? <div className="mc-notice">{msg}</div> : null}
+        <div className="mc-form-grid">
+          <label className="mc-field">
+            <span>用户名 *</span>
+            <input
+              value={username}
+              autoComplete="off"
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </label>
+          <label className="mc-field">
+            <span>初始密码（≥8 位）*</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+        </div>
+        <p>账号创建后将自动绑定到当前档案；对方使用该账号登录{roleLabel}。</p>
+      </DemoDialog>
+      {toast}
+    </div>
   );
 }
 
@@ -155,6 +289,22 @@ function CustomerDetail({ id }: { id: string }) {
         <dl className="mc-fact"><dt>客户 ID</dt><dd className="mc-mono">{customer.id}</dd></dl>
         <dl className="mc-fact"><dt>备注</dt><dd>{customer.remark ?? "-"}</dd></dl>
         <dl className="mc-fact"><dt>建档时间</dt><dd>{dateTime(customer.createdAt)}</dd></dl>
+      </section>
+
+      <section className="mc-panel">
+        <div className="mc-section-head">
+          <div><h2>老板端登录账号</h2><p>创建后对方可用该账号从 H5 门面登录老板端。</p></div>
+        </div>
+        <LoginAccountSetup
+          roleLabel="老板端"
+          role="CUSTOMER"
+          bindUrl={`/api/v1/tenant/customers/${id}/account`}
+          onBound={() =>
+            void queryClient.invalidateQueries({
+              queryKey: ["merchant", "customer-account", id],
+            })
+          }
+        />
       </section>
 
       <section className="mc-panel">
@@ -303,6 +453,22 @@ function PlayerDetailView({ id }: { id: string }) {
           </button>
         </div>
       </div>
+
+      <section className="mc-panel">
+        <div className="mc-section-head">
+          <div><h2>陪玩端登录账号</h2><p>创建后对方可用该账号从 H5 门面登录陪玩端。</p></div>
+        </div>
+        <LoginAccountSetup
+          roleLabel="陪玩端"
+          role="PLAYER"
+          bindUrl={`/api/v1/tenant/players/${id}/account`}
+          onBound={() =>
+            void queryClient.invalidateQueries({
+              queryKey: ["merchant", "player-account", id],
+            })
+          }
+        />
+      </section>
 
       <section className="mc-panel">
         <div className="mc-section-head">

@@ -292,6 +292,20 @@
         ]
       }
     },
+    "/api/v1/auth/phone-login": {
+      "post": {
+        "operationId": "auth_phoneLogin",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "auth_refresh",
@@ -431,6 +445,20 @@
         },
         "tags": [
           "TenantAccounts"
+        ]
+      }
+    },
+    "/api/v1/auth/phone-verification-code": {
+      "post": {
+        "operationId": "phoneVerification_sendCode",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhoneVerification"
         ]
       }
     },
@@ -5717,6 +5745,92 @@
         },
         "tags": [
           "Wallet"
+        ]
+      }
+    },
+    "/api/v1/tenant/dashboard/summary": {
+      "get": {
+        "operationId": "dashboardSummary_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "DashboardSummary"
+        ]
+      }
+    },
+    "/api/v1/tenant/player-applications": {
+      "post": {
+        "operationId": "playerApplications_apply",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerApplications"
+        ]
+      },
+      "get": {
+        "operationId": "playerApplications_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerApplications"
+        ]
+      }
+    },
+    "/api/v1/tenant/player-applications/{id}/approve": {
+      "post": {
+        "operationId": "playerApplications_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerApplications"
+        ]
+      }
+    },
+    "/api/v1/tenant/player-applications/{id}/reject": {
+      "post": {
+        "operationId": "playerApplications_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlayerApplications"
         ]
       }
     }

@@ -212,6 +212,17 @@ export type AuthLoginResponses = {
     201: unknown;
 };
 
+export type AuthPhoneLoginData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/phone-login';
+};
+
+export type AuthPhoneLoginResponses = {
+    201: unknown;
+};
+
 export type AuthRefreshData = {
     body?: never;
     path?: never;
@@ -313,6 +324,17 @@ export type TenantAccountsSetRolesData = {
 
 export type TenantAccountsSetRolesResponses = {
     200: unknown;
+};
+
+export type PhoneVerificationSendCodeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/phone-verification-code';
+};
+
+export type PhoneVerificationSendCodeResponses = {
+    201: unknown;
 };
 
 export type EntitlementsListTenantFeaturesData = {
@@ -3520,5 +3542,64 @@ export type WalletRechargeData = {
 };
 
 export type WalletRechargeResponses = {
+    201: unknown;
+};
+
+export type DashboardSummarySummaryData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/dashboard/summary';
+};
+
+export type DashboardSummarySummaryResponses = {
+    200: unknown;
+};
+
+export type PlayerApplicationsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/player-applications';
+};
+
+export type PlayerApplicationsListResponses = {
+    200: unknown;
+};
+
+export type PlayerApplicationsApplyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/player-applications';
+};
+
+export type PlayerApplicationsApplyResponses = {
+    201: unknown;
+};
+
+export type PlayerApplicationsApproveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/player-applications/{id}/approve';
+};
+
+export type PlayerApplicationsApproveResponses = {
+    201: unknown;
+};
+
+export type PlayerApplicationsRejectData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/player-applications/{id}/reject';
+};
+
+export type PlayerApplicationsRejectResponses = {
     201: unknown;
 };

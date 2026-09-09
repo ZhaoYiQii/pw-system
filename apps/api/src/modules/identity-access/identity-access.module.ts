@@ -10,18 +10,51 @@ import { TokenService } from "./infrastructure/tokens.js";
 import { AuthController } from "./interface/auth.controller.js";
 import { MeController } from "./interface/me.controller.js";
 import { TenantAccountsController } from "./interface/tenant-accounts.controller.js";
+import { PhoneVerificationController } from "./interface/phone-verification.controller.js";
 import { TenantAccountsService } from "./application/tenant-accounts.service.js";
+import { PhoneVerificationService } from "./application/phone-verification.service.js";
 import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 import { RedisRateLimitService } from "../../common/auth/redis-rate-limit.service.js";
 import { EntitlementsModule } from "../entitlements/entitlements.module.js";
+import { Logger } from "@nestjs/common";
+import type { SmsProvider } from "./domain/sms-provider.js";
+import { MockSmsProvider } from "./infrastructure/mock-sms.provider.js";
 
 export const AUTH_PLATFORM_CLIENT = "AUTH_PLATFORM_CLIENT";
 export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
+export const SMS_PROVIDER = "SMS_PROVIDER";
+
+function resolveSmsProvider(): SmsProvider {
+  const provider = process.env.SMS_PROVIDER ?? "mock";
+  if (provider !== "mock") {
+    throw new Error(
+      "SMS_PROVIDER only supports mock until real provider is implemented (P-5)",
+    );
+  }
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ALLOW_MOCK_SMS !== "true"
+  ) {
+    throw new Error(
+      "mock sms is not allowed in production unless ALLOW_MOCK_SMS=true (demo only)",
+    );
+  }
+  return new MockSmsProvider(new Logger("SmsProvider"));
+}
 
 @Module({
   imports: [EntitlementsModule],
-  controllers: [AuthController, MeController, TenantAccountsController],
+  controllers: [
+    AuthController,
+    MeController,
+    TenantAccountsController,
+    PhoneVerificationController,
+  ],
   providers: [
+    {
+      provide: SMS_PROVIDER,
+      useFactory: resolveSmsProvider,
+    },
     {
       provide: AUTH_PLATFORM_CLIENT,
       useFactory: () => {
@@ -67,6 +100,14 @@ export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
       ) => new TenantAccountsService(runtimeClient),
       inject: [AUTH_RUNTIME_CLIENT],
     },
+    {
+      provide: PhoneVerificationService,
+      useFactory: (
+        runtimeClient: ReturnType<typeof createDatabaseClient>,
+        sms: SmsProvider,
+      ) => new PhoneVerificationService(runtimeClient, sms),
+      inject: [AUTH_RUNTIME_CLIENT, SMS_PROVIDER],
+    },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: EntitlementGuard },
@@ -79,6 +120,6 @@ export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
       },
     },
   ],
-  exports: [AuthService, RateLimitService],
+  exports: [AuthService, RateLimitService, PhoneVerificationService],
 })
 export class IdentityAccessModule {}
