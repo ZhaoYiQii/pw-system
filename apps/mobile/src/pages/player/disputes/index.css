@@ -1,0 +1,14 @@
+.dispute-card {
+  gap: 20px;
+}
+.dispute-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pw-line);
+}
+.dispute-copy {
+  font-size: 25px;
+  line-height: 1.55;
+}

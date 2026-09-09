@@ -1,4 +1,5 @@
 import type {
+  PlayerAccountView,
   PlayerDetailView,
   PlayerSkillView,
   PlayerView,
@@ -46,6 +47,7 @@ export interface PlayerRepository {
   ): Promise<PlayerView[]>;
   find(tenantId: string, id: string): Promise<PlayerView | null>;
   detail(tenantId: string, id: string): Promise<PlayerDetailView | null>;
+  account(tenantId: string, id: string): Promise<PlayerAccountView | null>;
   create(tenantId: string, input: PlayerInput): Promise<PlayerView>;
   update(
     tenantId: string,
@@ -145,6 +147,12 @@ export class PlayersService {
 
   async get(tenantId: string, id: string): Promise<PlayerDetailView> {
     const row = await this.repository.detail(tenantId, id);
+    if (!row) throw new PlayerNotFoundError(id);
+    return row;
+  }
+
+  async getAccount(tenantId: string, id: string): Promise<PlayerAccountView> {
+    const row = await this.repository.account(tenantId, id);
     if (!row) throw new PlayerNotFoundError(id);
     return row;
   }

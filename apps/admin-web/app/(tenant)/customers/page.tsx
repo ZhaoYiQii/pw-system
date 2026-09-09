@@ -84,9 +84,7 @@ function CustomerListInner() {
       <Card>
         <CardHeader>
           <CardTitle>新建客户</CardTitle>
-          <CardDescription>
-            样板页：TanStack Query + shadcn/ui + Tailwind token
-          </CardDescription>
+          <CardDescription>为门店档案新增客户，可后续绑定老板账号。</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -181,7 +179,14 @@ function CustomerListInner() {
               <TableBody>
                 {rows.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/customers/${c.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {c.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{c.mobile ?? "-"}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.remark ?? "-"}
@@ -223,7 +228,7 @@ export default function CustomersPage() {
       <div className="mx-auto max-w-6xl px-6 py-8">
         <h1 className="text-2xl font-semibold tracking-tight">客户</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Tailwind/shadcn/TanStack Query 样板页（原其它页面样式不受影响）
+          客户档案创建、检索，点击客户名查看余额/账变与历史订单。
         </p>
         <div className="mt-6">
           <QueryClientProvider client={queryClient}>

@@ -1,10 +1,15 @@
 import { Button, Input, Text, View } from "@tarojs/components";
-import Taro, { useLoad } from "@tarojs/taro";
+import { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
 import { apiAdapter } from "@platform-api";
+import {
+  PlayerLoginCard,
+  PlayerMessage,
+  PlayerPage,
+} from "../../../components/player-ui";
 import "./index.css";
 
 interface PlayerMe {
@@ -28,15 +33,13 @@ export default function PlayerAvailabilityPage() {
   const [busy, setBusy] = useState(false);
   const [me, setMe] = useState<PlayerMe | null>(null);
 
-  const load = async (t: string) => {
+  const load = async (accessToken: string) => {
     try {
-      const profile = await apiAdapter.request<PlayerMe>(
-        "/api/v1/tenant/player/me",
-        {
-          token: t,
-        },
+      setMe(
+        await apiAdapter.request<PlayerMe>("/api/v1/tenant/player/me", {
+          token: accessToken,
+        }),
       );
-      setMe(profile);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
       session.clearToken();
@@ -45,9 +48,9 @@ export default function PlayerAvailabilityPage() {
   };
 
   useLoad(async () => {
-    const t = session.getToken();
-    setToken(t);
-    if (t) await load(t);
+    const accessToken = session.getToken();
+    setToken(accessToken);
+    if (accessToken) await load(accessToken);
     const info = await tenantLocator.resolveTenant();
     if (info.state === "ok" && info.tenant?.code)
       setTenantCode(info.tenant.code);
@@ -64,11 +67,11 @@ export default function PlayerAvailabilityPage() {
         tenantCode?: string;
       } = { kind: "tenant", username, password };
       if (tenantCode) input.tenantCode = tenantCode;
-      const s = await identityAdapter.login(input);
-      session.setToken(s.accessToken);
-      setToken(s.accessToken);
+      const loginSession = await identityAdapter.login(input);
+      session.setToken(loginSession.accessToken);
+      setToken(loginSession.accessToken);
       setPassword("");
-      await load(s.accessToken);
+      await load(loginSession.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -86,7 +89,7 @@ export default function PlayerAvailabilityPage() {
       Number.isNaN(start.getTime()) ||
       Number.isNaN(end.getTime())
     ) {
-      setMsg("请填写合法开始/结束时间");
+      setMsg("请填写合法的开始和结束时间。");
       return;
     }
     setBusy(true);
@@ -104,6 +107,7 @@ export default function PlayerAvailabilityPage() {
       setStartsAt("");
       setEndsAt("");
       setReason("");
+      setMsg("不可接时段已添加。");
       await load(token);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -121,6 +125,7 @@ export default function PlayerAvailabilityPage() {
         `/api/v1/tenant/player/availability/${availabilityId}`,
         { method: "DELETE", token },
       );
+      setMsg("时段已删除。");
       await load(token);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -130,107 +135,112 @@ export default function PlayerAvailabilityPage() {
   };
 
   return (
-    <View className="page">
-      <Text className="title">接单时间</Text>
-      {token === null ? (
-        <View className="card">
-          <Text className="label">门店 code</Text>
-          <Input
-            className="input"
-            value={tenantCode}
-            onInput={(e) => setTenantCode(e.detail.value)}
-            placeholder="demo"
-          />
-          <Text className="label">账号（陪玩）</Text>
-          <Input
-            className="input"
-            value={username}
-            onInput={(e) => setUsername(e.detail.value)}
-            placeholder="player"
-          />
-          <Text className="label">密码</Text>
-          <Input
-            className="input"
-            password
-            value={password}
-            onInput={(e) => setPassword(e.detail.value)}
-            placeholder="••••"
-          />
-          <Button
-            className="btn primary"
-            disabled={busy}
-            onClick={() => void login()}
-          >
-            登录
-          </Button>
-          {msg ? <Text className="err">{msg}</Text> : null}
-        </View>
+    <PlayerPage
+      title="接单时间"
+      subtitle="维护不能接单的具体时段"
+      activeNav="profile"
+      badge={
+        me ? (
+          <Text className="pw-badge pw-badge-live">
+            {me.availability.length === 0
+              ? "空闲中"
+              : `${me.availability.length} 个时段`}
+          </Text>
+        ) : undefined
+      }
+    >
+      {!token ? (
+        <PlayerLoginCard
+          tenantCode={tenantCode}
+          username={username}
+          password={password}
+          busy={busy}
+          actionLabel="登录并维护时间"
+          onTenantCode={setTenantCode}
+          onUsername={setUsername}
+          onPassword={setPassword}
+          onLogin={() => void login()}
+        />
+      ) : null}
+      {msg ? (
+        <PlayerMessage
+          tone={
+            msg === "不可接时段已添加。" || msg === "时段已删除。"
+              ? "success"
+              : "error"
+          }
+        >
+          {msg}
+        </PlayerMessage>
       ) : null}
       {token && me ? (
         <>
-          {msg ? <Text className="err">{msg}</Text> : null}
-          <View className="card">
-            <Text className="label">开始（例 2026-09-08T10:00）</Text>
-            <Input
-              className="input"
-              value={startsAt}
-              onInput={(e) => setStartsAt(e.detail.value)}
-              placeholder="2026-09-08T10:00"
-            />
-            <Text className="label">结束</Text>
-            <Input
-              className="input"
-              value={endsAt}
-              onInput={(e) => setEndsAt(e.detail.value)}
-              placeholder="2026-09-08T12:00"
-            />
-            <Text className="label">原因（可选）</Text>
-            <Input
-              className="input"
-              value={reason}
-              onInput={(e) => setReason(e.detail.value)}
-              placeholder="外出"
-            />
-            <Button
-              className="btn primary"
-              disabled={busy}
-              onClick={() => void add()}
-            >
-              添加不可接单时段
-            </Button>
-          </View>
-          <View className="card">
-            <Text className="strong">当前排期（{me.availability.length}）</Text>
+          <View className="pw-card pw-divider-list">
             {me.availability.length === 0 ? (
-              <Text className="muted">暂无不可接单时段。</Text>
+              <Text className="pw-empty">
+                暂无不可接时段，当前默认为可接单。
+              </Text>
             ) : null}
-            {me.availability.map((a) => (
-              <View key={a.id} className="row">
-                <Text className="muted">
-                  {new Date(a.startsAt).toLocaleString()} →{" "}
-                  {new Date(a.endsAt).toLocaleString()}
-                  {a.reason ? `（${a.reason}）` : ""}
-                </Text>
+            {me.availability.map((item) => (
+              <View key={item.id} className="availability-row">
+                <View className="pw-row-copy">
+                  <Text className="availability-time">
+                    {new Date(item.startsAt).toLocaleString()}
+                  </Text>
+                  <Text className="pw-muted">
+                    至 {new Date(item.endsAt).toLocaleString()}
+                    {item.reason ? ` · ${item.reason}` : ""}
+                  </Text>
+                </View>
                 <Button
-                  size="mini"
+                  className="availability-delete"
                   disabled={busy}
-                  onClick={() => void remove(a.id)}
+                  onClick={() => void remove(item.id)}
                 >
                   删除
                 </Button>
               </View>
             ))}
           </View>
+          <View className="pw-card">
+            <Text className="pw-card-title">添加不可接时段</Text>
+            <View className="pw-field">
+              <Text className="pw-field-label">开始时间</Text>
+              <Input
+                className="pw-input"
+                value={startsAt}
+                onInput={(event) => setStartsAt(event.detail.value)}
+                placeholder="2026-09-08T19:00"
+              />
+            </View>
+            <View className="pw-field">
+              <Text className="pw-field-label">结束时间</Text>
+              <Input
+                className="pw-input"
+                value={endsAt}
+                onInput={(event) => setEndsAt(event.detail.value)}
+                placeholder="2026-09-08T23:00"
+              />
+            </View>
+            <View className="pw-field">
+              <Text className="pw-field-label">备注（选填）</Text>
+              <Input
+                className="pw-input"
+                value={reason}
+                onInput={(event) => setReason(event.detail.value)}
+                placeholder="例如：临时有事"
+              />
+            </View>
+            <Button
+              className="pw-button pw-button-dark"
+              disabled={busy}
+              onClick={() => void add()}
+            >
+              添加时段
+            </Button>
+          </View>
         </>
       ) : null}
-      <Button
-        className="btn"
-        onClick={() =>
-          void Taro.reLaunch({ url: "/pages/player/profile/index" })
-        }
-      >
-        返回资料
-      </Button>
-    </View>
+    </PlayerPage>
   );
 }

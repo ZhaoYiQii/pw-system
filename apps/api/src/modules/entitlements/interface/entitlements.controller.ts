@@ -20,6 +20,7 @@ import {
 } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { AuditService } from "../../audit/audit.service.js";
+import { PlatformGrantsService } from "../../platform-accounts/platform-grants.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -34,12 +35,20 @@ export class EntitlementsController {
     @Inject(EntitlementsService)
     private readonly entitlements: EntitlementsService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(PlatformGrantsService)
+    private readonly grants: PlatformGrantsService,
   ) {}
 
   @TenantScope()
   @Get("tenant/features")
   async listTenantFeatures(@Req() req: AuthenticatedRequest) {
     return { data: await this.entitlements.listFeatures(tenantIdOf(req)) };
+  }
+
+  @TenantScope()
+  @Get("tenant/subscription")
+  async subscription(@Req() req: AuthenticatedRequest) {
+    return { data: await this.entitlements.getSubscription(tenantIdOf(req)) };
   }
 
   @TenantScope()
@@ -63,7 +72,11 @@ export class EntitlementsController {
   @PlatformScope()
   @Permissions("tenant.view")
   @Get("platform/tenants/:tenantId/entitlements")
-  async listEntitlements(@Param("tenantId") tenantId: string) {
+  async listEntitlements(
+    @Req() req: AuthenticatedRequest,
+    @Param("tenantId") tenantId: string,
+  ) {
+    await this.grants.assertTenantReadAllowed(req.principal, tenantId);
     return { data: await this.entitlements.listFeatures(tenantId) };
   }
 

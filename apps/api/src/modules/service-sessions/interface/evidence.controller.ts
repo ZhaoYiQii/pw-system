@@ -260,7 +260,12 @@ export class EvidenceController {
     if (!ev) throw new NotFoundException("证据不存在");
     const s = await this.repo.sessionOf(tenantId, ev.sessionId);
     const role = req.principal?.role;
-    if (role !== "TENANT_OWNER" && role !== "CUSTOMER_SERVICE") {
+    if (
+      role !== "TENANT_OWNER" &&
+      role !== "CUSTOMER_SERVICE" &&
+      role !== "TENANT_ADMIN" &&
+      role !== "FINANCE"
+    ) {
       if (role !== "PLAYER" || !s) throw new ForbiddenException("无权限下载");
       const me = await this.players
         .getByAccount(tenantId, req.principal?.sub ?? "")
@@ -268,6 +273,40 @@ export class EvidenceController {
       if (!me || !s || me.id !== s.playerId)
         throw new ForbiddenException("无权限下载");
     }
+    const full = path.join(rootDir(), ev.objectKey);
+    try {
+      const data = await readFile(full);
+      res.setHeader("content-type", ev.mimeType);
+      res.setHeader("content-length", String(data.length));
+      res.setHeader(
+        "content-disposition",
+        `inline; filename*=UTF-8''${encodeURIComponent(ev.originalName)}`,
+      );
+      res.end(data);
+    } catch {
+      throw new NotFoundException("文件缺失");
+    }
+  }
+
+  @TenantScope()
+  @Get("slot-evidence/:id")
+  async downloadSlotEvidence(
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Param("id") id: string,
+  ) {
+    const tenantId = this.tenantIdOf(req);
+    const role = req.principal?.role;
+    if (
+      role !== "TENANT_OWNER" &&
+      role !== "CUSTOMER_SERVICE" &&
+      role !== "TENANT_ADMIN" &&
+      role !== "FINANCE"
+    ) {
+      throw new ForbiddenException("仅门店员工可下载档位证据");
+    }
+    const ev = await this.repo.findSlotEvidence(tenantId, id);
+    if (!ev) throw new NotFoundException("证据不存在");
     const full = path.join(rootDir(), ev.objectKey);
     try {
       const data = await readFile(full);

@@ -106,6 +106,20 @@
         ]
       }
     },
+    "/api/v1/tenant/audit/export": {
+      "get": {
+        "operationId": "audit_export",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
     "/api/v1/platform/tenants/{tenantId}/audit": {
       "get": {
         "operationId": "platformAudit_platformList",
@@ -126,6 +140,141 @@
         },
         "tags": [
           "PlatformAudit"
+        ]
+      }
+    },
+    "/api/v1/platform/audit": {
+      "get": {
+        "operationId": "platformAuditAggregate_aggregate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAuditAggregate"
+        ]
+      }
+    },
+    "/api/v1/platform/accounts": {
+      "get": {
+        "operationId": "platformAccounts_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      },
+      "post": {
+        "operationId": "platformAccounts_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      }
+    },
+    "/api/v1/platform/accounts/{id}/status": {
+      "patch": {
+        "operationId": "platformAccounts_setStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      }
+    },
+    "/api/v1/platform/accounts/{id}/role": {
+      "patch": {
+        "operationId": "platformAccounts_setRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformAccounts"
+        ]
+      }
+    },
+    "/api/v1/platform/grants": {
+      "get": {
+        "operationId": "platformGrants_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformGrants"
+        ]
+      },
+      "post": {
+        "operationId": "platformGrants_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformGrants"
+        ]
+      }
+    },
+    "/api/v1/platform/grants/{id}/revoke": {
+      "post": {
+        "operationId": "platformGrants_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformGrants"
         ]
       }
     },
@@ -213,9 +362,95 @@
         ]
       }
     },
+    "/api/v1/tenant/accounts": {
+      "get": {
+        "operationId": "tenantAccounts_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantAccounts"
+        ]
+      },
+      "post": {
+        "operationId": "tenantAccounts_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantAccounts"
+        ]
+      }
+    },
+    "/api/v1/tenant/accounts/{id}/status": {
+      "patch": {
+        "operationId": "tenantAccounts_setStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantAccounts"
+        ]
+      }
+    },
+    "/api/v1/tenant/accounts/{id}/roles": {
+      "patch": {
+        "operationId": "tenantAccounts_setRoles",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantAccounts"
+        ]
+      }
+    },
     "/api/v1/tenant/features": {
       "get": {
         "operationId": "entitlements_listTenantFeatures",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Entitlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/subscription": {
+      "get": {
+        "operationId": "entitlements_subscription",
         "parameters": [],
         "responses": {
           "200": {
@@ -454,6 +689,27 @@
       }
     },
     "/api/v1/tenant/customers/{id}/account": {
+      "get": {
+        "operationId": "customers_account",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      },
       "post": {
         "operationId": "customers_bind",
         "parameters": [
@@ -468,6 +724,29 @@
         ],
         "responses": {
           "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Customers"
+        ]
+      }
+    },
+    "/api/v1/tenant/customers/{id}/orders": {
+      "get": {
+        "operationId": "customers_orders",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": ""
           }
         },
@@ -2814,6 +3093,20 @@
         ]
       }
     },
+    "/api/v1/tenant/settlements/ledger": {
+      "get": {
+        "operationId": "settlements_financeLedger",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
     "/api/v1/tenant/settlements/{id}": {
       "get": {
         "operationId": "settlements_detail",
@@ -3043,6 +3336,50 @@
         ]
       }
     },
+    "/api/v1/tenant/players/{id}/account": {
+      "get": {
+        "operationId": "players_account",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      },
+      "post": {
+        "operationId": "players_bind",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Players"
+        ]
+      }
+    },
     "/api/v1/tenant/players/{id}/skills": {
       "post": {
         "operationId": "players_addSkill",
@@ -3100,29 +3437,6 @@
     "/api/v1/tenant/players/{id}/availability": {
       "post": {
         "operationId": "players_addAvailability",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Players"
-        ]
-      }
-    },
-    "/api/v1/tenant/players/{id}/account": {
-      "post": {
-        "operationId": "players_bind",
         "parameters": [
           {
             "name": "id",
@@ -4106,6 +4420,43 @@
         ]
       }
     },
+    "/api/v1/tenant/sessions": {
+      "get": {
+        "operationId": "sessions_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
+    "/api/v1/tenant/sessions/{sessionId}": {
+      "get": {
+        "operationId": "sessions_detail",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sessions"
+        ]
+      }
+    },
     "/api/v1/tenant/orders/{orderId}/session": {
       "get": {
         "operationId": "sessions_session",
@@ -4314,10 +4665,56 @@
         ]
       }
     },
+    "/api/v1/tenant/slot-evidence/{id}": {
+      "get": {
+        "operationId": "evidence_downloadSlotEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Evidence"
+        ]
+      }
+    },
     "/api/v1/tenant/disputes": {
       "get": {
         "operationId": "disputes_listAll",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Disputes"
+        ]
+      }
+    },
+    "/api/v1/tenant/disputes/{disputeId}": {
+      "get": {
+        "operationId": "disputes_detail",
+        "parameters": [
+          {
+            "name": "disputeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -4426,6 +4823,20 @@
     "/api/v1/tenant/notifications": {
       "get": {
         "operationId": "notifications_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/tenant/notifications/unread-count": {
+      "get": {
+        "operationId": "notifications_unreadCount",
         "parameters": [],
         "responses": {
           "200": {
@@ -4599,6 +5010,29 @@
         ]
       }
     },
+    "/api/v1/platform/subscriptions/{subscriptionId}/renew": {
+      "post": {
+        "operationId": "platformBilling_renew",
+        "parameters": [
+          {
+            "name": "subscriptionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PlatformBilling"
+        ]
+      }
+    },
     "/api/v1/platform/overview": {
       "get": {
         "operationId": "platformOps_overview",
@@ -4647,78 +5081,6 @@
         },
         "tags": [
           "PlatformOps"
-        ]
-      }
-    },
-    "/api/v1/platform/accounts": {
-      "get": {
-        "operationId": "platformAccounts_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "PlatformAccounts"
-        ]
-      },
-      "post": {
-        "operationId": "platformAccounts_create",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "PlatformAccounts"
-        ]
-      }
-    },
-    "/api/v1/platform/accounts/{id}/status": {
-      "patch": {
-        "operationId": "platformAccounts_setStatus",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "PlatformAccounts"
-        ]
-      }
-    },
-    "/api/v1/platform/accounts/{id}/role": {
-      "patch": {
-        "operationId": "platformAccounts_setRole",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "PlatformAccounts"
         ]
       }
     },

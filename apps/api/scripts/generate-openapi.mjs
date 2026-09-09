@@ -12,6 +12,7 @@ process.env.PLATFORM_DATABASE_URL ??=
 process.env.DATABASE_MIGRATION_URL ??=
   "postgresql://pw:openapi_generate_unused@127.0.0.1:5432/pw_openapi_generate";
 process.env.SESSION_SECRET ??= "openapi-generate-only-secret-not-for-auth";
+process.env.PAYMENT_PROVIDER ??= "mock";
 
 const { buildApiDocument } = await import("../dist/openapi/contract.js");
 

@@ -9,6 +9,8 @@ import {
 
 export interface SessionView {
   id: string;
+  flow: "CLASSIC" | "GAME_DISPATCH";
+  slotId: string | null;
   orderId: string;
   playerId: string;
   status: string;
@@ -22,6 +24,14 @@ export interface SessionView {
     toStatus: string | null;
     occurredAt: Date;
   }>;
+  evidence: Array<{
+    id: string;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+    uploadedBy: string | null;
+    createdAt: Date;
+  }>;
   adjustments: Array<{
     id: string;
     originalDurationSeconds: number;
@@ -29,6 +39,24 @@ export interface SessionView {
     reason: string;
     status: string;
   }>;
+}
+
+export interface SessionListRow {
+  id: string;
+  flow: "CLASSIC" | "GAME_DISPATCH";
+  slotId: string | null;
+  orderId: string;
+  orderNo: string;
+  playerId: string;
+  playerName: string;
+  customerName: string;
+  status: string;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  durationSeconds: number | null;
+  evidenceCount: number;
+  adjustmentPendingCount: number;
+  createdAt: Date;
 }
 
 export class PrismaSessionsRepository {
@@ -63,8 +91,12 @@ export class PrismaSessionsRepository {
     const s = await this.client.serviceSession.findFirst({
       where: { tenantId, id: sessionId },
     });
-    if (!s) return null;
-    return this.assemble(tenantId, s.id);
+    if (s) return this.assemble(tenantId, s.id);
+    const slot = await this.client.slotSession.findFirst({
+      where: { tenantId, id: sessionId },
+    });
+    if (!slot) return null;
+    return this.assembleSlot(tenantId, slot.id);
   }
 
   private async assemble(
@@ -83,8 +115,14 @@ export class PrismaSessionsRepository {
       where: { tenantId, sessionId },
       orderBy: { createdAt: "desc" },
     });
+    const evidence = await this.client.evidenceAsset.findMany({
+      where: { tenantId, sessionId },
+      orderBy: { createdAt: "asc" },
+    });
     return {
       id: s.id,
+      flow: "CLASSIC",
+      slotId: null,
       orderId: s.orderId,
       playerId: s.playerId,
       status: s.status,
@@ -98,6 +136,14 @@ export class PrismaSessionsRepository {
         toStatus: e.toStatus,
         occurredAt: e.occurredAt,
       })),
+      evidence: evidence.map((e) => ({
+        id: e.id,
+        originalName: e.originalName,
+        mimeType: e.mimeType,
+        sizeBytes: e.sizeBytes,
+        uploadedBy: e.uploadedBy,
+        createdAt: e.createdAt,
+      })),
       adjustments: adjustments.map((a) => ({
         id: a.id,
         originalDurationSeconds: a.originalDurationSeconds,
@@ -106,6 +152,207 @@ export class PrismaSessionsRepository {
         status: a.status,
       })),
     };
+  }
+
+  private async assembleSlot(
+    tenantId: string,
+    sessionId: string,
+  ): Promise<SessionView> {
+    const s = await this.client.slotSession.findFirst({
+      where: { tenantId, id: sessionId },
+    });
+    if (!s) throw new SessionNotFoundError("session", sessionId);
+    const evidence = await this.client.slotEvidence.findMany({
+      where: { tenantId, sessionId: s.id },
+      orderBy: { createdAt: "asc" },
+    });
+    const events: SessionView["events"] = [];
+    if (s.startedAt) {
+      events.push({
+        id: `${s.id}-started`,
+        eventType: "SLOT_SESSION_STARTED",
+        fromStatus: "NOT_STARTED",
+        toStatus: "STARTED",
+        occurredAt: s.startedAt,
+      });
+    }
+    if (s.endedAt) {
+      events.push({
+        id: `${s.id}-ended`,
+        eventType: "SLOT_SESSION_ENDED",
+        fromStatus: "STARTED",
+        toStatus: "ENDED",
+        occurredAt: s.endedAt,
+      });
+    }
+    return {
+      id: s.id,
+      flow: "GAME_DISPATCH",
+      slotId: s.orderSlotId,
+      orderId: s.orderId,
+      playerId: s.playerId,
+      status: s.status,
+      startedAt: s.startedAt,
+      endedAt: s.endedAt,
+      durationSeconds: s.durationSeconds,
+      events,
+      evidence: evidence.map((e) => ({
+        id: e.id,
+        originalName: e.originalName,
+        mimeType: e.mimeType,
+        sizeBytes: e.sizeBytes,
+        uploadedBy: e.uploadedBy,
+        createdAt: e.createdAt,
+      })),
+      adjustments: [],
+    };
+  }
+
+  async list(
+    tenantId: string,
+    opts: { status?: string; q?: string } = {},
+  ): Promise<SessionListRow[]> {
+    const classicRows = await this.client.serviceSession.findMany({
+      where: {
+        tenantId,
+        ...(opts.status ? { status: opts.status as never } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    const slotRows = await this.client.slotSession.findMany({
+      where: {
+        tenantId,
+        ...(opts.status ? { status: opts.status as never } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    if (classicRows.length === 0 && slotRows.length === 0) return [];
+    const orderIds = Array.from(
+      new Set([
+        ...classicRows.map((r) => r.orderId),
+        ...slotRows.map((r) => r.orderId),
+      ]),
+    );
+    const playerIds = Array.from(
+      new Set([
+        ...classicRows.map((r) => r.playerId),
+        ...slotRows.map((r) => r.playerId),
+      ]),
+    );
+    const [orders, players, evidenceRows, pendingAdjustments] =
+      await Promise.all([
+        this.client.order.findMany({
+          where: { tenantId, id: { in: orderIds } },
+          select: {
+            id: true,
+            orderNo: true,
+            customerProfileId: true,
+          },
+        }),
+        this.client.playerProfile.findMany({
+          where: { tenantId, id: { in: playerIds } },
+          select: { id: true, name: true },
+        }),
+        this.client.evidenceAsset.groupBy({
+          by: ["sessionId"],
+          where: {
+            tenantId,
+            sessionId: { in: classicRows.map((r) => r.id) },
+          },
+          _count: { _all: true },
+        }),
+        this.client.sessionAdjustment.groupBy({
+          by: ["sessionId"],
+          where: {
+            tenantId,
+            sessionId: { in: classicRows.map((r) => r.id) },
+            status: "PENDING",
+          },
+          _count: { _all: true },
+        }),
+      ]);
+    const slotEvidenceRows =
+      slotRows.length > 0
+        ? await this.client.slotEvidence.groupBy({
+            by: ["sessionId"],
+            where: {
+              tenantId,
+              sessionId: { in: slotRows.map((r) => r.id) },
+            },
+            _count: { _all: true },
+          })
+        : [];
+    const customerIds = Array.from(
+      new Set(orders.map((o) => o.customerProfileId)),
+    );
+    const customers =
+      customerIds.length > 0
+        ? await this.client.customerProfile.findMany({
+            where: { tenantId, id: { in: customerIds } },
+            select: { id: true, name: true },
+          })
+        : [];
+    const orderById = new Map(orders.map((o) => [o.id, o]));
+    const playerById = new Map(players.map((p) => [p.id, p.name]));
+    const customerById = new Map(customers.map((c) => [c.id, c.name]));
+    const evidenceCount = new Map(
+      evidenceRows.map((r) => [r.sessionId, r._count._all]),
+    );
+    const slotEvidenceCount = new Map(
+      slotEvidenceRows.map((r) => [r.sessionId, r._count._all]),
+    );
+    const pendingCount = new Map(
+      pendingAdjustments.map((r) => [r.sessionId, r._count._all]),
+    );
+    const classicOut = classicRows.map((r) => {
+      const order = orderById.get(r.orderId);
+      return {
+        id: r.id,
+        flow: "CLASSIC" as const,
+        slotId: null,
+        orderId: r.orderId,
+        orderNo: order?.orderNo ?? "未知订单",
+        playerId: r.playerId,
+        playerName: playerById.get(r.playerId) ?? "未知陪玩",
+        customerName: order
+          ? (customerById.get(order.customerProfileId) ?? "未知客户")
+          : "未知客户",
+        status: r.status,
+        startedAt: r.startedAt,
+        endedAt: r.endedAt,
+        durationSeconds: r.durationSeconds,
+        evidenceCount: evidenceCount.get(r.id) ?? 0,
+        adjustmentPendingCount: pendingCount.get(r.id) ?? 0,
+        createdAt: r.createdAt,
+      };
+    });
+    const slotOut = slotRows.map((r) => {
+      const order = orderById.get(r.orderId);
+      return {
+        id: r.id,
+        flow: "GAME_DISPATCH" as const,
+        slotId: r.orderSlotId,
+        orderId: r.orderId,
+        orderNo: order?.orderNo ?? "未知订单",
+        playerId: r.playerId,
+        playerName: playerById.get(r.playerId) ?? "未知陪玩",
+        customerName: order
+          ? (customerById.get(order.customerProfileId) ?? "未知客户")
+          : "未知客户",
+        status: r.status,
+        startedAt: r.startedAt,
+        endedAt: r.endedAt,
+        durationSeconds: r.durationSeconds,
+        evidenceCount: slotEvidenceCount.get(r.id) ?? 0,
+        adjustmentPendingCount: 0,
+        createdAt: r.createdAt,
+      };
+    });
+    return [...slotOut, ...classicOut]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 100);
   }
 
   /** 开始场次：ASSIGNED→READY→IN_PROGRESS；服务器时间；重复开始幂等返回同一场次。 */
@@ -465,5 +712,9 @@ export class PrismaSessionsRepository {
 
   async findEvidence(tenantId: string, id: string) {
     return this.client.evidenceAsset.findFirst({ where: { tenantId, id } });
+  }
+
+  async findSlotEvidence(tenantId: string, id: string) {
+    return this.client.slotEvidence.findFirst({ where: { tenantId, id } });
   }
 }

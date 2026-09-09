@@ -113,6 +113,25 @@ export class NotificationsController {
   }
 
   @TenantScope()
+  @Get("unread-count")
+  async unreadCount(@Req() req: AuthenticatedRequest) {
+    const tenantId = req.principal?.tenantId;
+    if (!tenantId)
+      throw new HttpException("tenant missing", HttpStatus.UNAUTHORIZED);
+    return withTenantContext(
+      this.client,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const where = await this.listWhere(req, tx, tenantId);
+        const count = await tx.notificationDelivery.count({
+          where: { ...where, readAt: null },
+        });
+        return { data: { count } };
+      },
+    );
+  }
+
+  @TenantScope()
   @Post(":id/read")
   async markRead(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     const tenantId = req.principal?.tenantId;

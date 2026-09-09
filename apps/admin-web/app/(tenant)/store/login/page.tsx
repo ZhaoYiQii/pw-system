@@ -12,10 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { apiFetch, setAccessToken } from "../../../_lib/api";
+import { apiFetch, setAccessToken, setCsrfToken } from "../../../_lib/api";
 
 interface LoginResult {
   accessToken: string;
+  csrfToken?: string;
   principal?: { role?: string; username?: string };
 }
 
@@ -33,6 +34,7 @@ export default function TenantLoginPage() {
     try {
       const data = await apiFetch<LoginResult>("/api/v1/auth/login", {
         method: "POST",
+        credentials: "include",
         body: JSON.stringify({
           kind: "tenant",
           tenantCode,
@@ -41,7 +43,8 @@ export default function TenantLoginPage() {
         }),
       });
       setAccessToken(data.accessToken);
-      router.push("/settings");
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
+      router.push("/merchant-console/work");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {

@@ -116,4 +116,26 @@ export class PlatformBillingController {
       bad(error);
     }
   }
+
+  @PlatformScope()
+  @Permissions("platform.manage")
+  @Post("subscriptions/:subscriptionId/renew")
+  async renew(
+    @Req() req: AuthenticatedRequest,
+    @Param("subscriptionId") subscriptionId: string,
+    @Body() body: { months?: unknown; note?: unknown },
+  ) {
+    try {
+      return {
+        data: await this.svc.renewSubscription(
+          subscriptionId,
+          body.months,
+          req.principal?.sub ?? "platform",
+          body.note,
+        ),
+      };
+    } catch (error) {
+      bad(error);
+    }
+  }
 }

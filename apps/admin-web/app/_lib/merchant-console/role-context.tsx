@@ -1,48 +1,75 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
-  useCallback,
   useContext,
-  useLayoutEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
-import { MERCHANT_ROLES, type MerchantRole } from "./modules";
+import { apiFetch } from "../api";
+import { type MerchantRole } from "./modules";
 
-interface MerchantRoleContextValue {
+export interface MerchantPrincipal {
+  sub: string;
+  username: string;
+  role: string;
+  tenantId?: string;
+  scope?: string;
+}
+
+export interface MerchantRoleContextValue {
   role: MerchantRole;
+  principal: MerchantPrincipal | null;
+  ready: boolean;
+  unauthorized: boolean;
+  forbidden: boolean;
+  loginHref: string;
   setRole: (role: MerchantRole) => void;
 }
+
+const ROLE_MAP: Record<string, MerchantRole> = {
+  TENANT_OWNER: "OWNER",
+  TENANT_ADMIN: "ADMIN",
+  CUSTOMER_SERVICE: "CS",
+  FINANCE: "FINANCE",
+};
 
 const MerchantRoleContext = createContext<MerchantRoleContextValue | null>(
   null,
 );
 
-const ROLE_QUERY_VALUES = MERCHANT_ROLES as readonly string[];
-
 export function MerchantRoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<MerchantRole>("OWNER");
+  const meQuery = useQuery({
+    queryKey: ["merchant", "me"],
+    queryFn: () => apiFetch<MerchantPrincipal>("/api/v1/tenant/me"),
+    retry: false,
+  });
 
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    const roleParam = new URLSearchParams(window.location.search).get("role");
-    if (
-      typeof roleParam === "string" &&
-      ROLE_QUERY_VALUES.includes(roleParam)
-    ) {
-      setRole(roleParam as MerchantRole);
-    }
-  }, []);
+  const principal = meQuery.data ?? null;
+  const rawRole = principal?.role ?? "";
+  const role: MerchantRole = ROLE_MAP[rawRole] ?? "OWNER";
+  const is401 =
+    meQuery.isError &&
+    meQuery.error instanceof Error &&
+    (meQuery.error as { status?: number }).status === 401;
+  const unauthorized = Boolean(is401);
+  const forbidden = principal !== null && !(rawRole in ROLE_MAP);
+  const ready = meQuery.isSuccess || meQuery.isError;
 
-  const changeRole = useCallback((nextRole: MerchantRole) => {
-    setRole(nextRole);
-  }, []);
-
-  const value = useMemo(
-    () => ({ role, setRole: changeRole }),
-    [role, changeRole],
+  const value = useMemo<MerchantRoleContextValue>(
+    () => ({
+      role,
+      principal,
+      ready,
+      unauthorized,
+      forbidden,
+      loginHref: "/store/login",
+      setRole: () => {
+        /* 角色来自后端会话，不允许前端切换。 */
+      },
+    }),
+    [role, principal, ready, unauthorized, forbidden],
   );
 
   return (

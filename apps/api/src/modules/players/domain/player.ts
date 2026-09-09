@@ -40,3 +40,25 @@ export interface PlayerDetailView extends PlayerView {
   skills: PlayerSkillView[];
   availability: PlayerAvailabilityView[];
 }
+
+export type PlayerEarningSource = "LEGACY" | "SLOT";
+
+export interface PlayerEarningRecordView {
+  id: string;
+  source: PlayerEarningSource;
+  amountFen: string;
+  status: string;
+  orderId: string;
+  orderNo: string;
+  createdAt: Date;
+}
+
+export interface PlayerAccountFinanceView {
+  paidFen: string;
+  unpaidFen: string;
+  records: PlayerEarningRecordView[];
+}
+
+export interface PlayerAccountView extends PlayerDetailView {
+  finance: PlayerAccountFinanceView;
+}

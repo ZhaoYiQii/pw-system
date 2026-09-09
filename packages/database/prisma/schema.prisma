@@ -118,6 +118,32 @@ model PlatformAuditEvent {
   @@map("platform_audit_events")
 }
 
+enum PlatformGrantStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// 平台跨租户临时授权（P-B2b）：仅向平台运营开放指定门店的限时只读访问。
+/// 平台级表，不启用租户 RLS；每次创建/撤销均写 platform_audit_events。
+model PlatformAccessGrant {
+  id                         String               @id @default(uuid()) @db.Uuid
+  grantorPlatformAccountId   String               @map("grantor_platform_account_id") @db.Uuid
+  granteePlatformAccountId   String               @map("grantee_platform_account_id") @db.Uuid
+  tenantId                   String               @map("tenant_id") @db.Uuid
+  reason                     String
+  scope                      String               @default("read")
+  status                     PlatformGrantStatus  @default(ACTIVE)
+  expiresAt                  DateTime             @map("expires_at")
+  revokedAt                  DateTime?            @map("revoked_at")
+  revokedBy                  String?              @map("revoked_by") @db.Uuid
+  createdAt                  DateTime             @default(now()) @map("created_at")
+
+  @@index([granteePlatformAccountId, status])
+  @@index([tenantId, status])
+  @@index([expiresAt])
+  @@map("platform_access_grants")
+}
+
 /// 门店账号（店员/陪玩/客户）。租户级资源，启用 RLS（按 tenant_id）。
 model TenantAccount {
   id           String        @id @default(uuid()) @db.Uuid

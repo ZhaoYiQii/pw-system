@@ -1,5 +1,5 @@
-import { Button, Input, Text, View } from "@tarojs/components";
-import { useLoad } from "@tarojs/taro";
+import { Button, Text, View } from "@tarojs/components";
+import { useLoad, useRouter } from "@tarojs/taro";
 import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
@@ -7,6 +7,11 @@ import { tenantLocator } from "@platform-locator";
 import { apiAdapter } from "@platform-api";
 import { mediaAdapter } from "@platform-media";
 import { formatFenYuan } from "../../../features/money/money";
+import {
+  PlayerLoginCard,
+  PlayerMessage,
+  PlayerPage,
+} from "../../../components/player-ui";
 import "./index.css";
 
 interface HallItem {
@@ -23,7 +28,6 @@ interface MyApp {
   status: string;
   createdAt: string;
 }
-
 interface SessionView {
   id: string;
   status: string;
@@ -31,8 +35,27 @@ interface SessionView {
   endedAt: string | null;
   durationSeconds: number | null;
 }
+type HallView = "hall" | "service" | "applications";
+
+const APPLICATION_STATUS: Record<string, string> = {
+  APPLIED: "报名待选",
+  SELECTED: "已被选",
+  EXPIRED: "已结束",
+  WITHDRAWN: "已撤销",
+};
+
+function formatDateTime(value: string | null): string {
+  return value ? new Date(value).toLocaleString() : "时间待确认";
+}
 
 export default function OrderHallPage() {
+  const router = useRouter();
+  const initialView = router.params.view;
+  const [view, setView] = useState<HallView>(
+    initialView === "service" || initialView === "applications"
+      ? initialView
+      : "hall",
+  );
   const [token, setToken] = useState<string | null>(session.getToken());
   const [tenantCode, setTenantCode] = useState("");
   const [username, setUsername] = useState("");
@@ -44,47 +67,43 @@ export default function OrderHallPage() {
   const [sessions, setSessions] = useState<Record<string, SessionView>>({});
   const [hallEnabled, setHallEnabled] = useState(true);
 
-  const loadFeatureGate = async (t: string) => {
+  const loadFeatureGate = async (accessToken: string) => {
     try {
-      const feats = await apiAdapter.request<
+      const features = await apiAdapter.request<
         Array<{ featureKey: string; enabled: boolean }>
-      >("/api/v1/tenant/features", { token: t });
-      const enabled = feats.find(
-        (f) => f.featureKey === "addon.player_order_hall",
+      >("/api/v1/tenant/features", { token: accessToken });
+      const enabled = features.find(
+        (feature) => feature.featureKey === "addon.player_order_hall",
       )?.enabled;
       setHallEnabled(enabled !== false);
       if (enabled === false)
-        setMsg(
-          "该门店未开通「陪玩接单大厅」，暂时无法报名接单，请联系门店开通。",
-        );
+        setMsg("该门店未开通陪玩接单大厅，请联系门店开通。");
     } catch {
       setHallEnabled(true);
     }
   };
 
-  const load = async (t: string) => {
+  const load = async (accessToken: string) => {
     try {
-      const h = await apiAdapter.request<HallItem[]>(
+      const availableOrders = await apiAdapter.request<HallItem[]>(
         "/api/v1/tenant/player/order-hall",
-        { token: t },
+        { token: accessToken },
       );
-      const m = await apiAdapter.request<MyApp[]>(
+      const applications = await apiAdapter.request<MyApp[]>(
         "/api/v1/tenant/player/applications",
-        { token: t },
+        { token: accessToken },
       );
-      setHall(h);
-      setMine(m);
+      setHall(availableOrders);
+      setMine(applications);
       const next: Record<string, SessionView> = {};
-      for (const app of m) {
-        if (app.status !== "SELECTED") continue;
+      for (const application of applications) {
+        if (application.status !== "SELECTED") continue;
         try {
-          const view = await apiAdapter.request<SessionView | null>(
-            `/api/v1/tenant/orders/${app.orderId}/session`,
-            { token: t },
+          const sessionView = await apiAdapter.request<SessionView | null>(
+            `/api/v1/tenant/orders/${application.orderId}/session`,
+            { token: accessToken },
           );
-          // 指派成功但场次尚未 start：以占位状态渲染“开始场次”按钮，
-          // start 响应返回真实 sessionId 后再展示证据/结束操作。
-          next[app.orderId] = view ?? {
+          next[application.orderId] = sessionView ?? {
             id: "",
             status: "NOT_STARTED",
             startedAt: null,
@@ -92,8 +111,7 @@ export default function OrderHallPage() {
             durationSeconds: null,
           };
         } catch {
-          // 未生成场次/尚未开始均不阻塞大厅加载，仍显示“开始场次”。
-          next[app.orderId] = {
+          next[application.orderId] = {
             id: "",
             status: "NOT_STARTED",
             startedAt: null,
@@ -113,11 +131,11 @@ export default function OrderHallPage() {
   };
 
   useLoad(async () => {
-    const t = session.getToken();
-    setToken(t);
-    if (t) {
-      await load(t);
-      await loadFeatureGate(t);
+    const accessToken = session.getToken();
+    setToken(accessToken);
+    if (accessToken) {
+      await load(accessToken);
+      await loadFeatureGate(accessToken);
     }
     const info = await tenantLocator.resolveTenant();
     if (info.state === "ok" && info.tenant?.code)
@@ -128,19 +146,19 @@ export default function OrderHallPage() {
     setBusy(true);
     setMsg(null);
     try {
-      const loginInput: {
+      const input: {
         kind: "tenant";
         username: string;
         password: string;
         tenantCode?: string;
       } = { kind: "tenant", username, password };
-      if (tenantCode) loginInput.tenantCode = tenantCode;
-      const s = await identityAdapter.login(loginInput);
-      session.setToken(s.accessToken);
-      setToken(s.accessToken);
+      if (tenantCode) input.tenantCode = tenantCode;
+      const loginSession = await identityAdapter.login(input);
+      session.setToken(loginSession.accessToken);
+      setToken(loginSession.accessToken);
       setPassword("");
-      await load(s.accessToken);
-      await loadFeatureGate(s.accessToken);
+      await load(loginSession.accessToken);
+      await loadFeatureGate(loginSession.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {
@@ -157,7 +175,7 @@ export default function OrderHallPage() {
         `/api/v1/tenant/player/orders/${orderId}/applications`,
         { method: "POST", token, body: {} },
       );
-      setMsg("报名成功");
+      setMsg("报名成功，门店选中后会出现在服务列表中。");
       await load(token);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -168,12 +186,12 @@ export default function OrderHallPage() {
 
   const toggleSession = async (orderId: string) => {
     if (!token) return;
-    const view = sessions[orderId];
-    if (!view) return;
+    const sessionView = sessions[orderId];
+    if (!sessionView) return;
     setBusy(true);
     setMsg(null);
     try {
-      const action = view.status === "STARTED" ? "end" : "start";
+      const action = sessionView.status === "STARTED" ? "end" : "start";
       const captureProof = async (sessionId: string) => {
         const evidence = await mediaAdapter.chooseEvidence({ capture: true });
         await apiAdapter.uploadBytes(
@@ -190,7 +208,7 @@ export default function OrderHallPage() {
         );
         await captureProof(started.id);
       } else {
-        await captureProof(view.id);
+        await captureProof(sessionView.id);
         await apiAdapter.request(
           `/api/v1/tenant/orders/${orderId}/session/end`,
           { method: "POST", token },
@@ -198,8 +216,8 @@ export default function OrderHallPage() {
       }
       setMsg(
         action === "start"
-          ? "场次已开始，已保存开始照片/录像。"
-          : "场次已结束，已保存结束照片/录像。",
+          ? "场次已开始，开始证据已保存。"
+          : "场次已结束，结束证据已保存。",
       );
       await load(token);
     } catch (error) {
@@ -234,147 +252,238 @@ export default function OrderHallPage() {
     }
   };
 
-  const logout = () => {
-    session.clearToken();
-    setToken(null);
-    setMsg(null);
-  };
+  const selectedApplications = mine.filter(
+    (application) => application.status === "SELECTED",
+  );
+  const runningCount = selectedApplications.filter(
+    (application) => sessions[application.orderId]?.status === "STARTED",
+  ).length;
+  const pageTitle =
+    view === "hall" ? "接单大厅" : view === "service" ? "服务中" : "我的接单";
+  const subtitle =
+    view === "hall"
+      ? `当前有 ${hall.length} 单可报名`
+      : view === "service"
+        ? "开始、结束与证据均以服务端为准"
+        : `${mine.length} 条报名记录`;
 
   return (
-    <View className="page">
-      <Text className="title">接单大厅</Text>
-      {token === null ? (
-        <View className="card">
-          <Text className="label">门店 code</Text>
-          <Input
-            className="input"
-            value={tenantCode}
-            onInput={(e) => setTenantCode(e.detail.value)}
-            placeholder="demo"
-          />
-          <Text className="label">账号（陪玩）</Text>
-          <Input
-            className="input"
-            value={username}
-            onInput={(e) => setUsername(e.detail.value)}
-            placeholder="player"
-          />
-          <Text className="label">密码</Text>
-          <Input
-            className="input"
-            password
-            value={password}
-            onInput={(e) => setPassword(e.detail.value)}
-            placeholder="••••"
-          />
-          <Button className="btn" disabled={busy} onClick={() => void login()}>
-            登录并查看可接订单
-          </Button>
-          {msg ? <Text className="err">{msg}</Text> : null}
-        </View>
+    <PlayerPage
+      title={pageTitle}
+      subtitle={subtitle}
+      activeNav={view === "hall" ? "orders" : "service"}
+      badge={
+        token ? (
+          <Text
+            className={`pw-badge ${view === "service" && runningCount > 0 ? "pw-badge-live" : ""}`}
+          >
+            {view === "service"
+              ? `${runningCount} 进行中`
+              : hallEnabled
+                ? "可接单"
+                : "未开通"}
+          </Text>
+        ) : undefined
+      }
+    >
+      {!token ? (
+        <PlayerLoginCard
+          tenantCode={tenantCode}
+          username={username}
+          password={password}
+          busy={busy}
+          actionLabel="登录并查看可接订单"
+          onTenantCode={setTenantCode}
+          onUsername={setUsername}
+          onPassword={setPassword}
+          onLogin={() => void login()}
+        />
       ) : (
-        <>
-          <View className="row">
-            <Text className="label">已登录（可接 {hall.length}）</Text>
-            <Button size="mini" onClick={logout}>
-              退出
+        <View className="pw-tabs">
+          {(["hall", "service", "applications"] as const).map((key) => (
+            <Button
+              key={key}
+              className={`pw-tab ${view === key ? "is-active" : ""}`}
+              onClick={() => setView(key)}
+            >
+              {key === "hall"
+                ? "大厅"
+                : key === "service"
+                  ? "服务"
+                  : "我的接单"}
             </Button>
+          ))}
+        </View>
+      )}
+
+      {msg ? (
+        <PlayerMessage
+          tone={
+            msg.startsWith("报名成功") ||
+            msg.startsWith("场次已") ||
+            msg.startsWith("已拍摄") ||
+            msg.startsWith("证据已")
+              ? "success"
+              : "error"
+          }
+        >
+          {msg}
+        </PlayerMessage>
+      ) : null}
+
+      {token && view === "hall" ? (
+        <>
+          <View className="pw-stat-card">
+            <Text className="pw-stat-label">今日大厅</Text>
+            <Text className="pw-stat-value">{hall.length} 单可接</Text>
+            <Text className="pw-stat-note">
+              订单可见性与报名权限由门店配置决定
+            </Text>
           </View>
-          {msg ? <Text className="err">{msg}</Text> : null}
           {hall.length === 0 ? (
-            <Text className="muted">暂无派单（可先由商家端发布订单）</Text>
+            <Text className="pw-empty">暂无可接订单，请稍后再来查看。</Text>
           ) : null}
-          {hall.map((o) => (
-            <View key={o.id} className="card">
-              <Text className="strong">
-                {o.productName} · {Math.floor(o.durationSeconds / 60)} 分钟
-              </Text>
-              <Text className="muted">
-                单号 {o.orderNo} · {formatFenYuan(o.unitPriceFen)}
-              </Text>
-              {o.desiredStartAt ? (
-                <Text className="muted">
-                  期望开始：{new Date(o.desiredStartAt).toLocaleString()}
+          {hall.map((order) => (
+            <View key={order.id} className="pw-card hall-order-card">
+              <Text className="pw-card-title">{order.productName}</Text>
+              <View className="hall-order-meta">
+                <Text className="pw-muted">
+                  单号 {order.orderNo} ·{" "}
+                  {Math.floor(order.durationSeconds / 60)} 分钟
                 </Text>
-              ) : null}
-              {hallEnabled ? (
-                <Button
-                  className="btn primary"
-                  disabled={busy}
-                  onClick={() => void apply(o.id)}
+                <Text className="pw-muted">
+                  期望开始：{formatDateTime(order.desiredStartAt)}
+                </Text>
+              </View>
+              <View className="pw-row-between">
+                <Text className="pw-price">
+                  {formatFenYuan(order.unitPriceFen)}
+                </Text>
+                {hallEnabled ? (
+                  <Button
+                    className="pw-button pw-button-small pw-button-soft"
+                    disabled={busy}
+                    onClick={() => void apply(order.id)}
+                  >
+                    报名
+                  </Button>
+                ) : null}
+              </View>
+            </View>
+          ))}
+        </>
+      ) : null}
+
+      {token && view === "service" ? (
+        <>
+          {selectedApplications.length === 0 ? (
+            <Text className="pw-empty">
+              暂无待服务或进行中的场次。被选中后会显示在这里。
+            </Text>
+          ) : null}
+          {selectedApplications.map((application) => {
+            const sessionView = sessions[application.orderId];
+            const running = sessionView?.status === "STARTED";
+            return (
+              <View
+                key={application.id}
+                className={`pw-card hall-session-card ${running ? "is-running" : ""}`}
+              >
+                <View className="pw-row-between">
+                  <View className="pw-row-copy">
+                    <Text className="pw-card-title">
+                      订单 {application.orderId.slice(0, 8)}…
+                    </Text>
+                    <Text className="pw-muted">
+                      {running
+                        ? `开始时间 ${formatDateTime(sessionView.startedAt)}`
+                        : "等待开始服务"}
+                    </Text>
+                  </View>
+                  <Text
+                    className={`pw-badge ${running ? "pw-badge-live" : "pw-badge-wait"}`}
+                  >
+                    {running ? "进行中" : "待开始"}
+                  </Text>
+                </View>
+                {running && sessionView.durationSeconds !== null ? (
+                  <Text className="pw-stat-value">
+                    {Math.floor(sessionView.durationSeconds / 60)} 分钟
+                  </Text>
+                ) : null}
+                <View className="hall-session-actions">
+                  {running && sessionView.id ? (
+                    <>
+                      <Button
+                        className="pw-button pw-button-small pw-button-plain"
+                        disabled={busy}
+                        onClick={() =>
+                          void uploadEvidence(sessionView.id, "upload")
+                        }
+                      >
+                        上传证据
+                      </Button>
+                      <Button
+                        className="pw-button pw-button-small pw-button-plain"
+                        disabled={busy}
+                        onClick={() =>
+                          void uploadEvidence(sessionView.id, "capture")
+                        }
+                      >
+                        拍照/录像
+                      </Button>
+                    </>
+                  ) : null}
+                  <Button
+                    className={`pw-button ${running ? "pw-button-plain" : "pw-button-primary"}`}
+                    disabled={busy || !sessionView}
+                    onClick={() => void toggleSession(application.orderId)}
+                  >
+                    {running
+                      ? "结束服务（先拍照/录像）"
+                      : "开始服务（拍照留证）"}
+                  </Button>
+                </View>
+              </View>
+            );
+          })}
+        </>
+      ) : null}
+
+      {token && view === "applications" ? (
+        <View className="pw-stack">
+          {mine.length === 0 ? (
+            <Text className="pw-empty">暂无报名记录。</Text>
+          ) : null}
+          {mine.map((application) => (
+            <View key={application.id} className="pw-card">
+              <View className="pw-row-between">
+                <View className="pw-row-copy">
+                  <Text className="pw-card-title">
+                    订单 {application.orderId.slice(0, 8)}…
+                  </Text>
+                  <Text className="pw-muted">
+                    报名于 {formatDateTime(application.createdAt)}
+                  </Text>
+                </View>
+                <Text
+                  className={`pw-badge ${application.status === "SELECTED" ? "pw-badge-live" : "pw-badge-wait"}`}
                 >
-                  报名
+                  {APPLICATION_STATUS[application.status] ?? application.status}
+                </Text>
+              </View>
+              {application.status === "SELECTED" ? (
+                <Button
+                  className="pw-button pw-button-small pw-button-dark"
+                  onClick={() => setView("service")}
+                >
+                  查看场次
                 </Button>
               ) : null}
             </View>
           ))}
-          <View className="card">
-            <Text className="strong">我的报名</Text>
-            {mine.length === 0 ? <Text className="muted">暂无报名</Text> : null}
-            {mine.map((m) => (
-              <View key={m.id} className="row">
-                <View>
-                  <Text className="muted">
-                    单 {m.orderId.slice(0, 8)}… · 状态：{m.status}
-                  </Text>
-                  {sessions[m.orderId] ? (
-                    <Text className="muted">
-                      · 场次：{sessions[m.orderId]?.status}
-                    </Text>
-                  ) : null}
-                </View>
-                {m.status === "SELECTED" && sessions[m.orderId] ? (
-                  <View className="row-actions">
-                    {sessions[m.orderId]?.status === "STARTED" ? (
-                      <View
-                        style={{
-                          display: "flex",
-                          flexDirection: "row",
-                          gap: 8,
-                        }}
-                      >
-                        <Button
-                          size="mini"
-                          disabled={busy}
-                          onClick={() =>
-                            void uploadEvidence(
-                              sessions[m.orderId]?.id ?? "",
-                              "upload",
-                            )
-                          }
-                        >
-                          上传证据
-                        </Button>
-                        <Button
-                          size="mini"
-                          disabled={busy}
-                          onClick={() =>
-                            void uploadEvidence(
-                              sessions[m.orderId]?.id ?? "",
-                              "capture",
-                            )
-                          }
-                        >
-                          拍照/录像
-                        </Button>
-                      </View>
-                    ) : null}
-                    <Button
-                      size="mini"
-                      disabled={busy}
-                      onClick={() => void toggleSession(m.orderId)}
-                    >
-                      {sessions[m.orderId]?.status === "STARTED"
-                        ? "结束场次"
-                        : "开始场次"}
-                    </Button>
-                  </View>
-                ) : null}
-              </View>
-            ))}
-          </View>
-        </>
-      )}
-    </View>
+        </View>
+      ) : null}
+    </PlayerPage>
   );
 }

@@ -2,11 +2,13 @@ import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
 import { PlatformAccountsController } from "./platform-accounts.controller.js";
 import { PlatformAccountsService } from "./platform-accounts.service.js";
+import { PlatformGrantsController } from "./platform-grants.controller.js";
+import { PlatformGrantsService } from "./platform-grants.service.js";
 
 export const PLATFORM_ACCOUNTS_DB_CLIENT = "PLATFORM_ACCOUNTS_DB_CLIENT";
 
 @Module({
-  controllers: [PlatformAccountsController],
+  controllers: [PlatformAccountsController, PlatformGrantsController],
   providers: [
     {
       provide: PLATFORM_ACCOUNTS_DB_CLIENT,
@@ -22,6 +24,13 @@ export const PLATFORM_ACCOUNTS_DB_CLIENT = "PLATFORM_ACCOUNTS_DB_CLIENT";
         new PlatformAccountsService(client),
       inject: [PLATFORM_ACCOUNTS_DB_CLIENT],
     },
+    {
+      provide: PlatformGrantsService,
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        new PlatformGrantsService(client),
+      inject: [PLATFORM_ACCOUNTS_DB_CLIENT],
+    },
   ],
+  exports: [PlatformGrantsService],
 })
 export class PlatformAccountsModule {}

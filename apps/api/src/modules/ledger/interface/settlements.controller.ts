@@ -61,6 +61,14 @@ export class SettlementsController {
 
   @TenantScope()
   @Permissions("finance.manage")
+  @Get("ledger")
+  async financeLedger(@Req() req: AuthenticatedRequest) {
+    this.guard(req);
+    return { data: await this.repo.financeLedger(tenantIdOf(req)) };
+  }
+
+  @TenantScope()
+  @Permissions("finance.manage")
   @Get(":id")
   async detail(
     @Req() req: AuthenticatedRequest,

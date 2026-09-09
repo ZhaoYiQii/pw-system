@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ModuleGate } from "@/app/_lib/merchant-console/module-gate";
-import { getRecordModule } from "@/app/_lib/merchant-console/record-data";
+import { getMerchantModule } from "@/app/_lib/merchant-console/modules";
 import { RecordDetailView } from "@/app/_lib/merchant-console/record-detail-view";
 
 export default async function MerchantRecordDetailPage({
@@ -9,20 +9,15 @@ export default async function MerchantRecordDetailPage({
   params: Promise<{ module: string; recordId: string }>;
 }) {
   const { module, recordId } = await params;
-  const config = getRecordModule(module);
+  const meta = getMerchantModule(module);
 
-  if (!config) {
-    notFound();
-  }
-
-  const row = config.rows.find((item) => item.id === recordId);
-  if (!row) {
+  if (!meta) {
     notFound();
   }
 
   return (
-    <ModuleGate moduleId={config.id}>
-      <RecordDetailView moduleId={config.id} recordId={row.id} />
+    <ModuleGate moduleId={meta.id}>
+      <RecordDetailView moduleId={meta.id} recordId={recordId} />
     </ModuleGate>
   );
 }

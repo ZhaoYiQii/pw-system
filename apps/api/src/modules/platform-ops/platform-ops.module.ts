@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { PlatformAccountsModule } from "../platform-accounts/platform-accounts.module.js";
 import { PlatformOpsController } from "./platform-ops.controller.js";
 import { PlatformOpsService } from "./platform-ops.service.js";
 
 export const PLATFORM_OPS_DB_CLIENT = "PLATFORM_OPS_DB_CLIENT";
 
 @Module({
+  imports: [PlatformAccountsModule],
   controllers: [PlatformOpsController],
   providers: [
     {

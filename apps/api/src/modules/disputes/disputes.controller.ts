@@ -68,6 +68,22 @@ export class DisputesController {
 
   @TenantScope()
   @Permissions("dispute.manage")
+  @Get("disputes/:disputeId")
+  async detail(
+    @Req() req: AuthenticatedRequest,
+    @Param("disputeId") disputeId: string,
+  ) {
+    const role = req.principal?.role;
+    if (role !== "TENANT_OWNER" && role !== "CUSTOMER_SERVICE")
+      throw new ForbiddenException("仅客服/店主可查看争议详情");
+    const view = await this.disputes.detail(tenantIdOf(req), disputeId);
+    if (!view)
+      throw new HttpException("争议不存在", HttpStatus.NOT_FOUND);
+    return { data: view };
+  }
+
+  @TenantScope()
+  @Permissions("dispute.manage")
   @Get("orders/:orderId/disputes")
   async list(
     @Req() req: AuthenticatedRequest,

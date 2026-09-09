@@ -3,78 +3,120 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Plus, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "../api";
+import { DemoEmptyState } from "./demo-ui";
 import {
-  DEMO_ORDER_STATUSES,
-  filledCount,
-  neededCount,
-  orderNo,
-  taskActionLabel,
-  taskHint,
-  type DemoOrder,
-  type DemoOrderStatus,
-} from "./demo-data";
-import { DemoEmptyState, DemoStatusBadge, useDemoToast } from "./demo-ui";
-import { useDemoStore } from "./demo-store";
+  type DispatchRow,
+  type OrderRow,
+  statusLabel,
+  toneFor,
+} from "./merchant-api";
 import { useMerchantRole } from "./role-context";
 
-type FilterValue = "ALL" | DemoOrderStatus;
+interface UnifiedOrder {
+  key: string;
+  id: string;
+  kind: "CLASSIC" | "GD";
+  no: string;
+  customerName: string;
+  status: string;
+  durationText: string;
+  createdAt: string;
+}
+
+type FilterValue = "ALL" | string;
+
+const STATUS_ORDER = [
+  "DRAFT",
+  "CONFIRMED",
+  "DISPATCHING",
+  "ASSIGNED",
+  "READY",
+  "IN_PROGRESS",
+  "PENDING_CONFIRMATION",
+  "COMPLETED",
+  "CANCELLED",
+];
 
 const FILTER_TABS: Array<{ id: FilterValue; label: string }> = [
   { id: "ALL", label: "全部" },
-  { id: "DRAFT", label: "待发布" },
-  { id: "DISPATCHING", label: "报名选人" },
-  { id: "ASSIGNED", label: "已选定" },
-  { id: "IN_PROGRESS", label: "服务中" },
-  { id: "PENDING_CONFIRMATION", label: "待核算" },
-  { id: "COMPLETED", label: "已完成" },
-  { id: "CANCELLED", label: "已取消" },
+  ...STATUS_ORDER.map((status) => ({
+    id: status as FilterValue,
+    label: statusLabel(status),
+  })),
 ];
 
 export function DispatchListView() {
-  const { orders } = useDemoStore();
   const { role } = useMerchantRole();
-  const { toast } = useDemoToast();
   const [filter, setFilter] = useState<FilterValue>("ALL");
   const [query, setQuery] = useState("");
 
-  const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
+  const ordersQuery = useQuery({
+    queryKey: ["merchant", "dispatch", "classic"],
+    queryFn: () => apiFetch<OrderRow[]>("/api/v1/tenant/orders"),
+  });
+  const gdQuery = useQuery({
+    queryKey: ["merchant", "dispatch", "gd"],
+    queryFn: () => apiFetch<DispatchRow[]>("/api/v1/tenant/game-dispatch"),
+  });
 
   useEffect(() => {
     const statusParam = new URLSearchParams(window.location.search).get(
       "status",
     );
-    if (
-      statusParam &&
-      (DEMO_ORDER_STATUSES as readonly string[]).includes(statusParam)
-    ) {
-      setFilter(statusParam as DemoOrderStatus);
-    }
+    if (statusParam) setFilter(statusParam);
   }, []);
+
+  const all = useMemo<UnifiedOrder[]>(() => {
+    const classic: UnifiedOrder[] = (ordersQuery.data ?? []).map((row) => ({
+      key: `c-${row.id}`,
+      id: row.id,
+      kind: "CLASSIC",
+      no: row.orderNo,
+      customerName: row.customerName,
+      status: row.status,
+      durationText: "—",
+      createdAt: row.createdAt,
+    }));
+    const gd: UnifiedOrder[] = (gdQuery.data ?? []).map((row) => ({
+      key: `g-${row.orderId}`,
+      id: row.orderId,
+      kind: "GD",
+      no: row.dispatchNo,
+      customerName: "老板订单",
+      status: row.status,
+      durationText: `${row.durationMinutes} 分钟`,
+      createdAt: row.createdAt,
+    }));
+    return [...classic, ...gd].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
+  }, [ordersQuery.data, gdQuery.data]);
 
   const rows = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    return orders.filter((order) => {
+    return all.filter((order) => {
       const statusOk = filter === "ALL" || order.status === filter;
       if (!statusOk) return false;
       if (!keyword) return true;
-      return [orderNo(order), order.customer, order.game, order.mode].some(
-        (text) => text.toLowerCase().includes(keyword),
+      return [order.no, order.customerName, order.kind].some((text) =>
+        text.toLowerCase().includes(keyword),
       );
     });
-  }, [orders, filter, query]);
+  }, [all, filter, query]);
 
   const countFor = (value: FilterValue) =>
-    value === "ALL"
-      ? orders.length
-      : orders.filter((order) => order.status === value).length;
+    value === "ALL" ? all.length : all.filter((o) => o.status === value).length;
+  const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
 
   return (
     <div>
       <div className="mc-pagehead">
         <div>
-          <div className="mc-kicker">ORDER OPERATIONS</div>
+          <div className="mc-kicker">RECORDS / ORDERS</div>
           <h1>订单与派单</h1>
-          <p>按需求、人员进度和当前动作快速判断每一单。</p>
+          <p>真实订单台账：CLASSIC 订单与 GAME_DISPATCH 派单按状态汇总。</p>
         </div>
         {canOperate ? (
           <Link
@@ -87,6 +129,12 @@ export function DispatchListView() {
         ) : null}
       </div>
 
+      {ordersQuery.isError || gdQuery.isError ? (
+        <div className="mc-notice">
+          订单加载失败，请检查 API 服务或登录会话。
+        </div>
+      ) : null}
+
       <section className="mc-panel">
         <div className="mc-filterbar">
           <div className="mc-filter-row">
@@ -95,12 +143,12 @@ export function DispatchListView() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索编号、客户或游戏"
+                placeholder="搜索编号、客户或类型"
                 aria-label="搜索订单"
               />
             </label>
             <span className="mc-muted-text">
-              更新于原型演示 · 已加载 {orders.length} 单
+              已加载 {all.length} 单 · 来自真实接口
             </span>
           </div>
           <div className="mc-tabs" role="tablist" aria-label="订单状态">
@@ -125,31 +173,70 @@ export function DispatchListView() {
             <table>
               <thead>
                 <tr>
-                  <th>派单 / 客户</th>
-                  <th>游戏需求</th>
-                  <th>人员进度</th>
-                  <th>预约 / 时长</th>
+                  <th>单号</th>
+                  <th>类型 / 客户</th>
+                  <th>时长</th>
+                  <th>创建时间</th>
                   <th>当前状态</th>
                   <th>下一步</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((order) => (
-                  <OrderRow key={order.id} order={order} />
+                  <tr key={order.key}>
+                    <td>
+                      <Link
+                        href={`/merchant-console/dispatch/${order.id}?kind=${order.kind}`}
+                        className="mc-order-link"
+                      >
+                        {order.no}
+                      </Link>
+                    </td>
+                    <td>
+                      <b className="mc-cell-title">
+                        {order.kind === "GD" ? "GAME_DISPATCH" : "CLASSIC"}
+                      </b>
+                      <span className="mc-sub">{order.customerName}</span>
+                    </td>
+                    <td>
+                      <span className="mc-sub">{order.durationText}</span>
+                    </td>
+                    <td>
+                      <span className="mc-mono">
+                        {new Date(order.createdAt).toLocaleString("zh-CN", {
+                          hour12: false,
+                        })}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`mc-status st-${toneFor(order.status)}`}>
+                        {statusLabel(order.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <Link
+                        href={`/merchant-console/dispatch/${order.id}?kind=${order.kind}`}
+                        className="mc-btn mc-btn-ghost mc-btn-small"
+                      >
+                        查看详情
+                        <ArrowRight size={13} />
+                      </Link>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
             <div className="mc-table-foot">
               <span>
-                显示 {rows.length} / {orders.length} 单
+                显示 {rows.length} / {all.length} 单
               </span>
-              <span>原型演示数据 · 按编号倒序</span>
+              <span>订单接口：/tenant/orders · /tenant/game-dispatch</span>
             </div>
           </div>
         ) : (
           <DemoEmptyState
-            title="没有符合条件的派单"
-            description="调整搜索文字或清空当前筛选。"
+            title="没有符合条件的订单"
+            description="调整筛选或搜索条件后重试。"
           >
             <button
               type="button"
@@ -164,70 +251,6 @@ export function DispatchListView() {
           </DemoEmptyState>
         )}
       </section>
-      {toast}
     </div>
-  );
-}
-
-function OrderRow({ order }: { order: DemoOrder }) {
-  const applied = order.players.filter(
-    (player) => player.status === "APPLIED",
-  ).length;
-  const total = neededCount(order);
-  const done = filledCount(order);
-  const percent = total ? Math.round((done / total) * 100) : 0;
-  const hint =
-    order.status === "DISPATCHING" ? `${applied} 人待选` : taskHint(order);
-
-  return (
-    <tr>
-      <td>
-        <Link
-          href={`/merchant-console/dispatch/${order.id}`}
-          className="mc-order-link"
-        >
-          {orderNo(order)}
-        </Link>
-        <span className="mc-sub">{order.customer}</span>
-      </td>
-      <td>
-        <b className="mc-cell-title">{order.game}</b>
-        <span className="mc-sub">
-          {order.mode} ·{" "}
-          {order.roles.map((role) => `${role.name} ${role.need}`).join(" / ")}
-        </span>
-      </td>
-      <td>
-        <span className="mc-mono">
-          {done} / {total}
-        </span>
-        <span className="mc-sub">
-          {order.status === "CANCELLED" || total === 0
-            ? "无有效席位"
-            : done >= total
-              ? "人员已确认"
-              : hint}
-        </span>
-        <div className="mc-progress" aria-label={`人员进度 ${percent}%`}>
-          <i style={{ width: `${percent}%` }} />
-        </div>
-      </td>
-      <td>
-        <span className="mc-mono">{order.time}</span>
-        <span className="mc-sub">{order.duration} 分钟</span>
-      </td>
-      <td>
-        <DemoStatusBadge status={order.status} />
-      </td>
-      <td>
-        <Link
-          href={`/merchant-console/dispatch/${order.id}`}
-          className="mc-btn mc-btn-ghost mc-btn-small"
-        >
-          {taskActionLabel(order)}
-          <ArrowRight size={13} />
-        </Link>
-      </td>
-    </tr>
   );
 }

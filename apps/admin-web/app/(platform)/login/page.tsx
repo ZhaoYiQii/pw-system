@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiFetch, setAccessToken } from "../../_lib/api";
+import { apiFetch, setAccessToken, setCsrfToken } from "../../_lib/api";
 
 interface LoginResult {
   accessToken: string;
+  csrfToken?: string;
 }
 
 export default function PlatformLoginPage() {
@@ -21,9 +22,11 @@ export default function PlatformLoginPage() {
     try {
       const data = await apiFetch<LoginResult>("/api/v1/auth/login", {
         method: "POST",
+        credentials: "include",
         body: JSON.stringify({ kind: "platform", username, password }),
       });
       setAccessToken(data.accessToken);
+      if (data.csrfToken) setCsrfToken(data.csrfToken);
       router.replace("/overview");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -100,7 +103,7 @@ export default function PlatformLoginPage() {
                   margin: "12px 0 0",
                 }}
               >
-                本地演示：登录后进入平台运营控制台。
+                登录后进入平台运营控制台。
               </div>
             )}
             <button
@@ -117,4 +120,3 @@ export default function PlatformLoginPage() {
     </div>
   );
 }
-

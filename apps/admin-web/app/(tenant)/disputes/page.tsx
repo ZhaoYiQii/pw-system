@@ -32,7 +32,11 @@ import { TenantShell } from "../../_lib/tenant-shell";
 interface DisputeRow {
   id: string;
   orderId: string;
+  orderNo: string;
   playerId: string;
+  playerName: string;
+  customerProfileId: string;
+  customerName: string;
   reason: string;
   status: "OPEN" | "RESOLVED";
   resolution: string | null;
@@ -125,6 +129,8 @@ function Inner() {
               <TableHeader>
                 <TableRow>
                   <TableHead>订单</TableHead>
+                  <TableHead>客户</TableHead>
+                  <TableHead>陪玩</TableHead>
                   <TableHead>原因</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>创建时间</TableHead>
@@ -135,8 +141,15 @@ function Inner() {
                 {rowsQuery.data.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-mono text-xs">
-                      {d.orderId.slice(0, 8)}…
+                      <Link
+                        href={`/disputes/${d.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {d.orderNo}
+                      </Link>
                     </TableCell>
+                    <TableCell>{d.customerName}</TableCell>
+                    <TableCell>{d.playerName}</TableCell>
                     <TableCell>{d.reason}</TableCell>
                     <TableCell>
                       <Badge
@@ -152,18 +165,28 @@ function Inner() {
                     </TableCell>
                     <TableCell>
                       {d.status === "OPEN" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={resolve.isPending}
-                          onClick={() => resolve.mutate(d)}
-                        >
-                          处理
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/disputes/${d.id}`}>详情</Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={resolve.isPending}
+                            onClick={() => resolve.mutate(d)}
+                          >
+                            快速处理
+                          </Button>
+                        </div>
                       ) : (
-                        <span className="text-muted-foreground">
-                          {d.resolution ?? "-"}
-                        </span>
+                        <div className="flex gap-2">
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={`/disputes/${d.id}`}>详情</Link>
+                          </Button>
+                          <span className="text-muted-foreground">
+                            {d.resolution ?? "-"}
+                          </span>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

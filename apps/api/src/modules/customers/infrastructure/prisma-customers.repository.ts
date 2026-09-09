@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@pw/database";
-import type { CustomerView } from "../domain/customer.js";
+import type {
+  CustomerAccountView,
+  CustomerOrderHistoryRow,
+  CustomerView,
+} from "../domain/customer.js";
 import {
   decryptPhone,
   encryptPhone,
@@ -183,5 +187,80 @@ export class PrismaCustomerRepository implements CustomerRepository {
       where: { tenantId, tenantAccountId: accountId },
     });
     return row ? map(row) : null;
+  }
+
+  async account(
+    tenantId: string,
+    customerId: string,
+  ): Promise<CustomerAccountView> {
+    const wallet = await this.client.bossWallet.findFirst({
+      where: { tenantId, customerProfileId: customerId },
+    });
+    if (!wallet) {
+      return { customerId, wallet: null };
+    }
+    const entries = await this.client.walletEntry.findMany({
+      where: { tenantId, walletId: wallet.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return {
+      customerId,
+      wallet: {
+        bossNo: wallet.bossNo,
+        balanceFen: wallet.balanceFen.toString(),
+        entries: entries.map((e) => ({
+          id: e.id,
+          txNo: e.txNo,
+          type: e.type,
+          amountFen: e.amountFen.toString(),
+          balanceAfterFen: e.balanceAfterFen.toString(),
+          reason: e.reason,
+          createdAt: e.createdAt,
+        })),
+      },
+    };
+  }
+
+  async orderHistory(
+    tenantId: string,
+    customerId: string,
+  ): Promise<CustomerOrderHistoryRow[]> {
+    const rows = await this.client.order.findMany({
+      where: { tenantId, customerProfileId: customerId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    if (rows.length === 0) return [];
+    const gdOrderIds = rows
+      .filter((r) => r.processType === "GAME_DISPATCH")
+      .map((r) => r.id);
+    const gdRows =
+      gdOrderIds.length > 0
+        ? await this.client.gameDispatchOrder.findMany({
+            where: { tenantId, orderId: { in: gdOrderIds } },
+            select: { orderId: true, dispatchNo: true },
+          })
+        : [];
+    const dispatchNoByOrderId = new Map(
+      gdRows.map((r) => [r.orderId, r.dispatchNo]),
+    );
+    return rows.map((r) => ({
+      orderId: r.id,
+      orderNo:
+        r.processType === "GAME_DISPATCH"
+          ? (dispatchNoByOrderId.get(r.id) ?? r.orderNo)
+          : r.orderNo,
+      dispatchNo:
+        r.processType === "GAME_DISPATCH"
+          ? (dispatchNoByOrderId.get(r.id) ?? null)
+          : null,
+      processType:
+        r.processType === "GAME_DISPATCH" ? "GAME_DISPATCH" : "CLASSIC",
+      status: r.status,
+      remark: r.remark,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
   }
 }

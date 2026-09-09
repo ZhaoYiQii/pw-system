@@ -1,69 +1,152 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, Clipboard, Copy } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, ArrowRight, Clipboard, Copy, RefreshCw } from "lucide-react";
 import {
-  buildCopyText,
-  COPY_LABEL,
-  neededCount,
-  orderNo,
-  ORDER_STAGE,
-  selectedPlayers,
-  shortageFor,
-  totalShortage,
-  type DemoOrder,
-  type DemoOrderStatus,
-} from "./demo-data";
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { apiFetch } from "../api";
+import { formatFenYuan } from "../money";
+import { DemoDialog, DemoEmptyState, useDemoToast } from "./demo-ui";
 import {
-  DemoDialog,
-  DemoEmptyState,
-  DemoStatusBadge,
-  useDemoToast,
-} from "./demo-ui";
-import { useDemoStore } from "./demo-store";
+  type ApplicationView,
+  type DispatchDetail,
+  type OrderView,
+  type SessionOfOrder,
+  dateTime,
+  statusLabel,
+  toneFor,
+} from "./merchant-api";
 import { useMerchantRole } from "./role-context";
 
-type CopyType = "group" | "selected" | "apply" | "boss";
-type PendingAction = "publish" | "confirm" | "settle" | null;
-
-const STEP_LABELS = [
-  "待发布",
-  "报名选人",
-  "已选定",
-  "服务中",
-  "待核算",
-  "已完成",
-];
-
-export function OrderDetailView({ orderId }: { orderId: string }) {
-  const {
-    orders,
-    publishOrder,
-    completeOrder,
-    confirmSelections,
-    removeApplicant,
-  } = useDemoStore();
+export function OrderDetailView({
+  orderId,
+  kind,
+}: {
+  orderId: string;
+  kind: "CLASSIC" | "GD" | null;
+}) {
   const { role } = useMerchantRole();
-  const { toast, showToast } = useDemoToast();
-  const [picks, setPicks] = useState<string[]>([]);
-  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  if (kind === "CLASSIC") {
+    return <ClassicOrderDetail orderId={orderId} role={role} />;
+  }
+  return <GdOrderDetail orderId={orderId} role={role} />;
+}
 
-  const order = orders.find((item) => item.id === orderId);
+// ---------------------------------------------------------------- GD
+function GdOrderDetail({
+  orderId,
+  role,
+}: {
+  orderId: string;
+  role: string;
+}) {
+  const queryClient = useQueryClient();
+  const { toast, showToast } = useDemoToast();
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [confirmAction, setConfirmAction] = useState<
+    "publish" | "settle" | null
+  >(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const query = useQuery({
+    queryKey: ["merchant", "dispatch", "gd", orderId],
+    queryFn: () =>
+      apiFetch<DispatchDetail>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}`,
+      ),
+    retry: false,
+  });
+  const data = query.data;
   const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
 
-  useEffect(() => {
-    setPicks([]);
-  }, [orderId]);
+  const invalidate = () =>
+    void queryClient.invalidateQueries({
+      queryKey: ["merchant", "dispatch", "gd", orderId],
+    });
 
-  const picksSet = useMemo(() => new Set(picks), [picks]);
+  const publish = useMutation({
+    mutationFn: () =>
+      apiFetch<DispatchDetail>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/publish`,
+        { method: "POST" },
+      ),
+    onSuccess: () => {
+      setConfirmAction(null);
+      showToast("派单已发布，报名通道开放。");
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
 
-  if (!order) {
+  const assign = useMutation({
+    mutationFn: () =>
+      apiFetch<DispatchDetail>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/assignment`,
+        {
+          method: "POST",
+          body: JSON.stringify({ applicationIds: Array.from(checked) }),
+        },
+      ),
+    onSuccess: () => {
+      setChecked(new Set());
+      showToast("已确认选中，可复制选定文案。");
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
+
+  const removeApp = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<unknown>(`/api/v1/tenant/game-dispatch/applications/${id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      showToast("已移除报名。");
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
+
+  const settle = useMutation({
+    mutationFn: () =>
+      apiFetch<{ totalFen: string; balanceAfterFen: string }>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/confirm-settlement`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setConfirmAction(null);
+      showToast(
+        `结算完成：扣 ${formatFenYuan(result.totalFen)}，老板余额 ${formatFenYuan(result.balanceAfterFen)}。`,
+      );
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
+
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`${label}已复制。`);
+    } catch {
+      setError("浏览器未允许剪贴板，请手动复制。");
+    }
+  };
+
+  if (query.isPending) {
+    return <div className="mc-empty">加载派单详情…</div>;
+  }
+  if (query.isError || !data) {
     return (
       <section className="mc-panel">
         <DemoEmptyState
           title="没有找到这张派单"
-          description="它可能已随演示数据重置，返回订单台账查看。"
+          description={
+            query.error instanceof Error ? query.error.message : "数据不存在"
+          }
         >
           <Link href="/merchant-console/dispatch" className="mc-btn">
             返回订单台账
@@ -73,597 +156,665 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     );
   }
 
-  const togglePick = (applicantId: string) => {
-    setPicks((prev) =>
-      prev.includes(applicantId)
-        ? prev.filter((id) => id !== applicantId)
-        : [...prev, applicantId],
-    );
-  };
-
-  const copy = async (type: CopyType) => {
-    const text = buildCopyText(order, type);
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast(`${COPY_LABEL[type]} 已复制 · 原型演示`);
-    } catch {
-      showToast("浏览器未允许剪贴板，请在接入后使用复制按钮");
-    }
-  };
-
-  const stage = ORDER_STAGE[order.status];
-  const selected = selectedPlayers(order);
-  const chosen = order.players.filter((player) => picks.includes(player.id));
-  const missAfterPicks = totalShortage(order, picks);
+  const selectedText = data.lines
+    .flatMap((line) =>
+      line.applications
+        .filter((a) => a.status === "SELECTED")
+        .map((a) => `${a.playerName}（${line.positionLabel}）`),
+    )
+    .join("、");
 
   return (
     <div>
       <Link href="/merchant-console/dispatch" className="mc-back">
-        <ArrowLeft size={15} />
-        返回订单与派单
+        <ArrowLeft size={15} /> 返回订单与派单
       </Link>
-
       <div className="mc-pagehead mc-detail-head">
         <div>
-          <div className="mc-kicker">ORDER DETAIL</div>
+          <div className="mc-kicker">GAME_DISPATCH / DETAIL</div>
           <div className="mc-detail-title">
-            <h1 className="mc-mono">{orderNo(order)}</h1>
-            <DemoStatusBadge status={order.status} />
+            <h1 className="mc-mono">{data.dispatchNo}</h1>
+            <span className={`mc-status st-${toneFor(data.status)}`}>
+              {statusLabel(data.status)}
+            </span>
           </div>
-          <p>
-            {order.game} · {order.mode}
-          </p>
+          <p>派单详情 · 复制文案后发送到陪玩群</p>
         </div>
-        <button
-          type="button"
-          className="mc-btn"
-          onClick={() => void copy("group")}
-        >
-          <Clipboard size={15} />
-          群派单文案
-        </button>
+        <div className="mc-button-row">
+          <button
+            type="button"
+            className="mc-btn"
+            onClick={() => void copyText(data.copyText, "群文案")}
+          >
+            <Clipboard size={15} /> 复制群文案
+          </button>
+          <button
+            type="button"
+            className="mc-btn"
+            onClick={() =>
+              void copyText(
+                selectedText
+                  ? `已确认接单：${selectedText}；派单号：${data.dispatchNo}`
+                  : "",
+                "已选定文案",
+              )
+            }
+          >
+            <Copy size={15} /> 复制已选定
+          </button>
+        </div>
       </div>
 
-      <div className="mc-steps" aria-label="订单状态步骤">
-        {STEP_LABELS.map((label, index) => (
-          <div
-            key={label}
-            className={`mc-step${
-              stage === index ? " current" : stage > index ? " done" : ""
-            }`}
-          >
-            <strong>{String(index + 1).padStart(2, "0")}</strong>
-            {label}
-          </div>
-        ))}
-      </div>
+      {error ? <div className="mc-notice">{error}</div> : null}
 
       <div className="mc-detailgrid">
         <div>
           <section className="mc-panel mc-facts">
             <dl className="mc-fact">
-              <dt>客户</dt>
-              <dd>{order.customer}</dd>
+              <dt>报名链接</dt>
+              <dd className="mc-mono">{data.applyUrl || "发布后生成"}</dd>
             </dl>
             <dl className="mc-fact">
-              <dt>计划时长</dt>
-              <dd>{order.duration} 分钟</dd>
+              <dt>老板选人链接</dt>
+              <dd className="mc-mono">{data.bossUrl || "发布后生成"}</dd>
             </dl>
             <dl className="mc-fact">
-              <dt>{order.time.includes(":") ? "预约时间" : "服务进度"}</dt>
-              <dd className="mc-mono">{order.time}</dd>
-            </dl>
-            <dl className="mc-fact">
-              <dt>岗位需求</dt>
-              <dd>
-                {order.roles
-                  .map((roleItem) => `${roleItem.name} ${roleItem.need}`)
-                  .join(" / ")}
+              <dt>报名轮次</dt>
+              <dd className="mc-mono">
+                {data.round ? `第 ${data.round.roundNo} 轮` : "未开始"}
               </dd>
             </dl>
+            {data.round ? (
+              <dl className="mc-fact">
+                <dt>截止时间</dt>
+                <dd className="mc-mono">{dateTime(data.round.closesAt)}</dd>
+              </dl>
+            ) : null}
           </section>
 
-          {order.status === "DISPATCHING" ? (
-            <>
-              <SeatsPanel order={order} picks={picks} />
-              <ApplicantsPanel
-                order={order}
-                picks={picks}
-                picksSet={picksSet}
-                canOperate={canOperate}
-                onToggle={togglePick}
-                onRemove={(applicantId) => {
-                  removeApplicant(order.id, applicantId);
-                  setPicks((prev) => prev.filter((id) => id !== applicantId));
-                  showToast(`已移除报名 · 仅原型演示`);
-                }}
-              />
-            </>
-          ) : (
-            <StateCard
-              order={order}
-              canOperate={canOperate}
-              onPublish={() => setPendingAction("publish")}
-              onSettle={() => setPendingAction("settle")}
-              roleLabel={role}
-            />
-          )}
-
-          {order.status !== "DISPATCHING" &&
-          !["DRAFT", "CONFIRMED", "CANCELLED"].includes(order.status) ? (
-            <SeatsPanel order={order} picks={[]} />
+          {data.lines.length ? (
+            <section className="mc-panel mc-applicants">
+              <div className="mc-section-head">
+                <div>
+                  <h2>报名席位</h2>
+                  <p>勾选报名中的陪玩后可批量确认</p>
+                </div>
+                <span className="mc-sub">{data.lines.length} 个岗位</span>
+              </div>
+              {data.lines.map((line) => {
+                const selected = line.applications.filter(
+                  (a) => a.status === "SELECTED",
+                ).length;
+                const canPick = data.status === "DISPATCHING";
+                return (
+                  <div key={line.id} className="mc-role-label">
+                    <span>
+                      {line.positionLabel} · 需要 {line.requiredCount} 人
+                    </span>
+                    <span>
+                      {selected} / {line.requiredCount} 已确认
+                    </span>
+                    <div className="mc-seats mc-seats-inline">
+                      {line.applications.map((app) => {
+                        const chosen = checked.has(app.id);
+                        return (
+                          <div
+                            className={`mc-candidate${chosen ? " chosen" : ""}`}
+                            key={app.id}
+                          >
+                            <input
+                              type="checkbox"
+                              id={`pick-${app.id}`}
+                              disabled={!canOperate || !canPick}
+                              checked={
+                                app.status === "SELECTED" || chosen
+                              }
+                              onChange={() =>
+                                setChecked((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(app.id)) next.delete(app.id);
+                                  else next.add(app.id);
+                                  return next;
+                                })
+                              }
+                            />
+                            <label htmlFor={`pick-${app.id}`}>
+                              <span className="mc-avatar mc-avatar-sm" aria-hidden="true">
+                                {app.playerName.slice(0, 1)}
+                              </span>
+                              <span>
+                                <b>{app.playerName}</b>
+                                <small>
+                                  {app.status === "APPLIED"
+                                    ? "已报名"
+                                    : app.status === "SELECTED"
+                                      ? "已确认"
+                                      : app.status}
+                                  {" · "}
+                                  {dateTime(app.createdAt)}
+                                </small>
+                              </span>
+                            </label>
+                            {canOperate && canPick && app.status === "APPLIED" ? (
+                              <button
+                                type="button"
+                                className="mc-remove"
+                                onClick={() => removeApp.mutate(app.id)}
+                              >
+                                移除
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      {line.applications.length === 0 ? (
+                        <div className="mc-empty mc-empty-compact">
+                          暂无报名，等待陪玩报名。
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
           ) : null}
         </div>
 
-        <ReviewRail
-          order={order}
-          selected={selected}
-          chosen={chosen}
-          missAfterPicks={missAfterPicks}
-          canOperate={canOperate}
-          onCopy={(type) => void copy(type)}
-          onConfirm={() => setPendingAction("confirm")}
-        />
+        <aside className="mc-panel mc-review">
+          <div className="mc-review-top">
+            <h2>派单动作</h2>
+            <span>{canOperate ? "按状态开放" : "只读"}</span>
+          </div>
+          <div className="mc-review-group">
+            <div className="mc-summary-line">
+              <span>当前状态</span>
+              <b>{statusLabel(data.status)}</b>
+            </div>
+            <div className="mc-summary-line">
+              <span>已选人数</span>
+              <b>
+                {data.lines.reduce(
+                  (sum, line) =>
+                    sum +
+                    line.applications.filter(
+                      (a) => a.status === "SELECTED",
+                    ).length,
+                  0,
+                )}
+              </b>
+            </div>
+          </div>
+          {canOperate && ["DRAFT", "CONFIRMED"].includes(data.status) ? (
+            <button
+              type="button"
+              className="mc-btn mc-btn-primary mc-review-confirm"
+              onClick={() => setConfirmAction("publish")}
+            >
+              发布派单
+            </button>
+          ) : null}
+          {canOperate && data.status === "DISPATCHING" ? (
+            <button
+              type="button"
+              className="mc-btn mc-btn-primary mc-review-confirm"
+              disabled={checked.size === 0 || assign.isPending}
+              onClick={() => assign.mutate()}
+            >
+              确认选中 · {checked.size} 人
+            </button>
+          ) : null}
+          {canOperate && data.status === "PENDING_CONFIRMATION" ? (
+            <button
+              type="button"
+              className="mc-btn mc-btn-primary mc-review-confirm"
+              onClick={() => setConfirmAction("settle")}
+            >
+              确认结算
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="mc-btn mc-btn-ghost"
+            onClick={() => invalidate()}
+          >
+            <RefreshCw size={14} /> 刷新报名
+          </button>
+        </aside>
       </div>
 
       <DemoDialog
-        open={pendingAction === "publish"}
+        open={confirmAction === "publish"}
         title="发布派单"
         confirmLabel="发布派单"
-        onCancel={() => setPendingAction(null)}
-        onConfirm={() => {
-          publishOrder(order.id);
-          setPendingAction(null);
-          showToast("派单已发布 · 原型状态已更新");
-        }}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => publish.mutate()}
       >
-        <p>
-          {orderNo(order)} · {order.game} · {order.mode}
-        </p>
-        <div className="mc-summary-line">
-          <span>岗位需求</span>
-          <b>
-            {order.roles
-              .map((roleItem) => `${roleItem.name} ${roleItem.need} 人`)
-              .join("、")}
-          </b>
-        </div>
-        <div className="mc-notice">发布后将开放 10 分钟报名（演示规则）。</div>
+        <p>{data.dispatchNo} 发布后将开放报名通道。</p>
       </DemoDialog>
-
       <DemoDialog
-        open={pendingAction === "confirm"}
-        title="复核本次人选"
-        confirmLabel="确认选人"
-        onCancel={() => setPendingAction(null)}
-        onConfirm={() => {
-          confirmSelections(order.id, picks);
-          setPicks([]);
-          setPendingAction(null);
-          showToast(
-            missAfterPicks
-              ? "人选已确认 · 剩余岗位继续报名"
-              : "人选已确认 · 队伍已选定",
-          );
-        }}
+        open={confirmAction === "settle"}
+        title="确认结算"
+        confirmLabel="确认结算"
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={() => settle.mutate()}
       >
-        <p>以下人选将确认为 {orderNo(order)} 的服务人选。</p>
-        {chosen.map((player) => (
-          <div className="mc-summary-line" key={player.id}>
-            <b>{player.name}</b>
-            <span>{player.role}</span>
-          </div>
-        ))}
-        <div className="mc-notice">
-          {missAfterPicks
-            ? `确认后仍缺 ${missAfterPicks} 人，订单保持报名选人。`
-            : "岗位全部补齐，订单将进入已选定。"}
-        </div>
+        <p>确认按实际时长向老板扣费并结算陪玩收入？</p>
       </DemoDialog>
-
-      <DemoDialog
-        open={pendingAction === "settle"}
-        title="核算预览"
-        confirmLabel="模拟确认"
-        onCancel={() => setPendingAction(null)}
-        onConfirm={() => {
-          completeOrder(order.id);
-          setPendingAction(null);
-          showToast("已模拟确认核算 · 未实际扣费");
-        }}
-      >
-        <span className="mc-status st-dispatch">演示金额 · 未实际扣费</span>
-        <p style={{ marginTop: 10 }}>
-          以下金额只用于展示核算界面，不是服务端结果。
-        </p>
-        <div className="mc-summary-line">
-          <span>计划时长</span>
-          <b>{order.duration} 分钟</b>
-        </div>
-        <div className="mc-summary-line">
-          <span>订单扣费（示例）</span>
-          <b>¥120.00</b>
-        </div>
-        <div className="mc-summary-line">
-          <span>扣费后余额（示例）</span>
-          <b>¥380.00</b>
-        </div>
-        <div className="mc-notice">订单扣费与收入确认不代表已向陪玩付款。</div>
-      </DemoDialog>
-
       {toast}
     </div>
   );
 }
 
-function StateCard({
-  order,
-  canOperate,
-  onPublish,
-  onSettle,
-  roleLabel,
+// ------------------------------------------------------------- CLASSIC
+function ClassicOrderDetail({
+  orderId,
+  role,
 }: {
-  order: DemoOrder;
-  canOperate: boolean;
-  onPublish: () => void;
-  onSettle: () => void;
-  roleLabel: string;
+  orderId: string;
+  role: string;
 }) {
-  const state: Record<
-    DemoOrderStatus,
-    { title: string; description: string; action?: "publish" | "settle" }
-  > = {
-    DRAFT: {
-      title: "等待发布",
-      description: "确认需求与岗位人数后开放 10 分钟报名。",
-      action: "publish",
-    },
-    CONFIRMED: {
-      title: "等待发布",
-      description: "确认需求与岗位人数后开放 10 分钟报名。",
-      action: "publish",
-    },
-    ASSIGNED: {
-      title: "队伍已选定",
-      description: "人员已确认，等待服务开始；预约时间不代表已开始计时。",
-    },
-    IN_PROGRESS: {
-      title: "服务进行中",
-      description: "实际时长由服务端记录，完成后进入费用核对。",
-    },
-    PENDING_CONFIRMATION: {
-      title: "等待核对费用",
-      description: "服务已结束，请核对实际时长、订单扣费与收入确认。",
-      action: "settle",
-    },
-    COMPLETED: {
-      title: "订单已完成",
-      description: "订单核算已确认；陪玩付款仍由财务结算批次处理。",
-    },
-    CANCELLED: {
-      title: "订单已取消",
-      description: "报名和后续操作已经关闭。",
-    },
-    DISPATCHING: {
-      title: "报名选人中",
-      description: "从报名人选中选择并确认队伍席位。",
-    },
+  const queryClient = useQueryClient();
+  const { toast, showToast } = useDemoToast();
+  const [error, setError] = useState<string | null>(null);
+  const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
+
+  const detailQuery = useQuery({
+    queryKey: ["merchant", "dispatch", "classic", orderId],
+    queryFn: () =>
+      apiFetch<OrderView>(`/api/v1/tenant/orders/${orderId}`),
+    retry: false,
+  });
+  const detail = detailQuery.data;
+  const applicationsQuery = useQuery({
+    queryKey: ["merchant", "dispatch", "classic-apps", orderId],
+    queryFn: () =>
+      apiFetch<ApplicationView[]>(
+        `/api/v1/tenant/orders/${orderId}/applications`,
+      ),
+    enabled:
+      detail !== undefined &&
+      ["DISPATCHING", "ASSIGNED", "READY", "IN_PROGRESS", "PENDING_CONFIRMATION"].includes(
+        detail.status,
+      ),
+    retry: false,
+  });
+  const sessionQuery = useQuery({
+    queryKey: ["merchant", "dispatch", "classic-session", orderId],
+    queryFn: () =>
+      apiFetch<SessionOfOrder>(`/api/v1/tenant/orders/${orderId}/session`),
+    enabled:
+      detail !== undefined &&
+      ["READY", "IN_PROGRESS", "PENDING_CONFIRMATION", "COMPLETED"].includes(
+        detail.status,
+      ),
+    retry: false,
+  });
+  const applications = applicationsQuery.data ?? [];
+  const sessionInfo = sessionQuery.data ?? null;
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["merchant", "dispatch", "classic", orderId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["merchant", "dispatch", "classic-apps", orderId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["merchant", "dispatch", "classic-session", orderId],
+    });
   };
 
-  const meta = state[order.status];
-  return (
-    <section className="mc-panel mc-state-card">
-      <h2>{meta.title}</h2>
-      <p>{meta.description}</p>
-      {meta.action && canOperate ? (
-        <div className="mc-button-row">
-          <button
-            type="button"
-            className="mc-btn mc-btn-primary"
-            onClick={meta.action === "publish" ? onPublish : onSettle}
-          >
-            {meta.action === "publish" ? "发布派单" : "查看核算演示"}
-          </button>
-        </div>
-      ) : null}
-      {meta.action && !canOperate ? (
-        <p className="mc-state-note">
-          当前为 {roleLabel} 只读视角，写操作待后端权限接口就绪后开放。
-        </p>
-      ) : null}
-      <div className="mc-state-note">
-        <b>服务需求</b>
-        <br />
-        {order.game} · {order.mode} ·{" "}
-        {order.roles
-          .map((roleItem) => `${roleItem.name} ${roleItem.need} 人`)
-          .join(" / ")}
-      </div>
-    </section>
-  );
-}
+  const mutate = useMutation({
+    mutationFn: (payload: {
+      action: string;
+      body?: unknown;
+    }) =>
+      apiFetch<unknown>(`/api/v1/tenant/orders/${orderId}/${payload.action}`, {
+        method: "POST",
+        ...(payload.body !== undefined
+          ? { body: JSON.stringify(payload.body) }
+          : {}),
+      }),
+    onSuccess: () => {
+      showToast("订单状态已更新。");
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
 
-function SeatsPanel({ order, picks }: { order: DemoOrder; picks: string[] }) {
-  const selectedCount = order.players.filter(
-    (player) => player.status === "SELECTED",
-  ).length;
+  const shortlist = useMutation({
+    mutationFn: (applicationId: string) =>
+      apiFetch<unknown>(
+        `/api/v1/tenant/orders/${orderId}/applications/${applicationId}/shortlist`,
+        {
+          method: "POST",
+          body: JSON.stringify({ shortlisted: true }),
+        },
+      ),
+    onSuccess: () => {
+      showToast("已加入候选。");
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
+  const assign = useMutation({
+    mutationFn: (applicationId: string) =>
+      apiFetch<unknown>(`/api/v1/tenant/orders/${orderId}/assignment`, {
+        method: "POST",
+        body: JSON.stringify({ applicationId }),
+      }),
+    onSuccess: () => {
+      showToast("已指派陪玩。");
+      invalidate();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
+
+  if (detailQuery.isPending) return <div className="mc-empty">加载订单…</div>;
+  if (detailQuery.isError || !detail) {
+    return (
+      <section className="mc-panel">
+        <DemoEmptyState
+          title="没有找到这张订单"
+          description={
+            detailQuery.error instanceof Error
+              ? detailQuery.error.message
+              : "订单不存在"
+          }
+        >
+          <Link href="/merchant-console/dispatch" className="mc-btn">
+            返回订单台账
+          </Link>
+        </DemoEmptyState>
+      </section>
+    );
+  }
+
+  const facts = detail.requirement
+    ? [
+        { label: "客户", value: detail.customerName },
+        { label: "需求描述", value: detail.requirement.description || "-" },
+        {
+          label: "服务产品",
+          value: detail.requirement.productName ?? "-",
+        },
+        {
+          label: "计划时长",
+          value: detail.requirement.durationSeconds
+            ? `${Math.floor(detail.requirement.durationSeconds / 60)} 分钟`
+            : "-",
+        },
+        {
+          label: "期望开始",
+          value: dateTime(detail.requirement.desiredStartAt),
+        },
+      ]
+    : [{ label: "客户", value: detail.customerName }];
+
   return (
-    <>
-      <div className="mc-seat-head">
+    <div>
+      <Link href="/merchant-console/dispatch" className="mc-back">
+        <ArrowLeft size={15} /> 返回订单与派单
+      </Link>
+      <div className="mc-pagehead mc-detail-head">
         <div>
-          <h2>队伍席位</h2>
-          <p>每个岗位独立计算名额</p>
+          <div className="mc-kicker">CLASSIC / DETAIL</div>
+          <div className="mc-detail-title">
+            <h1 className="mc-mono">{detail.orderNo}</h1>
+            <span className={`mc-status st-${toneFor(detail.status)}`}>
+              {statusLabel(detail.status)}
+            </span>
+          </div>
+          <p>{detail.customerName}</p>
         </div>
-        <span className="mc-mono">
-          {selectedCount} / {neededCount(order)} 已确认
-        </span>
       </div>
-      <div className="mc-seats">
-        {order.roles.map((roleItem) => {
-          const members = order.players.filter(
-            (player) =>
-              player.role === roleItem.name &&
-              (player.status === "SELECTED" || picks.includes(player.id)),
-          );
-          const miss = Math.max(
-            0,
-            roleItem.need -
-              members.filter(
-                (player) =>
-                  player.status === "SELECTED" || picks.includes(player.id),
-              ).length,
-          );
-          return (
-            <section
-              className={`mc-seat${miss > 0 ? " open" : ""}`}
-              key={roleItem.name}
-            >
-              <div className="mc-seat-top">
-                <b>{roleItem.name}</b>
-                <span className="mc-mono">
-                  {members.length} / {roleItem.need}
-                </span>
+      {error ? <div className="mc-notice">{error}</div> : null}
+
+      <div className="mc-detailgrid">
+        <div>
+          <section className="mc-panel mc-facts">
+            {facts.map((fact) => (
+              <dl className="mc-fact" key={fact.label}>
+                <dt>{fact.label}</dt>
+                <dd>{fact.value}</dd>
+              </dl>
+            ))}
+          </section>
+
+          {detail.snapshot && detail.snapshot.length > 0 ? (
+            <section className="mc-panel">
+              <div className="mc-section-head">
+                <div>
+                  <h2>价格快照</h2>
+                  <p>订单确认后冻结</p>
+                </div>
               </div>
-              {members.map((player) => (
-                <div className="mc-person" key={player.id}>
-                  <span className="mc-avatar mc-avatar-sm" aria-hidden="true">
-                    {player.name.slice(0, 1)}
-                  </span>
-                  <span>
-                    <b>{player.name}</b>
-                    <small>
-                      {player.status === "SELECTED" ? "已确认" : "本次暂选"}
-                    </small>
-                  </span>
-                  {player.status === "SELECTED" ? (
-                    <span className="mc-seat-ok">
-                      <Check size={13} />
-                      已就位
-                    </span>
-                  ) : null}
-                </div>
-              ))}
-              {Array.from({ length: miss }, (_, index) => (
-                <div className="mc-person mc-empty-seat" key={`empty-${index}`}>
-                  <span className="mc-avatar mc-avatar-sm" aria-hidden="true">
-                    +
-                  </span>
-                  <span>
-                    <b>等待{roleItem.name}</b>
-                    <small>从报名人选中选择</small>
-                  </span>
-                </div>
-              ))}
+              <div className="mc-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>产品</th>
+                      <th>单价</th>
+                      <th>小计</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.snapshot.map((s, i) => (
+                      <tr key={i}>
+                        <td>{s.productName}</td>
+                        <td>{formatFenYuan(s.unitPriceFen)}</td>
+                        <td>{formatFenYuan(s.lineTotalFen)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
-          );
-        })}
-      </div>
-    </>
-  );
-}
+          ) : null}
 
-function ApplicantsPanel({
-  order,
-  picks,
-  picksSet,
-  canOperate,
-  onToggle,
-  onRemove,
-}: {
-  order: DemoOrder;
-  picks: string[];
-  picksSet: Set<string>;
-  canOperate: boolean;
-  onToggle: (applicantId: string) => void;
-  onRemove: (applicantId: string) => void;
-}) {
-  return (
-    <section className="mc-panel mc-applicants">
-      <div className="mc-section-head">
-        <div>
-          <h2>报名人选</h2>
-          <p>报名截止后仍可确认已有报名</p>
-        </div>
-        <span className="mc-sub">原型演示 · 实时报名待后端推送</span>
-      </div>
-      {order.roles.map((roleItem) => {
-        const applicants = order.players.filter(
-          (player) =>
-            player.role === roleItem.name && player.status === "APPLIED",
-        );
-        if (!applicants.length) return null;
-        const remaining = shortageFor(order, roleItem.name, picks);
-        return (
-          <div key={roleItem.name}>
-            <div className="mc-role-label">
-              <span>
-                {roleItem.name} · 需要 {roleItem.need} 人
-              </span>
-              <span>
-                {remaining ? `还可选 ${remaining} 人` : "本岗位暂选已满"}
-              </span>
-            </div>
-            {applicants.map((player) => {
-              const chosen = picksSet.has(player.id);
-              const full = remaining <= 0 && !chosen;
-              return (
-                <div
-                  className={`mc-candidate${chosen ? " chosen" : ""}`}
-                  key={player.id}
-                >
-                  <input
-                    type="checkbox"
-                    id={`pick-${player.id}`}
-                    checked={chosen}
-                    disabled={!canOperate || full}
-                    onChange={() => onToggle(player.id)}
-                  />
-                  <label htmlFor={`pick-${player.id}`}>
-                    <span className="mc-avatar mc-avatar-sm" aria-hidden="true">
-                      {player.name.slice(0, 1)}
-                    </span>
-                    <span>
-                      <b>{player.name}</b>
-                      <small>
-                        {player.role} · {player.at} 报名
-                      </small>
-                    </span>
-                  </label>
-                  {chosen ? (
-                    <span className="mc-status st-dispatch">本次暂选</span>
-                  ) : null}
-                  {canOperate ? (
-                    <button
-                      type="button"
-                      className="mc-remove"
-                      onClick={() => onRemove(player.id)}
-                    >
-                      移除
-                    </button>
-                  ) : null}
+          {applications.length > 0 &&
+          ["DISPATCHING", "ASSIGNED"].includes(detail.status) ? (
+            <section className="mc-panel">
+              <div className="mc-section-head">
+                <div>
+                  <h2>报名（{applications.length}）</h2>
+                  <p>报名后先入候选，再指派对应陪玩</p>
                 </div>
-              );
-            })}
-          </div>
-        );
-      })}
-    </section>
-  );
-}
-
-function ReviewRail({
-  order,
-  selected,
-  chosen,
-  missAfterPicks,
-  canOperate,
-  onCopy,
-  onConfirm,
-}: {
-  order: DemoOrder;
-  selected: ReturnType<typeof selectedPlayers>;
-  chosen: DemoOrder["players"];
-  missAfterPicks: number;
-  canOperate: boolean;
-  onCopy: (type: CopyType) => void;
-  onConfirm: () => void;
-}) {
-  const dispatching = order.status === "DISPATCHING";
-  const copyItems: CopyType[] = ["group", "selected", "apply", "boss"];
-  return (
-    <aside className="mc-panel mc-review">
-      <div className="mc-review-top">
-        <h2>{dispatching ? "确认人选" : "订单摘要"}</h2>
-        <span>{dispatching && canOperate ? "复核后提交" : ""}</span>
-      </div>
-
-      {dispatching ? (
-        <>
-          <div className="mc-review-group">
-            <div className="mc-review-label">已确认 · {selected.length} 人</div>
-            {selected.length ? (
-              selected.map((player) => (
-                <div className="mc-review-person" key={player.id}>
-                  <b>{player.name}</b>
-                  <span>{player.role}</span>
-                </div>
-              ))
-            ) : (
-              <div className="mc-review-empty">暂无已确认人选</div>
-            )}
-          </div>
-          <div className="mc-review-group">
-            <div className="mc-review-label">本次暂选 · {chosen.length} 人</div>
-            {chosen.length ? (
-              chosen.map((player) => (
-                <div className="mc-review-person" key={player.id}>
-                  <b>{player.name}</b>
-                  <span>{player.role}</span>
-                </div>
-              ))
-            ) : (
-              <div className="mc-review-empty">从左侧报名中选择</div>
-            )}
-          </div>
-          {canOperate ? (
-            <>
-              <div className="mc-shortage">
-                {missAfterPicks
-                  ? `确认后仍缺 ${missAfterPicks} 人，订单继续报名。`
-                  : "所有岗位已补齐，确认后进入已选定。"}
               </div>
+              <div className="mc-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>陪玩</th>
+                      <th>状态</th>
+                      <th>备注</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {applications.map((app) => (
+                      <tr key={app.id}>
+                        <td>{app.playerName}</td>
+                        <td>
+                          <span className={`mc-status st-${toneFor(app.status)}`}>
+                            {app.status}
+                          </span>
+                        </td>
+                        <td>{app.playerNote ?? "-"}</td>
+                        <td>
+                          {detail.status === "DISPATCHING" ? (
+                            <div className="mc-button-row">
+                              {app.status === "APPLIED" ? (
+                                <button
+                                  type="button"
+                                  className="mc-btn mc-btn-ghost mc-btn-small"
+                                  onClick={() => shortlist.mutate(app.id)}
+                                >
+                                  入候选
+                                </button>
+                              ) : null}
+                              {app.status === "SHORTLISTED" ? (
+                                <button
+                                  type="button"
+                                  className="mc-btn mc-btn-primary mc-btn-small"
+                                  disabled={assign.isPending}
+                                  onClick={() => {
+                                    if (
+                                      window.confirm(
+                                        `确认指派 ${app.playerName}？`,
+                                      )
+                                    )
+                                      assign.mutate(app.id);
+                                  }}
+                                >
+                                  指派
+                                </button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
+
+          <section className="mc-panel">
+            <div className="mc-section-head">
+              <div>
+                <h2>状态时间线</h2>
+                <p>服务端状态变更留痕</p>
+              </div>
+            </div>
+            {detail.timeline.length ? (
+              <ol className="mc-timeline">
+                {detail.timeline.map((e, idx) => (
+                  <li key={idx}>
+                    <time>{dateTime(e.occurredAt)}</time>
+                    <b>{e.eventType}</b>
+                    <p>
+                      {e.fromStatus ?? "—"} → {e.toStatus ?? "—"}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mc-muted-text">暂无状态变更记录。</p>
+            )}
+          </section>
+        </div>
+
+        <aside className="mc-panel mc-review">
+          <div className="mc-review-top">
+            <h2>订单动作</h2>
+            <span>{canOperate ? "按状态开放" : "只读"}</span>
+          </div>
+          <div className="mc-review-group">
+            <div className="mc-summary-line">
+              <span>当前状态</span>
+              <b>{statusLabel(detail.status)}</b>
+            </div>
+            <div className="mc-summary-line">
+              <span>数据来源</span>
+              <b>订单接口</b>
+            </div>
+          </div>
+          <div className="mc-button-row">
+            {detail.status === "DRAFT" && canOperate ? (
+              <>
+                <button
+                  type="button"
+                  className="mc-btn mc-btn-primary"
+                  onClick={() => mutate.mutate({ action: "confirm" })}
+                >
+                  确认订单
+                </button>
+                <button
+                  type="button"
+                  className="mc-btn"
+                  onClick={() =>
+                    mutate.mutate({
+                      action: "cancel",
+                      body: { reason: "手动取消" },
+                    })
+                  }
+                >
+                  取消
+                </button>
+              </>
+            ) : null}
+            {detail.status === "CONFIRMED" && canOperate ? (
+              <>
+                <button
+                  type="button"
+                  className="mc-btn mc-btn-primary"
+                  onClick={() => mutate.mutate({ action: "publish" })}
+                >
+                  发布派单
+                </button>
+                <button
+                  type="button"
+                  className="mc-btn"
+                  onClick={() =>
+                    mutate.mutate({
+                      action: "cancel",
+                      body: { reason: "手动取消" },
+                    })
+                  }
+                >
+                  取消
+                </button>
+              </>
+            ) : null}
+            {["ASSIGNED", "READY"].includes(detail.status) && canOperate ? (
               <button
                 type="button"
-                className="mc-btn mc-btn-primary mc-review-confirm"
-                disabled={chosen.length === 0}
-                onClick={onConfirm}
+                className="mc-btn mc-btn-primary"
+                onClick={() =>
+                  mutate.mutate({ action: "session/start" })
+                }
               >
-                确认选人{chosen.length ? ` · ${chosen.length} 人` : ""}
+                开始场次
               </button>
-              <p className="mc-review-note">
-                支持部分确认；开始计时后才进入服务中。
-              </p>
-            </>
-          ) : (
-            <p className="mc-review-note">
-              财务只读视角，选人操作由客服/店长完成。
-            </p>
-          )}
-        </>
-      ) : (
-        <div className="mc-review-group">
-          <div className="mc-summary-line">
-            <span>客户</span>
-            <b>{order.customer}</b>
+            ) : null}
+            {detail.status === "IN_PROGRESS" && canOperate ? (
+              <button
+                type="button"
+                className="mc-btn mc-btn-primary"
+                onClick={() => mutate.mutate({ action: "session/end" })}
+              >
+                结束场次
+              </button>
+            ) : null}
+            {detail.status === "PENDING_CONFIRMATION" && canOperate ? (
+              <button
+                type="button"
+                className="mc-btn mc-btn-primary"
+                onClick={() => mutate.mutate({ action: "staff-confirm" })}
+              >
+                客服确认完成
+              </button>
+            ) : null}
           </div>
-          <div className="mc-summary-line">
-            <span>计划时长</span>
-            <b>{order.duration} 分钟</b>
-          </div>
-          <div className="mc-summary-line">
-            <span>岗位</span>
-            <b>
-              {order.roles
-                .map((roleItem) => `${roleItem.name} ${roleItem.need}`)
-                .join(" / ")}
-            </b>
-          </div>
-        </div>
-      )}
-
-      <div className="mc-tools">
-        {copyItems.map((type) => (
-          <button type="button" key={type} onClick={() => onCopy(type)}>
-            <span>{COPY_LABEL[type]}</span>
-            <Copy size={13} />
-          </button>
-        ))}
+          {sessionInfo ? (
+            <div className="mc-notice">
+              场次：{sessionInfo.status} · 开始{" "}
+              {dateTime(sessionInfo.startedAt)} · 结束{" "}
+              {dateTime(sessionInfo.endedAt)}
+            </div>
+          ) : null}
+          <Link
+            href="/merchant-console/sessions"
+            className="mc-btn mc-btn-ghost"
+          >
+            查看场次与证据
+            <ArrowRight size={14} />
+          </Link>
+        </aside>
       </div>
-      {!dispatching && !canOperate ? (
-        <p className="mc-review-note">
-          当前为只读视角；发布与核算按钮由后端权限接口开放。
-        </p>
-      ) : null}
-    </aside>
+      {toast}
+    </div>
   );
 }

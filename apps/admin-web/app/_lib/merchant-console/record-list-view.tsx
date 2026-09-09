@@ -42,7 +42,8 @@ export function RecordListView({ moduleId }: { moduleId: RecordModuleId }) {
 
       {moduleId === "audit" && role === "FINANCE" ? (
         <div className="mc-notice mc-record-readonly">
-          财务仅可查看审计日志中涉自身记录（只读 · 涉自身）；行级过滤由后端授权接口执行。
+          财务仅可查看审计日志中涉自身记录（只读 ·
+          涉自身）；行级过滤由后端授权接口执行。
         </div>
       ) : null}
 

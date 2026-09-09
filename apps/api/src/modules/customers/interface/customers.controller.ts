@@ -94,6 +94,28 @@ export class CustomersController {
 
   @TenantScope()
   @Permissions("customer.manage")
+  @Get(":id/account")
+  async account(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    try {
+      return { data: await this.customers.account(tenantIdOf(req), id) };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("customer.manage")
+  @Get(":id/orders")
+  async orders(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    try {
+      return { data: await this.customers.orderHistory(tenantIdOf(req), id) };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("customer.manage")
   @Patch(":id")
   async update(
     @Req() req: AuthenticatedRequest,

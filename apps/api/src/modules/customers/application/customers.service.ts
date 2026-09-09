@@ -1,4 +1,8 @@
 import type { CustomerView } from "../domain/customer.js";
+import type {
+  CustomerAccountView,
+  CustomerOrderHistoryRow,
+} from "../domain/customer.js";
 import {
   CustomerNotFoundError,
   DuplicateCustomerError,
@@ -31,6 +35,11 @@ export interface CustomerRepository {
     tenantId: string,
     accountId: string,
   ): Promise<CustomerView | null>;
+  account(tenantId: string, customerId: string): Promise<CustomerAccountView>;
+  orderHistory(
+    tenantId: string,
+    customerId: string,
+  ): Promise<CustomerOrderHistoryRow[]>;
 }
 
 function assertValid(input: CustomerInput | Partial<CustomerInput>): void {
@@ -126,5 +135,21 @@ export class CustomersService {
     const customer = await this.repository.findByAccount(tenantId, accountId);
     if (!customer) throw new CustomerNotFoundError(accountId);
     return customer;
+  }
+
+  async account(
+    tenantId: string,
+    customerId: string,
+  ): Promise<CustomerAccountView> {
+    await this.get(tenantId, customerId);
+    return this.repository.account(tenantId, customerId);
+  }
+
+  async orderHistory(
+    tenantId: string,
+    customerId: string,
+  ): Promise<CustomerOrderHistoryRow[]> {
+    await this.get(tenantId, customerId);
+    return this.repository.orderHistory(tenantId, customerId);
   }
 }

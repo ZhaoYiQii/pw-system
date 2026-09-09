@@ -59,6 +59,24 @@ interface PlayerDetail extends Player {
   skills: Skill[];
   availability: Availability[];
 }
+interface PlayerEarningRecord {
+  id: string;
+  source: "LEGACY" | "SLOT";
+  amountFen: string;
+  status: string;
+  orderId: string;
+  orderNo: string;
+  createdAt: string;
+}
+interface PlayerAccount {
+  id: string;
+  name: string;
+  finance: {
+    paidFen: string;
+    unpaidFen: string;
+    records: PlayerEarningRecord[];
+  };
+}
 
 function Inner() {
   const queryClient = useQueryClient();
@@ -84,6 +102,14 @@ function Inner() {
     queryKey: ["player-detail", selectedId],
     queryFn: () =>
       apiFetch<PlayerDetail>(`/api/v1/tenant/players/${selectedId as string}`),
+    enabled: selectedId !== null,
+  });
+  const account = useQuery({
+    queryKey: ["player-account", selectedId],
+    queryFn: () =>
+      apiFetch<PlayerAccount>(
+        `/api/v1/tenant/players/${selectedId as string}/account`,
+      ),
     enabled: selectedId !== null,
   });
 
@@ -416,6 +442,71 @@ function Inner() {
                   添加
                 </Button>
               </div>
+            </section>
+            <section>
+              <h3 className="mb-2 text-sm font-semibold">收入与结算</h3>
+              {account.isPending ? (
+                <p className="text-sm text-muted-foreground">加载中…</p>
+              ) : null}
+              {!account.isPending && account.data ? (
+                <div className="flex flex-col gap-3">
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <p>
+                      已付{" "}
+                      <b className="font-mono">
+                        {fenToYuanText(account.data.finance.paidFen)} 元
+                      </b>
+                    </p>
+                    <p>
+                      待付/未入账{" "}
+                      <b className="font-mono">
+                        {fenToYuanText(account.data.finance.unpaidFen)} 元
+                      </b>
+                    </p>
+                  </div>
+                  {account.data.finance.records.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">暂无收入记录。</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>来源</TableHead>
+                          <TableHead>订单</TableHead>
+                          <TableHead>状态</TableHead>
+                          <TableHead className="text-right">金额</TableHead>
+                          <TableHead>时间</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {account.data.finance.records.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {r.source === "SLOT" ? "GD 档位" : "CLASSIC"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {r.orderNo}
+                            </TableCell>
+                            <TableCell>{r.status}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {fenToYuanText(r.amountFen)} 元
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(r.createdAt).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              ) : null}
+              {!account.isPending && !account.data ? (
+                <p className="text-sm text-muted-foreground">
+                  收入数据加载失败，请刷新。
+                </p>
+              ) : null}
             </section>
           </CardContent>
         </Card>

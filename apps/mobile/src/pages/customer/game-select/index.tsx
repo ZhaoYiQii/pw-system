@@ -1,20 +1,38 @@
-import { Button, Input, Text, View } from "@tarojs/components";
+import { Button, Text, View } from "@tarojs/components";
 import { useLoad, useRouter } from "@tarojs/taro";
-import { useState, type CSSProperties } from "react";
-import { identityAdapter } from "@platform-identity";
-import { session } from "@platform-session";
+import { useState } from "react";
 import { apiAdapter } from "@platform-api";
+import { session } from "@platform-session";
+import {
+  CustomerLoginCard,
+  CustomerMessage,
+  CustomerShell,
+  goCustomer,
+  StatusPill,
+} from "../../../components/customer-ui";
+import {
+  customerLogin,
+  resolveTenantCode,
+} from "../../../features/customer-ui/session";
 
 interface AppView {
   id: string;
   playerName: string;
   status: string;
 }
+
 interface LineView {
   id: string;
   positionLabel: string;
   requiredCount: number;
   applications: AppView[];
+}
+
+interface SelectView {
+  orderId: string;
+  dispatchNo: string;
+  status: string;
+  lines: LineView[];
 }
 
 export default function GameSelectPage() {
@@ -25,59 +43,56 @@ export default function GameSelectPage() {
   const [tenantCode, setTenantCode] = useState(tenant);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [lines, setLines] = useState<LineView[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<SelectView | null>(null);
   const [picked, setPicked] = useState<Record<string, string>>({});
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{
+    tone: "error" | "success" | "info";
+    text: string;
+  } | null>(null);
 
-  const load = async (t: string) => {
+  const load = async (accessToken: string) => {
+    setMsg(null);
     try {
-      const data = await apiAdapter.request<{ lines: LineView[] }>(
+      const data = await apiAdapter.request<SelectView>(
         `/api/v1/tenant/game-dispatch/customer/orders/${orderId}/select`,
-        { token: t },
+        { token: accessToken },
       );
-      setLines(data.lines);
+      setView(data);
       setPicked({});
     } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+      session.clearToken();
+      setToken(null);
     }
   };
 
-  useLoad(() => {
-    const t = session.getToken();
-    setToken(t);
-    if (t) void load(t);
+  useLoad(async () => {
+    const accessToken = session.getToken();
+    setToken(accessToken);
+    if (accessToken && orderId) await load(accessToken);
+    const code = tenant || (await resolveTenantCode());
+    if (code) setTenantCode(code);
   });
 
   const login = async () => {
+    setBusy(true);
     setMsg(null);
     try {
-      const s = await identityAdapter.login({
-        kind: "tenant",
-        tenantCode,
-        username,
-        password,
+      const accessToken = await customerLogin(tenantCode, username, password);
+      setToken(accessToken);
+      setPassword("");
+      if (orderId) await load(accessToken);
+    } catch (error) {
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
       });
-      session.setToken(s.accessToken);
-      setToken(s.accessToken);
-      await load(s.accessToken);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
-    }
-  };
-
-  const confirm = async () => {
-    if (!token) return;
-    const ids = Object.values(picked).filter(Boolean);
-    setMsg(null);
-    try {
-      await apiAdapter.request(
-        `/api/v1/tenant/game-dispatch/customer/orders/${orderId}/assignment`,
-        { method: "POST", token, body: { applicationIds: ids } },
-      );
-      setMsg("已确认所选陪玩。");
-      await load(token);
-    } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -88,60 +103,104 @@ export default function GameSelectPage() {
     }));
   };
 
+  const confirm = async () => {
+    if (!token || !orderId) return;
+    const ids = Object.values(picked).filter(Boolean);
+    if (ids.length === 0) {
+      setMsg({ tone: "error", text: "请先为需要的位置选择陪玩" });
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const data = await apiAdapter.request<SelectView>(
+        `/api/v1/tenant/game-dispatch/customer/orders/${orderId}/assignment`,
+        { method: "POST", token, body: { applicationIds: ids } },
+      );
+      setView(data);
+      setMsg({ tone: "success", text: "已确认所选陪玩。" });
+    } catch (error) {
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <View
-      style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}
+    <CustomerShell
+      title="选择陪玩"
+      subtitle={view?.dispatchNo ? `派单 ${view.dispatchNo}` : "等待门店推送"}
+      active="order"
     >
-      <Text style={{ fontSize: 20, fontWeight: "bold" }}>选择陪玩</Text>
-      {msg ? <Text style={{ color: "#dc2626" }}>{msg}</Text> : null}
       {!token ? (
+        <CustomerLoginCard
+          tenantCode={tenantCode}
+          username={username}
+          password={password}
+          busy={busy}
+          actionLabel="登录并查看候选"
+          onTenantCode={setTenantCode}
+          onUsername={setUsername}
+          onPassword={setPassword}
+          onLogin={() => void login()}
+        />
+      ) : null}
+      {msg ? (
+        <CustomerMessage tone={msg.tone}>{msg.text}</CustomerMessage>
+      ) : null}
+      {token && orderId && !view && !busy ? (
+        <View className="cu-loading">正在加载可选陪玩…</View>
+      ) : null}
+      {token && !orderId ? (
+        <View className="cu-empty">
+          缺少订单编号。请从门店推送的链接或我的订单进入。
+        </View>
+      ) : null}
+      {token && view ? (
         <>
-          <Input
-            style={inputStyle}
-            value={tenantCode}
-            placeholder="门店 code"
-            onInput={(e) => setTenantCode(e.detail.value)}
-          />
-          <Input
-            style={inputStyle}
-            value={username}
-            placeholder="老板账号"
-            onInput={(e) => setUsername(e.detail.value)}
-          />
-          <Input
-            style={inputStyle}
-            password
-            value={password}
-            placeholder="密码"
-            onInput={(e) => setPassword(e.detail.value)}
-          />
-          <Button onClick={() => void login()}>登录并查看报名</Button>
-        </>
-      ) : (
-        <>
-          <Button size="mini" onClick={() => token && void load(token)}>
-            刷新报名
-          </Button>
-          {lines.map((line) => (
-            <View key={line.id} style={cardStyle}>
-              <Text style={{ fontWeight: "bold" }}>
-                {line.positionLabel}（需 {line.requiredCount} 人）
+          {view.status === "DISPATCHING" ? (
+            <View className="cu-row">
+              <StatusPill wait>正在选人</StatusPill>
+            </View>
+          ) : (
+            <View className="cu-card">
+              <Text className="cu-meta">
+                当前订单状态：{view.status}；仅“正在选人”阶段可操作。
               </Text>
+            </View>
+          )}
+          {view.lines.map((line) => (
+            <View className="cu-card" key={line.id}>
+              <View className="cu-row cu-row-first">
+                <Text className="cu-card-title">
+                  {line.positionLabel} · 需 {line.requiredCount} 人
+                </Text>
+                <StatusPill
+                  wait={!picked[line.id] && view.status === "DISPATCHING"}
+                >
+                  {picked[line.id] ? "已选" : "待选"}
+                </StatusPill>
+              </View>
+              {line.applications.filter((app) => app.status === "APPLIED")
+                .length === 0 ? (
+                <View className="cu-empty">该位置暂无报名。</View>
+              ) : null}
               {line.applications
-                .filter((a) => a.status === "APPLIED")
+                .filter((app) => app.status === "APPLIED")
                 .map((app) => (
-                  <View
-                    key={app.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text>{app.playerName}</Text>
+                  <View className="cu-person" key={app.id}>
+                    <View className="cu-avatar">
+                      {app.playerName.slice(0, 1)}
+                    </View>
+                    <View className="cu-grow">
+                      <Text className="cu-card-title">{app.playerName}</Text>
+                    </View>
                     <Button
-                      size="mini"
-                      disabled={picked[line.id] === app.id}
+                      className={`cu-button cu-button-small ${picked[line.id] === app.id ? "cu-button-soft" : "cu-button-outline"}`}
+                      disabled={view.status !== "DISPATCHING" || busy}
                       onClick={() => toggle(line.id, app.id)}
                     >
                       {picked[line.id] === app.id ? "已选" : "选择"}
@@ -150,29 +209,26 @@ export default function GameSelectPage() {
                 ))}
             </View>
           ))}
+          {view.status === "DISPATCHING" ? (
+            <Button
+              className={`cu-button cu-button-primary cu-button-full${Object.values(picked).filter(Boolean).length === 0 || busy ? " is-disabled" : ""}`}
+              disabled={
+                Object.values(picked).filter(Boolean).length === 0 || busy
+              }
+              onClick={() => void confirm()}
+            >
+              {busy ? "确认中…" : "确认陪玩"}
+            </Button>
+          ) : null}
           <Button
-            disabled={Object.values(picked).filter(Boolean).length === 0}
-            onClick={() => void confirm()}
+            className="cu-button cu-button-outline cu-button-small cu-button-full"
+            style={{ marginTop: 18 }}
+            onClick={() => goCustomer("/pages/customer/orders/index")}
           >
-            确认陪玩
+            返回我的订单
           </Button>
         </>
-      )}
-    </View>
+      ) : null}
+    </CustomerShell>
   );
 }
-
-const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: 8,
-  height: 40,
-};
-const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
-  padding: 12,
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-};

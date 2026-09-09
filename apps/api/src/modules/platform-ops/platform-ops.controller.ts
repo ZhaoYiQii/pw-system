@@ -5,8 +5,11 @@ import {
   HttpStatus,
   Inject,
   Param,
+  Req,
 } from "@nestjs/common";
+import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
 import { PlatformScope, Permissions } from "../../common/auth/decorators.js";
+import { PlatformGrantsService } from "../platform-accounts/platform-grants.service.js";
 import {
   PlatformOpsService,
   type PlatformOverviewResult,
@@ -18,17 +21,19 @@ import {
 export class PlatformOpsController {
   constructor(
     @Inject(PlatformOpsService) private readonly ops: PlatformOpsService,
+    @Inject(PlatformGrantsService)
+    private readonly grants: PlatformGrantsService,
   ) {}
 
   @PlatformScope()
-  @Permissions("tenant.view")
+  @Permissions("platform.manage")
   @Get("overview")
   async overview(): Promise<{ data: PlatformOverviewResult }> {
     return { data: await this.ops.overview() };
   }
 
   @PlatformScope()
-  @Permissions("tenant.view")
+  @Permissions("platform.manage")
   @Get("subscriptions")
   async subscriptions(): Promise<{ data: PlatformSubscriptionRow[] }> {
     return { data: await this.ops.subscriptions() };
@@ -38,8 +43,10 @@ export class PlatformOpsController {
   @Permissions("tenant.view")
   @Get("tenants/:tenantId/detail")
   async tenantDetail(
+    @Req() req: AuthenticatedRequest,
     @Param("tenantId") tenantId: string,
   ): Promise<{ data: PlatformTenantDetail }> {
+    await this.grants.assertTenantReadAllowed(req.principal, tenantId);
     const detail = await this.ops.tenantDetail(tenantId);
     if (!detail) {
       throw new HttpException("tenant not found", HttpStatus.NOT_FOUND);

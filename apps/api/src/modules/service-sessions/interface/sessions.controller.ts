@@ -8,6 +8,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
   Req,
 } from "@nestjs/common";
 import { PrismaSessionsRepository } from "../infrastructure/prisma-sessions.repository.js";
@@ -60,7 +61,12 @@ export class SessionsController {
 
   private isStaff(req: AuthenticatedRequest): boolean {
     const r = req.principal?.role;
-    return r === "TENANT_OWNER" || r === "CUSTOMER_SERVICE";
+    return (
+      r === "TENANT_OWNER" ||
+      r === "CUSTOMER_SERVICE" ||
+      r === "FINANCE" ||
+      r === "TENANT_ADMIN"
+    );
   }
 
   private async requireActor(
@@ -87,6 +93,35 @@ export class SessionsController {
     const order = await this.repo.detailByOrder(tenantId, orderId);
     if (!order) return null;
     return order.playerId;
+  }
+
+  @TenantScope()
+  @Get("sessions")
+  async list(
+    @Req() req: AuthenticatedRequest,
+    @Query("status") status?: unknown,
+  ) {
+    const role = req.principal?.role;
+    if (role !== "TENANT_OWNER" && role !== "TENANT_ADMIN" && role !== "CUSTOMER_SERVICE" && role !== "FINANCE")
+      throw new ForbiddenException("仅门店员工可查看场次台账");
+    const s = typeof status === "string" && status ? status : undefined;
+    return {
+      data: await this.repo.list(tenantIdOf(req), s ? { status: s } : {}),
+    };
+  }
+
+  @TenantScope()
+  @Get("sessions/:sessionId")
+  async detail(
+    @Req() req: AuthenticatedRequest,
+    @Param("sessionId") sessionId: string,
+  ) {
+    const role = req.principal?.role;
+    if (role !== "TENANT_OWNER" && role !== "TENANT_ADMIN" && role !== "CUSTOMER_SERVICE" && role !== "FINANCE")
+      throw new ForbiddenException("仅门店员工可查看场次详情");
+    const view = await this.repo.detailById(tenantIdOf(req), sessionId);
+    if (!view) throw new HttpException("场次不存在", HttpStatus.NOT_FOUND);
+    return { data: view };
   }
 
   @TenantScope()

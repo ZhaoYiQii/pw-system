@@ -68,6 +68,11 @@ interface BatchDetail {
   totalAmountFen: string;
   itemCount: number;
   items: BatchDetailItem[];
+  createdByName: string | null;
+  reviewedByName: string | null;
+  approvedByName: string | null;
+  paidByName: string | null;
+  paidAt: string | null;
 }
 
 const STATUS_META: Record<
@@ -448,6 +453,26 @@ function Inner() {
                   合计 {formatFenYuan(detailQuery.data?.totalAmountFen ?? "0")}，
                   {detailQuery.data?.itemCount ?? 0} 笔。
                 </CardDescription>
+                {detailQuery.data ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    创建：{detailQuery.data.createdByName ?? "-"}
+                    {detailQuery.data.reviewedByName
+                      ? ` · 复核：${detailQuery.data.reviewedByName}`
+                      : ""}
+                    {detailQuery.data.approvedByName
+                      ? ` · 批准：${detailQuery.data.approvedByName}`
+                      : ""}
+                    {detailQuery.data.paidByName
+                      ? ` · 登记支付：${detailQuery.data.paidByName}${
+                          detailQuery.data.paidAt
+                            ? `（${new Date(
+                                detailQuery.data.paidAt,
+                              ).toLocaleString()}）`
+                            : ""
+                        }`
+                      : ""}
+                  </p>
+                ) : null}
               </CardHeader>
               <CardContent>
                 {detailQuery.isPending ? (

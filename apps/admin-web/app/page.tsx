@@ -16,12 +16,12 @@ const PLATFORM_LINKS = [
 
 const STORE_LINKS = [
   { href: "/store/login", label: "门店登录" },
-  { href: "/customers", label: "客户" },
-  { href: "/orders", label: "订单" },
-  { href: "/players", label: "陪玩" },
-  { href: "/catalog", label: "服务目录" },
-  { href: "/finance", label: "财务" },
-  { href: "/settings", label: "门店设置" },
+  { href: "/merchant-console/work", label: "商家工作台" },
+  { href: "/merchant-console/dispatch", label: "订单与派单" },
+  { href: "/merchant-console/customers", label: "客户档案" },
+  { href: "/merchant-console/players", label: "陪玩档案" },
+  { href: "/merchant-console/catalog", label: "服务目录" },
+  { href: "/merchant-console/settings", label: "门店设置" },
 ];
 
 export default function HomePage() {

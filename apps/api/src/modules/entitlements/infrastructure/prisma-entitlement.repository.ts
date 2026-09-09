@@ -2,6 +2,7 @@ import type { PrismaClient } from "@pw/database";
 import type {
   EntitlementRepository,
   FeatureRow,
+  TenantSubscriptionView,
 } from "../application/entitlements.service.js";
 
 export class PrismaEntitlementRepository implements EntitlementRepository {
@@ -24,5 +25,22 @@ export class PrismaEntitlementRepository implements EntitlementRepository {
       update: { enabled },
       create: { tenantId, featureKey, enabled, source: "platform" },
     });
+  }
+
+  async getSubscription(
+    tenantId: string,
+  ): Promise<TenantSubscriptionView | null> {
+    const row = await this.client.tenantSubscription.findFirst({
+      where: { tenantId, status: "ACTIVE" },
+      orderBy: { startsAt: "desc" },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      packageCode: row.packageCode,
+      status: row.status,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
+    };
   }
 }

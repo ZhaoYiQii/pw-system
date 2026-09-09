@@ -33,6 +33,29 @@ export interface SettlementDetailItem {
 
 export interface SettlementDetailView extends BatchView {
   items: SettlementDetailItem[];
+  createdByName: string | null;
+  reviewedByName: string | null;
+  approvedByName: string | null;
+  paidByName: string | null;
+  paidAt: Date | null;
+}
+
+export interface FinanceLedgerRow {
+  id: string;
+  source: "LEGACY" | "SLOT";
+  amountFen: string;
+  status: string;
+  playerId: string;
+  playerName: string;
+  orderNo: string;
+  batchNo: string | null;
+  createdAt: Date;
+}
+
+export interface FinanceLedgerView {
+  paidFen: string;
+  unpaidFen: string;
+  rows: FinanceLedgerRow[];
 }
 
 export class PrismaSettlementsRepository {
@@ -131,6 +154,25 @@ export class PrismaSettlementsRepository {
       where: { tenantId, id: batchId },
     });
     if (!batch) return null;
+    const actorIds = [
+      batch.createdBy,
+      batch.reviewedBy,
+      batch.approvedBy,
+      batch.paidBy,
+    ].filter((x): x is string => x !== null);
+    const actors =
+      actorIds.length > 0
+        ? await this.client.tenantAccount.findMany({
+            where: { tenantId, id: { in: actorIds } },
+            select: { id: true, username: true },
+          })
+        : [];
+    const actorName = new Map(actors.map((a) => [a.id, a.username]));
+    const payments = await this.client.manualPaymentRecord.findMany({
+      where: { tenantId, batchId },
+      orderBy: { paidAt: "desc" },
+      take: 1,
+    });
     const items = await this.client.settlementItem.findMany({
       where: { tenantId, batchId },
       orderBy: { createdAt: "asc" },
@@ -201,6 +243,147 @@ export class PrismaSettlementsRepository {
       createdBy: batch.createdBy,
       createdAt: batch.createdAt,
       items: outItems,
+      createdByName: batch.createdBy
+        ? (actorName.get(batch.createdBy) ?? null)
+        : null,
+      reviewedByName: batch.reviewedBy
+        ? (actorName.get(batch.reviewedBy) ?? null)
+        : null,
+      approvedByName: batch.approvedBy
+        ? (actorName.get(batch.approvedBy) ?? null)
+        : null,
+      paidByName: batch.paidBy
+        ? (actorName.get(batch.paidBy) ?? null)
+        : null,
+      paidAt: payments[0]?.paidAt ?? null,
+    };
+  }
+
+  async financeLedger(tenantId: string): Promise<FinanceLedgerView> {
+    const [legacy, slots] = await Promise.all([
+      this.client.earning.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+        take: 500,
+      }),
+      this.client.slotEarning.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+        take: 500,
+      }),
+    ]);
+    if (legacy.length === 0 && slots.length === 0)
+      return { paidFen: "0", unpaidFen: "0", rows: [] };
+    const [players, orders, legacyItems, slotItems] = await Promise.all([
+      this.client.playerProfile.findMany({
+        where: {
+          tenantId,
+          id: {
+            in: Array.from(
+              new Set([
+                ...legacy.map((e) => e.playerId),
+                ...slots.map((e) => e.playerId),
+              ]),
+            ),
+          },
+        },
+        select: { id: true, name: true },
+      }),
+      this.client.order.findMany({
+        where: {
+          tenantId,
+          id: {
+            in: Array.from(
+              new Set([
+                ...legacy.map((e) => e.orderId),
+                ...slots.map((e) => e.orderId),
+              ]),
+            ),
+          },
+        },
+        select: { id: true, orderNo: true },
+      }),
+      legacy.length > 0
+        ? this.client.settlementItem.findMany({
+            where: {
+              tenantId,
+              earningId: { in: legacy.map((e) => e.id) },
+            },
+            select: { earningId: true, batchId: true },
+          })
+        : Promise.resolve([]),
+      slots.length > 0
+        ? this.client.settlementItem.findMany({
+            where: {
+              tenantId,
+              slotEarningId: { in: slots.map((e) => e.id) },
+            },
+            select: { slotEarningId: true, batchId: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const batchIds = Array.from(
+      new Set([
+        ...legacyItems.map((i) => i.batchId),
+        ...slotItems.map((i) => i.batchId),
+      ]),
+    );
+    const batches =
+      batchIds.length > 0
+        ? await this.client.settlementBatch.findMany({
+            where: { tenantId, id: { in: batchIds } },
+            select: { id: true, batchNo: true },
+          })
+        : [];
+    const batchNoById = new Map(batches.map((b) => [b.id, b.batchNo]));
+    const playerById = new Map(players.map((p) => [p.id, p.name]));
+    const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+    const batchByLegacy = new Map(
+      legacyItems.map((i) => [i.earningId, i.batchId]),
+    );
+    const batchBySlot = new Map(
+      slotItems.map((i) => [i.slotEarningId, i.batchId]),
+    );
+    const rows: FinanceLedgerRow[] = [
+      ...legacy.map((e) => {
+        const batchId = batchByLegacy.get(e.id);
+        return {
+          id: e.id,
+          source: "LEGACY" as const,
+          amountFen: e.amountFen.toString(),
+          status: e.status,
+          playerId: e.playerId,
+          playerName: playerById.get(e.playerId) ?? "未知陪玩",
+          orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+          batchNo: batchId ? (batchNoById.get(batchId) ?? null) : null,
+          createdAt: e.createdAt,
+        };
+      }),
+      ...slots.map((e) => {
+        const batchId = batchBySlot.get(e.id);
+        return {
+          id: e.id,
+          source: "SLOT" as const,
+          amountFen: e.amountFen.toString(),
+          status: e.status,
+          playerId: e.playerId,
+          playerName: playerById.get(e.playerId) ?? "未知陪玩",
+          orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+          batchNo: batchId ? (batchNoById.get(batchId) ?? null) : null,
+          createdAt: e.createdAt,
+        };
+      }),
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    let paidFen = 0n;
+    let unpaidFen = 0n;
+    for (const r of rows) {
+      if (r.status === "PAID") paidFen += BigInt(r.amountFen);
+      else unpaidFen += BigInt(r.amountFen);
+    }
+    return {
+      paidFen: paidFen.toString(),
+      unpaidFen: unpaidFen.toString(),
+      rows,
     };
   }
 

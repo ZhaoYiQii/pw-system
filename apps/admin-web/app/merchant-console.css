@@ -2,47 +2,6 @@
    视觉基线：design-demos/ui-templates/merchant/merchant-console-full.html
    P0 范围：仅作用于 .pw-merchant 作用域，不影响平台端与既有 (tenant) 页面。 */
 .pw-merchant {
-  --mc-bg: #f2f0e9;
-  --mc-paper: #fffdf8;
-  --mc-paper-2: #f8f6ef;
-  --mc-ink: #18231e;
-  --mc-muted: #6d746f;
-  --mc-line: #dedbd1;
-  --mc-side: #16231e;
-  --mc-side-2: #203029;
-  --mc-accent: #cf6040;
-  --mc-accent-2: #f5e5de;
-  --mc-green: #2d7259;
-  --mc-green-2: #e6f0ea;
-  --mc-amber: #a56b22;
-  --mc-amber-2: #f5ead7;
-  --mc-blue: #496a83;
-  --mc-blue-2: #e8eff3;
-  --mc-red: #a94d45;
-  --mc-red-2: #f7e8e4;
-  --mc-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
-
-  --background: var(--mc-bg);
-  --foreground: var(--mc-ink);
-  --card: var(--mc-paper);
-  --card-foreground: var(--mc-ink);
-  --popover: var(--mc-paper);
-  --popover-foreground: var(--mc-ink);
-  --primary: var(--mc-accent);
-  --primary-foreground: #ffffff;
-  --secondary: var(--mc-paper-2);
-  --secondary-foreground: var(--mc-ink);
-  --muted: var(--mc-paper-2);
-  --muted-foreground: var(--mc-muted);
-  --accent: var(--mc-accent-2);
-  --accent-foreground: #7c3f2b;
-  --destructive: var(--mc-red);
-  --destructive-foreground: #ffffff;
-  --border: var(--mc-line);
-  --input: #d4d0c5;
-  --ring: #d9a797;
-  --radius: 12px;
-
   font-family:
     "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
   background: var(--mc-bg);
@@ -2311,4 +2270,79 @@
   align-items: center;
   gap: 10px;
   flex: none;
+}
+
+/* ---- 后端接通后新增的通用控件样式 ---- */
+.pw-merchant .mc-status.st-muted {
+  background: #eeece7;
+  color: #686e69;
+}
+
+.pw-merchant .mc-mode-live {
+  background: var(--mc-green-2);
+  color: var(--mc-green);
+}
+
+.pw-merchant .mc-loading {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  color: var(--mc-muted);
+  font-size: 13px;
+}
+
+.pw-merchant .mc-input {
+  min-height: 38px;
+  border: 1px solid var(--mc-line);
+  background: #faf8f2;
+  color: var(--mc-ink);
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 12px;
+  outline: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pw-merchant .mc-input[type="datetime-local"],
+.pw-merchant .mc-input[type="color"] {
+  padding: 4px;
+}
+
+.pw-merchant .mc-select {
+  min-height: 38px;
+  border: 1px solid var(--mc-line);
+  background: #faf8f2;
+  color: var(--mc-ink);
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 12px;
+  outline: 0;
+}
+
+.pw-merchant .mc-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--mc-ink);
+  padding: 8px 0;
+}
+
+.pw-merchant .mc-check input {
+  margin-top: 2px;
+}
+
+.pw-merchant .mc-check small {
+  display: block;
+  color: var(--mc-muted);
+}
+
+.pw-merchant .mc-seats-inline {
+  margin-top: 10px;
+}
+
+.pw-merchant .mc-button-row textarea.mc-input {
+  min-width: 280px;
+  min-height: 64px;
 }

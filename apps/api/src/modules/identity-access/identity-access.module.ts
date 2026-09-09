@@ -9,6 +9,8 @@ import { PrismaAuthRepository } from "./infrastructure/auth.repository.js";
 import { TokenService } from "./infrastructure/tokens.js";
 import { AuthController } from "./interface/auth.controller.js";
 import { MeController } from "./interface/me.controller.js";
+import { TenantAccountsController } from "./interface/tenant-accounts.controller.js";
+import { TenantAccountsService } from "./application/tenant-accounts.service.js";
 import { RateLimitService } from "../../common/auth/rate-limit.service.js";
 import { RedisRateLimitService } from "../../common/auth/redis-rate-limit.service.js";
 import { EntitlementsModule } from "../entitlements/entitlements.module.js";
@@ -18,7 +20,7 @@ export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
 
 @Module({
   imports: [EntitlementsModule],
-  controllers: [AuthController, MeController],
+  controllers: [AuthController, MeController, TenantAccountsController],
   providers: [
     {
       provide: AUTH_PLATFORM_CLIENT,
@@ -57,6 +59,13 @@ export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
       useFactory: (repo: PrismaAuthRepository, tokens: TokenService) =>
         new AuthService(repo, tokens),
       inject: [PrismaAuthRepository, TokenService],
+    },
+    {
+      provide: TenantAccountsService,
+      useFactory: (
+        runtimeClient: ReturnType<typeof createDatabaseClient>,
+      ) => new TenantAccountsService(runtimeClient),
+      inject: [AUTH_RUNTIME_CLIENT],
     },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },

@@ -104,6 +104,50 @@
   --ring: #d9a797;
 }
 
+/* 商家端控制台设计令牌：源自 merchant-console-full.html，仅在商家端作用域生效 */
+.pw-merchant {
+  --mc-bg: #f2f0e9;
+  --mc-paper: #fffdf8;
+  --mc-paper-2: #f8f6ef;
+  --mc-ink: #18231e;
+  --mc-muted: #6d746f;
+  --mc-line: #dedbd1;
+  --mc-side: #16231e;
+  --mc-side-2: #203029;
+  --mc-accent: #cf6040;
+  --mc-accent-2: #f5e5de;
+  --mc-green: #2d7259;
+  --mc-green-2: #e6f0ea;
+  --mc-amber: #a56b22;
+  --mc-amber-2: #f5ead7;
+  --mc-blue: #496a83;
+  --mc-blue-2: #e8eff3;
+  --mc-red: #a94d45;
+  --mc-red-2: #f7e8e4;
+  --mc-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+
+  --background: var(--mc-bg);
+  --foreground: var(--mc-ink);
+  --card: var(--mc-paper);
+  --card-foreground: var(--mc-ink);
+  --popover: var(--mc-paper);
+  --popover-foreground: var(--mc-ink);
+  --primary: var(--mc-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--mc-paper-2);
+  --secondary-foreground: var(--mc-ink);
+  --muted: var(--mc-paper-2);
+  --muted-foreground: var(--mc-muted);
+  --accent: var(--mc-accent-2);
+  --accent-foreground: #7c3f2b;
+  --destructive: var(--mc-red);
+  --destructive-foreground: #ffffff;
+  --border: var(--mc-line);
+  --input: #d4d0c5;
+  --ring: #d9a797;
+  --radius: 12px;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -118,4 +162,3 @@ body {
   font-size: 14px;
   line-height: 1.6;
 }
-

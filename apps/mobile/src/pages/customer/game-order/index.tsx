@@ -1,14 +1,24 @@
 import { Button, Input, Text, View } from "@tarojs/components";
 import { useLoad } from "@tarojs/taro";
-import { useState, type CSSProperties } from "react";
-import { identityAdapter } from "@platform-identity";
-import { session } from "@platform-session";
+import { useState } from "react";
 import { apiAdapter } from "@platform-api";
+import { session } from "@platform-session";
+import {
+  CustomerLoginCard,
+  CustomerMessage,
+  CustomerShell,
+  goCustomer,
+} from "../../../components/customer-ui";
+import {
+  customerLogin,
+  resolveTenantCode,
+} from "../../../features/customer-ui/session";
 
 interface TemplateOption {
   id: string;
   name: string;
 }
+
 interface TemplateDetail {
   id: string;
   name: string;
@@ -19,7 +29,17 @@ interface TemplateDetail {
     required: boolean;
     options: string[];
   }>;
-  positions: Array<{ id: string; label: string; defaultCount: number }>;
+  positions: Array<{
+    id: string;
+    label: string;
+    defaultCount: number;
+  }>;
+}
+
+interface CreatedDraft {
+  orderId: string;
+  dispatchOrderId: string;
+  dispatchNo: string;
 }
 
 export default function GameOrderPage() {
@@ -27,40 +47,70 @@ export default function GameOrderPage() {
   const [tenantCode, setTenantCode] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [selfEnabled, setSelfEnabled] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [detail, setDetail] = useState<TemplateDetail | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [duration, setDuration] = useState("60");
-  const [msg, setMsg] = useState<string | null>(null);
+  const [created, setCreated] = useState<CreatedDraft | null>(null);
+  const [msg, setMsg] = useState<{
+    tone: "error" | "success" | "info";
+    text: string;
+  } | null>(null);
 
-  const loadTemplates = async (t: string) => {
-    const list = await apiAdapter.request<TemplateOption[]>(
-      "/api/v1/tenant/game-dispatch/customer/templates",
-      { token: t },
-    );
-    setTemplates(list);
+  const loadTemplates = async (accessToken: string) => {
+    setMsg(null);
+    try {
+      const [list, features] = await Promise.all([
+        apiAdapter.request<TemplateOption[]>(
+          "/api/v1/tenant/game-dispatch/customer/templates",
+          { token: accessToken },
+        ),
+        apiAdapter.request<Array<{ featureKey: string; enabled: boolean }>>(
+          "/api/v1/tenant/features",
+          { token: accessToken },
+        ),
+      ]);
+      const enabled = features.find(
+        (feature) => feature.featureKey === "addon.customer_self_service",
+      )?.enabled;
+      setSelfEnabled(enabled !== false);
+      setTemplates(list);
+    } catch (error) {
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+      session.clearToken();
+      setToken(null);
+    }
   };
 
-  useLoad(() => {
-    const t = session.getToken();
-    setToken(t);
-    if (t) void loadTemplates(t);
+  useLoad(async () => {
+    const accessToken = session.getToken();
+    setToken(accessToken);
+    if (accessToken) await loadTemplates(accessToken);
+    const code = await resolveTenantCode();
+    if (code) setTenantCode(code);
   });
 
   const login = async () => {
+    setBusy(true);
+    setMsg(null);
     try {
-      const s = await identityAdapter.login({
-        kind: "tenant",
-        tenantCode,
-        username,
-        password,
-      });
-      session.setToken(s.accessToken);
-      setToken(s.accessToken);
-      await loadTemplates(s.accessToken);
+      const accessToken = await customerLogin(tenantCode, username, password);
+      setToken(accessToken);
+      setPassword("");
+      await loadTemplates(accessToken);
     } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -68,160 +118,207 @@ export default function GameOrderPage() {
     if (!token) return;
     setValues({});
     setCounts({});
+    setDetail(null);
+    setMsg(null);
     try {
-      const data = await apiAdapter.request<TemplateDetail>(
-        `/api/v1/tenant/game-dispatch/customer/templates/${id}`,
-        { token },
+      setDetail(
+        await apiAdapter.request<TemplateDetail>(
+          `/api/v1/tenant/game-dispatch/customer/templates/${id}`,
+          { token },
+        ),
       );
-      setDetail(data);
     } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
   const submit = async () => {
     if (!token || !detail) return;
-    try {
-      const formValues: Record<string, string> = {};
-      for (const f of detail.fields) {
-        if (f.fieldType === "duration") continue;
-        const v = values[f.fieldKey]?.trim() ?? "";
-        if (f.required && !v) throw new Error(`请填写 ${f.label}`);
-        if (v) formValues[f.fieldKey] = v;
+    const formValues: Record<string, string> = {};
+    for (const field of detail.fields) {
+      if (field.fieldType === "duration") continue;
+      const value = values[field.fieldKey]?.trim() ?? "";
+      if (field.required && !value) {
+        setMsg({ tone: "error", text: `请填写 ${field.label}` });
+        return;
       }
-      const lines = detail.positions.map((p) => ({
-        positionLabel: p.label,
-        requiredCount: Math.max(1, counts[p.id] ?? p.defaultCount),
-      }));
-      await apiAdapter.request("/api/v1/tenant/game-dispatch/customer/orders", {
-        method: "POST",
-        token,
-        body: {
-          templateId: detail.id,
-          formValues,
-          durationMinutes: Number(duration),
-          lines,
+      if (value) formValues[field.fieldKey] = value;
+    }
+    const lines = detail.positions.map((position) => ({
+      positionLabel: position.label,
+      requiredCount: Math.max(1, counts[position.id] ?? position.defaultCount),
+    }));
+    setBusy(true);
+    setMsg(null);
+    try {
+      const result = await apiAdapter.request<CreatedDraft>(
+        "/api/v1/tenant/game-dispatch/customer/orders",
+        {
+          method: "POST",
+          token,
+          body: {
+            templateId: detail.id,
+            formValues,
+            durationMinutes: Number(duration),
+            lines,
+          },
         },
-      });
-      setMsg("下单成功，等待门店确认后即可选人。");
+      );
+      setCreated(result);
     } catch (error) {
-      setMsg(error instanceof Error ? error.message : String(error));
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <View
-      style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}
-    >
-      <Text style={{ fontSize: 20, fontWeight: "bold" }}>老板自助下单</Text>
-      {msg ? <Text style={{ color: "#dc2626" }}>{msg}</Text> : null}
+    <CustomerShell title="自助下单" subtitle="选择服务模板" active="order">
       {!token ? (
+        <CustomerLoginCard
+          tenantCode={tenantCode}
+          username={username}
+          password={password}
+          busy={busy}
+          actionLabel="登录并开始下单"
+          onTenantCode={setTenantCode}
+          onUsername={setUsername}
+          onPassword={setPassword}
+          onLogin={() => void login()}
+        />
+      ) : null}
+      {msg ? (
+        <CustomerMessage tone={msg.tone}>{msg.text}</CustomerMessage>
+      ) : null}
+      {created ? (
         <>
-          <Input
-            style={inputStyle}
-            value={tenantCode}
-            placeholder="门店 code"
-            onInput={(e) => setTenantCode(e.detail.value)}
-          />
-          <Input
-            style={inputStyle}
-            value={username}
-            placeholder="老板账号"
-            onInput={(e) => setUsername(e.detail.value)}
-          />
-          <Input
-            style={inputStyle}
-            password
-            value={password}
-            placeholder="密码"
-            onInput={(e) => setPassword(e.detail.value)}
-          />
-          <Button onClick={() => void login()}>登录</Button>
+          <View className="cu-stat cu-stat-pine">
+            <Text className="cu-stat-label">下单成功</Text>
+            <Text className="cu-stat-value">{created.dispatchNo}</Text>
+            <Text className="cu-stat-note">
+              门店确认并发布后，会推送选人链接；钱包需保持余额充足。
+            </Text>
+          </View>
+          <Button
+            className="cu-button cu-button-primary cu-button-full"
+            onClick={() => goCustomer("/pages/customer/orders/index")}
+          >
+            查看我的订单
+          </Button>
         </>
-      ) : (
+      ) : null}
+      {token && !created && selfEnabled === false ? (
         <>
-          <Text style={labelStyle}>选择游戏模板</Text>
-          {templates.map((t) => (
-            <Button
-              key={t.id}
-              size="mini"
-              onClick={() => void selectTemplate(t.id)}
-            >
-              {t.name}
-            </Button>
-          ))}
+          <View className="cu-empty">
+            这家门店暂未开启老板自助服务，请联系门店客服下单。
+          </View>
+          <Button
+            className="cu-button cu-button-outline cu-button-small cu-button-full"
+            onClick={() => goCustomer("/pages/customer/service-off/index")}
+          >
+            查看未开通说明
+          </Button>
+        </>
+      ) : null}
+      {token && selfEnabled && !created ? (
+        <>
+          {templates.length === 0 ? (
+            <View className="cu-empty">
+              暂无可用的下单模板，请等待门店配置服务目录。
+            </View>
+          ) : null}
+          <Text className="cu-section-label">选择游戏模板</Text>
+          <View className="cu-tabs">
+            {templates.map((template) => (
+              <Button
+                key={template.id}
+                className={`cu-tab${detail?.id === template.id ? " is-active" : ""}`}
+                onClick={() => void selectTemplate(template.id)}
+              >
+                {template.name}
+              </Button>
+            ))}
+          </View>
           {detail ? (
-            <>
-              <Text style={{ fontWeight: "bold" }}>{detail.name}</Text>
-              {detail.fields
-                .filter((f) => f.fieldType !== "duration")
-                .map((f) => (
-                  <View key={f.fieldKey}>
-                    <Text style={labelStyle}>{f.label}</Text>
-                    {f.fieldType === "select" ? (
+            <View className="cu-card">
+              <Text className="cu-card-title">{detail.name}</Text>
+              <View className="cu-fields">
+                {detail.fields
+                  .filter((field) => field.fieldType !== "duration")
+                  .map((field) => (
+                    <View className="cu-field" key={field.fieldKey}>
+                      <Text className="cu-label">
+                        {field.label}
+                        {field.required ? " *" : ""}
+                      </Text>
                       <Input
-                        style={inputStyle}
-                        value={values[f.fieldKey] ?? ""}
-                        placeholder="选择"
-                        onInput={(e) =>
-                          setValues({ ...values, [f.fieldKey]: e.detail.value })
+                        className="cu-input"
+                        name={field.fieldKey}
+                        aria-label={field.label}
+                        value={values[field.fieldKey] ?? ""}
+                        placeholder={field.options[0] ?? "填写"}
+                        onInput={(event) =>
+                          setValues({
+                            ...values,
+                            [field.fieldKey]: event.detail.value,
+                          })
                         }
                       />
-                    ) : (
-                      <Input
-                        style={inputStyle}
-                        value={values[f.fieldKey] ?? ""}
-                        placeholder="填写"
-                        onInput={(e) =>
-                          setValues({ ...values, [f.fieldKey]: e.detail.value })
-                        }
-                      />
-                    )}
-                  </View>
-                ))}
-              <Text style={labelStyle}>时长（分钟）</Text>
-              <Input
-                style={inputStyle}
-                type="number"
-                value={duration}
-                onInput={(e) => setDuration(e.detail.value)}
-              />
-              {detail.positions.map((p) => (
-                <View
-                  key={p.id}
-                  style={{ display: "flex", alignItems: "center", gap: 8 }}
-                >
-                  <Text style={{ flex: 1 }}>{p.label} 人数</Text>
+                    </View>
+                  ))}
+                <View className="cu-field">
+                  <Text className="cu-label">时长（分钟）</Text>
                   <Input
-                    style={{ ...inputStyle, width: 80 }}
+                    className="cu-input"
                     type="number"
-                    value={String(counts[p.id] ?? p.defaultCount)}
-                    onInput={(e) =>
-                      setCounts({
-                        ...counts,
-                        [p.id]: Math.max(1, Number(e.detail.value) || 1),
-                      })
-                    }
+                    name="durationMinutes"
+                    aria-label="时长（分钟）"
+                    value={duration}
+                    onInput={(event) => setDuration(event.detail.value)}
                   />
                 </View>
-              ))}
-              <Button onClick={() => void submit()}>提交订单</Button>
-            </>
+                {detail.positions.map((position) => (
+                  <View className="cu-field" key={position.id}>
+                    <Text className="cu-label">{position.label} 人数</Text>
+                    <Input
+                      className="cu-input"
+                      type="number"
+                      name={position.label}
+                      aria-label={`${position.label}人数`}
+                      value={String(
+                        counts[position.id] ?? position.defaultCount,
+                      )}
+                      onInput={(event) =>
+                        setCounts({
+                          ...counts,
+                          [position.id]: Math.max(
+                            1,
+                            Number(event.detail.value) || 1,
+                          ),
+                        })
+                      }
+                    />
+                  </View>
+                ))}
+              </View>
+              <Button
+                className={`cu-button cu-button-primary cu-button-full${busy ? " is-disabled" : ""}`}
+                style={{ marginTop: 24 }}
+                disabled={busy}
+                onClick={() => void submit()}
+              >
+                {busy ? "提交中…" : "提交订单"}
+              </Button>
+            </View>
           ) : null}
         </>
-      )}
-    </View>
+      ) : null}
+    </CustomerShell>
   );
 }
-
-const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: 8,
-  height: 40,
-};
-const labelStyle: CSSProperties = {
-  fontSize: 14,
-  color: "#6b7280",
-  marginTop: 4,
-};

@@ -30,6 +30,8 @@ import {
 import { ApiError, apiFetch } from "../../_lib/api";
 import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
 import { TenantShell } from "../../_lib/tenant-shell";
+import { EmployeesCard } from "./employees-card";
+import { SubscriptionCard } from "./subscription-card";
 
 interface BrandConfig {
   primaryColor: string;
@@ -418,7 +420,7 @@ function Inner() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="addons">
         <CardHeader>
           <CardTitle>增值功能（只读）</CardTitle>
           <CardDescription>
@@ -460,6 +462,9 @@ function Inner() {
           )}
         </CardContent>
       </Card>
+
+      <SubscriptionCard />
+      <EmployeesCard />
     </div>
   );
 }

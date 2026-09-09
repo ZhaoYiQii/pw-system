@@ -1,5 +1,6 @@
 const apiOrigin = process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://127.0.0.1:3000";
 const TOKEN_KEY = "pw_access_token";
+const CSRF_KEY = "pw_csrf_token";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -26,6 +27,39 @@ export function clearAccessToken(): void {
   window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
+export function getCsrfToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(CSRF_KEY);
+}
+
+export function setCsrfToken(token: string): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(CSRF_KEY, token);
+}
+
+export function clearCsrfToken(): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(CSRF_KEY);
+}
+
+/** 调用服务端 logout 撤销 refresh session，随后清理本地会话。 */
+export async function logoutSession(): Promise<void> {
+  try {
+    const csrf = getCsrfToken();
+    await fetch(`${apiOrigin}/api/v1/auth/logout`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(csrf ? { "x-csrf-token": csrf } : {}),
+      },
+      credentials: "include",
+    });
+  } finally {
+    clearAccessToken();
+    clearCsrfToken();
+  }
+}
+
 /** 统一请求：自动附加 Bearer access token，解包 { data }，401 清 token。 */
 export async function apiFetch<T = unknown>(
   path: string,
@@ -35,7 +69,10 @@ export async function apiFetch<T = unknown>(
   const headers = new Headers(init?.headers);
   headers.set("content-type", "application/json");
   if (token) headers.set("authorization", `Bearer ${token}`);
-  const res = await fetch(`${apiOrigin}${path}`, { ...init, headers });
+  const res = await fetch(`${apiOrigin}${path}`, {
+    ...init,
+    headers,
+  });
   const text = await res.text();
   let body: unknown = null;
   try {

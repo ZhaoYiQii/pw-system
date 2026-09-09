@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiFetch, clearAccessToken, getAccessToken } from "./api";
-import { TENANT_ADDON_LINKS, TENANT_LINKS } from "./tenant-links";
+import {
+  TENANT_ADDON_LINKS,
+  tenantNavGroupsWithAddons,
+} from "./tenant-links";
 
 export function TenantShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -41,23 +44,24 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex max-w-[1440px] items-center gap-4 px-5 py-3">
           <span className="whitespace-nowrap font-semibold">PW SaaS</span>
           <nav className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto text-sm">
-            {TENANT_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+            {tenantNavGroupsWithAddons(addonLinks).map((group) => (
+              <div
+                key={group.id}
+                className="flex items-center gap-2 border-r pr-3 last:border-r-0"
               >
-                {link.label}
-              </Link>
-            ))}
-            {addonLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {link.label}
-              </Link>
+                <span className="text-xs text-muted-foreground">
+                  {group.label}
+                </span>
+                {group.items.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
           <Button variant="outline" size="sm" onClick={logout}>

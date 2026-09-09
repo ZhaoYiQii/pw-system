@@ -1,16 +1,23 @@
 import { Global, Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { PlatformAccountsModule } from "../platform-accounts/platform-accounts.module.js";
 import { AuditService } from "./audit.service.js";
 import {
   AuditController,
   PlatformAuditController,
+  PlatformAuditAggregateController,
 } from "./audit.controller.js";
 
 export const AUDIT_DB_CLIENT = "AUDIT_DB_CLIENT";
 
 @Global()
 @Module({
-  controllers: [AuditController, PlatformAuditController],
+  imports: [PlatformAccountsModule],
+  controllers: [
+    AuditController,
+    PlatformAuditController,
+    PlatformAuditAggregateController,
+  ],
   providers: [
     {
       provide: AUDIT_DB_CLIENT,

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@pw/database";
 import type {
+  PlayerAccountView,
   PlayerDetailView,
   PlayerSkillView,
   PlayerView,
@@ -165,6 +166,65 @@ export class PrismaPlayerRepository implements PlayerRepository {
         endsAt: a.endsAt,
         reason: a.reason,
       })),
+    };
+  }
+
+  async account(
+    tenantId: string,
+    id: string,
+  ): Promise<PlayerAccountView | null> {
+    const player = await this.detail(tenantId, id);
+    if (!player) return null;
+    const [legacy, slots, orders] = await Promise.all([
+      this.client.earning.findMany({
+        where: { tenantId, playerId: id },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      }),
+      this.client.slotEarning.findMany({
+        where: { tenantId, playerId: id },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      }),
+      this.client.order.findMany({
+        where: { tenantId },
+        select: { id: true, orderNo: true },
+      }),
+    ]);
+    const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+    const records: PlayerAccountView["finance"]["records"] = [
+      ...legacy.map((e) => ({
+        id: e.id,
+        source: "LEGACY" as const,
+        amountFen: e.amountFen.toString(),
+        status: e.status,
+        orderId: e.orderId,
+        orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+        createdAt: e.createdAt,
+      })),
+      ...slots.map((e) => ({
+        id: e.id,
+        source: "SLOT" as const,
+        amountFen: e.amountFen.toString(),
+        status: e.status,
+        orderId: e.orderId,
+        orderNo: orderNoById.get(e.orderId) ?? "未知订单",
+        createdAt: e.createdAt,
+      })),
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    let paidFen = 0n;
+    let unpaidFen = 0n;
+    for (const r of records) {
+      if (r.status === "PAID") paidFen += BigInt(r.amountFen);
+      else unpaidFen += BigInt(r.amountFen);
+    }
+    return {
+      ...player,
+      finance: {
+        paidFen: paidFen.toString(),
+        unpaidFen: unpaidFen.toString(),
+        records,
+      },
     };
   }
 

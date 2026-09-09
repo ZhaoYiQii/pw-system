@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
+import { PlatformAccountsModule } from "../platform-accounts/platform-accounts.module.js";
 import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { EntitlementsService } from "./application/entitlements.service.js";
 import { PrismaEntitlementRepository } from "./infrastructure/prisma-entitlement.repository.js";
@@ -9,6 +10,7 @@ export const ENTITLEMENT_DB_CLIENT = "ENTITLEMENT_DB_CLIENT";
 
 @Global()
 @Module({
+  imports: [PlatformAccountsModule],
   controllers: [EntitlementsController],
   providers: [
     {

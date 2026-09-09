@@ -1,9 +1,15 @@
-import { Button, Input, Text, View } from "@tarojs/components";
+import { Button, Text, View } from "@tarojs/components";
 import { useLoad, useRouter } from "@tarojs/taro";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { apiAdapter } from "@platform-api";
+import {
+  PlayerLoginCard,
+  PlayerMessage,
+  PlayerPage,
+} from "../../../components/player-ui";
+import "./index.css";
 
 interface SignupLine {
   lineId: string;
@@ -25,13 +31,13 @@ export default function GameSignupPage() {
   const [status, setStatus] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
-  const load = async (t: string) => {
+  const load = async (accessToken: string) => {
     try {
       const data = await apiAdapter.request<{
         status: string;
         lines: SignupLine[];
       }>(`/api/v1/tenant/game-dispatch/player/orders/${orderId}/signup`, {
-        token: t,
+        token: accessToken,
       });
       setStatus(data.status);
       setLines(data.lines);
@@ -41,23 +47,24 @@ export default function GameSignupPage() {
   };
 
   useLoad(() => {
-    const t = session.getToken();
-    setToken(t);
-    if (t) void load(t);
+    const accessToken = session.getToken();
+    setToken(accessToken);
+    if (accessToken) void load(accessToken);
   });
 
   const login = async () => {
     setMsg(null);
     try {
-      const s = await identityAdapter.login({
+      const loginSession = await identityAdapter.login({
         kind: "tenant",
         tenantCode,
         username,
         password,
       });
-      session.setToken(s.accessToken);
-      setToken(s.accessToken);
-      await load(s.accessToken);
+      session.setToken(loginSession.accessToken);
+      setToken(loginSession.accessToken);
+      setPassword("");
+      await load(loginSession.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     }
@@ -71,6 +78,7 @@ export default function GameSignupPage() {
         `/api/v1/tenant/game-dispatch/orders/${orderId}/lines/${lineId}/applications`,
         { method: "POST", token, body: {} },
       );
+      setMsg("岗位报名成功。");
       await load(token);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
@@ -85,90 +93,107 @@ export default function GameSignupPage() {
         `/api/v1/tenant/game-dispatch/applications/${applicationId}/withdraw`,
         { method: "POST", token, body: {} },
       );
+      setMsg("已撤销岗位报名。");
       await load(token);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     }
   };
 
+  const isOpen = status === "DISPATCHING";
+
   return (
-    <View
-      style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}
+    <PlayerPage
+      title="陪玩报名"
+      subtitle={orderId ? `订单 ${orderId.slice(0, 10)}…` : "按岗位独立报名"}
+      activeNav="orders"
+      badge={
+        token ? (
+          <Text
+            className={`pw-badge ${isOpen ? "pw-badge-live" : "pw-badge-wait"}`}
+          >
+            {isOpen ? "报名开放" : "报名关闭"}
+          </Text>
+        ) : undefined
+      }
     >
-      <Text style={{ fontSize: 20, fontWeight: "bold" }}>陪玩报名</Text>
-      {msg ? <Text style={{ color: "#dc2626" }}>{msg}</Text> : null}
       {!token ? (
+        <PlayerLoginCard
+          tenantCode={tenantCode}
+          username={username}
+          password={password}
+          actionLabel="登录并查看可报岗位"
+          onTenantCode={setTenantCode}
+          onUsername={setUsername}
+          onPassword={setPassword}
+          onLogin={() => void login()}
+        />
+      ) : null}
+      {msg ? (
+        <PlayerMessage
+          tone={
+            msg.includes("成功") || msg.includes("已撤销") ? "success" : "error"
+          }
+        >
+          {msg}
+        </PlayerMessage>
+      ) : null}
+      {token ? (
         <>
-          <Input
-            style={inputStyle}
-            value={tenantCode}
-            placeholder="门店 code"
-            onInput={(e) => setTenantCode(e.detail.value)}
-          />
-          <Input
-            style={inputStyle}
-            value={username}
-            placeholder="陪玩账号"
-            onInput={(e) => setUsername(e.detail.value)}
-          />
-          <Input
-            style={inputStyle}
-            password
-            value={password}
-            placeholder="密码"
-            onInput={(e) => setPassword(e.detail.value)}
-          />
-          <Button onClick={() => void login()}>登录并查看可报位置</Button>
+          <View className="pw-card signup-intro">
+            <Text className="pw-card-title">选择报名岗位</Text>
+            <Text className="pw-muted">
+              同一订单的不同岗位独立报名，门店选中后进入服务列表。
+            </Text>
+          </View>
+          {lines.length === 0 ? (
+            <Text className="pw-empty">当前订单没有可报名岗位。</Text>
+          ) : null}
+          {lines.map((line) => {
+            const applied = line.myStatus === "APPLIED";
+            return (
+              <View key={line.lineId} className="pw-card">
+                <View className="pw-row-between">
+                  <View className="pw-row-copy">
+                    <Text className="pw-card-title">{line.positionLabel}</Text>
+                    <Text className="pw-muted">
+                      需要 {line.requiredCount} 人
+                    </Text>
+                  </View>
+                  <Text
+                    className={`pw-badge ${applied ? "pw-badge-live" : "pw-badge-wait"}`}
+                  >
+                    {applied ? "我：已报名" : "未报名"}
+                  </Text>
+                </View>
+                {applied ? (
+                  <Button
+                    className="pw-button pw-button-plain"
+                    onClick={() =>
+                      line.myApplicationId
+                        ? void withdraw(line.myApplicationId)
+                        : undefined
+                    }
+                  >
+                    撤销报名
+                  </Button>
+                ) : (
+                  <Button
+                    className="pw-button pw-button-primary"
+                    disabled={!isOpen}
+                    onClick={() => void apply(line.lineId)}
+                  >
+                    报名这个岗位
+                  </Button>
+                )}
+              </View>
+            );
+          })}
+          <Text className="pw-footnote">
+            报名截止后不可新增报名；每个岗位只保留一个有效报名记录。
+          </Text>
         </>
-      ) : (
-        <>
-          <Button size="mini" onClick={() => void load(token)}>
-            刷新
-          </Button>
-          {lines.map((line) => (
-            <View key={line.lineId} style={cardStyle}>
-              <Text style={{ fontWeight: "bold" }}>
-                {line.positionLabel}（需 {line.requiredCount} 人）
-              </Text>
-              {line.myStatus === "APPLIED" ? (
-                <Button
-                  size="mini"
-                  onClick={() =>
-                    line.myApplicationId
-                      ? void withdraw(line.myApplicationId)
-                      : undefined
-                  }
-                >
-                  取消报名
-                </Button>
-              ) : (
-                <Button
-                  size="mini"
-                  disabled={status !== "DISPATCHING"}
-                  onClick={() => void apply(line.lineId)}
-                >
-                  报名
-                </Button>
-              )}
-            </View>
-          ))}
-        </>
-      )}
-    </View>
+      ) : null}
+    </PlayerPage>
   );
 }
-
-const inputStyle: CSSProperties = {
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: 8,
-  height: 40,
-};
-const cardStyle: CSSProperties = {
-  border: "1px solid #e5e7eb",
-  borderRadius: 10,
-  padding: 12,
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-};

@@ -47,7 +47,7 @@ export default function Index() {
   };
 
   const openBoss = () => {
-    void Taro.navigateTo({ url: "/pages/customer/game-order/index" });
+    void Taro.navigateTo({ url: "/pages/customer/home/index" });
   };
 
   return (

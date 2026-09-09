@@ -37,6 +37,11 @@ function Inner() {
     queryKey: ["notifications"],
     queryFn: () => apiFetch<NotificationRow[]>("/api/v1/tenant/notifications"),
   });
+  const unreadQuery = useQuery({
+    queryKey: ["notifications", "unread"],
+    queryFn: () =>
+      apiFetch<{ count: number }>("/api/v1/tenant/notifications/unread-count"),
+  });
 
   const markRead = useMutation({
     mutationFn: (id: string) =>
@@ -87,18 +92,33 @@ function Inner() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle>站内通知</CardTitle>
+              <CardTitle>
+                站内通知
+                {unreadQuery.data?.count ? `（未读 ${unreadQuery.data.count}）` : ""}
+              </CardTitle>
               <CardDescription>
                 订单状态事件推送；支持单项/全部标记已读。
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              disabled={markAll.isPending}
-              onClick={() => markAll.mutate()}
-            >
-              全部已读
-            </Button>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void queryClient.invalidateQueries({
+                    queryKey: ["notifications"],
+                  })
+                }
+              >
+                刷新
+              </Button>
+              <Button
+                variant="outline"
+                disabled={markAll.isPending || unreadQuery.data?.count === 0}
+                onClick={() => markAll.mutate()}
+              >
+                全部已读
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

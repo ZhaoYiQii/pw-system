@@ -196,6 +196,67 @@ export class PlatformBillingService {
     });
   }
 
+  /** 平台侧订阅续费：仅可延长 ACTIVE 订阅，从当前到期日（未过期）或今天起顺延。 */
+  async renewSubscription(
+    subscriptionId: string,
+    monthsInput: unknown,
+    actorId: string,
+    note?: unknown,
+  ): Promise<{
+    subscriptionId: string;
+    tenantId: string;
+    packageCode: string;
+    startsAt: Date;
+    endsAt: Date;
+  }> {
+    const months = Number(monthsInput);
+    if (![1, 3, 6, 12].includes(months))
+      throw new Error("续费周期仅支持 1/3/6/12 个月");
+    const noteText =
+      typeof note === "string" && note.trim().length > 0
+        ? note.trim().slice(0, 200)
+        : null;
+    const result = await this.client.$transaction(async (tx) => {
+      const current = await tx.tenantSubscription.findUnique({
+        where: { id: subscriptionId },
+      });
+      if (!current) throw new Error("订阅不存在");
+      if (current.status !== "ACTIVE")
+        throw new Error(
+          `仅可续费生效中的订阅（当前 ${current.status}）；请先重新指派套餐`,
+        );
+      const now = new Date();
+      const base =
+        current.endsAt && current.endsAt.getTime() > now.getTime()
+          ? current.endsAt
+          : now;
+      const endsAt = addMonths(base, months);
+      const updated = await tx.tenantSubscription.update({
+        where: { id: current.id },
+        data: { endsAt },
+      });
+      await tx.auditLog.create({
+        data: {
+          tenantId: current.tenantId,
+          actorType: "platform_account",
+          actorId,
+          action: "subscription.renew",
+          resourceType: "tenant_subscription",
+          resourceId: current.id,
+          summary: `续费 ${months} 个月${noteText ? `，备注：${noteText}` : ""}`,
+        },
+      });
+      return {
+        subscriptionId: updated.id,
+        tenantId: updated.tenantId,
+        packageCode: updated.packageCode,
+        startsAt: updated.startsAt,
+        endsAt: updated.endsAt ?? endsAt,
+      };
+    });
+    return result;
+  }
+
   /** 平台维护/worker 调用：把已到期 ACTIVE 订阅置 EXPIRED，并回收其套餐 addon 权限。 */
   async expireDueSubscriptions(): Promise<number> {
     return this.client.$transaction(async (tx) => {
@@ -236,6 +297,14 @@ export class PlatformBillingService {
 
 function addDays(from: Date, days: number): Date {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function addMonths(from: Date, months: number): Date {
+  const next = new Date(from);
+  const day = next.getDate();
+  next.setMonth(next.getMonth() + months);
+  if (next.getDate() !== day) next.setDate(0);
+  return next;
 }
 
 async function replacePackageEntitlements(

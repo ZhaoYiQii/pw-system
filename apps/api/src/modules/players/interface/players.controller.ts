@@ -142,6 +142,17 @@ export class PlayersController {
 
   @TenantScope()
   @Permissions("player.manage")
+  @Get(":id/account")
+  async account(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    try {
+      return { data: await this.players.getAccount(tenantIdOf(req), id) };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("player.manage")
   @Patch(":id")
   async update(
     @Req() req: AuthenticatedRequest,

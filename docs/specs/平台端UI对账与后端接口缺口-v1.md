@@ -1,5 +1,7 @@
 # 平台端 UI ↔ 后端接口对账（v1）
 
+> 状态更新：2026-09-09 · P-B1/P-B2a/P-B2b/P-B3/续费/费率均已实现并接线，本文档原“待补缺口”已全部落地；旧切片记录仅作追溯。
+
 > 状态：2026-09-08 · 对应 UI：`apps/admin-web/app/(platform)` 全部页面
 > 目的：确认每个功能模块都有对应 UI 与可接线后端；未具备接口的区域全部显式“待接口”，禁止假数据。
 
@@ -62,3 +64,14 @@ POST /api/v1/platform/tenants/:tenantId/activate
 
 - UI 层不得臆造金额、订阅状态、权限与跨租户能力；未接接口处保留“待接口/待接入”标识。
 - 每个后端 Slice 单独审批：接口契约变更走 OpenAPI/生成客户端，数据库变更走迁移，涉及权限/租户边界走安全与审计门禁。
+
+## 2026-09-09 完成记录（回填）
+
+| 原缺口 | 落地文件 / 契约 | 验证 |
+| --- | --- | --- |
+| 总览/订阅/门店详情（P-B1） | 已存在并接线 `/overview`、`/subscriptions`、`/tenants/[id]`；overview/subscriptions 收敛为仅超管 | platform-ops 集成测试 |
+| 平台账号 CRUD（P-B2a） | 已存在；`/accounts` 完整接线 | platform-accounts 集成测试 |
+| 跨租户临时授权（P-B2b） | 新增 `platform_access_grants` 表/迁移；`GET/POST /api/v1/platform/grants`、`POST /api/v1/platform/grants/:id/revoke`；守卫接入 `tenants/:id/detail`、`entitlements`、`audit` | platform-grants-renew 集成测试 |
+| 平台级审计（P-B3） | 新增 `GET /api/v1/platform/audit` 汇总 + 真实指标；审计页 CSV 导出基于真实数据 | 同上 |
+| 订阅续费 | 新增 `POST /api/v1/platform/subscriptions/:subscriptionId/renew`；订阅页真实提交 | subscription-lifecycle + grants-renew |
+| 角色导航/权限展示 | `PlatformShell` 按 `PLATFORM_SUPPORT` 过滤导航；管理/聚合入口仅超管 | admin typecheck |

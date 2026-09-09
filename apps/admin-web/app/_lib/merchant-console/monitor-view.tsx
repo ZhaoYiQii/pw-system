@@ -1,287 +1,331 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
-import { DemoDialog, useDemoToast } from "./demo-ui";
 import {
-  MONITOR_MODULES,
-  type MonitorModuleId,
-  type MonitorRow,
-} from "./monitor-data";
-import { useDemoStore } from "./demo-store";
-import { isTodo } from "./demo-data";
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { apiFetch } from "../api";
+import { formatFenYuan } from "../money";
+import { DemoEmptyState } from "./demo-ui";
+import {
+  type DisputeRow,
+  type NotificationRow,
+  type SettlementBatchRow,
+  type SessionRow,
+  dateTime,
+  formatDuration,
+  statusLabel,
+} from "./merchant-api";
 
-export function MonitorModuleView({ moduleId }: { moduleId: MonitorModuleId }) {
+function Badge({ status }: { status: string }) {
+  const tone =
+    status === "OPEN" || ["DRAFT", "REVIEWED"].includes(status)
+      ? "pending"
+      : status === "STARTED" || status === "IN_PROGRESS"
+        ? "running"
+        : status === "APPROVED" || status === "PAID"
+          ? "done"
+          : "muted";
+  return <span className={`mc-status st-${tone}`}>{statusLabel(status)}</span>;
+}
+
+export function MonitorModuleView({ moduleId }: { moduleId: string }) {
   if (moduleId === "overview") return <OverviewView />;
-  return <MonitorTableView moduleId={moduleId} />;
+  if (moduleId === "live") return <LiveView />;
+  if (moduleId === "risk") return <RiskView />;
+  if (moduleId === "finrisk") return <FinRiskView />;
+  if (moduleId === "health") return <HealthView />;
+  return null;
 }
 
 function OverviewView() {
-  const { orders } = useDemoStore();
-  const todoCount = orders.filter(isTodo).length;
-  const liveCount = MONITOR_MODULES.live.rows.length;
-  const riskCount = MONITOR_MODULES.risk.rows.length;
-
+  const orders = useQuery({
+    queryKey: ["monitor", "overview-orders"],
+    queryFn: () => apiFetch<Array<{ status: string }>>("/api/v1/tenant/orders"),
+  });
+  const gd = useQuery({
+    queryKey: ["monitor", "overview-gd"],
+    queryFn: () =>
+      apiFetch<Array<{ status: string }>>("/api/v1/tenant/game-dispatch"),
+  });
+  const sessions = useQuery({
+    queryKey: ["monitor", "overview-sessions"],
+    queryFn: () => apiFetch<SessionRow[]>("/api/v1/tenant/sessions"),
+  });
+  const disputes = useQuery({
+    queryKey: ["monitor", "overview-disputes"],
+    queryFn: () => apiFetch<DisputeRow[]>("/api/v1/tenant/disputes"),
+  });
+  const settlements = useQuery({
+    queryKey: ["monitor", "overview-settlements"],
+    queryFn: () =>
+      apiFetch<SettlementBatchRow[]>("/api/v1/tenant/settlements"),
+  });
+  const allOrders = [
+    ...(orders.data ?? []),
+    ...(gd.data ?? []),
+  ];
+  const liveCount = (sessions.data ?? []).filter((s) =>
+    ["STARTED", "IN_PROGRESS"].includes(s.status),
+  ).length;
+  const riskCount = (disputes.data ?? []).filter((d) => d.status === "OPEN").length;
+  const finriskCount = (settlements.data ?? []).filter((b) =>
+    ["DRAFT", "REVIEWED", "APPROVED"].includes(b.status),
+  ).length;
   const metrics = [
     {
       label: "待办订单",
-      value: String(todoCount),
+      value: String(
+        allOrders.filter((o) =>
+          ["DRAFT", "CONFIRMED", "DISPATCHING", "PENDING_CONFIRMATION"].includes(o.status),
+        ).length,
+      ),
       hint: "去订单台账",
       href: "/merchant-console/dispatch",
     },
-    {
-      label: "进行中场次",
-      value: String(liveCount),
-      hint: "实时盯场",
-      href: "/merchant-console/live",
-    },
-    {
-      label: "异常事项",
-      value: String(riskCount),
-      hint: "争议 / 复核",
-      href: "/merchant-console/risk",
-    },
-    {
-      label: "财务风险",
-      value: String(MONITOR_MODULES.finrisk.rows.length),
-      hint: "待复核 / 冻结",
-      href: "/merchant-console/finrisk",
-    },
+    { label: "进行中场次", value: String(liveCount), hint: "实时盯场", href: "/merchant-console/live" },
+    { label: "异常事项", value: String(riskCount), hint: "争议 / 复核", href: "/merchant-console/risk" },
+    { label: "财务风险", value: String(finriskCount), hint: "待复核 / 冻结", href: "/merchant-console/finrisk" },
   ];
-
   return (
     <div>
       <div className="mc-pagehead">
         <div>
           <div className="mc-kicker">MONITOR / OVERVIEW</div>
           <h1>门店概览</h1>
-          <p>营业脉搏与需要人工处理的风险，先看影响再给动作。</p>
+          <p>营业脉搏与需要人工处理的风险，全部来自真实接口。</p>
         </div>
-        <span className="mc-chip">
-          演示数据 <b>未接后端</b>
-        </span>
       </div>
-
       <div className="mc-monitor-metrics">
         {metrics.map((metric) => (
-          <Link
-            key={metric.label}
-            href={metric.href}
-            className="mc-metric-tile"
-          >
+          <Link key={metric.label} href={metric.href} className="mc-metric-tile">
             <span>{metric.label}</span>
             <b>{metric.value}</b>
-            <em>
-              {metric.hint}
-              <ArrowRight size={12} />
-            </em>
+            <em>{metric.hint}<ArrowRight size={12} /></em>
           </Link>
         ))}
       </div>
-
       <div className="mc-workgrid">
         <section className="mc-panel">
           <div className="mc-section-head">
-            <div>
-              <h2>需要留意</h2>
-              <p>按影响排序</p>
-            </div>
+            <div><h2>需要留意</h2><p>按影响排序</p></div>
           </div>
           <div className="mc-agenda">
             <Link className="mc-agenda-row" href="/merchant-console/live">
-              <time className="mc-mono">19:30</time>
-              <span>
-                <b>2 单需收结束证据</b>
-                <p>场次接近计划结束，检查截图是否齐全。</p>
-              </span>
+              <time className="mc-mono">{liveCount}</time>
+              <span><b>{liveCount} 场进行中</b><p>进入场次查看服务端计时与结束证据。</p></span>
             </Link>
-            <Link
-              className="mc-agenda-row"
-              href="/merchant-console/settlements/s-0908-01"
-            >
-              <time className="mc-mono">待复核</time>
-              <span>
-                <b>1 笔结算待批准 · ¥860.00</b>
-                <p>财务角色处理，发起人不能自己批准。</p>
-              </span>
-            </Link>
-            <Link className="mc-agenda-row" href="/merchant-console/health">
-              <time className="mc-mono">降级</time>
-              <span>
-                <b>短信通知未配置</b>
-                <p>站内通知正常，短信通道提示降级。</p>
-              </span>
+            <Link className="mc-agenda-row" href="/merchant-console/finrisk">
+              <time className="mc-mono">{finriskCount}</time>
+              <span><b>{finriskCount} 笔财务待办</b><p>复核 / 批准 / 支付批次。</p></span>
             </Link>
           </div>
         </section>
-
         <aside className="mc-quiet-note" style={{ marginTop: 0 }}>
           <b>监控台原则</b>
-          先看影响，再给动作；实时计时以服务端为准；风险都带“去处理”跳转；金额与状态不臆造。
+          先看影响，再给动作；金额与状态不臆造。
         </aside>
       </div>
     </div>
   );
 }
 
-function MonitorTableView({ moduleId }: { moduleId: MonitorModuleId }) {
-  const config = MONITOR_MODULES[moduleId];
-  const { toast, showToast } = useDemoToast();
-  const [pendingRow, setPendingRow] = useState<MonitorRow | null>(null);
-
+function LiveView() {
+  const query = useQuery({
+    queryKey: ["monitor", "live"],
+    queryFn: () =>
+      apiFetch<SessionRow[]>("/api/v1/tenant/sessions?status=STARTED"),
+  });
+  const rows = query.data ?? [];
   return (
     <div>
-      <div className="mc-pagehead">
-        <div>
-          <div className="mc-kicker">{config.kicker}</div>
-          <h1>{config.title}</h1>
-          <p>{config.description}</p>
-        </div>
-        <span className="mc-chip">
-          演示数据 <b>未接后端</b>
-        </span>
-      </div>
-
-      {moduleId === "health" ? <HealthChannels /> : null}
-
+      <MonitorHeader kicker="MONITOR / LIVE" title="进行中场次" description="服务端计时中的场次。">
+        <Link href="/merchant-console/sessions" className="mc-btn">全部场次</Link>
+      </MonitorHeader>
       <section className="mc-panel">
-        <div className="mc-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>编号</th>
-                <th>对象 / 标题</th>
-                <th>关键信息</th>
-                <th>金额 / 状态值</th>
-                <th>状态</th>
-                <th>动作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {config.rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <span className="mc-mono">{row.no}</span>
-                  </td>
-                  <td>
-                    <b className="mc-cell-title">{row.title}</b>
-                  </td>
-                  <td>{row.info}</td>
-                  <td>
-                    <span className="mc-mono">{row.amount}</span>
-                  </td>
-                  <td>
-                    <span className={`mc-status st-${row.tone}`}>
-                      {row.statusLabel}
-                    </span>
-                  </td>
-                  <td>
-                    {row.href ? (
-                      <Link
-                        href={row.href}
-                        className="mc-btn mc-btn-ghost mc-btn-small"
-                      >
-                        {row.actionLabel}
-                        <ArrowRight size={13} />
-                      </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        className="mc-btn mc-btn-ghost mc-btn-small"
-                        onClick={() => setPendingRow(row)}
-                      >
-                        {row.actionLabel}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="mc-table-foot">
-            <span>显示 {config.rows.length} 条风险 / 提醒</span>
-            <span>统一监控模板 · 演示数据</span>
+        {rows.length ? (
+          <div className="mc-table-wrap">
+            <table>
+              <thead><tr><th>订单</th><th>流程</th><th>客户</th><th>陪玩</th><th>时长</th><th>证据</th><th>操作</th></tr></thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.orderNo}</td><td>{row.flow}</td><td>{row.customerName}</td><td>{row.playerName}</td>
+                    <td>{formatDuration(row.durationSeconds)}</td><td>{row.evidenceCount}</td>
+                    <td><Link href={`/merchant-console/sessions/${row.id}`} className="mc-btn mc-btn-ghost mc-btn-small">盯场 <ArrowRight size={13} /></Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        ) : query.isPending ? <div className="mc-empty">加载中…</div> : <DemoEmptyState title="暂无进行中场次" description="场次开始后出现在这里。" />}
       </section>
-
-      {pendingRow ? (
-        <DemoDialog
-          open
-          title={`${pendingRow.no} · ${pendingRow.title}`}
-          confirmLabel="确认动作"
-          onCancel={() => setPendingRow(null)}
-          onConfirm={() => {
-            setPendingRow(null);
-            showToast(`${pendingRow.actionLabel}已记录 · 仅原型演示`);
-          }}
-        >
-          <p>
-            “{pendingRow.actionLabel}”演示动作将按对应后端流程执行；
-            当前只更新页面反馈，不产生业务变更。
-          </p>
-          <div className="mc-summary-line">
-            <span>关联金额 / 状态</span>
-            <b>{pendingRow.amount}</b>
-          </div>
-        </DemoDialog>
-      ) : null}
-
-      {toast}
     </div>
   );
 }
 
-function HealthChannels() {
-  const channels = [
-    {
-      name: "站内通知",
-      status: "正常",
-      tone: "st-done",
-      note: "未发现失败记录",
-    },
-    {
-      name: "短信通道",
-      status: "未配置 · 降级",
-      tone: "st-pending",
-      note: "站内通知正常，短信发送将跳过",
-    },
-    {
-      name: "微信订阅消息",
-      status: "未配置 · 降级",
-      tone: "st-pending",
-      note: "等 AppID 授权后启用",
-    },
-    {
-      name: "Outbox 死信",
-      status: "0 条待重放",
-      tone: "st-muted",
-      note: "worker 每 5 分钟巡检一次",
-    },
-  ];
-
+function RiskView() {
+  const disputes = useQuery({
+    queryKey: ["monitor", "risk-disputes"],
+    queryFn: () => apiFetch<DisputeRow[]>("/api/v1/tenant/disputes"),
+  });
+  const sessions = useQuery({
+    queryKey: ["monitor", "risk-sessions"],
+    queryFn: () => apiFetch<SessionRow[]>("/api/v1/tenant/sessions"),
+  });
+  const openDisputes = (disputes.data ?? []).filter((d) => d.status === "OPEN");
+  const adjustments = (sessions.data ?? []).filter(
+    (s) => s.adjustmentPendingCount > 0,
+  );
   return (
-    <section className="mc-panel mc-channel-panel">
-      <div className="mc-section-head">
-        <div>
-          <h2>触达通道</h2>
-          <p>通道状态影响业务提醒可靠性；降级必须可见，不伪装送达。</p>
-        </div>
-      </div>
-      <div className="mc-channel-list">
-        {channels.map((channel) => (
-          <div className="mc-channel-row" key={channel.name}>
-            <span>
-              <b>{channel.name}</b>
-              <small>{channel.note}</small>
-            </span>
-            <span className={`mc-status ${channel.tone}`}>
-              {channel.status}
-            </span>
+    <div>
+      <MonitorHeader kicker="MONITOR / RISK" title="异常与争议" description="待处理客诉与待复核调整。">
+        <Link href="/merchant-console/disputes" className="mc-btn">客诉记录</Link>
+      </MonitorHeader>
+      <section className="mc-panel">
+        <div className="mc-section-head"><div><h2>待处理争议</h2></div><span>{openDisputes.length}</span></div>
+        {openDisputes.length ? (
+          <div className="mc-table-wrap">
+            <table>
+              <thead><tr><th>订单</th><th>客户</th><th>陪玩</th><th>原因</th><th>发起时间</th><th>操作</th></tr></thead>
+              <tbody>
+                {openDisputes.map((d) => (
+                  <tr key={d.id}><td>{d.orderNo}</td><td>{d.customerName}</td><td>{d.playerName}</td><td>{d.reason}</td><td>{dateTime(d.createdAt)}</td>
+                    <td><Link href={`/merchant-console/disputes/${d.id}`} className="mc-btn mc-btn-ghost mc-btn-small">去处理 <ArrowRight size={13} /></Link></td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
-    </section>
+        ) : <div className="mc-empty mc-empty-compact">暂无待处理争议。</div>}
+      </section>
+      <section className="mc-panel">
+        <div className="mc-section-head"><div><h2>时长调整待复核</h2></div><span>{adjustments.length}</span></div>
+        {adjustments.length ? (
+          <div className="mc-table-wrap">
+            <table>
+              <thead><tr><th>订单</th><th>陪玩</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+                {adjustments.map((s) => (
+                  <tr key={s.id}><td>{s.orderNo}</td><td>{s.playerName}</td><td><Badge status={s.status} /></td>
+                    <td><Link href={`/merchant-console/sessions/${s.id}`} className="mc-btn mc-btn-ghost mc-btn-small">复核 <ArrowRight size={13} /></Link></td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <div className="mc-empty mc-empty-compact">暂无待复核调整。</div>}
+      </section>
+    </div>
+  );
+}
+
+function FinRiskView() {
+  const batches = useQuery({
+    queryKey: ["monitor", "finrisk"],
+    queryFn: () =>
+      apiFetch<SettlementBatchRow[]>("/api/v1/tenant/settlements"),
+  });
+  const rows = (batches.data ?? []).filter((b) =>
+    ["DRAFT", "REVIEWED", "APPROVED"].includes(b.status),
+  );
+  return (
+    <div>
+      <MonitorHeader kicker="MONITOR / FINANCE RISK" title="财务风险" description="待复核、批准与登记的结算批次。">
+        <Link href="/merchant-console/settlements" className="mc-btn">结算批次</Link>
+      </MonitorHeader>
+      <section className="mc-panel">
+        {rows.length ? (
+          <div className="mc-table-wrap">
+            <table>
+              <thead><tr><th>批次</th><th>状态</th><th>总额</th><th>笔数</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
+              <tbody>
+                {rows.map((batch) => (
+                  <tr key={batch.id}>
+                    <td>{batch.batchNo}</td><td><Badge status={batch.status} /></td>
+                    <td>{formatFenYuan(batch.totalAmountFen)}</td><td>{batch.itemCount}</td><td>{batch.createdBy ?? "系统"}</td>
+                    <td>{dateTime(batch.createdAt)}</td>
+                    <td><Link href={`/merchant-console/settlements/${batch.id}`} className="mc-btn mc-btn-ghost mc-btn-small">去处理 <ArrowRight size={13} /></Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <DemoEmptyState title="暂无财务风险" description="没有待复核批次。" />}
+      </section>
+    </div>
+  );
+}
+
+function HealthView() {
+  const queryClient = useQueryClient();
+  const notifications = useQuery({
+    queryKey: ["monitor", "health-notifications"],
+    queryFn: () => apiFetch<NotificationRow[]>("/api/v1/tenant/notifications"),
+  });
+  const unread = useQuery({
+    queryKey: ["monitor", "health-unread"],
+    queryFn: () =>
+      apiFetch<{ count: number }>("/api/v1/tenant/notifications/unread-count"),
+  });
+  const markRead = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<unknown>(`/api/v1/tenant/notifications/${id}/read`, { method: "POST" }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["monitor", "health"] }),
+  });
+  const rows = notifications.data ?? [];
+  return (
+    <div>
+      <MonitorHeader kicker="MONITOR / HEALTH" title="通知与任务健康" description="站内通知已读管理；短信/微信通道为外部挂起项。">
+      </MonitorHeader>
+      <section className="mc-panel mc-channel-panel">
+        <div className="mc-section-head"><div><h2>触达通道</h2><p>只展示真实能力状态。</p></div></div>
+        <div className="mc-channel-list">
+          <div className="mc-channel-row"><span><b>站内通知</b><small>未读 {unread.data?.count ?? 0} 条</small></span><span className="mc-status st-done">正常</span></div>
+          <div className="mc-channel-row"><span><b>短信 / 微信</b><small>当前仓库未接入外部通道</small></span><span className="mc-status st-muted">未配置</span></div>
+        </div>
+      </section>
+      <section className="mc-panel">
+        <div className="mc-section-head"><div><h2>通知列表</h2></div><span>{rows.length} 条</span></div>
+        {rows.length ? (
+          <div className="mc-table-wrap">
+            <table>
+              <thead><tr><th>标题</th><th>内容</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.title ?? "-"}</td><td>{row.content}</td>
+                    <td>{row.readAt ? "已读" : "未读"}</td><td>{dateTime(row.createdAt)}</td>
+                    <td>{row.readAt ? null : <button type="button" className="mc-btn mc-btn-ghost mc-btn-small" onClick={() => markRead.mutate(row.id)}>标为已读</button>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <DemoEmptyState title="暂无通知" description="系统通知会显示在这里。" />}
+      </section>
+    </div>
+  );
+}
+
+function MonitorHeader({
+  kicker,
+  title,
+  description,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  description: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="mc-pagehead">
+      <div><div className="mc-kicker">{kicker}</div><h1>{title}</h1><p>{description}</p></div>
+      {children ? <div className="mc-button-row">{children}</div> : null}
+    </div>
   );
 }

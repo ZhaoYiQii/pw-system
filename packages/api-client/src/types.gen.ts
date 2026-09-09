@@ -83,6 +83,17 @@ export type AuditListResponses = {
     200: unknown;
 };
 
+export type AuditExportData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/audit/export';
+};
+
+export type AuditExportResponses = {
+    200: unknown;
+};
+
 export type PlatformAuditPlatformListData = {
     body?: never;
     path: {
@@ -93,6 +104,100 @@ export type PlatformAuditPlatformListData = {
 };
 
 export type PlatformAuditPlatformListResponses = {
+    200: unknown;
+};
+
+export type PlatformAuditAggregateAggregateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/audit';
+};
+
+export type PlatformAuditAggregateAggregateResponses = {
+    200: unknown;
+};
+
+export type PlatformAccountsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/accounts';
+};
+
+export type PlatformAccountsListResponses = {
+    200: unknown;
+};
+
+export type PlatformAccountsCreateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/accounts';
+};
+
+export type PlatformAccountsCreateResponses = {
+    201: unknown;
+};
+
+export type PlatformAccountsSetStatusData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/accounts/{id}/status';
+};
+
+export type PlatformAccountsSetStatusResponses = {
+    200: unknown;
+};
+
+export type PlatformAccountsSetRoleData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/accounts/{id}/role';
+};
+
+export type PlatformAccountsSetRoleResponses = {
+    200: unknown;
+};
+
+export type PlatformGrantsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/grants';
+};
+
+export type PlatformGrantsListResponses = {
+    200: unknown;
+};
+
+export type PlatformGrantsCreateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform/grants';
+};
+
+export type PlatformGrantsCreateResponses = {
+    201: unknown;
+};
+
+export type PlatformGrantsRevokeData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/grants/{id}/revoke';
+};
+
+export type PlatformGrantsRevokeResponses = {
     200: unknown;
 };
 
@@ -162,6 +267,54 @@ export type MeTenantMeResponses = {
     200: unknown;
 };
 
+export type TenantAccountsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/accounts';
+};
+
+export type TenantAccountsListResponses = {
+    200: unknown;
+};
+
+export type TenantAccountsCreateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/accounts';
+};
+
+export type TenantAccountsCreateResponses = {
+    201: unknown;
+};
+
+export type TenantAccountsSetStatusData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/accounts/{id}/status';
+};
+
+export type TenantAccountsSetStatusResponses = {
+    200: unknown;
+};
+
+export type TenantAccountsSetRolesData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/accounts/{id}/roles';
+};
+
+export type TenantAccountsSetRolesResponses = {
+    200: unknown;
+};
+
 export type EntitlementsListTenantFeaturesData = {
     body?: never;
     path?: never;
@@ -170,6 +323,17 @@ export type EntitlementsListTenantFeaturesData = {
 };
 
 export type EntitlementsListTenantFeaturesResponses = {
+    200: unknown;
+};
+
+export type EntitlementsSubscriptionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/subscription';
+};
+
+export type EntitlementsSubscriptionResponses = {
     200: unknown;
 };
 
@@ -328,6 +492,19 @@ export type CustomersUpdateResponses = {
     200: unknown;
 };
 
+export type CustomersAccountData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/customers/{id}/account';
+};
+
+export type CustomersAccountResponses = {
+    200: unknown;
+};
+
 export type CustomersBindData = {
     body?: never;
     path: {
@@ -339,6 +516,19 @@ export type CustomersBindData = {
 
 export type CustomersBindResponses = {
     201: unknown;
+};
+
+export type CustomersOrdersData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/customers/{id}/orders';
+};
+
+export type CustomersOrdersResponses = {
+    200: unknown;
 };
 
 export type CustomerSelfMeData = {
@@ -1752,6 +1942,17 @@ export type SettlementsListEarningsResponses = {
     200: unknown;
 };
 
+export type SettlementsFinanceLedgerData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/settlements/ledger';
+};
+
+export type SettlementsFinanceLedgerResponses = {
+    200: unknown;
+};
+
 export type SettlementsDetailData = {
     body?: never;
     path: {
@@ -1891,6 +2092,32 @@ export type PlayersUpdateResponses = {
     200: unknown;
 };
 
+export type PlayersAccountData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/players/{id}/account';
+};
+
+export type PlayersAccountResponses = {
+    200: unknown;
+};
+
+export type PlayersBindData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/players/{id}/account';
+};
+
+export type PlayersBindResponses = {
+    201: unknown;
+};
+
 export type PlayersAddSkillData = {
     body?: never;
     path: {
@@ -1928,19 +2155,6 @@ export type PlayersAddAvailabilityData = {
 };
 
 export type PlayersAddAvailabilityResponses = {
-    201: unknown;
-};
-
-export type PlayersBindData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/tenant/players/{id}/account';
-};
-
-export type PlayersBindResponses = {
     201: unknown;
 };
 
@@ -2518,6 +2732,30 @@ export type DispatchCustomerSelectResponses = {
     201: unknown;
 };
 
+export type SessionsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/sessions';
+};
+
+export type SessionsListResponses = {
+    200: unknown;
+};
+
+export type SessionsDetailData = {
+    body?: never;
+    path: {
+        sessionId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/sessions/{sessionId}';
+};
+
+export type SessionsDetailResponses = {
+    200: unknown;
+};
+
 export type SessionsSessionData = {
     body?: never;
     path: {
@@ -2629,6 +2867,19 @@ export type EvidenceDownloadResponses = {
     200: unknown;
 };
 
+export type EvidenceDownloadSlotEvidenceData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/slot-evidence/{id}';
+};
+
+export type EvidenceDownloadSlotEvidenceResponses = {
+    200: unknown;
+};
+
 export type DisputesListAllData = {
     body?: never;
     path?: never;
@@ -2637,6 +2888,19 @@ export type DisputesListAllData = {
 };
 
 export type DisputesListAllResponses = {
+    200: unknown;
+};
+
+export type DisputesDetailData = {
+    body?: never;
+    path: {
+        disputeId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/disputes/{disputeId}';
+};
+
+export type DisputesDetailResponses = {
     200: unknown;
 };
 
@@ -2709,6 +2973,17 @@ export type NotificationsListData = {
 };
 
 export type NotificationsListResponses = {
+    200: unknown;
+};
+
+export type NotificationsUnreadCountData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/notifications/unread-count';
+};
+
+export type NotificationsUnreadCountResponses = {
     200: unknown;
 };
 
@@ -2819,6 +3094,19 @@ export type PlatformBillingActivateResponses = {
     201: unknown;
 };
 
+export type PlatformBillingRenewData = {
+    body?: never;
+    path: {
+        subscriptionId: string;
+    };
+    query?: never;
+    url: '/api/v1/platform/subscriptions/{subscriptionId}/renew';
+};
+
+export type PlatformBillingRenewResponses = {
+    201: unknown;
+};
+
 export type PlatformOpsOverviewData = {
     body?: never;
     path?: never;
@@ -2851,54 +3139,6 @@ export type PlatformOpsTenantDetailData = {
 };
 
 export type PlatformOpsTenantDetailResponses = {
-    200: unknown;
-};
-
-export type PlatformAccountsListData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/platform/accounts';
-};
-
-export type PlatformAccountsListResponses = {
-    200: unknown;
-};
-
-export type PlatformAccountsCreateData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/platform/accounts';
-};
-
-export type PlatformAccountsCreateResponses = {
-    201: unknown;
-};
-
-export type PlatformAccountsSetStatusData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/platform/accounts/{id}/status';
-};
-
-export type PlatformAccountsSetStatusResponses = {
-    200: unknown;
-};
-
-export type PlatformAccountsSetRoleData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/platform/accounts/{id}/role';
-};
-
-export type PlatformAccountsSetRoleResponses = {
     200: unknown;
 };
 

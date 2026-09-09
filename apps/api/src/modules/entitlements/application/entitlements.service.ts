@@ -10,9 +10,20 @@ export interface FeatureRow {
   enabled: boolean;
 }
 
+export interface TenantSubscriptionView {
+  id: string;
+  packageCode: string;
+  status: string;
+  startsAt: Date;
+  endsAt: Date | null;
+}
+
 export interface EntitlementRepository {
   list(tenantId: string): Promise<FeatureRow[]>;
   set(tenantId: string, featureKey: string, enabled: boolean): Promise<void>;
+  getSubscription(
+    tenantId: string,
+  ): Promise<TenantSubscriptionView | null>;
 }
 
 export interface FeatureState extends FeatureRow {
@@ -81,5 +92,11 @@ export class EntitlementsService {
     const enabled = rows.find((r) => r.featureKey === key)?.enabled ?? false;
     if (!enabled) throw new FeatureDisabledError(key);
     return key;
+  }
+
+  async getSubscription(
+    tenantId: string,
+  ): Promise<TenantSubscriptionView | null> {
+    return this.repository.getSubscription(tenantId);
   }
 }

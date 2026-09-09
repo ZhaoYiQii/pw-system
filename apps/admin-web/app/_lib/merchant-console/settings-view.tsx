@@ -1,50 +1,77 @@
 "use client";
 
-import { useState } from "react";
-import { Check, RotateCcw, Save, UserPlus } from "lucide-react";
-import { DemoDialog, useDemoToast } from "./demo-ui";
-import { featureDescription, featureMeta } from "../feature-catalog";
+import { useEffect, useState } from "react";
+import { RotateCcw, Save, UserPlus } from "lucide-react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { apiFetch } from "../api";
+import { DemoDialog, DemoEmptyState, useDemoToast } from "./demo-ui";
 import {
   MERCHANT_GROUPS,
   MERCHANT_MODULES,
-  MERCHANT_ROLE_META,
   MERCHANT_ROLES,
+  MERCHANT_ROLE_META,
   canAccessModule,
-  type MerchantModule,
 } from "./modules";
 import {
-  SETTING_EMPLOYEES,
-  SETTING_FEATURE_ENABLED,
-  SETTING_FEATURE_KEYS,
-  SETTING_TABS,
-  SETTING_VERSIONS,
-  type SettingTabId,
-  type SettingVersion,
-} from "./settings-data";
+  type ConfigVersionRow,
+  type EffectiveConfig,
+  type FeatureState,
+  type SubscriptionView,
+  type TenantAccount,
+  type TenantConfigV1,
+  dateTime,
+  statusLabel,
+} from "./merchant-api";
+
+export type SettingTabId =
+  | "brand"
+  | "versions"
+  | "employees"
+  | "matrix"
+  | "plan";
+
+const SETTING_TABS: Array<{ id: SettingTabId; label: string }> = [
+  { id: "brand", label: "门店与品牌" },
+  { id: "versions", label: "配置版本" },
+  { id: "employees", label: "员工与角色" },
+  { id: "matrix", label: "权限矩阵" },
+  { id: "plan", label: "套餐与功能" },
+];
+
+const DEFAULT_CONFIG: TenantConfigV1 = {
+  schemaVersion: "v1",
+  brand: {
+    primaryColor: "#2f54eb",
+    accentColor: "#fa8c16",
+    logoText: "PW",
+    borderRadius: 8,
+  },
+  storefront: { allowCustomerSelection: true, showServiceDuration: true },
+};
+
+const ROLE_OPTIONS = [
+  { value: "TENANT_OWNER", label: "店老板", desc: "全模块管理" },
+  { value: "TENANT_ADMIN", label: "店长", desc: "经营与配置" },
+  { value: "CUSTOMER_SERVICE", label: "客服", desc: "订单与派单" },
+  { value: "FINANCE", label: "财务", desc: "结算与风控" },
+];
 
 export function SettingsModuleView() {
   const [tab, setTab] = useState<SettingTabId>("brand");
-
   return (
     <div>
       <div className="mc-pagehead">
         <div>
           <div className="mc-kicker">SETTINGS</div>
           <h1>门店设置</h1>
-          <p>
-            门店资料与品牌、配置版本、员工与角色、权限矩阵、套餐与功能开关。
-          </p>
+          <p>真实配置、版本回滚、员工角色与订阅状态。</p>
         </div>
-        <span className="mc-chip">
-          原型演示 <b>未接后端</b>
-        </span>
       </div>
-
-      <div
-        className="mc-settings-tabs"
-        role="tablist"
-        aria-label="门店设置分区"
-      >
+      <div className="mc-settings-tabs" role="tablist" aria-label="门店设置分区">
         {SETTING_TABS.map((item) => (
           <button
             key={item.id}
@@ -58,9 +85,8 @@ export function SettingsModuleView() {
           </button>
         ))}
       </div>
-
       {tab === "brand" ? <BrandSection /> : null}
-      {tab === "versions" ? <VersionHistorySection /> : null}
+      {tab === "versions" ? <VersionSection /> : null}
       {tab === "employees" ? <EmployeesSection /> : null}
       {tab === "matrix" ? <MatrixSection /> : null}
       {tab === "plan" ? <PlanSection /> : null}
@@ -68,239 +94,263 @@ export function SettingsModuleView() {
   );
 }
 
-function VersionHistorySection() {
+function BrandSection() {
+  const queryClient = useQueryClient();
   const { toast, showToast } = useDemoToast();
-  const [rollback, setRollback] = useState<SettingVersion | null>(null);
-
+  const [form, setForm] = useState<TenantConfigV1 | null>(null);
+  const query = useQuery({
+    queryKey: ["merchant", "settings", "effective"],
+    queryFn: () => apiFetch<EffectiveConfig>("/api/v1/tenant/config"),
+  });
+  useEffect(() => {
+    if (query.data?.config && !form) setForm(query.data.config);
+  }, [query.data, form]);
+  const [message, setMessage] = useState<string | null>(null);
+  const save = useMutation({
+    mutationFn: () =>
+      apiFetch<EffectiveConfig>("/api/v1/tenant/config", {
+        method: "POST",
+        body: JSON.stringify({ config: form ?? cfg }),
+      }),
+    onSuccess: (cfg) => {
+      showToast(`配置已保存并生效（v${cfg.version}）。`);
+      void queryClient.invalidateQueries({ queryKey: ["merchant", "settings"] });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+  const cfg = query.data?.config ?? form ?? DEFAULT_CONFIG;
+  const update = (patch: Partial<TenantConfigV1>) =>
+    setForm((prev) => ({ ...(prev ?? cfg), ...patch }));
+  const updateBrand = (patch: Partial<TenantConfigV1["brand"]>) =>
+    update({ brand: { ...cfg.brand, ...patch } });
+  const updateStorefront = (patch: Partial<TenantConfigV1["storefront"]>) =>
+    update({ storefront: { ...cfg.storefront, ...patch } });
   return (
-    <section className="mc-panel">
-      <div className="mc-section-head">
-        <div>
-          <h2>配置版本历史与回滚</h2>
-          <p>
-            品牌、服务规则等门店配置均保留版本；回滚会生成新版本而非删除旧版
-          </p>
-        </div>
+    <section className="mc-panel mc-form-panel">
+      <div className="mc-settings-section-title">
+        <h2>门店资料与品牌</h2>
+        <p>当前生效版本 v{query.data?.version ?? "-"} · {query.data?.status ?? "加载中"}</p>
       </div>
-      <div className="mc-version-list">
-        {SETTING_VERSIONS.map((version) => (
-          <div className="mc-version-row" key={version.id}>
-            <span className="mc-version-meta">
-              <b>
-                {version.version} · {version.label}
-              </b>
-              <small>
-                {version.actor} · {version.time}
-              </small>
-            </span>
-            <span className="mc-version-actions">
-              <span
-                className={`mc-status ${version.isCurrent ? "st-done" : "st-muted"}`}
-              >
-                {version.isCurrent ? "当前版本" : "历史版本"}
-              </span>
-              {!version.isCurrent ? (
-                <button
-                  type="button"
-                  className="mc-btn mc-btn-small"
-                  onClick={() => setRollback(version)}
-                >
-                  <RotateCcw size={13} />
-                  回滚到此版本
-                </button>
-              ) : null}
-            </span>
-          </div>
-        ))}
+      {message ? <div className="mc-notice">{message}</div> : null}
+      <div className="mc-form-grid">
+        <label className="mc-field"><span>主色</span><input type="color" value={cfg.brand.primaryColor} onChange={(e) => updateBrand({ primaryColor: e.target.value })} /></label>
+        <label className="mc-field"><span>辅色</span><input type="color" value={cfg.brand.accentColor} onChange={(e) => updateBrand({ accentColor: e.target.value })} /></label>
+        <label className="mc-field"><span>门店文字（1-40）</span><input maxLength={40} value={cfg.brand.logoText} onChange={(e) => updateBrand({ logoText: e.target.value })} /></label>
+        <label className="mc-field"><span>圆角（0-24）</span><input type="number" min={0} max={24} value={cfg.brand.borderRadius} onChange={(e) => updateBrand({ borderRadius: Number(e.target.value) })} /></label>
       </div>
-      <div className="mc-notice">
-        演示仅展示版本列表与确认流程；真实回滚调用租户配置接口并写入审计日志。
+      <label className="mc-check">
+        <input type="checkbox" checked={cfg.storefront.allowCustomerSelection} onChange={(e) => updateStorefront({ allowCustomerSelection: e.target.checked })} />
+        前台允许客户自选陪玩
+      </label>
+      <label className="mc-check">
+        <input type="checkbox" checked={cfg.storefront.showServiceDuration} onChange={(e) => updateStorefront({ showServiceDuration: e.target.checked })} />
+        前台展示服务时长
+      </label>
+      <div className="mc-brand-preview">
+        <span className="mc-brand-logo" style={{ background: cfg.brand.accentColor, borderRadius: cfg.brand.borderRadius }}>
+          {cfg.brand.logoText.slice(0, 2).toUpperCase()}
+        </span>
+        <span><b>{cfg.brand.logoText}</b><small>保存后门店前台与后台统一读取。</small></span>
       </div>
-
-      {rollback ? (
-        <DemoDialog
-          open
-          title={`回滚到 ${rollback.version}`}
-          confirmLabel="确认回滚"
-          onCancel={() => setRollback(null)}
-          onConfirm={() => {
-            setRollback(null);
-            showToast("演示回滚已记录 · 未调用 config/rollback");
-          }}
-        >
-          <p>
-            回滚后门店配置将恢复到「{rollback.label}」，并生成新的版本记录。
-          </p>
-          <div className="mc-summary-line">
-            <span>目标版本</span>
-            <b>{rollback.version}</b>
-          </div>
-        </DemoDialog>
-      ) : null}
+      <div className="mc-button-row mc-form-actions">
+        <button type="button" className="mc-btn mc-btn-primary" disabled={save.isPending} onClick={() => save.mutate()}>
+          <Save size={15} /> 保存并生效
+        </button>
+      </div>
       {toast}
     </section>
   );
 }
 
-function BrandSection() {
+function VersionSection() {
+  const queryClient = useQueryClient();
   const { toast, showToast } = useDemoToast();
-  const [storeName, setStoreName] = useState("南城 · 壹号店");
-  const [storeCode] = useState("c1");
-  const [businessStatus] = useState("营业中");
-  const [accentColor, setAccentColor] = useState("#CF6040");
-  const [timezone] = useState("Asia/Shanghai");
-
+  const versionsQuery = useQuery({
+    queryKey: ["merchant", "settings", "versions"],
+    queryFn: () =>
+      apiFetch<ConfigVersionRow[]>("/api/v1/tenant/config/versions"),
+  });
+  const [message, setMessage] = useState<string | null>(null);
+  const rollback = useMutation({
+    mutationFn: () =>
+      apiFetch<EffectiveConfig>("/api/v1/tenant/config/rollback", { method: "POST" }),
+    onSuccess: (cfg) => {
+      showToast(`已回滚到上一版本（当前 v${cfg.version}）。`);
+      void queryClient.invalidateQueries({ queryKey: ["merchant", "settings"] });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+  const rows = versionsQuery.data ?? [];
+  const [confirm, setConfirm] = useState(false);
   return (
-    <section className="mc-panel mc-form-panel">
-      <div className="mc-settings-section-title">
-        <h2>门店资料与品牌</h2>
-        <p>
-          门店身份、H5 访问域名与视觉 token 覆盖；品牌 token 将由门店 H5 读取。
-        </p>
+    <section className="mc-panel">
+      <div className="mc-section-head">
+        <div><h2>配置版本历史与回滚</h2><p>每次保存生成新版本；回滚到上一生效版本。</p></div>
       </div>
-      <div className="mc-form-grid">
-        <label className="mc-field">
-          <span>门店名称</span>
-          <input
-            value={storeName}
-            onChange={(event) => setStoreName(event.target.value)}
-          />
-        </label>
-        <label className="mc-field">
-          <span>门店 code</span>
-          <input value={storeCode} readOnly />
-        </label>
-        <label className="mc-field">
-          <span>营业状态</span>
-          <input value={businessStatus} readOnly />
-        </label>
-        <label className="mc-field">
-          <span>时区</span>
-          <input value={timezone} readOnly />
-        </label>
-        <label className="mc-field">
-          <span>主操作色（accent）</span>
-          <input
-            type="color"
-            value={accentColor}
-            onChange={(event) => setAccentColor(event.target.value)}
-          />
-        </label>
-      </div>
-      <div className="mc-brand-preview">
-        <span className="mc-brand-logo" style={{ background: accentColor }}>
-          PW
-        </span>
-        <span>
-          <b>{storeName}</b>
-          <small>门店前台与后台统一读取该品牌值（演示）</small>
-        </span>
-      </div>
-      <div className="mc-notice">
-        保存仅更新当前页面的演示状态；真实门店资料与品牌 token
-        需要租户配置接口。
-      </div>
-      <div className="mc-button-row mc-form-actions">
-        <button
-          type="button"
-          className="mc-btn mc-btn-primary"
-          onClick={() => showToast("门店资料已保存 · 仅前端演示")}
-        >
-          <Save size={15} />
-          保存门店资料
-        </button>
-      </div>
+      {message ? <div className="mc-notice">{message}</div> : null}
+      {rows.length ? (
+        <div className="mc-version-list">
+          {[...rows].sort((a, b) => b.version - a.version).map((version) => (
+            <div className="mc-version-row" key={version.id}>
+              <span className="mc-version-meta">
+                <b>v{version.version} · {version.status}</b>
+                <small>{dateTime(version.createdAt)}</small>
+              </span>
+              <span className="mc-version-actions">
+                <span className={`mc-status ${version.status === "ACTIVE" ? "st-done" : "st-muted"}`}>
+                  {version.status === "ACTIVE" ? "当前版本" : "历史版本"}
+                </span>
+                {version.status !== "ACTIVE" ? (
+                  <button type="button" className="mc-btn mc-btn-small" onClick={() => setConfirm(true)}>
+                    <RotateCcw size={13} /> 回滚上一版本
+                  </button>
+                ) : null}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : <div className="mc-empty mc-empty-compact">暂无保存记录。</div>}
+      <DemoDialog
+        open={confirm}
+        title="回滚配置"
+        confirmLabel="确认回滚"
+        onCancel={() => setConfirm(false)}
+        onConfirm={() => { setConfirm(false); rollback.mutate(); }}
+      >
+        <p>回滚会将上一生效版本重新置为当前版本，并生成新版本记录。</p>
+      </DemoDialog>
       {toast}
     </section>
   );
 }
 
 function EmployeesSection() {
+  const queryClient = useQueryClient();
   const { toast, showToast } = useDemoToast();
-  const [dialogEmployee, setDialogEmployee] = useState<
-    (typeof SETTING_EMPLOYEES)[number] | null
+  const employeesQuery = useQuery({
+    queryKey: ["merchant", "settings", "employees"],
+    queryFn: () => apiFetch<TenantAccount[]>("/api/v1/tenant/accounts"),
+  });
+  const [dialog, setDialog] = useState<
+    | { mode: "create"; employee: null }
+    | { mode: "edit"; employee: TenantAccount }
+    | null
   >(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [roles, setRoles] = useState<string[]>(["CUSTOMER_SERVICE"]);
+  const [message, setMessage] = useState<string | null>(null);
+  const employees = employeesQuery.data ?? [];
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!username.trim()) throw new Error("请输入用户名");
+      if (roles.length === 0) throw new Error("至少选择一个角色");
+      if (dialog?.mode === "create") {
+        if (password.length < 8) throw new Error("密码至少 8 位");
+        return apiFetch<TenantAccount>("/api/v1/tenant/accounts", {
+          method: "POST",
+          body: JSON.stringify({ username, password, roles }),
+        });
+      }
+      if (!dialog || dialog.mode !== "edit" || !dialog.employee)
+        throw new Error("缺少员工信息");
+      return apiFetch<TenantAccount>(
+        `/api/v1/tenant/accounts/${dialog.employee.id}/roles`,
+        { method: "PATCH", body: JSON.stringify({ roles }) },
+      );
+    },
+    onSuccess: () => {
+      setDialog(null);
+      showToast("员工已保存。");
+      void queryClient.invalidateQueries({ queryKey: ["merchant", "settings", "employees"] });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+  const toggleStatus = useMutation({
+    mutationFn: (employee: TenantAccount) =>
+      apiFetch<TenantAccount>(
+        `/api/v1/tenant/accounts/${employee.id}/status`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: employee.status === "ACTIVE" ? "DISABLED" : "ACTIVE",
+          }),
+        },
+      ),
+    onSuccess: () => {
+      showToast("员工状态已更新。");
+      void queryClient.invalidateQueries({ queryKey: ["merchant", "settings", "employees"] });
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
 
   return (
     <section className="mc-panel">
       <div className="mc-section-head">
-        <div>
-          <h2>员工与角色</h2>
-          <p>员工列表与角色分配；真实账号与邀请接口在后端权限切片开放</p>
-        </div>
-        <button
-          type="button"
-          className="mc-btn mc-btn-small"
-          onClick={() => showToast("演示：员工邀请表单将在账号接口就绪后启用")}
-        >
-          <UserPlus size={14} />
-          邀请员工
+        <div><h2>员工与角色</h2><p>真实员工账号、启停与角色分配。</p></div>
+        <button type="button" className="mc-btn mc-btn-small" onClick={() => { setDialog({ mode: "create", employee: null }); setUsername(""); setPassword(""); setRoles(["CUSTOMER_SERVICE"]); setMessage(null); }}>
+          <UserPlus size={14} /> 新建员工
         </button>
       </div>
-      <div className="mc-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>员工</th>
-              <th>角色</th>
-              <th>最近活跃</th>
-              <th>状态</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {SETTING_EMPLOYEES.map((employee) => (
-              <tr key={employee.id}>
-                <td>
-                  <span className="mc-avatar mc-avatar-sm">
-                    {employee.name.slice(0, 1)}
-                  </span>
-                  <span className="mc-cell-title">{employee.name}</span>
-                </td>
-                <td>
-                  <b>{employee.roleLabel}</b>
-                  <span className="mc-sub">{employee.roleDesc}</span>
-                </td>
-                <td>{employee.lastActive}</td>
-                <td>
-                  <span className={`mc-status st-${employee.statusTone}`}>
-                    {employee.statusLabel}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="mc-btn mc-btn-ghost mc-btn-small"
-                    onClick={() => setDialogEmployee(employee)}
-                  >
-                    编辑角色
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {message ? <div className="mc-notice">{message}</div> : null}
+      {employees.length ? (
+        <div className="mc-table-wrap">
+          <table>
+            <thead><tr><th>员工</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id}>
+                  <td><b className="mc-cell-title">{employee.username}</b></td>
+                  <td>{employee.roles.map((role) => ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role).join(" / ")}</td>
+                  <td><span className={`mc-status ${employee.status === "ACTIVE" ? "st-done" : "st-cancelled"}`}>{statusLabel(employee.status)}</span></td>
+                  <td>{dateTime(employee.createdAt)}</td>
+                  <td>
+                    <div className="mc-button-row">
+                      <button type="button" className="mc-btn mc-btn-ghost mc-btn-small" onClick={() => { setDialog({ mode: "edit", employee }); setUsername(employee.username); setPassword(""); setRoles(employee.roles); setMessage(null); }}>编辑角色</button>
+                      <button type="button" className="mc-btn mc-btn-ghost mc-btn-small" onClick={() => toggleStatus.mutate(employee)}>{employee.status === "ACTIVE" ? "停用" : "启用"}</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <DemoEmptyState title="暂无员工账号" description="当前角色可能没有员工管理权限或尚未创建。" />}
 
-      {dialogEmployee ? (
+      {dialog ? (
         <DemoDialog
           open
-          title={`编辑角色 · ${dialogEmployee.name}`}
-          confirmLabel="了解"
-          onCancel={() => setDialogEmployee(null)}
-          onConfirm={() => {
-            setDialogEmployee(null);
-            showToast("角色分配演示完成 · 后端权限矩阵未改动");
-          }}
+          title={dialog.mode === "create" ? "新建员工" : `编辑角色：${dialog.employee.username}`}
+          confirmLabel="保存"
+          onCancel={() => setDialog(null)}
+          onConfirm={() => save.mutate()}
         >
-          <p>
-            当前角色为「{dialogEmployee.roleLabel} · {dialogEmployee.roleDesc}
-            」。员工角色分配与细粒度授权将作为独立权限模型由后端开放，前端只读展示。
-          </p>
-          <div className="mc-summary-line">
-            <span>最近活跃</span>
-            <b>{dialogEmployee.lastActive}</b>
+          <div className="mc-form-grid">
+            <label className="mc-field"><span>用户名</span><input value={username} disabled={dialog.mode === "edit"} onChange={(e) => setUsername(e.target.value)} /></label>
+            {dialog.mode === "create" ? <label className="mc-field"><span>初始密码（≥8）</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label> : null}
           </div>
+          <fieldset>
+            <legend>角色</legend>
+            <div className="mc-feature-list">
+              {ROLE_OPTIONS.map((option) => (
+                <label className="mc-check" key={option.value}>
+                  <input
+                    type="checkbox"
+                    checked={roles.includes(option.value)}
+                    onChange={(e) =>
+                      setRoles((prev) =>
+                        e.target.checked
+                          ? [...prev, option.value]
+                          : prev.filter((r) => r !== option.value),
+                      )
+                    }
+                  />
+                  <span><b>{option.label}</b><small>{option.desc}</small></span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </DemoDialog>
       ) : null}
       {toast}
@@ -312,175 +362,68 @@ function MatrixSection() {
   return (
     <section className="mc-panel">
       <div className="mc-section-head">
-        <div>
-          <h2>权限矩阵</h2>
-          <p>三台模块 × 四角色，由 UiPermission mock 驱动（只读展示）</p>
-        </div>
+        <div><h2>权限矩阵</h2><p>三台模块 × 四角色；真实访问由后端角色权限执行。</p></div>
       </div>
       <div className="mc-table-wrap mc-matrix-table">
         <table>
-          <thead>
-            <tr>
-              <th>模块</th>
-              {MERCHANT_ROLES.map((role) => (
-                <th key={role}>
-                  {MERCHANT_ROLE_META[role].label}
-                  <span className="mc-sub">
-                    {MERCHANT_ROLE_META[role].desc}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
+          <thead><tr><th>模块</th>{MERCHANT_ROLES.map((role) => <th key={role}>{MERCHANT_ROLE_META[role].label}</th>)}</tr></thead>
           <tbody>
-            {MERCHANT_GROUPS.map((group) => (
-              <MatrixGroupRows
-                key={group.id}
-                groupLabel={group.label}
-                modules={MERCHANT_MODULES.filter(
-                  (moduleItem) => moduleItem.group === group.id,
-                )}
-              />
-            ))}
+            {MERCHANT_GROUPS.map((group) =>
+              MERCHANT_MODULES.filter((m) => m.group === group.id).map((m) => (
+                <tr key={m.id}>
+                  <td><span className="mc-sub">{group.label}</span><b className="mc-cell-title">{m.label}</b></td>
+                  {MERCHANT_ROLES.map((role) => (
+                    <td key={role}>{canAccessModule(role, m.id) ? "✓" : "—"}</td>
+                  ))}
+                </tr>
+              )),
+            )}
           </tbody>
         </table>
-      </div>
-      <div className="mc-table-foot">
-        <span>「✓」= mock 导航可见；财务审计为「只读 · 涉自身」</span>
-        <span>前端隐藏不等于授权，接入后端后以真实权限为准</span>
       </div>
     </section>
   );
 }
 
-function MatrixGroupRows({
-  groupLabel,
-  modules,
-}: {
-  groupLabel: string;
-  modules: MerchantModule[];
-}) {
-  return modules.map((moduleItem) => (
-    <tr key={moduleItem.id}>
-      <td>
-        <span className="mc-sub">{groupLabel}</span>
-        <b className="mc-cell-title">{moduleItem.label}</b>
-      </td>
-      {MERCHANT_ROLES.map((role) => (
-        <td key={role}>
-          {canAccessModule(role, moduleItem.id) ? (
-            <span className="mc-matrix-check">
-              <Check size={14} aria-hidden="true" />
-            </span>
-          ) : (
-            <span className="mc-muted-text">—</span>
-          )}
-        </td>
-      ))}
-    </tr>
-  ));
-}
-
 function PlanSection() {
-  const { toast, showToast } = useDemoToast();
-  const [enabled, setEnabled] = useState<Set<string>>(
-    () => new Set(SETTING_FEATURE_ENABLED),
-  );
-
-  const toggle = (featureKey: string) => {
-    setEnabled((prev) => {
-      const next = new Set(prev);
-      if (next.has(featureKey)) {
-        next.delete(featureKey);
-      } else {
-        next.add(featureKey);
-      }
-      return next;
-    });
-  };
-
+  const subscriptionQuery = useQuery({
+    queryKey: ["merchant", "settings", "subscription"],
+    queryFn: () =>
+      apiFetch<SubscriptionView | null>("/api/v1/tenant/subscription"),
+  });
+  const featuresQuery = useQuery({
+    queryKey: ["merchant", "settings", "features"],
+    queryFn: () => apiFetch<FeatureState[]>("/api/v1/tenant/features"),
+  });
+  const subscription = subscriptionQuery.data;
+  const features = featuresQuery.data ?? [];
   return (
     <div className="mc-plan-grid">
       <section className="mc-panel mc-form-panel">
-        <div className="mc-settings-section-title">
-          <h2>当前套餐</h2>
-          <p>套餐与订阅状态为演示数据，真实状态来自订阅与权益接口。</p>
-        </div>
-        <div className="mc-summary-line">
-          <span>套餐</span>
-          <b>专业版</b>
-        </div>
-        <div className="mc-summary-line">
-          <span>状态</span>
-          <b>生效中</b>
-        </div>
-        <div className="mc-summary-line">
-          <span>到期时间</span>
-          <b>2026-10-01</b>
-        </div>
-        <div className="mc-notice">
-          “续费”“切换套餐”按钮待后端订阅接口就绪后启用，当前不提供跳转。
-        </div>
+        <div className="mc-settings-section-title"><h2>当前套餐</h2><p>续费与套餐变更由平台端处理。</p></div>
+        {subscription ? (
+          <>
+            <div className="mc-summary-line"><span>套餐</span><b>{subscription.packageCode}</b></div>
+            <div className="mc-summary-line"><span>状态</span><b>{statusLabel(subscription.status)}</b></div>
+            <div className="mc-summary-line"><span>生效 / 到期</span><b>{dateTime(subscription.startsAt)} → {dateTime(subscription.endsAt)}</b></div>
+          </>
+        ) : subscriptionQuery.isPending ? <div className="mc-empty mc-empty-compact">加载中…</div> : <div className="mc-empty mc-empty-compact">暂无生效订阅，请联系平台开通。</div>}
       </section>
-
       <section className="mc-panel">
-        <div className="mc-section-head">
-          <div>
-            <h2>功能开关</h2>
-            <p>增值模块为独立权益；core 功能随套餐启用（演示只读）</p>
-          </div>
-        </div>
-        <div className="mc-feature-list">
-          {SETTING_FEATURE_KEYS.map((featureKey) => {
-            const meta = featureMeta(featureKey);
-            if (!meta) return null;
-            const isCore = featureKey.startsWith("core.");
-            const isOn = enabled.has(featureKey);
-            return (
-              <div className="mc-feature-row" key={featureKey}>
-                <span>
-                  <b>{meta.name}</b>
-                  <small>{featureDescription(featureKey)}</small>
-                </span>
-                <span className="mc-feature-action">
-                  <span
-                    className={`mc-status ${isOn ? "st-done" : "st-muted"}`}
-                  >
-                    {isOn ? "已启用" : "未启用"}
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isOn}
-                    aria-label={`${meta.name}开关`}
-                    className={`mc-switch${isOn ? " on" : ""}`}
-                    disabled={isCore}
-                    onClick={() => toggle(featureKey)}
-                  >
-                    <i />
-                  </button>
+        <div className="mc-section-head"><div><h2>功能开关</h2><p>增值功能由平台控制，此处展示真实状态。</p></div></div>
+        {features.length ? (
+          <div className="mc-feature-list">
+            {features.map((feature) => (
+              <div className="mc-feature-row" key={feature.featureKey}>
+                <span><b>{feature.featureKey}</b><small>{feature.core ? "core" : "addon"}</small></span>
+                <span className={`mc-status ${feature.enabled ? "st-done" : "st-muted"}`}>
+                  {feature.enabled ? "已启用" : "未启用"}
                 </span>
               </div>
-            );
-          })}
-        </div>
-        <div className="mc-table-foot">
-          <button
-            type="button"
-            className="mc-btn mc-btn-primary mc-btn-small"
-            onClick={() => showToast("功能开关已保存 · 仅前端演示")}
-          >
-            <Save size={14} />
-            保存开关
-          </button>
-          <span>
-            {[...enabled].filter((key) => key.startsWith("addon.")).length}{" "}
-            个增值模块启用
-          </span>
-        </div>
+            ))}
+          </div>
+        ) : <DemoEmptyState title="暂无功能开关" description="套餐开通后展示。" />}
       </section>
-
-      {toast}
     </div>
   );
 }

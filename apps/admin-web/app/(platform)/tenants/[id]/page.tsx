@@ -44,6 +44,13 @@ interface FeatureState {
   enabled: boolean;
 }
 
+interface Principal {
+  sub: string;
+  scope: string;
+  role: string;
+  username: string;
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Intl.DateTimeFormat("zh-CN", {
@@ -60,12 +67,14 @@ function Inner() {
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const principalQuery = useQuery({
+    queryKey: ["platform-tenant-principal"],
+    queryFn: () => apiFetch<Principal>("/api/v1/platform/me"),
+  });
   const detailQuery = useQuery({
     queryKey: ["platform-tenant-detail", id],
     queryFn: () =>
-      apiFetch<PlatformTenantDetail>(
-        `/api/v1/platform/tenants/${id}/detail`,
-      ),
+      apiFetch<PlatformTenantDetail>(`/api/v1/platform/tenants/${id}/detail`),
     enabled: id !== undefined,
     retry: false,
   });
@@ -73,9 +82,7 @@ function Inner() {
   const entitlementsQuery = useQuery({
     queryKey: ["platform-tenant-detail-entitlements", id],
     queryFn: () =>
-      apiFetch<FeatureState[]>(
-        `/api/v1/platform/tenants/${id}/entitlements`,
-      ),
+      apiFetch<FeatureState[]>(`/api/v1/platform/tenants/${id}/entitlements`),
     enabled: id !== undefined,
   });
 
@@ -83,20 +90,15 @@ function Inner() {
   const features = entitlementsQuery.data ?? [];
   const addons = features.filter((f) => !f.core);
   const is401 =
-    detailQuery.error instanceof ApiError &&
-    detailQuery.error.status === 401;
+    detailQuery.error instanceof ApiError && detailQuery.error.status === 401;
   const is404 =
-    detailQuery.error instanceof ApiError &&
-    detailQuery.error.status === 404;
+    detailQuery.error instanceof ApiError && detailQuery.error.status === 404;
+  const is403 =
+    detailQuery.error instanceof ApiError && detailQuery.error.status === 403;
+  const isSupport = principalQuery.data?.role === "PLATFORM_SUPPORT";
 
   const toggle = useMutation({
-    mutationFn: ({
-      featureKey,
-      next,
-    }: {
-      featureKey: string;
-      next: boolean;
-    }) =>
+    mutationFn: ({ featureKey, next }: { featureKey: string; next: boolean }) =>
       apiFetch<FeatureState[]>(`/api/v1/platform/tenants/${id}/entitlements`, {
         method: "POST",
         body: JSON.stringify({ featureKey, enabled: next }),
@@ -132,11 +134,38 @@ function Inner() {
   return (
     <PlatformShell>
       {is401 ? (
-        <div className="pw-panel" style={{ maxWidth: 520, margin: "60px auto" }}>
+        <div
+          className="pw-panel"
+          style={{ maxWidth: 520, margin: "60px auto" }}
+        >
           <div className="pw-panel-body">
             <h2 style={{ margin: "0 0 8px" }}>尚未登录平台账号</h2>
-            <Link className="pw-btn pw-primary" href="/login" style={{ marginTop: 12 }}>
+            <Link
+              className="pw-btn pw-primary"
+              href="/login"
+              style={{ marginTop: 12 }}
+            >
               去登录
+            </Link>
+          </div>
+        </div>
+      ) : is403 ? (
+        <div
+          className="pw-panel"
+          style={{ maxWidth: 560, margin: "60px auto" }}
+        >
+          <div className="pw-panel-body">
+            <h2 style={{ margin: "0 0 8px" }}>无该门店的临时访问授权</h2>
+            <p style={{ color: "var(--pw-muted)", fontSize: 12 }}>
+              平台运营读取门店明细需要超级管理员先在“平台账号与授权”页创建
+              限时临时授权；授权过期或撤销后此处会恢复为 403。
+            </p>
+            <Link
+              className="pw-btn pw-primary"
+              href="/tenants"
+              style={{ marginTop: 12 }}
+            >
+              返回门店管理
             </Link>
           </div>
         </div>
@@ -156,13 +185,19 @@ function Inner() {
               <Link className="pw-btn" href="/tenants">
                 ← 返回门店管理
               </Link>
-              <Link
-                className="pw-btn pw-primary"
-                href={`/packages?tenantId=${encodeURIComponent(detail.id)}`}
-              >
-                开通增值功能
-              </Link>
-              {detail.status === "ACTIVE" ? (
+              {isSupport ? (
+                <Link className="pw-btn" href="/platform/audit">
+                  查看门店审计
+                </Link>
+              ) : (
+                <Link
+                  className="pw-btn pw-primary"
+                  href={`/packages?tenantId=${encodeURIComponent(detail.id)}`}
+                >
+                  开通增值功能
+                </Link>
+              )}
+              {!isSupport && detail.status === "ACTIVE" ? (
                 <button
                   type="button"
                   className="pw-btn pw-danger"
@@ -183,7 +218,10 @@ function Inner() {
           {notice ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-green-soft)", color: "var(--pw-green)" }}
+              style={{
+                background: "var(--pw-green-soft)",
+                color: "var(--pw-green)",
+              }}
             >
               {notice}
             </div>
@@ -191,7 +229,10 @@ function Inner() {
           {message ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-red-soft)", color: "var(--pw-red)" }}
+              style={{
+                background: "var(--pw-red-soft)",
+                color: "var(--pw-red)",
+              }}
             >
               {message}
             </div>
@@ -217,7 +258,10 @@ function Inner() {
                   </div>
                   <div className="pw-field">
                     <label>状态 / 时区</label>
-                    <input value={`${detail.status} / ${detail.timezone}`} readOnly />
+                    <input
+                      value={`${detail.status} / ${detail.timezone}`}
+                      readOnly
+                    />
                   </div>
                   <div className="pw-field">
                     <label>创建时间</label>
@@ -294,7 +338,7 @@ function Inner() {
                         role="switch"
                         aria-checked={feature.enabled}
                         className={`pw-toggle ${feature.enabled ? "pw-on" : ""}`}
-                        disabled={toggle.isPending}
+                        disabled={toggle.isPending || isSupport}
                         onClick={() =>
                           toggle.mutate({
                             featureKey: feature.featureKey,
