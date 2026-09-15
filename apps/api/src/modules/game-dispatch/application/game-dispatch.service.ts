@@ -14,6 +14,11 @@ import {
   DispatchNotFoundError,
   DispatchStateError,
 } from "../domain/dispatch-errors.js";
+import {
+  activeTemplateFields,
+  activeTemplateValues,
+  templateFormValueError,
+} from "../domain/game-template-values.js";
 
 type Tx = DbTransaction;
 
@@ -123,10 +128,31 @@ export class GameDispatchService {
       where: { templateId: template.id },
       orderBy: { sortOrder: "asc" },
     });
-    const formValues = input.formValues ?? {};
+    const templateSections =
+      await this.client.gameDispatchTemplateSection.findMany({
+        where: { templateId: template.id },
+        orderBy: { sortOrder: "asc" },
+      });
+    const submittedFormValues = input.formValues ?? {};
+    const effectiveTemplateFields = activeTemplateFields(
+      templateSections,
+      templateFields,
+    );
+    const formValues = activeTemplateValues(
+      effectiveTemplateFields,
+      submittedFormValues,
+    );
+    const valueError = templateFormValueError(
+      effectiveTemplateFields,
+      formValues,
+    );
+    if (valueError) throw new DispatchInputError(valueError);
+    const effectiveTemplateSections = templateSections.filter(
+      (section) => section.enabled,
+    );
     const mode =
       typeof formValues["mode"] === "string" ? formValues["mode"] : null;
-    const rankField = templateFields.find(
+    const rankField = effectiveTemplateFields.find(
       (f) => f.fieldKey.includes("rank") || f.label.includes("段位"),
     );
     const targetRank =
@@ -157,11 +183,23 @@ export class GameDispatchService {
           templateName: template.name,
           fieldsJson: JSON.parse(
             JSON.stringify(
-              templateFields.map((f) => ({
+              effectiveTemplateFields.map((f) => ({
                 fieldKey: f.fieldKey,
                 label: f.label,
                 fieldType: f.fieldType,
                 options: f.options ?? [],
+                sectionId: f.sectionId,
+                colSpan: f.colSpan,
+                rowBreakBefore: f.rowBreakBefore,
+              })),
+            ),
+          ),
+          sectionsJson: JSON.parse(
+            JSON.stringify(
+              effectiveTemplateSections.map((s) => ({
+                name: s.name,
+                columns: s.columns,
+                sortOrder: s.sortOrder,
               })),
             ),
           ),

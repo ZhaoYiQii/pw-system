@@ -20,10 +20,12 @@ import {
 } from "../domain/errors.js";
 import type {
   CreateGameTemplateInput,
+  TemplateBlockLabels,
   TemplateCopyLineInput,
   TemplateFieldInput,
   TemplatePositionInput,
   TemplateRankRuleInput,
+  TemplateSectionInput,
   UpdateGameTemplateInput,
 } from "../domain/game-template.js";
 
@@ -87,6 +89,10 @@ export class GameTemplateController {
       if (body.enabled !== undefined) input.enabled = body.enabled === true;
       if (body.fields !== undefined)
         input.fields = body.fields as TemplateFieldInput[];
+      if (body.sections !== undefined)
+        input.sections = body.sections as TemplateSectionInput[];
+      if (body.blockLabels !== undefined)
+        input.blockLabels = body.blockLabels as TemplateBlockLabels;
       if (body.positions !== undefined)
         input.positions = body.positions as TemplatePositionInput[];
       if (body.rankRules !== undefined)
@@ -113,6 +119,10 @@ export class GameTemplateController {
       if (body.enabled !== undefined) input.enabled = body.enabled === true;
       if (body.fields !== undefined)
         input.fields = body.fields as TemplateFieldInput[];
+      if (body.sections !== undefined)
+        input.sections = body.sections as TemplateSectionInput[];
+      if (body.blockLabels !== undefined)
+        input.blockLabels = body.blockLabels as TemplateBlockLabels;
       if (body.positions !== undefined)
         input.positions = body.positions as TemplatePositionInput[];
       if (body.rankRules !== undefined)

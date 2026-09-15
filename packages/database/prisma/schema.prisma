@@ -230,7 +230,7 @@ model RefreshSession {
   subjectType String    @map("subject_type")
   accountId   String    @map("account_id") @db.Uuid
   tenantId    String?   @map("tenant_id") @db.Uuid
-  tokenHash   String    @map("token_hash") @unique
+  tokenHash   String    @unique @map("token_hash")
   expiresAt   DateTime  @map("expires_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   revokedAt   DateTime? @map("revoked_at")
@@ -239,6 +239,7 @@ model RefreshSession {
   @@index([expiresAt])
   @@map("refresh_sessions")
 }
+
 // ===== Slice 3：门店配置与套餐功能开关（主规格 8.3/9/11.1）=====
 
 enum ConfigVersionStatus {
@@ -341,6 +342,7 @@ model Game {
   version   Int          @default(1)
 
   @@unique([tenantId, name])
+  @@unique([tenantId, id], map: "games_tenant_id_id_key")
   @@index([tenantId])
   @@map("games")
 }
@@ -427,6 +429,7 @@ model PlayerAvailability {
   @@index([tenantId, playerId, startsAt])
   @@map("player_availability")
 }
+
 // ===== Slice 5：需求确认与订单（主规格 10.1/11.3-11.5/12.1/14.2）=====
 // 状态机唯一入口写入 order_events；order_price_snapshots/order_events 不可变（无 updated_at）。
 // outbox_events 与业务写入同事务；idempotency_records 支持 Idempotency-Key。
@@ -557,6 +560,7 @@ model IdempotencyRecord {
   @@index([tenantId, entityType, entityId])
   @@map("idempotency_records")
 }
+
 // ===== Slice 6：派单、报名、候选与选人（主规格 10.2/11.3/12.3）=====
 // 同一陪玩对同一订单只有一个有效报名；指派唯一（assignment.order_id 唯一）；其余报名原子 EXPIRED。
 
@@ -623,6 +627,7 @@ model Assignment {
   @@index([tenantId, playerId])
   @@map("assignments")
 }
+
 // ===== Slice 7：服务场次与证据（主规格 10.3/11.3/14.1）=====
 // 服务器权威时钟核算；session_events/adjustments/evidence 只追加（无 updated_at 或复核不覆盖原始）。
 
@@ -710,6 +715,7 @@ model EvidenceAsset {
   @@index([tenantId, sessionId])
   @@map("evidence_assets")
 }
+
 // ===== Slice 8：核算、账本与陪玩结算（主规格 10.4/10.5/11.4）=====
 // 金额一律 bigint 分 CNY；ledger 只追加（无 updated_at）；批次 DRAFT→REVIEWED→APPROVED→PAID/VOID。
 
@@ -845,6 +851,7 @@ model ManualPaymentRecord {
   @@index([tenantId, batchId])
   @@map("manual_payment_records")
 }
+
 // ===== Slice 8：分成费率规则（可后台调整，bp=基点 1/10000）=====
 model FinanceRateRule {
   id             String   @id @default(uuid()) @db.Uuid
@@ -857,6 +864,7 @@ model FinanceRateRule {
 
   @@map("finance_rate_rules")
 }
+
 // ===== Slice 9：客诉、审计、通知与重试（主规格 10.x/11.4/14.2）=====
 // disputes 独立状态机并可冻结结算；audit_logs/notification_deliveries 支持可追溯与重试。
 
@@ -937,6 +945,7 @@ model NotificationDelivery {
   @@index([status, nextRetryAt])
   @@map("notification_deliveries")
 }
+
 // ===== Slice 10：AI 辅助需求与匹配（主规格 11.4/15/16）=====
 // ai_suggestions 结构化受限；生产无授权 provider 时 unavailable（不伪装）；可审计与人工采纳。
 
@@ -968,6 +977,7 @@ model AiSuggestion {
   @@index([tenantId, runId])
   @@map("ai_suggestions")
 }
+
 // ===== Slice 11：SaaS 运营、套餐与门店开通（主规格 11.1/ADR-005）=====
 model TenantSubscription {
   id          String   @id @default(uuid()) @db.Uuid
@@ -988,18 +998,55 @@ model TenantSubscription {
 // 模块化新流程：所有内容以新增表 + orders.process_type 承载，旧表/旧流程不删除。
 // 金额一律 BigInt 分；JSON 一律 JSONB；全部租户表沿用 RLS。
 
+enum GameDispatchTemplateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum GameDispatchTemplateSemanticRole {
+  CUSTOM
+  MODE
+  TARGET_RANK
+  CURRENT_RANK
+  DURATION_MINUTES
+  SERVER_REGION
+  CONTACT
+  ORDER_NOTE
+  STAFFING_LABEL
+  STAFFING_COUNT
+}
+
 model GameDispatchTemplate {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
+  gameId                 String?                    @map("game_id") @db.Uuid
   name      String
+  normalizedName         String                     @default(dbgenerated("lower(regexp_replace(btrim(name), '\\s+', ' ', 'g'))")) @map("normalized_name")
+  description            String?
+  status                 GameDispatchTemplateStatus @default(DRAFT)
   enabled   Boolean  @default(true)
+  activeVersionId        String?                    @map("active_version_id") @db.Uuid
+  revision               Int                        @default(1)
+  isDefault              Boolean                    @default(false) @map("is_default")
+  lastUsedAt             DateTime?                  @map("last_used_at")
   copyLines Json     @map("copy_lines")
+  blockLabels            Json                       @default("{}") @map("block_labels")
+  draftConfigJson        Json?                      @map("draft_config_json")
+  draftSchemaVersion     Int?                       @map("draft_schema_version")
+  legacyConversionState  String                     @default("NOT_REQUIRED") @map("legacy_conversion_state")
+  legacyConversionIssues Json                       @default("[]") @map("legacy_conversion_issues")
+  createdBy              String?                    @map("created_by") @db.Uuid
+  updatedBy              String?                    @map("updated_by") @db.Uuid
+  archivedAt             DateTime?                  @map("archived_at")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   version   Int      @default(1)
 
-  @@unique([tenantId, name])
+  @@unique([tenantId, id], map: "gd_templates_tenant_id_id_key")
   @@index([tenantId, enabled])
+  @@index([tenantId, gameId, status, updatedAt], map: "gd_templates_tenant_game_status_updated_idx")
+  @@index([tenantId, activeVersionId], map: "gd_templates_tenant_active_version_idx")
   @@map("game_dispatch_templates")
 }
 
@@ -1007,12 +1054,16 @@ model GameDispatchTemplateField {
   id         String  @id @default(uuid()) @db.Uuid
   tenantId   String  @map("tenant_id") @db.Uuid
   templateId String  @map("template_id") @db.Uuid
+  sectionId      String?                          @map("section_id") @db.Uuid
   fieldKey   String  @map("field_key")
   label      String
   fieldType  String  @map("field_type")
+  semanticRole   GameDispatchTemplateSemanticRole @default(CUSTOM) @map("semantic_role")
   required   Boolean @default(false)
   options    Json    @default("[]")
   placeholder String?
+  colSpan        Int                              @default(1) @map("col_span")
+  rowBreakBefore Boolean                          @default(false) @map("row_break_before")
   sortOrder  Int     @map("sort_order")
   enabled    Boolean @default(true)
   createdAt  DateTime @default(now()) @map("created_at")
@@ -1021,7 +1072,44 @@ model GameDispatchTemplateField {
 
   @@unique([tenantId, templateId, fieldKey])
   @@index([tenantId, templateId, sortOrder])
+  @@index([tenantId, templateId, sectionId, sortOrder])
   @@map("game_dispatch_template_fields")
+}
+
+model GameDispatchTemplateVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  templateId      String   @map("template_id") @db.Uuid
+  versionNo       Int      @map("version_no")
+  configJson      Json     @map("config_json")
+  changeNote      String?  @map("change_note")
+  publishedBy     String?  @map("published_by") @db.Uuid
+  publishedAt     DateTime @default(now()) @map("published_at")
+  sourceVersionId String?  @map("source_version_id") @db.Uuid
+
+  @@unique([tenantId, templateId, versionNo], map: "gd_template_versions_tenant_template_no_key")
+  @@unique([tenantId, id], map: "gd_template_versions_tenant_id_id_key")
+  @@unique([tenantId, templateId, id], map: "gd_template_versions_tenant_template_id_key")
+  @@index([tenantId, templateId, publishedAt], map: "gd_template_versions_tenant_template_published_idx")
+  @@index([tenantId, sourceVersionId], map: "gd_template_versions_tenant_source_idx")
+  @@map("game_dispatch_template_versions")
+}
+
+model GameDispatchTemplateSection {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  templateId String   @map("template_id") @db.Uuid
+  name       String
+  columns    Int      @default(1)
+  sortOrder  Int      @map("sort_order")
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  version    Int      @default(1)
+
+  @@unique([tenantId, templateId, name])
+  @@index([tenantId, templateId, sortOrder])
+  @@map("game_dispatch_template_sections")
 }
 
 model GameDispatchPosition {
@@ -1061,18 +1149,24 @@ model GameDispatchTemplateSnapshot {
   id           String   @id @default(uuid()) @db.Uuid
   tenantId     String   @map("tenant_id") @db.Uuid
   orderId      String   @map("order_id") @db.Uuid
+  gameId            String?  @map("game_id") @db.Uuid
   templateId   String?  @map("template_id") @db.Uuid
+  templateVersionId String?  @map("template_version_id") @db.Uuid
   templateName String   @map("template_name")
   fieldsJson   Json     @map("fields_json")
+  sectionsJson      Json     @default("[]") @map("sections_json")
   positionsJson Json    @map("positions_json")
   rankRulesJson Json    @map("rank_rules_json")
   copyLinesJson Json    @map("copy_lines_json")
+  configJson        Json?    @map("config_json")
+  schemaVersion     Int?     @map("schema_version")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   version      Int      @default(1)
 
   @@unique([tenantId, orderId])
   @@index([tenantId, templateId])
+  @@index([tenantId, templateVersionId], map: "gd_snapshots_tenant_template_version_idx")
   @@map("game_dispatch_template_snapshots")
 }
 
@@ -1080,6 +1174,8 @@ model GameDispatchOrder {
   id                String    @id @default(uuid()) @db.Uuid
   tenantId          String    @map("tenant_id") @db.Uuid
   orderId           String    @map("order_id") @db.Uuid
+  gameId            String?   @map("game_id") @db.Uuid
+  templateVersionId String?   @map("template_version_id") @db.Uuid
   snapshotId        String?   @map("snapshot_id") @db.Uuid
   dispatchNo        String    @map("dispatch_no")
   formValuesJson    Json      @map("form_values_json")
@@ -1093,6 +1189,8 @@ model GameDispatchOrder {
 
   @@unique([tenantId, orderId])
   @@unique([tenantId, dispatchNo])
+  @@index([tenantId, gameId, createdAt], map: "gd_orders_tenant_game_created_idx")
+  @@index([tenantId, templateVersionId], map: "gd_orders_tenant_template_version_idx")
   @@map("game_dispatch_orders")
 }
 
@@ -1256,7 +1354,7 @@ model SlotEvidence {
   tenantId     String   @map("tenant_id") @db.Uuid
   sessionId    String   @map("session_id") @db.Uuid
   orderSlotId  String   @map("order_slot_id") @db.Uuid
-  objectKey    String   @map("object_key") @unique
+  objectKey    String   @unique @map("object_key")
   originalName String   @map("original_name")
   mimeType     String   @map("mime_type")
   sizeBytes    Int      @map("size_bytes")

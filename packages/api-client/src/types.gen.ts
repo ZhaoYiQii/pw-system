@@ -223,6 +223,17 @@ export type AuthPhoneLoginResponses = {
     201: unknown;
 };
 
+export type AuthSwitchContextData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/switch-context';
+};
+
+export type AuthSwitchContextResponses = {
+    201: unknown;
+};
+
 export type AuthRefreshData = {
     body?: never;
     path?: never;
@@ -3237,6 +3248,5235 @@ export type GameTemplateCopyData = {
 export type GameTemplateCopyResponses = {
     201: unknown;
 };
+
+export type GenericGameTemplateListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 每页条数（1-100，默认 30/版本历史 20）
+         */
+        limit?: string;
+        /**
+         * 上一页返回的游标
+         */
+        cursor?: string;
+        /**
+         * 排序（默认 UPDATED_DESC）
+         */
+        sort?: 'UPDATED_DESC' | 'UPDATED_ASC' | 'NAME_ASC' | 'LAST_USED_DESC';
+        /**
+         * 按名称/说明搜索
+         */
+        q?: string;
+        /**
+         * 派生状态过滤（默认不含已归档）
+         */
+        status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+        /**
+         * 按游戏过滤
+         */
+        gameId?: string;
+    };
+    url: '/api/v1/tenant/game-dispatch-templates';
+};
+
+export type GenericGameTemplateListErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateListError = GenericGameTemplateListErrors[keyof GenericGameTemplateListErrors];
+
+export type GenericGameTemplateListResponses = {
+    /**
+     * 模板摘要分页响应
+     */
+    200: {
+        /**
+         * 模板摘要列表
+         */
+        data: Array<{
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+        }>;
+        /**
+         * 分页信息
+         */
+        page: {
+            /**
+             * 下一页游标（与排序绑定，null 表示结束）
+             */
+            nextCursor: string | null;
+        };
+    };
+};
+
+export type GenericGameTemplateListResponse = GenericGameTemplateListResponses[keyof GenericGameTemplateListResponses];
+
+export type GenericGameTemplateCreateData = {
+    /**
+     * 创建模板（生成最小有效 v2 草稿）
+     */
+    body: {
+        /**
+         * 目标游戏 id
+         */
+        gameId: string;
+        /**
+         * 模板名称
+         */
+        name: string;
+        /**
+         * 模板说明
+         */
+        description?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates';
+};
+
+export type GenericGameTemplateCreateErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateCreateError = GenericGameTemplateCreateErrors[keyof GenericGameTemplateCreateErrors];
+
+export type GenericGameTemplateCreateResponses = {
+    201: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplateCreateResponse = GenericGameTemplateCreateResponses[keyof GenericGameTemplateCreateResponses];
+
+export type GenericGameTemplateGetDraftData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/draft';
+};
+
+export type GenericGameTemplateGetDraftErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateGetDraftError = GenericGameTemplateGetDraftErrors[keyof GenericGameTemplateGetDraftErrors];
+
+export type GenericGameTemplateGetDraftResponses = {
+    200: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplateGetDraftResponse = GenericGameTemplateGetDraftResponses[keyof GenericGameTemplateGetDraftResponses];
+
+export type GenericGameTemplateSaveDraftData = {
+    /**
+     * 整份保存草稿（乐观锁）
+     */
+    body: {
+        /**
+         * 客户端持有的修订号（必须与当前一致）
+         */
+        expectedRevision: number;
+        /**
+         * 通用模板草稿配置（schemaVersion 2）
+         */
+        config: {
+            /**
+             * 配置版本（固定 2）
+             */
+            schemaVersion: 2;
+            /**
+             * 内容区块（最多 20）
+             */
+            sections: Array<{
+                /**
+                 * 区块稳定键（发布后不可改）
+                 */
+                stableKey: string;
+                /**
+                 * 区块名称
+                 */
+                label: string;
+                /**
+                 * 区块说明
+                 */
+                description?: string;
+                /**
+                 * 区块是否启用
+                 */
+                enabled: boolean;
+                /**
+                 * 区块顺序
+                 */
+                sortOrder: number;
+                /**
+                 * 区块布局
+                 */
+                layout: {
+                    /**
+                     * 列数（1-4）
+                     */
+                    columns: 1 | 2 | 3 | 4;
+                    /**
+                     * 密度
+                     */
+                    density?: 'comfortable' | 'compact';
+                    /**
+                     * 对齐
+                     */
+                    align?: 'left' | 'center';
+                };
+            }>;
+            /**
+             * 模板组件（判别联合，按 kind 区分）
+             */
+            components: Array<{
+                /**
+                 * 组件类型
+                 */
+                kind: string;
+                /**
+                 * 组件稳定键
+                 */
+                stableKey: string;
+                /**
+                 * 所属区块稳定键
+                 */
+                sectionKey: string;
+                /**
+                 * 组件名称
+                 */
+                label: string;
+                /**
+                 * 组件说明
+                 */
+                description?: string;
+                /**
+                 * 组件是否启用
+                 */
+                enabled: boolean;
+                /**
+                 * 组件顺序
+                 */
+                sortOrder: number;
+                /**
+                 * 组件布局
+                 */
+                layout: {
+                    /**
+                     * 栅格宽度（1-4）
+                     */
+                    colSpan: 1 | 2 | 3 | 4;
+                    /**
+                     * 是否在此组件前换行
+                     */
+                    rowBreakBefore: boolean;
+                };
+                /**
+                 * 字段类型
+                 */
+                fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                /**
+                 * 业务语义角色（非 CUSTOM 时全局唯一）
+                 */
+                semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                /**
+                 * 是否必填
+                 */
+                required: boolean;
+                /**
+                 * 占位提示
+                 */
+                placeholder?: string;
+                /**
+                 * 选择项（选择类字段必须至少一个）
+                 */
+                options?: Array<{
+                    /**
+                     * 选项值（稳定键）
+                     */
+                    value: string;
+                    /**
+                     * 选项名称
+                     */
+                    label: string;
+                    /**
+                     * 选项加价（十进制字符串分，禁止 number/浮点）
+                     */
+                    priceDeltaFen?: string;
+                }>;
+                /**
+                 * 多选字段的聚合策略（MULTI_SELECT 必填）
+                 */
+                aggregationPolicy?: 'SUM' | 'MAX';
+            } | {
+                /**
+                 * 组件类型
+                 */
+                kind: string;
+                /**
+                 * 组件稳定键
+                 */
+                stableKey: string;
+                /**
+                 * 所属区块稳定键
+                 */
+                sectionKey: string;
+                /**
+                 * 组件名称
+                 */
+                label: string;
+                /**
+                 * 组件说明
+                 */
+                description?: string;
+                /**
+                 * 组件是否启用
+                 */
+                enabled: boolean;
+                /**
+                 * 组件顺序
+                 */
+                sortOrder: number;
+                /**
+                 * 组件布局
+                 */
+                layout: {
+                    /**
+                     * 栅格宽度（1-4）
+                     */
+                    colSpan: 1 | 2 | 3 | 4;
+                    /**
+                     * 是否在此组件前换行
+                     */
+                    rowBreakBefore: boolean;
+                };
+                /**
+                 * 表格列（最多 10 列）
+                 */
+                columns: Array<{
+                    /**
+                     * 列稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 列名称
+                     */
+                    label: string;
+                    /**
+                     * 列类型
+                     */
+                    columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                    /**
+                     * 业务语义角色
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 单选列的选项
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                }>;
+                /**
+                 * 默认行（键必须是已定义的列）
+                 */
+                defaultRows: Array<{
+                    [key: string]: unknown;
+                }>;
+            } | {
+                /**
+                 * 组件类型
+                 */
+                kind: string;
+                /**
+                 * 组件稳定键
+                 */
+                stableKey: string;
+                /**
+                 * 所属区块稳定键
+                 */
+                sectionKey: string;
+                /**
+                 * 组件名称
+                 */
+                label: string;
+                /**
+                 * 组件说明
+                 */
+                description?: string;
+                /**
+                 * 组件是否启用
+                 */
+                enabled: boolean;
+                /**
+                 * 组件顺序
+                 */
+                sortOrder: number;
+                /**
+                 * 组件布局
+                 */
+                layout: {
+                    /**
+                     * 栅格宽度（1-4）
+                     */
+                    colSpan: 1 | 2 | 3 | 4;
+                    /**
+                     * 是否在此组件前换行
+                     */
+                    rowBreakBefore: boolean;
+                };
+                /**
+                 * 说明纯文本（不支持 HTML/脚本）
+                 */
+                text: string;
+            }>;
+            /**
+             * 人数来源（判别联合，按 kind 区分）
+             */
+            staffingSource: {
+                /**
+                 * 固定人数
+                 */
+                kind: string;
+                /**
+                 * 人数
+                 */
+                count: number;
+            } | {
+                /**
+                 * 取启用数字字段
+                 */
+                kind: string;
+                /**
+                 * 人数字段稳定键
+                 */
+                componentKey: string;
+            } | {
+                /**
+                 * 汇总表格列
+                 */
+                kind: string;
+                /**
+                 * 表格组件稳定键
+                 */
+                componentKey: string;
+                /**
+                 * STAFFING_COUNT 数字列稳定键
+                 */
+                columnKey: string;
+            };
+            /**
+             * 旧模板迁移兼容信息（发布配置中会被移除）
+             */
+            legacyCompatibility?: {
+                /**
+                 * 仅迁移兼容；非空时不允许发布
+                 */
+                unboundPriceRules: Array<{
+                    /**
+                     * 旧价格规则名称
+                     */
+                    label: string;
+                    /**
+                     * 选项加价（十进制字符串分，禁止 number/浮点）
+                     */
+                    priceDeltaFen: string;
+                    /**
+                     * 排序
+                     */
+                    sortOrder: number;
+                }>;
+            };
+        };
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/draft';
+};
+
+export type GenericGameTemplateSaveDraftErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 修订冲突（409）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 修订冲突明细
+         */
+        details: {
+            /**
+             * 客户端提交的修订号
+             */
+            expectedRevision: number;
+            /**
+             * 服务端当前修订号
+             */
+            currentRevision: number;
+            /**
+             * 当前编辑人
+             */
+            currentEditor: string | null;
+            /**
+             * 当前更新时间
+             */
+            currentUpdatedAt: string | null;
+        };
+    };
+    /**
+     * 配置校验失败（422）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 校验失败明细
+         */
+        details: {
+            /**
+             * 校验问题列表
+             */
+            issues: Array<{
+                /**
+                 * 校验问题码
+                 */
+                code: 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+                /**
+                 * 配置内定位路径
+                 */
+                path: string;
+                /**
+                 * 相关组件稳定键
+                 */
+                componentKey?: string | null;
+                /**
+                 * 问题说明（不含完整 config）
+                 */
+                message: string;
+            }>;
+        };
+    };
+};
+
+export type GenericGameTemplateSaveDraftError = GenericGameTemplateSaveDraftErrors[keyof GenericGameTemplateSaveDraftErrors];
+
+export type GenericGameTemplateSaveDraftResponses = {
+    200: {
+        /**
+         * 保存草稿结果
+         */
+        data: {
+            /**
+             * 保存后的修订号
+             */
+            revision: number;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string;
+            /**
+             * 非阻断提示（阻断问题会直接返回 422）
+             */
+            validationWarnings: Array<{
+                /**
+                 * 校验问题码
+                 */
+                code: 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+                /**
+                 * 配置内定位路径
+                 */
+                path: string;
+                /**
+                 * 相关组件稳定键
+                 */
+                componentKey?: string | null;
+                /**
+                 * 问题说明（不含完整 config）
+                 */
+                message: string;
+            }>;
+        };
+    };
+};
+
+export type GenericGameTemplateSaveDraftResponse = GenericGameTemplateSaveDraftResponses[keyof GenericGameTemplateSaveDraftResponses];
+
+export type GenericGameTemplatePublishData = {
+    /**
+     * 发布（发布配置取服务端当前草稿）
+     */
+    body: {
+        /**
+         * 客户端持有的修订号
+         */
+        expectedRevision: number;
+        /**
+         * 发布备注
+         */
+        changeNote?: string | null;
+        /**
+         * 溯源来源版本 id（仅同模板版本，不决定发布配置）
+         */
+        sourceVersionId?: string | null;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/publish';
+};
+
+export type GenericGameTemplatePublishErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 修订冲突（409）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 修订冲突明细
+         */
+        details: {
+            /**
+             * 客户端提交的修订号
+             */
+            expectedRevision: number;
+            /**
+             * 服务端当前修订号
+             */
+            currentRevision: number;
+            /**
+             * 当前编辑人
+             */
+            currentEditor: string | null;
+            /**
+             * 当前更新时间
+             */
+            currentUpdatedAt: string | null;
+        };
+    };
+    /**
+     * 配置校验失败（422）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 校验失败明细
+         */
+        details: {
+            /**
+             * 校验问题列表
+             */
+            issues: Array<{
+                /**
+                 * 校验问题码
+                 */
+                code: 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+                /**
+                 * 配置内定位路径
+                 */
+                path: string;
+                /**
+                 * 相关组件稳定键
+                 */
+                componentKey?: string | null;
+                /**
+                 * 问题说明（不含完整 config）
+                 */
+                message: string;
+            }>;
+        };
+    };
+};
+
+export type GenericGameTemplatePublishError = GenericGameTemplatePublishErrors[keyof GenericGameTemplatePublishErrors];
+
+export type GenericGameTemplatePublishResponses = {
+    201: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplatePublishResponse = GenericGameTemplatePublishResponses[keyof GenericGameTemplatePublishResponses];
+
+export type GenericGameTemplateListVersionsData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * 每页条数（1-100，默认 30/版本历史 20）
+         */
+        limit?: string;
+        /**
+         * 上一页返回的游标
+         */
+        cursor?: string;
+    };
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/versions';
+};
+
+export type GenericGameTemplateListVersionsErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateListVersionsError = GenericGameTemplateListVersionsErrors[keyof GenericGameTemplateListVersionsErrors];
+
+export type GenericGameTemplateListVersionsResponses = {
+    /**
+     * 版本历史分页响应
+     */
+    200: {
+        /**
+         * 版本摘要列表
+         */
+        data: Array<{
+            /**
+             * 版本 id
+             */
+            id: string;
+            /**
+             * 版本号
+             */
+            versionNo: number;
+            /**
+             * 配置版本（1 为只读历史）
+             */
+            schemaVersion: number;
+            /**
+             * 溯源来源版本 id
+             */
+            sourceVersionId: string | null;
+            /**
+             * 发布备注
+             */
+            changeNote: string | null;
+            /**
+             * 发布时间
+             */
+            publishedAt: string;
+            /**
+             * 发布人
+             */
+            publishedBy: string;
+        }>;
+        /**
+         * 分页信息
+         */
+        page: {
+            /**
+             * 下一页游标（按 publishedAt+id，null 表示结束）
+             */
+            nextCursor: string | null;
+        };
+    };
+};
+
+export type GenericGameTemplateListVersionsResponse = GenericGameTemplateListVersionsResponses[keyof GenericGameTemplateListVersionsResponses];
+
+export type GenericGameTemplateRestoreData = {
+    /**
+     * 还原历史版本到草稿
+     */
+    body: {
+        /**
+         * 要还原的 v2 版本 id
+         */
+        versionId: string;
+        /**
+         * 客户端持有的修订号
+         */
+        expectedRevision: number;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/restore';
+};
+
+export type GenericGameTemplateRestoreErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 修订冲突（409）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 修订冲突明细
+         */
+        details: {
+            /**
+             * 客户端提交的修订号
+             */
+            expectedRevision: number;
+            /**
+             * 服务端当前修订号
+             */
+            currentRevision: number;
+            /**
+             * 当前编辑人
+             */
+            currentEditor: string | null;
+            /**
+             * 当前更新时间
+             */
+            currentUpdatedAt: string | null;
+        };
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateRestoreError = GenericGameTemplateRestoreErrors[keyof GenericGameTemplateRestoreErrors];
+
+export type GenericGameTemplateRestoreResponses = {
+    201: {
+        /**
+         * 还原结果（草稿视图 + 来源版本）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+            /**
+             * 本次还原的来源版本 id（发布时可作为溯源回传）
+             */
+            sourceVersionId: string;
+        };
+    };
+};
+
+export type GenericGameTemplateRestoreResponse = GenericGameTemplateRestoreResponses[keyof GenericGameTemplateRestoreResponses];
+
+export type GenericGameTemplateCopyData = {
+    /**
+     * 复制到目标游戏（生成独立 DRAFT）
+     */
+    body: {
+        /**
+         * 目标游戏 id（必须同租户）
+         */
+        targetGameId: string;
+        /**
+         * 新模板名称
+         */
+        newName: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/copy';
+};
+
+export type GenericGameTemplateCopyErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateCopyError = GenericGameTemplateCopyErrors[keyof GenericGameTemplateCopyErrors];
+
+export type GenericGameTemplateCopyResponses = {
+    201: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplateCopyResponse = GenericGameTemplateCopyResponses[keyof GenericGameTemplateCopyResponses];
+
+export type GenericGameTemplateSetDefaultData = {
+    /**
+     * 仅需修订号的幂等动作（default/archive/unarchive）
+     */
+    body: {
+        /**
+         * 客户端持有的修订号
+         */
+        expectedRevision: number;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/default';
+};
+
+export type GenericGameTemplateSetDefaultErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 修订冲突（409）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 修订冲突明细
+         */
+        details: {
+            /**
+             * 客户端提交的修订号
+             */
+            expectedRevision: number;
+            /**
+             * 服务端当前修订号
+             */
+            currentRevision: number;
+            /**
+             * 当前编辑人
+             */
+            currentEditor: string | null;
+            /**
+             * 当前更新时间
+             */
+            currentUpdatedAt: string | null;
+        };
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateSetDefaultError = GenericGameTemplateSetDefaultErrors[keyof GenericGameTemplateSetDefaultErrors];
+
+export type GenericGameTemplateSetDefaultResponses = {
+    201: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplateSetDefaultResponse = GenericGameTemplateSetDefaultResponses[keyof GenericGameTemplateSetDefaultResponses];
+
+export type GenericGameTemplateArchiveData = {
+    /**
+     * 仅需修订号的幂等动作（default/archive/unarchive）
+     */
+    body: {
+        /**
+         * 客户端持有的修订号
+         */
+        expectedRevision: number;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/archive';
+};
+
+export type GenericGameTemplateArchiveErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 修订冲突（409）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 修订冲突明细
+         */
+        details: {
+            /**
+             * 客户端提交的修订号
+             */
+            expectedRevision: number;
+            /**
+             * 服务端当前修订号
+             */
+            currentRevision: number;
+            /**
+             * 当前编辑人
+             */
+            currentEditor: string | null;
+            /**
+             * 当前更新时间
+             */
+            currentUpdatedAt: string | null;
+        };
+    };
+};
+
+export type GenericGameTemplateArchiveError = GenericGameTemplateArchiveErrors[keyof GenericGameTemplateArchiveErrors];
+
+export type GenericGameTemplateArchiveResponses = {
+    201: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplateArchiveResponse = GenericGameTemplateArchiveResponses[keyof GenericGameTemplateArchiveResponses];
+
+export type GenericGameTemplateUnarchiveData = {
+    /**
+     * 仅需修订号的幂等动作（default/archive/unarchive）
+     */
+    body: {
+        /**
+         * 客户端持有的修订号
+         */
+        expectedRevision: number;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/unarchive';
+};
+
+export type GenericGameTemplateUnarchiveErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 修订冲突（409）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 修订冲突明细
+         */
+        details: {
+            /**
+             * 客户端提交的修订号
+             */
+            expectedRevision: number;
+            /**
+             * 服务端当前修订号
+             */
+            currentRevision: number;
+            /**
+             * 当前编辑人
+             */
+            currentEditor: string | null;
+            /**
+             * 当前更新时间
+             */
+            currentUpdatedAt: string | null;
+        };
+    };
+};
+
+export type GenericGameTemplateUnarchiveError = GenericGameTemplateUnarchiveErrors[keyof GenericGameTemplateUnarchiveErrors];
+
+export type GenericGameTemplateUnarchiveResponses = {
+    201: {
+        /**
+         * 模板草稿视图（config 为可编辑草稿）
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            id: string;
+            /**
+             * 所属游戏
+             */
+            game: {
+                /**
+                 * 游戏 id（未归类旧模板为空串）
+                 */
+                id: string;
+                /**
+                 * 游戏名（未归类旧模板为空串）
+                 */
+                name: string;
+            };
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description: string | null;
+            /**
+             * 派生状态（UNPUBLISHED_CHANGES 不落库）
+             */
+            status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
+            /**
+             * 生效版本号
+             */
+            activeVersionNo: number | null;
+            /**
+             * 乐观锁修订号
+             */
+            revision: number;
+            /**
+             * 是否该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 最后修改人
+             */
+            updatedBy: string | null;
+            /**
+             * 草稿是否与生效版本不同
+             */
+            hasUnpublishedChanges: boolean;
+            /**
+             * 通用模板草稿配置（schemaVersion 2）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块（最多 20）
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 旧模板迁移兼容信息（发布配置中会被移除）
+                 */
+                legacyCompatibility?: {
+                    /**
+                     * 仅迁移兼容；非空时不允许发布
+                     */
+                    unboundPriceRules: Array<{
+                        /**
+                         * 旧价格规则名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen: string;
+                        /**
+                         * 排序
+                         */
+                        sortOrder: number;
+                    }>;
+                };
+            };
+            /**
+             * 生效版本摘要（只读）
+             */
+            activeVersion: {
+                /**
+                 * 版本 id
+                 */
+                id: string;
+                /**
+                 * 版本号
+                 */
+                versionNo: number;
+                /**
+                 * 配置版本（1 为只读历史）
+                 */
+                schemaVersion: number;
+                /**
+                 * 溯源来源版本 id
+                 */
+                sourceVersionId: string | null;
+                /**
+                 * 发布备注
+                 */
+                changeNote: string | null;
+                /**
+                 * 发布时间
+                 */
+                publishedAt: string;
+                /**
+                 * 发布人
+                 */
+                publishedBy: string;
+            } | null;
+        };
+    };
+};
+
+export type GenericGameTemplateUnarchiveResponse = GenericGameTemplateUnarchiveResponses[keyof GenericGameTemplateUnarchiveResponses];
+
+export type GenericGameTemplateRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query: {
+        /**
+         * 客户端持有的修订号（DELETE 走 query）
+         */
+        expectedRevision: string;
+    };
+    url: '/api/v1/tenant/game-dispatch-templates/{id}';
+};
+
+export type GenericGameTemplateRemoveErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 删除受限（409，应改为归档）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 删除受限明细
+         */
+        details: {
+            /**
+             * 模板 id
+             */
+            templateId: string;
+            /**
+             * 已存在版本数
+             */
+            versionCount: number;
+            /**
+             * 订单快照引用数
+             */
+            snapshotCount: number;
+            /**
+             * 派单引用数
+             */
+            orderCount: number;
+        };
+    };
+};
+
+export type GenericGameTemplateRemoveError = GenericGameTemplateRemoveErrors[keyof GenericGameTemplateRemoveErrors];
+
+export type GenericGameTemplateRemoveResponses = {
+    200: {
+        /**
+         * 删除结果
+         */
+        data: {
+            /**
+             * 是否删除成功
+             */
+            ok: boolean;
+        };
+    };
+};
+
+export type GenericGameTemplateRemoveResponse = GenericGameTemplateRemoveResponses[keyof GenericGameTemplateRemoveResponses];
 
 export type GameDispatchListData = {
     body?: never;

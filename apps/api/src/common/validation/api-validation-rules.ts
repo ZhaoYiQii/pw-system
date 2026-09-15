@@ -4,6 +4,7 @@ import {
   fenMoney,
   positiveFenMoney,
 } from "./api-input.schemas.js";
+import { GAME_TEMPLATE_V2_LIMITS } from "../../modules/game-dispatch/domain/game-template-config-v2.js";
 import { routeValidations } from "./validation-registry.js";
 
 const nonEmptyText = (label: string, max: number) =>
@@ -209,8 +210,7 @@ routeValidations.set("POST /api/v1/tenant/settlements/:id/items", {
     })
     .refine(
       (v) =>
-        (v.earningIds?.length ?? 0) > 0 ||
-        (v.slotEarningIds?.length ?? 0) > 0,
+        (v.earningIds?.length ?? 0) > 0 || (v.slotEarningIds?.length ?? 0) > 0,
       { message: "至少提供一个 earningIds 或 slotEarningIds" },
     ),
 });
@@ -393,8 +393,34 @@ const gameTemplateFieldBody = z.strictObject({
   required: z.boolean().optional(),
   options: z.array(z.string().min(1).max(50)).max(100).optional(),
   placeholder: z.string().max(60).nullable().optional(),
+  sectionId: z.string().min(1).max(64).nullable().optional(),
+  colSpan: z.number().int().min(1).max(4).optional(),
+  rowBreakBefore: z.boolean().optional(),
   sortOrder: z.number().int().min(0).optional(),
   enabled: z.boolean().optional(),
+});
+
+const gameTemplateSectionBody = z.strictObject({
+  name: z.string().trim().min(1).max(30, "分区名称超长"),
+  columns: z.number().int().min(1).max(4).optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  enabled: z.boolean().optional(),
+});
+
+const gameTemplateBlockLabelsBody = z.strictObject({
+  positions: z.string().trim().min(1).max(20).optional(),
+  rankRules: z.string().trim().min(1).max(20).optional(),
+  copyLines: z.string().trim().min(1).max(20).optional(),
+  sections: z
+    .record(
+      z.string().min(1).max(30),
+      z.strictObject({
+        variant: z.enum(["card", "plain", "divider"]).optional(),
+        density: z.enum(["comfortable", "compact"]).optional(),
+        align: z.enum(["left", "center"]).optional(),
+      }),
+    )
+    .optional(),
 });
 
 const gameTemplatePositionBody = z.strictObject({
@@ -419,6 +445,8 @@ const gameTemplateBody = z.strictObject({
   name: z.string().trim().min(1).max(60, "模板名称超长"),
   enabled: z.boolean().optional(),
   fields: z.array(gameTemplateFieldBody).max(100).optional(),
+  sections: z.array(gameTemplateSectionBody).max(20).optional(),
+  blockLabels: gameTemplateBlockLabelsBody.optional(),
   positions: z.array(gameTemplatePositionBody).max(50).optional(),
   rankRules: z.array(gameTemplateRankBody).max(50).optional(),
   copyLines: z.array(gameTemplateCopyLineBody).max(100).optional(),
@@ -492,5 +520,284 @@ routeValidations.set("POST /api/v1/tenant/game-dispatch/customer/orders", {
       )
       .min(1)
       .max(50),
+  }),
+});
+
+const genericTemplateSort = z.enum([
+  "UPDATED_DESC",
+  "UPDATED_ASC",
+  "NAME_ASC",
+  "LAST_USED_DESC",
+]);
+const genericTemplateStatus = z.enum([
+  "DRAFT",
+  "PUBLISHED",
+  "UNPUBLISHED_CHANGES",
+  "ARCHIVED",
+]);
+const queryLimit = (defaultValue: number) =>
+  z
+    .string()
+    .regex(/^[1-9][0-9]*$/)
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(100))
+    .default(defaultValue);
+const stableKey = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
+const genericTemplateMoney = z.string().regex(/^(?:0|[1-9][0-9]*)$/);
+const genericTemplateSemanticRole = z.enum([
+  "CUSTOM",
+  "MODE",
+  "TARGET_RANK",
+  "CURRENT_RANK",
+  "DURATION_MINUTES",
+  "SERVER_REGION",
+  "CONTACT",
+  "ORDER_NOTE",
+  "STAFFING_LABEL",
+  "STAFFING_COUNT",
+]);
+const genericTemplateLayout = z.strictObject({
+  colSpan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  rowBreakBefore: z.boolean(),
+});
+const genericTemplateOption = z.strictObject({
+  value: stableKey,
+  label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+  priceDeltaFen: genericTemplateMoney.optional(),
+});
+const genericTemplateFieldComponent = z.strictObject({
+  kind: z.literal("FIELD"),
+  stableKey,
+  sectionKey: stableKey,
+  label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+  description: z
+    .string()
+    .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
+    .optional(),
+  enabled: z.boolean(),
+  sortOrder: z.number().int().min(0),
+  layout: genericTemplateLayout,
+  fieldType: z.enum([
+    "TEXT",
+    "TEXTAREA",
+    "NUMBER",
+    "MONEY_FEN",
+    "DATETIME",
+    "SINGLE_SELECT",
+    "MULTI_SELECT",
+  ]),
+  semanticRole: genericTemplateSemanticRole,
+  required: z.boolean(),
+  placeholder: z
+    .string()
+    .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
+    .optional(),
+  options: z
+    .array(genericTemplateOption)
+    .max(GAME_TEMPLATE_V2_LIMITS.choiceOptions)
+    .optional(),
+  aggregationPolicy: z.enum(["SUM", "MAX"]).optional(),
+});
+const genericTemplateTableColumn = z.strictObject({
+  stableKey,
+  label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+  columnType: z.enum(["TEXT", "NUMBER", "SINGLE_SELECT"]),
+  semanticRole: genericTemplateSemanticRole,
+  required: z.boolean(),
+  options: z
+    .array(genericTemplateOption)
+    .max(GAME_TEMPLATE_V2_LIMITS.choiceOptions)
+    .optional(),
+});
+const genericTemplateTableComponent = z.strictObject({
+  kind: z.literal("REPEATABLE_TABLE"),
+  stableKey,
+  sectionKey: stableKey,
+  label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+  description: z
+    .string()
+    .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
+    .optional(),
+  enabled: z.boolean(),
+  sortOrder: z.number().int().min(0),
+  layout: genericTemplateLayout,
+  columns: z
+    .array(genericTemplateTableColumn)
+    .max(GAME_TEMPLATE_V2_LIMITS.tableColumns),
+  defaultRows: z
+    .array(z.record(z.string(), z.unknown()))
+    .max(GAME_TEMPLATE_V2_LIMITS.defaultRows),
+});
+const genericTemplateNoteComponent = z.strictObject({
+  kind: z.literal("NOTE"),
+  stableKey,
+  sectionKey: stableKey,
+  label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+  description: z
+    .string()
+    .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
+    .optional(),
+  enabled: z.boolean(),
+  sortOrder: z.number().int().min(0),
+  layout: genericTemplateLayout,
+  text: z.string().max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters),
+});
+const genericTemplateStaffingSource = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("FIXED"), count: z.number().int().min(1) }),
+  z.strictObject({ kind: z.literal("NUMBER_FIELD"), componentKey: stableKey }),
+  z.strictObject({
+    kind: z.literal("REPEATABLE_TABLE_SUM"),
+    componentKey: stableKey,
+    columnKey: stableKey,
+  }),
+]);
+const genericTemplateDraftConfig = z
+  .strictObject({
+    schemaVersion: z.literal(2),
+    sections: z
+      .array(
+        z.strictObject({
+          stableKey,
+          label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+          description: z
+            .string()
+            .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
+            .optional(),
+          enabled: z.boolean(),
+          sortOrder: z.number().int().min(0),
+          layout: z.strictObject({
+            columns: z.union([
+              z.literal(1),
+              z.literal(2),
+              z.literal(3),
+              z.literal(4),
+            ]),
+            density: z.enum(["comfortable", "compact"]).optional(),
+            align: z.enum(["left", "center"]).optional(),
+          }),
+        }),
+      )
+      .max(GAME_TEMPLATE_V2_LIMITS.sections),
+    components: z
+      .array(
+        z.discriminatedUnion("kind", [
+          genericTemplateFieldComponent,
+          genericTemplateTableComponent,
+          genericTemplateNoteComponent,
+        ]),
+      )
+      .max(GAME_TEMPLATE_V2_LIMITS.components),
+    staffingSource: genericTemplateStaffingSource,
+    legacyCompatibility: z
+      .strictObject({
+        unboundPriceRules: z
+          .array(
+            z.strictObject({
+              label: z
+                .string()
+                .min(1)
+                .max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
+              priceDeltaFen: genericTemplateMoney,
+              sortOrder: z.number().int().min(0),
+            }),
+          )
+          .max(GAME_TEMPLATE_V2_LIMITS.choiceOptions),
+      })
+      .optional(),
+  })
+  .refine(
+    (config) =>
+      new TextEncoder().encode(JSON.stringify(config)).byteLength <=
+      GAME_TEMPLATE_V2_LIMITS.draftBytes,
+    { message: "模板草稿体积超过 256 KiB" },
+  );
+
+const expectedRevisionBody = z.strictObject({
+  expectedRevision: z.number().int().min(0),
+});
+
+routeValidations.set("GET /api/v1/tenant/game-dispatch-templates", {
+  query: z.strictObject({
+    gameId: z.string().uuid().optional(),
+    status: genericTemplateStatus.optional(),
+    q: z.string().trim().min(1).max(100).optional(),
+    sort: genericTemplateSort.default("UPDATED_DESC"),
+    cursor: z.string().min(1).max(2000).optional(),
+    limit: queryLimit(30),
+  }),
+});
+
+routeValidations.set("POST /api/v1/tenant/game-dispatch-templates", {
+  body: z.strictObject({
+    gameId: z.string().uuid(),
+    name: z.string().trim().min(1).max(60),
+    description: z.string().trim().max(500).nullable().optional(),
+  }),
+});
+
+routeValidations.set(
+  "GET /api/v1/tenant/game-dispatch-templates/:id/draft",
+  {},
+);
+
+routeValidations.set("PATCH /api/v1/tenant/game-dispatch-templates/:id/draft", {
+  body: z.strictObject({
+    expectedRevision: z.number().int().min(0),
+    config: genericTemplateDraftConfig,
+  }),
+});
+
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch-templates/:id/publish",
+  {
+    body: z.strictObject({
+      expectedRevision: z.number().int().min(0),
+      changeNote: z.string().trim().max(500).nullable().optional(),
+      sourceVersionId: z.string().uuid().nullable().optional(),
+    }),
+  },
+);
+
+routeValidations.set(
+  "GET /api/v1/tenant/game-dispatch-templates/:id/versions",
+  {
+    query: z.strictObject({
+      cursor: z.string().min(1).max(2000).optional(),
+      limit: queryLimit(20),
+    }),
+  },
+);
+
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch-templates/:id/restore",
+  {
+    body: z.strictObject({
+      versionId: z.string().uuid(),
+      expectedRevision: z.number().int().min(0),
+    }),
+  },
+);
+
+routeValidations.set("POST /api/v1/tenant/game-dispatch-templates/:id/copy", {
+  body: z.strictObject({
+    targetGameId: z.string().uuid(),
+    newName: z.string().trim().min(1).max(60),
+  }),
+});
+
+for (const action of ["default", "archive", "unarchive"] as const) {
+  routeValidations.set(
+    `POST /api/v1/tenant/game-dispatch-templates/:id/${action}`,
+    { body: expectedRevisionBody },
+  );
+}
+
+routeValidations.set("DELETE /api/v1/tenant/game-dispatch-templates/:id", {
+  query: z.strictObject({
+    expectedRevision: z
+      .string()
+      .regex(/^(?:0|[1-9][0-9]*)$/)
+      .transform(Number)
+      .pipe(z.number().int().min(0)),
   }),
 });
