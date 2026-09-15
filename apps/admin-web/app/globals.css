@@ -106,24 +106,35 @@
 
 /* 商家端控制台设计令牌：源自 merchant-console-full.html，仅在商家端作用域生效 */
 .pw-merchant {
-  --mc-bg: #f2f0e9;
-  --mc-paper: #fffdf8;
-  --mc-paper-2: #f8f6ef;
-  --mc-ink: #18231e;
-  --mc-muted: #6d746f;
-  --mc-line: #dedbd1;
-  --mc-side: #16231e;
-  --mc-side-2: #203029;
-  --mc-accent: #cf6040;
-  --mc-accent-2: #f5e5de;
-  --mc-green: #2d7259;
-  --mc-green-2: #e6f0ea;
-  --mc-amber: #a56b22;
-  --mc-amber-2: #f5ead7;
-  --mc-blue: #496a83;
-  --mc-blue-2: #e8eff3;
-  --mc-red: #a94d45;
-  --mc-red-2: #f7e8e4;
+  --mc-bg: #f3f6f8;
+  --mc-paper: #ffffff;
+  --mc-paper-2: #f7f9fa;
+  --mc-ink: #15202b;
+  --mc-muted: #647180;
+  --mc-line: #dce3e8;
+  --mc-side: #15202b;
+  --mc-side-2: #26364a;
+  /* 主操作 teal：原 #189c91 配白字只有 3.39:1（AA 要求 4.5:1），作为文字色放在
+     --mc-accent-2 浅底上仅 3.00:1。改为 #11786f：纸面 5.33:1、--mc-paper-2 5.05:1、
+     --mc-accent-2 4.72:1、--mc-bg 4.91:1，四种底色全部达 AA，色相最接近原值。 */
+  --mc-accent: #11786f;
+  --mc-accent-2: #e3f5f2;
+  /* 成功/生效语义色：原先与 --mc-accent 同为 #189c91，导致"动作"与"状态"无法区分。
+     #2b742e 与主色色相相差约 53°，文字对比度：纸面 5.77:1、浅绿底 5.02:1、已完成底 5.18:1，均达 AA。 */
+  --mc-success: #2b742e;
+  --mc-success-2: #e7f2ea;
+  /* 兼容别名：老类名继续可用，新代码请写 --mc-success*。 */
+  --mc-green: var(--mc-success);
+  --mc-green-2: var(--mc-success-2);
+  /* 文字级琥珀：--mc-amber 在白底仅 4.32:1、在 --mc-amber-2 底仅 3.98:1，均未达 AA。
+     本值 = 72% amber + 28% ink：白底 6.40:1、琥珀浅底 5.90:1、纸面 6.06:1。 */
+  --mc-amber-text: #7d581a;
+  --mc-amber: #a66e13;
+  --mc-amber-2: #fff5dd;
+  --mc-blue: #3e6f9e;
+  --mc-blue-2: #e8f0f7;
+  --mc-red: #c85151;
+  --mc-red-2: #fae9e9;
   --mc-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
 
   --background: var(--mc-bg);
@@ -139,12 +150,12 @@
   --muted: var(--mc-paper-2);
   --muted-foreground: var(--mc-muted);
   --accent: var(--mc-accent-2);
-  --accent-foreground: #7c3f2b;
+  --accent-foreground: #106f68;
   --destructive: var(--mc-red);
   --destructive-foreground: #ffffff;
   --border: var(--mc-line);
-  --input: #d4d0c5;
-  --ring: #d9a797;
+  --input: #cfd8df;
+  --ring: #7fcac3;
   --radius: 12px;
 }
 
