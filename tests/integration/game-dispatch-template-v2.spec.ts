@@ -1392,4 +1392,36 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
     await req(csToken).get(`${base}/${created.id}/draft`).expect(200);
     await req(csToken).get(`${base}/${created.id}/versions`).expect(200);
   });
+
+  it("列表：gameScope=UNCLASSIFIED 只返回未归类模板，且与 gameId 互斥", async () => {
+    const bound = await createTemplate({
+      gameId: gameAId,
+      name: `已归类-${suffix}`,
+    });
+    // 未归类旧模板没有 gameId：这里直接落库模拟历史数据（API 不接受空 gameId）。
+    const legacy = await client.gameDispatchTemplate.create({
+      data: { tenantId, name: `未归类-${suffix}`, copyLines: [] },
+    });
+
+    const unclassified = await req(ownerToken)
+      .get(`${base}?gameScope=UNCLASSIFIED`)
+      .expect(200);
+    const unclassifiedIds = (unclassified.body as ListBody).data.map(
+      (row) => row.id,
+    );
+    expect(unclassifiedIds).toContain(legacy.id);
+    expect(unclassifiedIds).not.toContain(bound.id);
+
+    const scoped = await req(ownerToken)
+      .get(`${base}?gameId=${gameAId}`)
+      .expect(200);
+    const scopedIds = (scoped.body as ListBody).data.map((row) => row.id);
+    expect(scopedIds).toContain(bound.id);
+    expect(scopedIds).not.toContain(legacy.id);
+
+    // 互斥：同时给出即 400，避免"未归类 + 具体游戏"的模糊语义
+    await req(ownerToken)
+      .get(`${base}?gameId=${gameAId}&gameScope=UNCLASSIFIED`)
+      .expect(400);
+  });
 });

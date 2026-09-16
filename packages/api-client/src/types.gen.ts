@@ -3274,6 +3274,10 @@ export type GenericGameTemplateListData = {
          */
         status?: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED_CHANGES' | 'ARCHIVED';
         /**
+         * 游戏范围；与 gameId 互斥
+         */
+        gameScope?: 'ALL' | 'UNCLASSIFIED';
+        /**
          * 按游戏过滤
          */
         gameId?: string;

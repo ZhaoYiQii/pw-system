@@ -467,13 +467,9 @@ export function TemplateManagerView() {
     () => listQuery.data?.pages.flatMap((page) => page.data) ?? [],
     [listQuery.data],
   );
-  const visibleItems = useMemo(
-    () =>
-      search.game === UNCLASSIFIED_GAME
-        ? loadedItems.filter(isUnclassified)
-        : loadedItems,
-    [loadedItems, search.game],
-  );
+  // 未归类由服务端按 gameScope=UNCLASSIFIED 过滤（分页下才正确），
+  // 这里不再做客户端筛选；isUnclassified 仍用于展示"未归类"标记。
+  const visibleItems = loadedItems;
 
   const games = gamesQuery.data ?? [];
   const gameNameById = useMemo(() => {

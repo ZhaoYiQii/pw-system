@@ -82,6 +82,8 @@ export type TemplateDeleteResult =
 
 export interface TemplateListQuery {
   gameId?: string;
+  /** 与 gameId 互斥：UNCLASSIFIED 表示只取未归类旧模板。 */
+  gameScope?: "ALL" | "UNCLASSIFIED";
   status?: TemplateStatusFilter;
   q?: string;
   sort?: TemplateSort;
@@ -248,6 +250,7 @@ function toListQuery(
 ): NonNullable<GenericGameTemplateListData["query"]> {
   return {
     ...(query.gameId ? { gameId: query.gameId } : {}),
+    ...(query.gameScope ? { gameScope: query.gameScope } : {}),
     ...(query.status ? { status: query.status } : {}),
     ...(query.q ? { q: query.q } : {}),
     ...(query.cursor ? { cursor: query.cursor } : {}),

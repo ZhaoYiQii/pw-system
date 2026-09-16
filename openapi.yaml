@@ -3542,6 +3542,15 @@ paths:
               - UNPUBLISHED_CHANGES
               - ARCHIVED
             description: 派生状态过滤（默认不含已归档）
+        - name: gameScope
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - ALL
+              - UNCLASSIFIED
+            description: 游戏范围；与 gameId 互斥
         - name: gameId
           required: false
           in: query
@@ -4223,9 +4232,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -5056,9 +5069,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -5706,9 +5723,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -6307,9 +6328,13 @@ paths:
                                 maxLength: 500
                                 description: 说明纯文本（不支持 HTML/脚本）
                             description: NOTE 组件
+                        discriminator:
+                          propertyName: kind
                         description: 模板组件（判别联合，按 kind 区分）
                       description: 通用组件（最多 100）
                     staffingSource:
+                      discriminator:
+                        propertyName: kind
                       oneOf:
                         - type: object
                           required:
@@ -7188,9 +7213,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -8246,9 +8275,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -9076,9 +9109,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -9876,9 +9913,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -10660,9 +10701,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:
@@ -11407,9 +11452,13 @@ paths:
                                       maxLength: 500
                                       description: 说明纯文本（不支持 HTML/脚本）
                                   description: NOTE 组件
+                              discriminator:
+                                propertyName: kind
                               description: 模板组件（判别联合，按 kind 区分）
                             description: 通用组件（最多 100）
                           staffingSource:
+                            discriminator:
+                              propertyName: kind
                             oneOf:
                               - type: object
                                 required:

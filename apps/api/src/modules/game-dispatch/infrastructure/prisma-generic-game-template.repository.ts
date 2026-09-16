@@ -270,6 +270,8 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
     const archivedOnly = statusFilter === "ARCHIVED";
     const q = query.q === undefined ? null : query.q;
     const gameId = query.gameId ?? null;
+    // 未归类旧模板：契约新增 gameScope=UNCLASSIFIED，按 game_id 为空过滤。
+    const unclassified = query.gameScope === "UNCLASSIFIED";
 
     const rows = await this.client.$queryRaw<TemplateSummaryRow[]>`
       WITH candidate AS (
@@ -314,6 +316,7 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
           AND (${archivedOnly}::boolean = true OR t.archived_at IS NULL)
           AND (${archivedOnly}::boolean = false OR t.archived_at IS NOT NULL)
           AND (${gameId}::uuid IS NULL OR t.game_id = ${gameId}::uuid)
+          AND (${unclassified}::boolean IS NOT TRUE OR t.game_id IS NULL)
           AND (
             ${q}::text IS NULL
             OR strpos(lower(t.name), lower(${q}::text)) > 0

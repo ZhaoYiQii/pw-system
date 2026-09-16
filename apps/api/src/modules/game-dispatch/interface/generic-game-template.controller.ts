@@ -41,6 +41,7 @@ import {
   genericTemplateExpectedRevisionBodySchema,
   genericTemplateExpectedRevisionQuerySchema,
   genericTemplateGameIdQuerySchema,
+  genericTemplateGameScopeQuerySchema,
   genericTemplateLimitQuerySchema,
   genericTemplateListPageSchema,
   genericTemplatePublishBodySchema,
@@ -58,12 +59,14 @@ import {
   genericTemplateVersionsPageSchema,
 } from "../../../openapi/schemas.js";
 import {
+  GENERIC_TEMPLATE_GAME_SCOPES,
   GENERIC_TEMPLATE_SORTS,
   GENERIC_TEMPLATE_STATUSES,
   type CopyGenericTemplateInput,
   type CreateGenericTemplateInput,
   type ExpectedRevisionInput,
   type GenericTemplateListQuery,
+  type GenericTemplateGameScope,
   type GenericTemplateSort,
   type GenericTemplateStatus,
   type PublishGenericTemplateInput,
@@ -91,6 +94,15 @@ function parseSort(value: unknown): GenericTemplateSort {
     (GENERIC_TEMPLATE_SORTS as readonly string[]).includes(value)
     ? (value as GenericTemplateSort)
     : "UPDATED_DESC";
+}
+
+/** 游戏范围：非法值忽略（保持默认 ALL），互斥关系已由 API 边界校验。 */
+function parseGameScope(value: unknown): GenericTemplateGameScope | undefined {
+  return typeof value === "string" &&
+    (GENERIC_TEMPLATE_GAME_SCOPES as readonly string[]).includes(value) &&
+    value !== "ALL"
+    ? (value as GenericTemplateGameScope)
+    : undefined;
 }
 
 function parseStatus(value: unknown): GenericTemplateStatus | undefined {
@@ -154,6 +166,11 @@ export class GenericGameTemplateController {
     schema: genericTemplateGameIdQuerySchema as never,
   })
   @ApiQuery({
+    name: "gameScope",
+    required: false,
+    schema: genericTemplateGameScopeQuerySchema as never,
+  })
+  @ApiQuery({
     name: "status",
     required: false,
     schema: genericTemplateStatusQuerySchema as never,
@@ -190,6 +207,13 @@ export class GenericGameTemplateController {
       sort: parseSort(query.sort),
       limit: parseLimit(query.limit, 30),
       ...(typeof query.gameId === "string" ? { gameId: query.gameId } : {}),
+      ...(parseGameScope(query.gameScope) === undefined
+        ? {}
+        : {
+            gameScope: parseGameScope(
+              query.gameScope,
+            ) as GenericTemplateGameScope,
+          }),
       ...(typeof query.q === "string" ? { q: query.q } : {}),
       ...(typeof query.cursor === "string" ? { cursor: query.cursor } : {}),
       ...(parseStatus(query.status) === undefined

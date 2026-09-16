@@ -717,14 +717,25 @@ const expectedRevisionBody = z.strictObject({
 });
 
 routeValidations.set("GET /api/v1/tenant/game-dispatch-templates", {
-  query: z.strictObject({
-    gameId: z.string().uuid().optional(),
-    status: genericTemplateStatus.optional(),
-    q: z.string().trim().min(1).max(100).optional(),
-    sort: genericTemplateSort.default("UPDATED_DESC"),
-    cursor: z.string().min(1).max(2000).optional(),
-    limit: queryLimit(30),
-  }),
+  query: z
+    .strictObject({
+      gameId: z.string().uuid().optional(),
+      gameScope: z.enum(["ALL", "UNCLASSIFIED"]).optional(),
+      status: genericTemplateStatus.optional(),
+      q: z.string().trim().min(1).max(100).optional(),
+      sort: genericTemplateSort.default("UPDATED_DESC"),
+      cursor: z.string().min(1).max(2000).optional(),
+      limit: queryLimit(30),
+    })
+    // gameId 与 gameScope=UNCLASSIFIED 互斥：同时给出即 400。
+    .refine(
+      (value) =>
+        !(value.gameId !== undefined && value.gameScope === "UNCLASSIFIED"),
+      {
+        message: "gameId 与 gameScope=UNCLASSIFIED 不能同时使用",
+        path: ["gameScope"],
+      },
+    ),
 });
 
 routeValidations.set("GET /api/v1/tenant/game-dispatch-templates/published", {

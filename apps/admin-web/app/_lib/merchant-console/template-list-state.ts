@@ -121,8 +121,8 @@ export function buildTemplateListSearch(
 
 /**
  * URL 状态 → 列表接口查询。
- * `game=unclassified` 无法用契约参数表达（gameId 只接受 uuid），
- * 因此不发 gameId，由调用方在已加载结果内筛 `game.id === ""`。
+ * `game=unclassified` 现在用契约参数 `gameScope=UNCLASSIFIED` 交给服务端过滤，
+ * 不再依赖前端在已加载结果内筛选（分页下才正确）。
  */
 export function toListQuery(
   search: TemplateListSearch,
@@ -131,6 +131,9 @@ export function toListQuery(
   const q = search.q.trim();
   return {
     ...(UUID_PATTERN.test(search.game) ? { gameId: search.game } : {}),
+    ...(search.game === UNCLASSIFIED_GAME
+      ? { gameScope: "UNCLASSIFIED" as const }
+      : {}),
     ...(search.status === "all" ? {} : { status: search.status }),
     ...(q ? { q } : {}),
     sort: search.sort,

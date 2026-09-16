@@ -8,6 +8,29 @@ import {
 
 const UUID = "3f1a6d0e-6f3b-4a9c-9f2e-2c8a1b7d5e40";
 
+describe("template-list-state：游戏筛选的服务端参数", () => {
+  it("未归类走 gameScope=UNCLASSIFIED，且不再发 gameId", () => {
+    const query = toListQuery(parseTemplateListSearch("?game=unclassified"));
+
+    expect(query.gameScope).toBe("UNCLASSIFIED");
+    expect(query.gameId).toBeUndefined();
+  });
+
+  it("具体游戏仍走 gameId，且不带 gameScope", () => {
+    const query = toListQuery(parseTemplateListSearch(`?game=${UUID}`));
+
+    expect(query.gameId).toBe(UUID);
+    expect(query.gameScope).toBeUndefined();
+  });
+
+  it("全部游戏：两个参数都不发", () => {
+    const query = toListQuery(parseTemplateListSearch(""));
+
+    expect(query.gameId).toBeUndefined();
+    expect(query.gameScope).toBeUndefined();
+  });
+});
+
 describe("template-list-state：URL 状态 ⇄ 查询", () => {
   it("默认状态：不写任何参数，解析空串也得到默认值", () => {
     expect(DEFAULT_TEMPLATE_LIST_SEARCH).toMatchObject({

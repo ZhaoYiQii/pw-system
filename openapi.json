@@ -5305,6 +5305,19 @@
             }
           },
           {
+            "name": "gameScope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "UNCLASSIFIED"
+              ],
+              "description": "游戏范围；与 gameId 互斥"
+            }
+          },
+          {
             "name": "gameId",
             "required": false,
             "in": "query",
@@ -6200,11 +6213,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -7321,11 +7340,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -8193,11 +8218,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -9010,11 +9041,17 @@
                               "description": "NOTE 组件"
                             }
                           ],
+                          "discriminator": {
+                            "propertyName": "kind"
+                          },
                           "description": "模板组件（判别联合，按 kind 区分）"
                         },
                         "description": "通用组件（最多 100）"
                       },
                       "staffingSource": {
+                        "discriminator": {
+                          "propertyName": "kind"
+                        },
                         "oneOf": [
                           {
                             "type": "object",
@@ -10190,11 +10227,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -11604,11 +11647,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -12713,11 +12762,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -13784,11 +13839,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -14835,11 +14896,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",
@@ -15839,11 +15906,17 @@
                                     "description": "NOTE 组件"
                                   }
                                 ],
+                                "discriminator": {
+                                  "propertyName": "kind"
+                                },
                                 "description": "模板组件（判别联合，按 kind 区分）"
                               },
                               "description": "通用组件（最多 100）"
                             },
                             "staffingSource": {
+                              "discriminator": {
+                                "propertyName": "kind"
+                              },
                               "oneOf": [
                                 {
                                   "type": "object",

@@ -12,6 +12,8 @@ interface SchemaProperty {
   properties?: Record<string, unknown>;
   required?: string[];
   oneOf?: unknown[];
+  /** OpenAPI 判别联合：让生成器把 kind 渲染成字面量联合而不是 string。 */
+  discriminator?: { propertyName: string; mapping?: Record<string, string> };
   enum?: unknown[];
   const?: unknown;
   additionalProperties?: unknown;
@@ -30,6 +32,8 @@ export interface OpenApiSchema {
   properties?: Record<string, unknown>;
   items?: OpenApiSchema;
   oneOf?: unknown[];
+  /** OpenAPI 判别联合：让生成器把 kind 渲染成字面量联合而不是 string。 */
+  discriminator?: { propertyName: string; mapping?: Record<string, string> };
   enum?: unknown[];
   const?: unknown;
   additionalProperties?: unknown;
@@ -578,11 +582,13 @@ export const genericTemplateComponentSchema: OpenApiSchema = {
     genericTemplateTableComponentSchema,
     genericTemplateNoteComponentSchema,
   ],
+  discriminator: { propertyName: "kind" },
   description: "模板组件（判别联合，按 kind 区分）",
 };
 
 /** 人数来源判别联合：FIXED / NUMBER_FIELD / REPEATABLE_TABLE_SUM。 */
 export const genericTemplateStaffingSourceSchema: OpenApiSchema = {
+  discriminator: { propertyName: "kind" },
   oneOf: [
     object(
       ["kind", "count"],
@@ -919,6 +925,13 @@ export const genericTemplateGameIdQuerySchema: SchemaProperty = {
   type: "string",
   format: "uuid",
   description: "按游戏过滤",
+};
+
+/** 列表的游戏范围参数：ALL（默认）或 UNCLASSIFIED（未归类旧模板）。 */
+export const genericTemplateGameScopeQuerySchema: SchemaProperty = {
+  type: "string",
+  enum: ["ALL", "UNCLASSIFIED"],
+  description: "游戏范围；与 gameId 互斥",
 };
 
 export const genericTemplateStatusQuerySchema: SchemaProperty = {

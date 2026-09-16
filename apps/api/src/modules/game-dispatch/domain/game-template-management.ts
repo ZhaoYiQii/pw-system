@@ -22,8 +22,16 @@ export const GENERIC_TEMPLATE_STATUSES = [
 
 export type GenericTemplateStatus = (typeof GENERIC_TEMPLATE_STATUSES)[number];
 
+/** 列表的游戏范围：ALL 表示不限；UNCLASSIFIED 表示"未归类旧模板"（game_id 为空）。 */
+export const GENERIC_TEMPLATE_GAME_SCOPES = ["ALL", "UNCLASSIFIED"] as const;
+
+export type GenericTemplateGameScope =
+  (typeof GENERIC_TEMPLATE_GAME_SCOPES)[number];
+
 export interface GenericTemplateListQuery {
   gameId?: string;
+  /** 与 gameId 互斥：UNCLASSIFIED 时只返回未归类模板。 */
+  gameScope?: GenericTemplateGameScope;
   status?: GenericTemplateStatus;
   q?: string;
   sort: GenericTemplateSort;
