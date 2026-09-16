@@ -1,5 +1,7 @@
 # Generic Dispatch Template S3 UI Implementation Plan
 
+> 状态：**已完成**（2026-09-17 回写）。验收记录：`docs/acceptance/2026-09-16-s3-template-manager-ui.md`；提交：`64da32f`。
+
 Goal: 在 `apps/admin-web` 用 S2 生成客户端与 TanStack Query 交付正式的多游戏模板管理界面（列表 + 三标签编辑器 + 发布与版本历史），替换现有基于 v1 `/game-templates` 的临时实现。
 
 Architecture: 数据层统一走 `@pw/api-client` 的 `genericGameTemplate*` 12 个 operation；页面用 URL 保存筛选/选中模板/编辑标签；草稿编辑是纯函数状态模型（按 stableKey 操作），渲染层复用同一表单渲染器与布局计算；发布/版本走服务端契约，409 保留本地草稿。
@@ -66,12 +68,12 @@ Objective: 不改任何文件，确认 S3 起点、能力与阻塞项。
 
 Steps:
 
-- [ ] 重新读取 `docs/acceptance/2026-09-15-s2-template-management-api.md`，确认 S2 仍为 `locally-verified`。
-- [ ] 运行 `corepack pnpm --filter @pw/api-client typecheck`，确认生成客户端源码类型可用。
-- [ ] 只读核对 `template-manager-view.tsx` 当前使用的 endpoint 清单，产出「v1 调用 ↔ v2 operation」映射表。
-- [ ] 检查 3000/3005 端口占用、Docker/Postgres 状态、测试库 `pw_saas_s2_task2_20260916` 是否可连（不写入）。
-- [ ] 记录 `work/prototypes/s3-template-center` 的结构作为交互参考，并明确不复用其代码。
-- [ ] 若发现 S2 证据缺失、客户端不可用或 admin 工作树与计划假设冲突，停止并报告，不进入 Task 1。
+- [x] 重新读取 `docs/acceptance/2026-09-15-s2-template-management-api.md`，确认 S2 仍为 `locally-verified`。
+- [x] 运行 `corepack pnpm --filter @pw/api-client typecheck`，确认生成客户端源码类型可用。
+- [x] 只读核对 `template-manager-view.tsx` 当前使用的 endpoint 清单，产出「v1 调用 ↔ v2 operation」映射表。
+- [x] 检查 3000/3005 端口占用、Docker/Postgres 状态、测试库 `pw_saas_s2_task2_20260916` 是否可连（不写入）。
+- [x] 记录 `work/prototypes/s3-template-center` 的结构作为交互参考，并明确不复用其代码。
+- [x] 若发现 S2 证据缺失、客户端不可用或 admin 工作树与计划假设冲突，停止并报告，不进入 Task 1。
 
 Focused verification:
 
@@ -104,13 +106,13 @@ Interfaces:
 
 Steps:
 
-- [ ] 先写 `template-api.spec.ts`：断言 `toTemplateApiError` 对 409/422/404 载荷的映射、未知错误回退、列表 query 参数组装（`gameId/status/q/sort/cursor/limit` 只透传非空值）。
-- [ ] 运行红测：`& '.\node_modules\.bin\vitest.cmd' run apps/admin-web/app/_lib/merchant-console/template-api.spec.ts`，确认因缺少实现而失败。
-- [ ] 增加依赖并安装（**权限点 1**）。
-- [ ] 配置 `transpilePackages` 与 `paths`，并把 `./client` 单例配置抽到 `configureTemplateClient`。
-- [ ] 实现 12 个薄封装：只做参数透传 + 错误归一，不在前端复制业务规则、不判断角色。
-- [ ] 在 `template-manager-view.tsx` 的模块加载路径调用 `configureTemplateClient` 一次（`NEXT_PUBLIC_API_ORIGIN` 作为 origin，token 复用 `api.ts` 的 `getAccessToken`）。
-- [ ] 保留 `merchant-api.ts` 中其它模块使用的类型与函数；仅移除模板页面专属的 v1 调用（其它模块仍依赖 `TemplateRow` 等类型时保持导出）。
+- [x] 先写 `template-api.spec.ts`：断言 `toTemplateApiError` 对 409/422/404 载荷的映射、未知错误回退、列表 query 参数组装（`gameId/status/q/sort/cursor/limit` 只透传非空值）。
+- [x] 运行红测：`& '.\node_modules\.bin\vitest.cmd' run apps/admin-web/app/_lib/merchant-console/template-api.spec.ts`，确认因缺少实现而失败。
+- [x] 增加依赖并安装（**权限点 1**）。
+- [x] 配置 `transpilePackages` 与 `paths`，并把 `./client` 单例配置抽到 `configureTemplateClient`。
+- [x] 实现 12 个薄封装：只做参数透传 + 错误归一，不在前端复制业务规则、不判断角色。
+- [x] 在 `template-manager-view.tsx` 的模块加载路径调用 `configureTemplateClient` 一次（`NEXT_PUBLIC_API_ORIGIN` 作为 origin，token 复用 `api.ts` 的 `getAccessToken`）。
+- [x] 保留 `merchant-api.ts` 中其它模块使用的类型与函数；仅移除模板页面专属的 v1 调用（其它模块仍依赖 `TemplateRow` 等类型时保持导出）。
 
 Focused verification:
 
@@ -138,15 +140,15 @@ Interfaces:
 
 Steps:
 
-- [ ] 先写 `template-list-state.spec.ts`：往返解析、非法值回退默认（`sort=UPDATED_DESC`）、URL 不含表单值、`tab` 仅允许 `content|binding|release`。
-- [ ] 用 TanStack Query 的 `useInfiniteQuery` 接 `fetchTemplateList`，`nextCursor` 驱动「加载更多」；筛选变化时重置分页。
-- [ ] 列表卡片展示：模板名、状态（含 `UNPUBLISHED_CHANGES`、`ARCHIVED`）、线上版本号、草稿更新时间、编辑人、最近使用、默认标记；`game.id === ""` 显示「未归类」。
-- [ ] 页面状态：loading 骨架、空态（含「新建模板」入口）、错误态（可重试）、403 无权态（复用 `ModuleGate` 语义，不复用其文案）。
-- [ ] 角色门禁：`useMerchantRole()` 为 `CS` 时隐藏「新建模板」与列表内的写操作入口，只保留筛选与查看；服务端 403 仍要能正确显示（UI 隐藏不等于授权）。
-- [ ] 「新建模板」对话框：游戏必选（租户游戏列表）、名称必填，调用 `fetchTemplateCreate` 后跳到 `?id=<newId>&tab=content`。
-- [ ] 键盘可达：筛选控件有 label，列表项可 Tab 聚焦并 Enter 选中，焦点在 URL 变化后保持在触发元素。
-- [ ] 切换到模板/游戏前若存在未保存修改，弹出确认（调用 Task 3 的 `isDirty`）。
-- [ ] 存在未保存修改时，浏览器刷新/关闭触发 `beforeunload` 提示（仅在 dirty 状态注册监听）。
+- [x] 先写 `template-list-state.spec.ts`：往返解析、非法值回退默认（`sort=UPDATED_DESC`）、URL 不含表单值、`tab` 仅允许 `content|binding|release`。
+- [x] 用 TanStack Query 的 `useInfiniteQuery` 接 `fetchTemplateList`，`nextCursor` 驱动「加载更多」；筛选变化时重置分页。
+- [x] 列表卡片展示：模板名、状态（含 `UNPUBLISHED_CHANGES`、`ARCHIVED`）、线上版本号、草稿更新时间、编辑人、最近使用、默认标记；`game.id === ""` 显示「未归类」。
+- [x] 页面状态：loading 骨架、空态（含「新建模板」入口）、错误态（可重试）、403 无权态（复用 `ModuleGate` 语义，不复用其文案）。
+- [x] 角色门禁：`useMerchantRole()` 为 `CS` 时隐藏「新建模板」与列表内的写操作入口，只保留筛选与查看；服务端 403 仍要能正确显示（UI 隐藏不等于授权）。
+- [x] 「新建模板」对话框：游戏必选（租户游戏列表）、名称必填，调用 `fetchTemplateCreate` 后跳到 `?id=<newId>&tab=content`。
+- [x] 键盘可达：筛选控件有 label，列表项可 Tab 聚焦并 Enter 选中，焦点在 URL 变化后保持在触发元素。
+- [x] 切换到模板/游戏前若存在未保存修改，弹出确认（调用 Task 3 的 `isDirty`）。
+- [x] 存在未保存修改时，浏览器刷新/关闭触发 `beforeunload` 提示（仅在 dirty 状态注册监听）。
 
 Focused verification:
 
@@ -181,13 +183,13 @@ Interfaces（全部为纯函数，输入输出均为 `DraftConfigV2` 子集）�
 
 Steps:
 
-- [ ] 先写 `template-draft-state.spec.ts`：新增两到五个区块、插入两个预设后可按普通组件编辑、禁用保留配置、删除被 `staffingSource` 引用的组件被阻止、stableKey 全局唯一、移动顺序稳定（含键盘同路径）。
-- [ ] 实现状态模型（不可变更新，禁止原地修改；stableKey 用 `newStableKey()` 生成且不与现有键冲突）。
-- [ ] 扩展 `TemplateFormRenderer`：按 `enabled` 决定渲染，禁用组件在编辑器内弱化显示（预览默认跳过禁用项，需与 `form-layout.ts` 规则一致）。
-- [ ] 编辑器外壳：三标签（内容设计 / 业务绑定与计算 / 发布设置与版本历史），标签切换写入 URL `tab`。
-- [ ] 编辑器内不出现 copyLines 编辑入口（旧字段既不展示也不提交）；自动文案预览放在内容设计预览区与发布标签。
-- [ ] 内容设计：区块卡片（列数、启用、删除、上移/下移）、组件卡片（启用开关、必填、另起一行、列宽）、网格空位「添加内容」（普通字段 / 可重复表格 / 说明 / 新分区 / 参考预设）。
-- [ ] 可重复表格：增删列、列类型、默认行增删。
+- [x] 先写 `template-draft-state.spec.ts`：新增两到五个区块、插入两个预设后可按普通组件编辑、禁用保留配置、删除被 `staffingSource` 引用的组件被阻止、stableKey 全局唯一、移动顺序稳定（含键盘同路径）。
+- [x] 实现状态模型（不可变更新，禁止原地修改；stableKey 用 `newStableKey()` 生成且不与现有键冲突）。
+- [x] 扩展 `TemplateFormRenderer`：按 `enabled` 决定渲染，禁用组件在编辑器内弱化显示（预览默认跳过禁用项，需与 `form-layout.ts` 规则一致）。
+- [x] 编辑器外壳：三标签（内容设计 / 业务绑定与计算 / 发布设置与版本历史），标签切换写入 URL `tab`。
+- [x] 编辑器内不出现 copyLines 编辑入口（旧字段既不展示也不提交）；自动文案预览放在内容设计预览区与发布标签。
+- [x] 内容设计：区块卡片（列数、启用、删除、上移/下移）、组件卡片（启用开关、必填、另起一行、列宽）、网格空位「添加内容」（普通字段 / 可重复表格 / 说明 / 新分区 / 参考预设）。
+- [x] 可重复表格：增删列、列类型、默认行增删。
 
 Focused verification:
 
@@ -214,11 +216,11 @@ Interfaces:
 
 Steps:
 
-- [ ] 先写 `template-binding.spec.ts`：候选过滤、禁用组件不可被引用、非数字字段不可作为人数来源、价格必须是十进制字符串（拒绝 `1.5`/`1000` number）、issue → 位置映射。
-- [ ] 实现绑定面板：人数来源三选一（固定人数 / 数字字段 / 表格列汇总）+ stableKey 选择器（显示 label 与 stableKey，不显示 fieldKey 作为业务键）。
-- [ ] 选项价格：每个选项独立开关 + 分值输入（十进制字符串）+ 元显示；不允许负值与前导零。
-- [ ] 删除/禁用被引用组件时给出可定位提示并阻止（禁用允许但立即产生可见校验错误，未修复不可发布）。
-- [ ] 校验错误通过 `aria-live` 宣告，并定位到标签 + 区块 + 字段（含焦点移动）。
+- [x] 先写 `template-binding.spec.ts`：候选过滤、禁用组件不可被引用、非数字字段不可作为人数来源、价格必须是十进制字符串（拒绝 `1.5`/`1000` number）、issue → 位置映射。
+- [x] 实现绑定面板：人数来源三选一（固定人数 / 数字字段 / 表格列汇总）+ stableKey 选择器（显示 label 与 stableKey，不显示 fieldKey 作为业务键）。
+- [x] 选项价格：每个选项独立开关 + 分值输入（十进制字符串）+ 元显示；不允许负值与前导零。
+- [x] 删除/禁用被引用组件时给出可定位提示并阻止（禁用允许但立即产生可见校验错误，未修复不可发布）。
+- [x] 校验错误通过 `aria-live` 宣告，并定位到标签 + 区块 + 字段（含焦点移动）。
 
 Focused verification:
 
@@ -245,18 +247,18 @@ Interfaces:
 
 Steps:
 
-- [ ] 先写 `template-document-preview.spec.ts`：固定人数、数字字段人数、表格汇总人数三种来源的文案表格与纯文本；未知旧组件输出安全占位。
-- [ ] 实现镜像渲染器（不使用 `dangerouslySetInnerHTML`，说明文本按纯文本渲染）。
-- [ ] 保存草稿：`expectedRevision` 取服务端最新 revision，成功后刷新详情并提示；不改变线上版本展示。
-- [ ] 预览草稿：用当前草稿 + 表单渲染器渲染，并展示自动文案表格示例（Task 5 的镜像渲染器）。
-- [ ] 发布：调用 `publishTemplate`；`TEMPLATE_*_INVALID` / `TEMPLATE_LEGACY_REVIEW_REQUIRED` 展示 `details.issues` 并定位；成功后刷新版本历史。
-- [ ] 版本历史：`fetchTemplateVersions` 游标分页，显示 `versionNo/schemaVersion/发布时间/发布人/备注/是否生效`；`sourceVersionId` 恢复后发布时回传。
-- [ ] 状态栏常驻显示：线上版本号、草稿 `revision`、最后编辑人、是否存在未发布改动、`lastUsedAt`；`status` 与 `hasUnpublishedChanges` 取自接口，不在前端猜测。
-- [ ] `TEMPLATE_LEGACY_REVIEW_REQUIRED` 时给出「需要人工确认的旧价格规则」提示块，并说明修复路径（绑定或移除后重试发布）。
-- [ ] 次级菜单：复制（目标游戏 + 新名称）、设默认、归档、取消归档、删除（删除二次确认，`TEMPLATE_DELETE_RESTRICTED` 时引导归档）。
-- [ ] `CS` 角色下保存/发布/复制/设默认/归档/取消归档/删除入口全部不渲染；只保留查看与版本历史。
-- [ ] 409 冲突：保留本地草稿，提供「重新加载服务端」与「复制我的内容」两个动作，并显示 `currentEditor/currentUpdatedAt`；不自动覆盖。
-- [ ] 归档态：`save/publish/default` 按钮禁用并解释原因；历史与详情仍可读。
+- [x] 先写 `template-document-preview.spec.ts`：固定人数、数字字段人数、表格汇总人数三种来源的文案表格与纯文本；未知旧组件输出安全占位。
+- [x] 实现镜像渲染器（不使用 `dangerouslySetInnerHTML`，说明文本按纯文本渲染）。
+- [x] 保存草稿：`expectedRevision` 取服务端最新 revision，成功后刷新详情并提示；不改变线上版本展示。
+- [x] 预览草稿：用当前草稿 + 表单渲染器渲染，并展示自动文案表格示例（Task 5 的镜像渲染器）。
+- [x] 发布：调用 `publishTemplate`；`TEMPLATE_*_INVALID` / `TEMPLATE_LEGACY_REVIEW_REQUIRED` 展示 `details.issues` 并定位；成功后刷新版本历史。
+- [x] 版本历史：`fetchTemplateVersions` 游标分页，显示 `versionNo/schemaVersion/发布时间/发布人/备注/是否生效`；`sourceVersionId` 恢复后发布时回传。
+- [x] 状态栏常驻显示：线上版本号、草稿 `revision`、最后编辑人、是否存在未发布改动、`lastUsedAt`；`status` 与 `hasUnpublishedChanges` 取自接口，不在前端猜测。
+- [x] `TEMPLATE_LEGACY_REVIEW_REQUIRED` 时给出「需要人工确认的旧价格规则」提示块，并说明修复路径（绑定或移除后重试发布）。
+- [x] 次级菜单：复制（目标游戏 + 新名称）、设默认、归档、取消归档、删除（删除二次确认，`TEMPLATE_DELETE_RESTRICTED` 时引导归档）。
+- [x] `CS` 角色下保存/发布/复制/设默认/归档/取消归档/删除入口全部不渲染；只保留查看与版本历史。
+- [x] 409 冲突：保留本地草稿，提供「重新加载服务端」与「复制我的内容」两个动作，并显示 `currentEditor/currentUpdatedAt`；不自动覆盖。
+- [x] 归档态：`save/publish/default` 按钮禁用并解释原因；历史与详情仍可读。
 
 Focused verification:
 
@@ -276,11 +278,11 @@ Files:
 
 Steps:
 
-- [ ] 排序按钮同时支持鼠标与键盘，键盘上下移动结果与拖动一致（断言顺序数组相等）。
-- [ ] 对话框/抽屉关闭后焦点回到触发元素；`McDialog` 复用现有实现时补充焦点回归断言。
-- [ ] 校验错误用 `aria-live="polite"` 宣告，错误项与控件通过 `aria-describedby` 关联。
-- [ ] 页面提供 skip link、landmark（`main`）与唯一 `h1`；表单控件有 label。
-- [ ] 纯逻辑断言写入 `template-a11y.spec.ts`（顺序等价、焦点目标计算、aria 文案生成）。
+- [x] 排序按钮同时支持鼠标与键盘，键盘上下移动结果与拖动一致（断言顺序数组相等）。
+- [x] 对话框/抽屉关闭后焦点回到触发元素；`McDialog` 复用现有实现时补充焦点回归断言。
+- [x] 校验错误用 `aria-live="polite"` 宣告，错误项与控件通过 `aria-describedby` 关联。
+- [x] 页面提供 skip link、landmark（`main`）与唯一 `h1`；表单控件有 label。
+- [x] 纯逻辑断言写入 `template-a11y.spec.ts`（顺序等价、焦点目标计算、aria 文案生成）。
 
 Focused verification:
 
@@ -306,12 +308,12 @@ Preconditions（权限点 2）：
 
 Steps:
 
-- [ ] 先写失败用例：模板列表按游戏筛选 → 新建模板 → 添加 2 个区块 → 插入「岗位与人数」预设 → 禁用后重新启用 → 保存草稿（revision 递增）→ 预览自动文案表格 → 发布 → 版本历史出现 v1 → 再次保存草稿出现 `UNPUBLISHED_CHANGES` → 归档 → 取消归档。
-- [ ] 增加冲突用例：两个浏览器上下文对同一模板保存，第二个必须看到 409 对话框且本地草稿仍在。
-- [ ] 增加键盘用例：仅用键盘完成排序与保存。
-- [ ] 运行 `corepack pnpm --filter @pw/admin-web build`（生产构建）。
-- [ ] 运行 Playwright `admin` 项目（msedge channel，headless）。
-- [ ] 写 `docs/acceptance/2026-09-16-s3-template-manager-ui.md`：真实命令与退出码、测试库与租户、契约 operation 清单、未验证项与降级（例如未做视觉回归、未做深色模式、未做真机触控）。
+- [x] 先写失败用例：模板列表按游戏筛选 → 新建模板 → 添加 2 个区块 → 插入「岗位与人数」预设 → 禁用后重新启用 → 保存草稿（revision 递增）→ 预览自动文案表格 → 发布 → 版本历史出现 v1 → 再次保存草稿出现 `UNPUBLISHED_CHANGES` → 归档 → 取消归档。
+- [x] 增加冲突用例：两个浏览器上下文对同一模板保存，第二个必须看到 409 对话框且本地草稿仍在。
+- [x] 增加键盘用例：仅用键盘完成排序与保存。
+- [x] 运行 `corepack pnpm --filter @pw/admin-web build`（生产构建）。
+- [x] 运行 Playwright `admin` 项目（msedge channel，headless）。
+- [x] 写 `docs/acceptance/2026-09-16-s3-template-manager-ui.md`：真实命令与退出码、测试库与租户、契约 operation 清单、未验证项与降级（例如未做视觉回归、未做深色模式、未做真机触控）。
 
 Focused verification:
 

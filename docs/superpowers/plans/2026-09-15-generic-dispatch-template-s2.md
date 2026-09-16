@@ -1,5 +1,7 @@
 # Generic Dispatch Template S2 Implementation Plan
 
+> 状态：**已完成**（2026-09-17 回写）。验收记录：`docs/acceptance/2026-09-15-s2-template-management-api.md`；提交：`20e1dd5`。
+
 Goal: 在不改变旧模板 API、不切换新建派单运行路径、不执行数据库迁移的前提下，为 schemaVersion 2 通用模板提供可供 S3 管理界面消费的完整模板管理 API：摘要查询、创建与保存草稿、发布、版本历史、恢复、跨游戏复制、设默认、归档/取消归档和受限硬删除，并用权限、审计、租户隔离、乐观锁和服务端发布校验保护全部写路径。
 
 Architecture: 保留现有 `/api/v1/tenant/game-templates` 及 `GameTemplateService` 作为 v1 兼容路径；在同一 NestJS `game-dispatch` 模块内新增独立的 generic-template controller/application service/Prisma repository。公开路径使用 `/api/v1/tenant/game-dispatch-templates`，应用层只接收 API 边界已由严格 Zod schema 验证的类型，领域层复用 S1/S1b 的生命周期和 v2 配置校验纯函数，repository 负责租户约束、行锁、原子写入和同事务审计。列表和版本历史使用稳定的复合游标，列表只查摘要；发布版本只增不改，草稿与线上版本严格分离。
@@ -133,11 +135,11 @@ Files inspected: `docs/acceptance/2026-09-14-s1b-template-conversion.md`、`pack
 
 Steps:
 
-- [ ] 运行 `git status --short --branch`，把与 S2 文件重叠的用户改动列入实施日志；不得 reset/checkout。
-- [ ] 运行纯读取检查 `rg -n "draftConfigJson|GameDispatchTemplateVersion|activeVersionId|revision" packages/database/prisma/schema.prisma`，确认 S2 不需要 schema 变化。
-- [ ] 运行 S1b 纯领域回归，不连接数据库。
-- [ ] 仅检查测试环境变量是否存在及目标数据库名是否在授权范围；不得输出密码或完整连接串。
-- [ ] 如果 S1b 回归失败、schema 缺字段、测试 URL 指向 `pw_saas`/`pw_saas_test`/远程库或用户未授权写入，停止并报告，不进入 Task 1。
+- [x] 运行 `git status --short --branch`，把与 S2 文件重叠的用户改动列入实施日志；不得 reset/checkout。
+- [x] 运行纯读取检查 `rg -n "draftConfigJson|GameDispatchTemplateVersion|activeVersionId|revision" packages/database/prisma/schema.prisma`，确认 S2 不需要 schema 变化。
+- [x] 运行 S1b 纯领域回归，不连接数据库。
+- [x] 仅检查测试环境变量是否存在及目标数据库名是否在授权范围；不得输出密码或完整连接串。
+- [x] 如果 S1b 回归失败、schema 缺字段、测试 URL 指向 `pw_saas`/`pw_saas_test`/远程库或用户未授权写入，停止并报告，不进入 Task 1。
 
 Focused verification:
 
@@ -173,17 +175,17 @@ Interfaces produced:
 
 Red tests:
 
-- [ ] 角色矩阵测试先证明 Owner/Admin 获得全部新权限，Customer Service 只有 create/view，PLAYER/FINANCE/CUSTOMER 不默认获得模板管理权限，旧 `gameDispatch.manage` 映射保持不变。
-- [ ] 游标测试先覆盖四种排序、相同排序值用 id 稳定翻页、篡改/未知版本/排序不匹配拒绝。
-- [ ] API validation 测试先覆盖请求额外 tenantId/status/rendererVersion 被拒绝、expectedRevision 为非负整数、gameId/versionId 为 UUID、金额必须十进制字符串、config 大小和联合分支上限。
-- [ ] 错误契约测试先固定 400/404/409/422 与 details 形状，不泄露 draft config 或数据库错误。
+- [x] 角色矩阵测试先证明 Owner/Admin 获得全部新权限，Customer Service 只有 create/view，PLAYER/FINANCE/CUSTOMER 不默认获得模板管理权限，旧 `gameDispatch.manage` 映射保持不变。
+- [x] 游标测试先覆盖四种排序、相同排序值用 id 稳定翻页、篡改/未知版本/排序不匹配拒绝。
+- [x] API validation 测试先覆盖请求额外 tenantId/status/rendererVersion 被拒绝、expectedRevision 为非负整数、gameId/versionId 为 UUID、金额必须十进制字符串、config 大小和联合分支上限。
+- [x] 错误契约测试先固定 400/404/409/422 与 details 形状，不泄露 draft config 或数据库错误。
 
 Implementation steps:
 
-- [ ] 在 management domain 文件集中声明 DTO、cursor 和错误响应类型；不 import NestJS 或 Prisma。
-- [ ] 扩展 `PERMISSION_KEYS` 和 `ROLE_PERMISSIONS`，保留旧 key；不得在 controller 写角色名判断。
-- [ ] 在 errors 文件增加显式 S2 错误类和 code，扩展 revision conflict 的 editor/updatedAt details，同时保持旧构造方可编译。
-- [ ] 在 validation rules 为公共契约中的每条 route 注册 body/query schema；复用 S1b 限制常量，API 边界解析成明确类型。
+- [x] 在 management domain 文件集中声明 DTO、cursor 和错误响应类型；不 import NestJS 或 Prisma。
+- [x] 扩展 `PERMISSION_KEYS` 和 `ROLE_PERMISSIONS`，保留旧 key；不得在 controller 写角色名判断。
+- [x] 在 errors 文件增加显式 S2 错误类和 code，扩展 revision conflict 的 editor/updatedAt details，同时保持旧构造方可编译。
+- [x] 在 validation rules 为公共契约中的每条 route 注册 body/query schema；复用 S1b 限制常量，API 边界解析成明确类型。
 
 Focused verification:
 
@@ -215,21 +217,21 @@ Repository/application interfaces:
 
 Red tests:
 
-- [ ] Owner 能创建游戏 A/B 的模板；未知游戏和其他租户游戏返回 404/422，客户端 tenantId 被 API validator 拒绝。
-- [ ] Customer Service 能 list/get，但 create/save 返回 403；Admin/Owner 可 create/save；PLAYER 返回 403。
-- [ ] list 按 game/status/q/sort 过滤，支持未归类旧模板 `gameId=null`，只返回摘要和 nextCursor，第二页无重复/遗漏；查询计数证明不随模板数增加而逐模板加载子表。
-- [ ] save 用 expectedRevision 成功后 revision +1，activeVersionId 不变；旧 revision 返回 409 且带当前 revision/editor/time，数据库草稿不被覆盖。
-- [ ] 禁用区块/组件保存后配置仍存在；非法 stableKey、staffingSource、priceDeltaFen、unknown kind 和超限文档返回结构化 422。
-- [ ] tenant-isolation 以两个租户复用 id/搜索条件尝试 list/get/save，证明无跨租户读取、更新和错误侧信道。
+- [x] Owner 能创建游戏 A/B 的模板；未知游戏和其他租户游戏返回 404/422，客户端 tenantId 被 API validator 拒绝。
+- [x] Customer Service 能 list/get，但 create/save 返回 403；Admin/Owner 可 create/save；PLAYER 返回 403。
+- [x] list 按 game/status/q/sort 过滤，支持未归类旧模板 `gameId=null`，只返回摘要和 nextCursor，第二页无重复/遗漏；查询计数证明不随模板数增加而逐模板加载子表。
+- [x] save 用 expectedRevision 成功后 revision +1，activeVersionId 不变；旧 revision 返回 409 且带当前 revision/editor/time，数据库草稿不被覆盖。
+- [x] 禁用区块/组件保存后配置仍存在；非法 stableKey、staffingSource、priceDeltaFen、unknown kind 和超限文档返回结构化 422。
+- [x] tenant-isolation 以两个租户复用 id/搜索条件尝试 list/get/save，证明无跨租户读取、更新和错误侧信道。
 
 Implementation steps:
 
-- [ ] controller 只做 tenant/actor 提取、权限 decorator、调用 service 和显式错误映射；不读取客户端 tenantId，不复制业务规则。
-- [ ] create 在一个事务内验证游戏归属、名称唯一，创建最小 v2 草稿并写 audit。
-- [ ] list 使用一条带 active version/game/editor 摘要 join 的 tenant-scoped 查询；按规范化草稿与发布配置比较派生 hasUnpublishedChanges，不返回 config JSON。
-- [ ] save 先对已解析 config 调用 `validateDraftConfigV2`，再在事务中 `SELECT ... FOR UPDATE` 锁定 tenant+id 行并调用 `assertExpectedRevision`；成功原子更新 draft/revision/updatedBy 与 audit。
-- [ ] archived 模板允许 view，但 save 返回 `TEMPLATE_ARCHIVED`；没有 v2 草稿或未知 schemaVersion 显式拒绝，不回退到 v1 猜测。
-- [ ] module 注册新 controller/service/repository token，同时保留所有旧 provider。
+- [x] controller 只做 tenant/actor 提取、权限 decorator、调用 service 和显式错误映射；不读取客户端 tenantId，不复制业务规则。
+- [x] create 在一个事务内验证游戏归属、名称唯一，创建最小 v2 草稿并写 audit。
+- [x] list 使用一条带 active version/game/editor 摘要 join 的 tenant-scoped 查询；按规范化草稿与发布配置比较派生 hasUnpublishedChanges，不返回 config JSON。
+- [x] save 先对已解析 config 调用 `validateDraftConfigV2`，再在事务中 `SELECT ... FOR UPDATE` 锁定 tenant+id 行并调用 `assertExpectedRevision`；成功原子更新 draft/revision/updatedBy 与 audit。
+- [x] archived 模板允许 view，但 save 返回 `TEMPLATE_ARCHIVED`；没有 v2 草稿或未知 schemaVersion 显式拒绝，不回退到 v1 猜测。
+- [x] module 注册新 controller/service/repository token，同时保留所有旧 provider。
 
 Focused verification:
 
@@ -255,21 +257,21 @@ Files:
 
 Red tests:
 
-- [ ] 有效草稿发布生成 versionNo=1、activeVersionId、PUBLISHED 和 revision+1；版本 config 含服务端 rendererVersion=1，不含 legacyCompatibility。
-- [ ] 发布后继续 save 只改变草稿/revision，旧 active version config 字节不变；再次发布生成 versionNo=2，旧版本仍可读。
-- [ ] 无效人数绑定、选择项金额/聚合、未处理 legacy price rules 分别返回批准的 422 code，且不创建版本、不改 activeVersionId/revision、不写成功审计。
-- [ ] 客户端尝试提交 rendererVersion 或发布配置被拒绝；发布始终读取服务器当前草稿。
-- [ ] 两个连接以同一 expectedRevision 并发发布，恰有一个成功，另一个 409；版本号唯一且没有悬空 activeVersionId。
-- [ ] 并发 save/publish 及两次 publish 不出现重复 versionNo、丢失更新或部分审计。
-- [ ] versions cursor 分页稳定，只返回摘要/元数据；schemaVersion 1 版本可列出但不能 restore 为 v2。
+- [x] 有效草稿发布生成 versionNo=1、activeVersionId、PUBLISHED 和 revision+1；版本 config 含服务端 rendererVersion=1，不含 legacyCompatibility。
+- [x] 发布后继续 save 只改变草稿/revision，旧 active version config 字节不变；再次发布生成 versionNo=2，旧版本仍可读。
+- [x] 无效人数绑定、选择项金额/聚合、未处理 legacy price rules 分别返回批准的 422 code，且不创建版本、不改 activeVersionId/revision、不写成功审计。
+- [x] 客户端尝试提交 rendererVersion 或发布配置被拒绝；发布始终读取服务器当前草稿。
+- [x] 两个连接以同一 expectedRevision 并发发布，恰有一个成功，另一个 409；版本号唯一且没有悬空 activeVersionId。
+- [x] 并发 save/publish 及两次 publish 不出现重复 versionNo、丢失更新或部分审计。
+- [x] versions cursor 分页稳定，只返回摘要/元数据；schemaVersion 1 版本可列出但不能 restore 为 v2。
 
 Implementation steps:
 
-- [ ] service 将当前 draft 转换为候选 PublishedConfigV2：剔除 migration-only compatibility，服务端加入 renderer version，调用 `validatePublishedConfigV2`；按 issue code 选择精确 422。
-- [ ] repository 在事务内按 tenantId+id `FOR UPDATE`，复核 revision/status；查询 `MAX(version_no)` 后创建下一不可变版本并更新模板 activeVersion/status/revision/actor。
-- [ ] version history 查询使用 `(published_at,id)` 复合游标和 limit+1，不返回 configJson；draft detail 中只返回 active version 摘要。
-- [ ] publish audit 与 version/template 更新同事务；审计只写 versionNo、revision 和 changeNote 的受限摘要，不写 config。
-- [ ] 任何 Prisma unique/FK 错误只在已确认约束名后转换成受控冲突；未知数据库错误继续抛出，不吞异常。
+- [x] service 将当前 draft 转换为候选 PublishedConfigV2：剔除 migration-only compatibility，服务端加入 renderer version，调用 `validatePublishedConfigV2`；按 issue code 选择精确 422。
+- [x] repository 在事务内按 tenantId+id `FOR UPDATE`，复核 revision/status；查询 `MAX(version_no)` 后创建下一不可变版本并更新模板 activeVersion/status/revision/actor。
+- [x] version history 查询使用 `(published_at,id)` 复合游标和 limit+1，不返回 configJson；draft detail 中只返回 active version 摘要。
+- [x] publish audit 与 version/template 更新同事务；审计只写 versionNo、revision 和 changeNote 的受限摘要，不写 config。
+- [x] 任何 Prisma unique/FK 错误只在已确认约束名后转换成受控冲突；未知数据库错误继续抛出，不吞异常。
 
 Focused verification:
 
@@ -295,21 +297,21 @@ Files:
 
 Red tests:
 
-- [ ] restore v2 历史只更新 draft/revision，activeVersion/status 保持，返回 sourceVersionId；跨租户/跨模板/version 1 restore 拒绝。
-- [ ] copy 必须指定同租户 target game/newName，复制当前 v2 草稿且新模板为独立 DRAFT；不复制版本、默认、lastUsedAt、归档状态或旧固定模块。
-- [ ] set default 只接受已发布、未归档、有 gameId 模板；切换默认在同事务清除旧值，并发设置后最多一个默认，依赖服务校验和已有唯一索引。
-- [ ] archive 清除默认但保留 active version/history/draft；unarchive 按 activeVersionId 恢复 PUBLISHED/DRAFT；归档后 save/publish/default 拒绝但 view/history 仍可读。
-- [ ] 从未发布且无版本/快照/订单引用的模板可 delete；已发布、曾发布或被引用的模板返回 TEMPLATE_DELETE_RESTRICTED 且数据完整。
-- [ ] 每个动作验证 expectedRevision、permission、tenant boundary 和相应 audit；客服只能查看，不能 restore/copy/default/archive/delete。
+- [x] restore v2 历史只更新 draft/revision，activeVersion/status 保持，返回 sourceVersionId；跨租户/跨模板/version 1 restore 拒绝。
+- [x] copy 必须指定同租户 target game/newName，复制当前 v2 草稿且新模板为独立 DRAFT；不复制版本、默认、lastUsedAt、归档状态或旧固定模块。
+- [x] set default 只接受已发布、未归档、有 gameId 模板；切换默认在同事务清除旧值，并发设置后最多一个默认，依赖服务校验和已有唯一索引。
+- [x] archive 清除默认但保留 active version/history/draft；unarchive 按 activeVersionId 恢复 PUBLISHED/DRAFT；归档后 save/publish/default 拒绝但 view/history 仍可读。
+- [x] 从未发布且无版本/快照/订单引用的模板可 delete；已发布、曾发布或被引用的模板返回 TEMPLATE_DELETE_RESTRICTED 且数据完整。
+- [x] 每个动作验证 expectedRevision、permission、tenant boundary 和相应 audit；客服只能查看，不能 restore/copy/default/archive/delete。
 
 Implementation steps:
 
-- [ ] 每个 mutation 复用同一 tenant-scoped row-lock helper 和 revision conflict mapping，避免动作间出现不同并发语义。
-- [ ] restore 从指定 v2 immutable version 生成 DraftConfigV2，去除 rendererVersion，保留 active version；audit 记录 source version 和新 revision。
-- [ ] copy 验证 target game、规范化名称唯一并在一事务创建新模板/audit；不共享 JSON 对象引用或任何 version id。
-- [ ] set default 锁定目标和同游戏当前默认；先清除后设置并递增目标 revision，冲突时重读事实返回受控 409。
-- [ ] archive/unarchive 只修改 lifecycle 字段、revision 和 actor；不写历史 order/snapshot/version。
-- [ ] delete 在同一事务锁模板、统计 versions 和所有现有引用后删除；审计若受模板级 cascade 影响，先确认 AuditLog 无 FK，并在删除事务内保留 delete audit。
+- [x] 每个 mutation 复用同一 tenant-scoped row-lock helper 和 revision conflict mapping，避免动作间出现不同并发语义。
+- [x] restore 从指定 v2 immutable version 生成 DraftConfigV2，去除 rendererVersion，保留 active version；audit 记录 source version 和新 revision。
+- [x] copy 验证 target game、规范化名称唯一并在一事务创建新模板/audit；不共享 JSON 对象引用或任何 version id。
+- [x] set default 锁定目标和同游戏当前默认；先清除后设置并递增目标 revision，冲突时重读事实返回受控 409。
+- [x] archive/unarchive 只修改 lifecycle 字段、revision 和 actor；不写历史 order/snapshot/version。
+- [x] delete 在同一事务锁模板、统计 versions 和所有现有引用后删除；审计若受模板级 cascade 影响，先确认 AuditLog 无 FK，并在删除事务内保留 delete audit。
 
 Focused verification:
 
@@ -334,18 +336,18 @@ Files:
 
 Red tests:
 
-- [ ] OpenAPI paths/operationIds、query/body/response、权限错误和 pagination schema 存在，旧 game-template paths 仍存在。
-- [ ] config 使用 schemaVersion=2 判别联合；priceDeltaFen 是 decimal string pattern，不是 number；rendererVersion 只在发布响应 config 类型出现，不在可写 body。
-- [ ] revision conflict 和 validation issue 的 error details 有固定类型；生成 SDK 暴露 list/create/getDraft/saveDraft/publish/versions/restore/copy/default/archive/unarchive/remove。
+- [x] OpenAPI paths/operationIds、query/body/response、权限错误和 pagination schema 存在，旧 game-template paths 仍存在。
+- [x] config 使用 schemaVersion=2 判别联合；priceDeltaFen 是 decimal string pattern，不是 number；rendererVersion 只在发布响应 config 类型出现，不在可写 body。
+- [x] revision conflict 和 validation issue 的 error details 有固定类型；生成 SDK 暴露 list/create/getDraft/saveDraft/publish/versions/restore/copy/default/archive/unarchive/remove。
 
 Implementation steps:
 
-- [ ] 在 OpenAPI schemas 定义可复用 v2 section/component/config、summary/draft/version/page、request 和 error schema；字段上限与 Zod/领域常量一致。
-- [ ] controller 增加 `ApiBody`/`ApiOkResponse`/`ApiCreatedResponse`/错误 response decorators 和稳定方法名，避免生成操作名漂移。
-- [ ] 先运行 contract 红测试确认文档缺失，再运行 `corepack pnpm openapi:generate`；只接受生成器写入生成文件，不手改生成结果。
-- [ ] 运行 `openapi:check`，证明第二次生成无 diff；运行全套 S2、旧 v1、相关 domain、权限和 tenant isolation 回归。
-- [ ] acceptance 文档记录准确文件、数据库迁移状态“无 schema 变化、未执行迁移”、API 变化、租户/权限/输入/并发/审计位置、命令退出码、未验证能力和 skill 使用情况；不得记录凭据或完整 config。
-- [ ] 停止在 S2，向用户报告并请求 S3 计划/实施授权；不得自动修改 admin UI。
+- [x] 在 OpenAPI schemas 定义可复用 v2 section/component/config、summary/draft/version/page、request 和 error schema；字段上限与 Zod/领域常量一致。
+- [x] controller 增加 `ApiBody`/`ApiOkResponse`/`ApiCreatedResponse`/错误 response decorators 和稳定方法名，避免生成操作名漂移。
+- [x] 先运行 contract 红测试确认文档缺失，再运行 `corepack pnpm openapi:generate`；只接受生成器写入生成文件，不手改生成结果。
+- [x] 运行 `openapi:check`，证明第二次生成无 diff；运行全套 S2、旧 v1、相关 domain、权限和 tenant isolation 回归。
+- [x] acceptance 文档记录准确文件、数据库迁移状态“无 schema 变化、未执行迁移”、API 变化、租户/权限/输入/并发/审计位置、命令退出码、未验证能力和 skill 使用情况；不得记录凭据或完整 config。
+- [x] 停止在 S2，向用户报告并请求 S3 计划/实施授权；不得自动修改 admin UI。
 
 Focused verification:
 
