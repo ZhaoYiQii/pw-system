@@ -39,14 +39,97 @@ async function loginAsOwner(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/merchant-console\/work$/);
 }
 
-async function pickFirstSearchable(
+/** S4 新栈选择器：按 aria-label 展开并选第一项。 */
+async function pickFirstOption(
   page: import("@playwright/test").Page,
-  fieldLabel: string,
+  label: string,
 ) {
-  const field = page.locator(".mc-field", { hasText: fieldLabel });
-  await field.locator("input").click();
-  await field.locator(".mc-picker-option").first().click();
+  await page.getByRole("combobox", { name: label }).click();
+  await page.getByRole("option").first().click();
 }
+
+/** mock 场景下走完「客户 → 游戏 → 模板」三个阶段。 */
+async function selectMockedOrderContext(page: import("@playwright/test").Page) {
+  await pickFirstOption(page, "老板客户");
+  await pickFirstOption(page, "游戏");
+  await page
+    .getByRole("button", { name: /英雄联盟/ })
+    .first()
+    .click();
+}
+
+/** 新建派单 mock 用的发布快照：启用区块 + 两个字段 + 说明 + 一个停用区块。 */
+const MOCKED_PUBLISHED_CONFIG = {
+  schemaVersion: 2,
+  documentRendererVersion: 1,
+  sections: [
+    {
+      stableKey: "need",
+      label: "需求信息",
+      enabled: true,
+      sortOrder: 0,
+      layout: { columns: 2 },
+    },
+    {
+      stableKey: "off",
+      label: "已停用区块",
+      enabled: false,
+      sortOrder: 1,
+      layout: { columns: 1 },
+    },
+  ],
+  components: [
+    {
+      kind: "FIELD",
+      stableKey: "server",
+      sectionKey: "need",
+      label: "区服",
+      enabled: true,
+      sortOrder: 0,
+      layout: { colSpan: 1, rowBreakBefore: false },
+      fieldType: "TEXT",
+      semanticRole: "CUSTOM",
+      required: true,
+      placeholder: "请输入区服",
+    },
+    {
+      kind: "FIELD",
+      stableKey: "requirement",
+      sectionKey: "need",
+      label: "特殊要求",
+      enabled: true,
+      sortOrder: 1,
+      layout: { colSpan: 2, rowBreakBefore: true },
+      fieldType: "TEXTAREA",
+      semanticRole: "ORDER_NOTE",
+      required: false,
+      placeholder: "填写特殊要求",
+    },
+    {
+      kind: "NOTE",
+      stableKey: "reminder",
+      sectionKey: "need",
+      label: "须知",
+      enabled: true,
+      sortOrder: 2,
+      layout: { colSpan: 2, rowBreakBefore: true },
+      text: "请确认老板需求后再发布",
+    },
+    {
+      kind: "FIELD",
+      stableKey: "hidden",
+      sectionKey: "off",
+      label: "停用字段",
+      enabled: true,
+      sortOrder: 0,
+      layout: { colSpan: 1, rowBreakBefore: false },
+      fieldType: "TEXT",
+      semanticRole: "CUSTOM",
+      required: false,
+    },
+  ],
+  staffingSource: { kind: "FIXED", count: 1 },
+} as const;
 
 async function openMockedNewOrder(page: import("@playwright/test").Page) {
   await page.addInitScript(() => {
@@ -84,6 +167,63 @@ async function openMockedNewOrder(page: import("@playwright/test").Page) {
             createdAt: "2026-09-10T00:00:00.000Z",
           },
         ],
+        // S4：新建派单改为三阶段 + v2 契约（游戏 → 已发布模板 → 发布快照表单）
+        "/api/v1/tenant/catalog/games": [
+          { id: "game-1", name: "英雄联盟", enabled: true },
+        ],
+        "/api/v1/tenant/game-dispatch-templates/published": [
+          {
+            templateId: "template-1",
+            name: "英雄联盟",
+            description: null,
+            versionId: "version-1",
+            versionNo: 1,
+            isDefault: true,
+            lastUsedAt: null,
+          },
+        ],
+        "/api/v1/tenant/game-dispatch-templates/versions/version-1/form": {
+          templateId: "template-1",
+          gameId: "game-1",
+          versionId: "version-1",
+          versionNo: 1,
+          config: MOCKED_PUBLISHED_CONFIG,
+        },
+        "/api/v1/tenant/game-dispatch/orders/order-1": {
+          dispatchNo: "GD-E2E-1",
+          status: "DRAFT",
+          copyText: "历史群文案（旧订单）",
+          applyUrl: "",
+          bossUrl: "",
+          lines: [],
+          round: null,
+          document: {
+            schemaVersion: 1,
+            rendererVersion: 1,
+            rows: [
+              {
+                sectionLabel: "需求信息",
+                fieldLabel: "区服",
+                value: "艾欧尼亚",
+              },
+            ],
+            plainText: "【需求信息】\\n区服：艾欧尼亚",
+            generatedFromSnapshotAt: "2026-09-17T00:00:00.000Z",
+          },
+        },
+        "/api/v1/tenant/game-dispatch/template-orders": {
+          orderId: "order-1",
+          dispatchOrderId: "dispatch-1",
+          templateVersionId: "version-1",
+          staffingSummary: { total: 1, rows: [{ label: "人数", count: 1 }] },
+          priceAdjustmentFen: "0",
+          document: {
+            schemaVersion: 1,
+            rendererVersion: 1,
+            rows: [],
+            plainText: "【需求信息】",
+          },
+        },
       };
       const data = dataByPath[pathname];
       await route.fulfill({
@@ -95,139 +235,6 @@ async function openMockedNewOrder(page: import("@playwright/test").Page) {
   );
   await page.goto("/merchant-console/dispatch/new");
   await expect(page.getByRole("heading", { name: "新建派单" })).toBeVisible();
-}
-
-const SYNCED_TEMPLATE = {
-  id: "template-synced",
-  name: "同步布局模板",
-  enabled: true,
-  blockLabels: { positions: "组队岗位" },
-  sections: [
-    {
-      id: "section-active",
-      name: "需求信息",
-      columns: 3,
-      sortOrder: 0,
-      enabled: true,
-    },
-    {
-      id: "section-disabled",
-      name: "已停用区块",
-      columns: 2,
-      sortOrder: 1,
-      enabled: false,
-    },
-  ],
-  fields: [
-    {
-      id: "field-server",
-      fieldKey: "server",
-      label: "区服",
-      fieldType: "text",
-      required: true,
-      options: [],
-      placeholder: "请输入区服",
-      sectionId: "section-active",
-      colSpan: 1,
-      rowBreakBefore: false,
-      sortOrder: 0,
-      enabled: true,
-    },
-    {
-      id: "field-requirement",
-      fieldKey: "requirement",
-      label: "特殊要求",
-      fieldType: "multiline",
-      required: false,
-      options: [],
-      placeholder: "填写特殊要求",
-      sectionId: "section-active",
-      colSpan: 2,
-      rowBreakBefore: true,
-      sortOrder: 1,
-      enabled: true,
-    },
-    {
-      id: "field-note",
-      fieldKey: "notice",
-      label: "接单说明",
-      fieldType: "note",
-      required: false,
-      options: [],
-      placeholder: "请确认老板需求后再发布",
-      sectionId: "section-active",
-      colSpan: 3,
-      rowBreakBefore: false,
-      sortOrder: 2,
-      enabled: true,
-    },
-    {
-      id: "field-disabled",
-      fieldKey: "hidden_active_field",
-      label: "已停用字段",
-      fieldType: "text",
-      required: true,
-      options: [],
-      placeholder: null,
-      sectionId: "section-active",
-      colSpan: 1,
-      rowBreakBefore: false,
-      sortOrder: 3,
-      enabled: false,
-    },
-    {
-      id: "field-disabled-section",
-      fieldKey: "hidden_section_field",
-      label: "停用区块必填项",
-      fieldType: "text",
-      required: true,
-      options: [],
-      placeholder: null,
-      sectionId: "section-disabled",
-      colSpan: 1,
-      rowBreakBefore: false,
-      sortOrder: 4,
-      enabled: true,
-    },
-  ],
-  positions: [
-    { id: "position-1", label: "上单", defaultCount: 1, sortOrder: 0 },
-  ],
-  rankRules: [],
-  copyLines: [],
-};
-
-async function mockSyncedTemplate(page: import("@playwright/test").Page) {
-  await page.addInitScript(() => {
-    window.sessionStorage.setItem("pw_access_token", "e2e-token");
-  });
-  await page.route(
-    /^http:\/\/127\.0\.0\.1:(?:3000|3100)\/api\/v1\//,
-    async (route) => {
-      const pathname = new URL(route.request().url()).pathname;
-      const dataByPath: Record<string, unknown> = {
-        "/api/v1/tenant/me": {
-          sub: "owner-1",
-          username: "owner",
-          role: "TENANT_OWNER",
-          tenantId: "tenant-1",
-        },
-        "/api/v1/tenant/config": { config: null },
-        "/api/v1/tenant/game-templates": [
-          { id: SYNCED_TEMPLATE.id, name: SYNCED_TEMPLATE.name, enabled: true },
-        ],
-        [`/api/v1/tenant/game-templates/${SYNCED_TEMPLATE.id}`]:
-          SYNCED_TEMPLATE,
-        "/api/v1/tenant/customers": [],
-      };
-      const data = dataByPath[pathname];
-      await route.fulfill({
-        status: data === undefined ? 404 : 200,
-        contentType: "application/json",
-        body: JSON.stringify({ data: data ?? null }),
-      });
-    },
-  );
 }
 
 test("店长登录后进入新商家控制台工作台并看到真实导航", async ({ page }) => {
@@ -313,139 +320,90 @@ test("商家端所有模块页面均可打开并渲染真实数据", async ({ pa
   }
 });
 
-test("新建 GD 派单草稿后可真实发布", async ({ page }) => {
-  await loginAsOwner(page);
-  await page.goto("/merchant-console/dispatch/new");
-  await expect(page.getByRole("heading", { name: "新建派单" })).toBeVisible();
+// 说明：S4 起新建派单走 v2 契约（客户+游戏 → 模板 → 发布快照表单）。
+// 这里用 mock 契约验证「填写 → 提交 → 跳转详情」的接线；真实 API 的创建与发布
+// 由 Task 6 的一次性测试库 E2E 覆盖（需要 dev 库的旧用例已移除）。
+test("新建派单按发布快照提交后跳转订单详情", async ({ page }) => {
+  await openMockedNewOrder(page);
+  await selectMockedOrderContext(page);
 
-  await pickFirstSearchable(page, "游戏模板");
-  await pickFirstSearchable(page, "老板客户");
-  await page
-    .locator("label.mc-field", { hasText: "区" })
-    .locator("input")
-    .fill("艾欧尼亚");
-  await page
-    .locator("label.mc-field", { hasText: "目标段位" })
-    .locator("select")
-    .selectOption({ label: "钻石" });
-  await page
-    .locator("label.mc-field", { hasText: "模式" })
-    .locator("input")
-    .fill("排位双排");
-
+  await page.getByLabel("区服").fill("艾欧尼亚");
   await page.getByRole("button", { name: "创建派单草稿" }).click();
-  await expect(page).toHaveURL(/\/merchant-console\/dispatch\/.+kind=GD/);
-  await expect(page.locator(".mc-detail-title .mc-status")).toBeVisible();
 
-  const publish = page.getByRole("button", { name: "发布派单" }).first();
-  if (await publish.isVisible().catch(() => false)) {
-    await publish.click();
-    await page
-      .locator(".mc-dialog")
-      .getByRole("button", { name: "发布派单" })
-      .click();
-    await expect(page.locator(".mc-detail-title .mc-status")).toHaveText(
-      "报名选人",
-      { timeout: 15_000 },
-    );
-  }
+  await expect(page).toHaveURL(
+    /\/merchant-console\/dispatch\/order-1\?kind=GD/,
+  );
+
+  // S4 Task 5：详情页按订单快照渲染文案并可直接复制
+  await expect(page.getByRole("heading", { name: "派单文案" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "艾欧尼亚" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "复制派单文案" }),
+  ).toBeVisible();
+  await expect(page.getByText("历史群文案", { exact: false })).toHaveCount(0);
 });
 
 test("新建派单可搜索下拉可点击外部或按 ESC 关闭", async ({ page }) => {
   await openMockedNewOrder(page);
 
-  const customerField = page.locator(".mc-field", { hasText: "老板客户" });
-  const customerInput = customerField.locator("input");
-  const customerOptions = customerField.locator(".mc-picker-options");
-  await expect(customerInput).toBeEnabled();
-  await customerInput.click();
+  const customerPicker = page.getByRole("combobox", { name: "老板客户" });
+  const customerOptions = page.getByRole("listbox", { name: "老板客户选项" });
+  await customerPicker.click();
   await expect(customerOptions).toBeVisible();
-  const customerInputBox = await customerInput.boundingBox();
-  const customerOptionsBox = await customerOptions.boundingBox();
-  expect(customerInputBox).not.toBeNull();
-  expect(customerOptionsBox).not.toBeNull();
-  expect(customerOptionsBox!.y).toBeGreaterThanOrEqual(
-    customerInputBox!.y + customerInputBox!.height,
-  );
+
+  const inputBox = await customerPicker.boundingBox();
+  const optionsBox = await customerOptions.boundingBox();
+  expect(inputBox).not.toBeNull();
+  expect(optionsBox).not.toBeNull();
+  expect(optionsBox!.y).toBeGreaterThanOrEqual(inputBox!.y + inputBox!.height);
 
   await page.keyboard.press("Escape");
   await expect(customerOptions).toBeHidden();
 
-  const templateField = page.locator(".mc-field", { hasText: "游戏模板" });
-  const templateOptions = templateField.locator(".mc-picker-options");
-  await templateField.locator("input").click();
-  await expect(templateOptions).toBeVisible();
-
+  const gamePicker = page.getByRole("combobox", { name: "游戏" });
+  const gameOptions = page.getByRole("listbox", { name: "游戏选项" });
+  await gamePicker.click();
+  await expect(gameOptions).toBeVisible();
   await page.getByRole("heading", { name: "新建派单" }).click();
-  await expect(templateOptions).toBeHidden();
-
-  await pickFirstSearchable(page, "游戏模板");
-
-  await customerInput.click();
-  await expect(customerOptions).toBeVisible();
-
-  await page.keyboard.press("Escape");
-  await expect(customerOptions).toBeHidden();
+  await expect(gameOptions).toBeHidden();
 });
 
-test("新建派单搜索框有明确名称并暴露下拉状态", async ({ page }) => {
+test("新建派单三级选择器有明确名称并暴露下拉状态", async ({ page }) => {
   await openMockedNewOrder(page);
 
-  const templatePicker = page.getByRole("combobox", { name: "游戏模板" });
   const customerPicker = page.getByRole("combobox", { name: "老板客户" });
-  await expect(templatePicker).toHaveAttribute("aria-expanded", "false");
+  const gamePicker = page.getByRole("combobox", { name: "游戏" });
   await expect(customerPicker).toHaveAttribute("aria-expanded", "false");
+  await expect(gamePicker).toHaveAttribute("aria-expanded", "false");
 
-  await templatePicker.click();
-  await expect(templatePicker).toHaveAttribute("aria-expanded", "true");
+  await gamePicker.click();
+  await expect(gamePicker).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("listbox", { name: "游戏选项" })).toBeVisible();
+
+  await page.getByRole("option", { name: "英雄联盟" }).click();
+  // 阶段由「客户 + 游戏」共同推进，先补选客户才会出现模板列表
+  await pickFirstOption(page, "老板客户");
   await expect(
-    page.getByRole("listbox", { name: "游戏模板选项" }),
+    page.getByRole("button", { name: /英雄联盟/ }).first(),
   ).toBeVisible();
 });
 
-test("模板预览与新建派单共享启用区块和字段布局", async ({ page }) => {
-  await mockSyncedTemplate(page);
+// 说明：原用例比较「模板预览」与「新建派单」两处渲染。S4 起新建派单读发布快照，
+// 布局一致性由 S3 的 form-layout / template-form-renderer 单测保证（form-layout-v2.spec.ts），
+// 这里验证的是「新单按发布快照渲染：启用区块显示、停用区块与字段不出现」。
+test("新建派单按发布快照渲染启用区块与字段", async ({ page }) => {
+  await openMockedNewOrder(page);
+  await selectMockedOrderContext(page);
 
-  await page.goto("/merchant-console/dispatch/templates");
-  await expect(page.getByRole("heading", { name: "模板管理" })).toBeVisible();
-  await expect(
-    page.getByText(SYNCED_TEMPLATE.name, { exact: true }).first(),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "预览表单" }).click();
-
-  const preview = page.getByRole("dialog", {
-    name: `预览 · ${SYNCED_TEMPLATE.name}`,
-  });
-  await expect(preview.getByText("需求信息", { exact: true })).toBeVisible();
-  await expect(preview.locator('[name="server"]')).toBeVisible();
-  await expect(preview.locator('[name="requirement"]')).toBeVisible();
-  await expect(preview.getByText("请确认老板需求后再发布")).toBeVisible();
-  await expect(preview.getByText("已停用字段", { exact: true })).toHaveCount(0);
-  await expect(preview.getByText("已停用区块", { exact: true })).toHaveCount(0);
-  await expect(
-    preview.getByText("停用区块必填项", { exact: true }),
-  ).toHaveCount(0);
-  await expect(preview.getByText("组队岗位", { exact: true })).toBeVisible();
-
-  await page.goto("/merchant-console/dispatch/new");
-  await expect(page.getByRole("heading", { name: "新建派单" })).toBeVisible();
-  await page.getByRole("combobox", { name: "游戏模板" }).click();
-  await page.getByRole("option", { name: SYNCED_TEMPLATE.name }).click();
-
-  await expect(page.getByText("需求信息", { exact: true })).toBeVisible();
-  await expect(page.locator('[name="server"]')).toBeVisible();
-  const requirement = page.locator('[name="requirement"]');
-  await expect(requirement).toBeVisible();
-  await expect(requirement).toHaveCSS("border-radius", "8px");
-  await expect(requirement).toHaveCSS("background-color", "rgb(250, 248, 242)");
-  await expect(requirement).toHaveCSS("min-height", "72px");
+  await expect(page.getByRole("heading", { name: "需求信息" })).toBeVisible();
+  await expect(page.getByLabel("区服")).toBeVisible();
+  await expect(page.getByLabel("特殊要求")).toBeVisible();
   await expect(page.getByText("请确认老板需求后再发布")).toBeVisible();
-  await expect(page.getByText("已停用字段", { exact: true })).toHaveCount(0);
   await expect(page.getByText("已停用区块", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("停用区块必填项", { exact: true })).toHaveCount(
-    0,
-  );
-  await expect(page.getByRole("heading", { name: "组队岗位" })).toBeVisible();
+  await expect(page.getByText("停用字段", { exact: true })).toHaveCount(0);
+
+  // 必填缺失时按钮仍禁用逻辑由流程层保证；这里断言未填时给出提示
+  await expect(page.getByText(/个必填项未填写/)).toBeVisible();
 });
 
 test.describe("S3 模板管理主路径（真实本地 API）", () => {
@@ -603,5 +561,379 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
         ?.getAttribute("data-component-key"),
     );
     expect(focusedAfter).toBe(focusedBefore);
+  });
+});
+
+/* ------------------------------------------------------------------ S4 */
+
+const S4_TENANT_CODE = process.env.S4_E2E_TENANT_CODE ?? "s4e2e";
+const S4_PASSWORD = process.env.S4_E2E_PASSWORD ?? "zcloud1024";
+/**
+ * API 源：夹具通过真实 HTTP 建立（建游戏/模板/发布）。
+ * 与 admin 的 baseURL 分开配置，避免把 API 端口写死在断言里。
+ */
+const S4_API_ORIGIN = process.env.S4_API_ORIGIN ?? "http://127.0.0.1:3100";
+
+/** S4 发布快照：必填单选（带加价）+ 人数表格（列汇总）+ 说明。 */
+function s4Config() {
+  return {
+    schemaVersion: 2,
+    sections: [
+      {
+        stableKey: "need",
+        label: "需求信息",
+        enabled: true,
+        sortOrder: 0,
+        layout: { columns: 2 },
+      },
+      {
+        stableKey: "roster",
+        label: "组队岗位",
+        enabled: true,
+        sortOrder: 1,
+        layout: { columns: 1 },
+      },
+    ],
+    components: [
+      {
+        kind: "FIELD",
+        stableKey: "server",
+        sectionKey: "need",
+        label: "区服",
+        enabled: true,
+        sortOrder: 0,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "TEXT",
+        semanticRole: "CUSTOM",
+        required: true,
+        placeholder: "请输入区服",
+      },
+      {
+        kind: "FIELD",
+        stableKey: "mode",
+        sectionKey: "need",
+        label: "模式",
+        enabled: true,
+        sortOrder: 1,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "SINGLE_SELECT",
+        semanticRole: "MODE",
+        required: true,
+        options: [
+          { value: "ranked", label: "排位", priceDeltaFen: "1500" },
+          { value: "normal", label: "匹配" },
+        ],
+      },
+      {
+        kind: "NOTE",
+        stableKey: "reminder",
+        sectionKey: "need",
+        label: "须知",
+        enabled: true,
+        sortOrder: 2,
+        layout: { colSpan: 2, rowBreakBefore: true },
+        text: "请确认老板需求后再发布",
+      },
+      {
+        kind: "REPEATABLE_TABLE",
+        stableKey: "roster_table",
+        sectionKey: "roster",
+        label: "岗位与人数",
+        enabled: true,
+        sortOrder: 0,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        columns: [
+          {
+            stableKey: "position",
+            label: "位置",
+            columnType: "TEXT",
+            semanticRole: "STAFFING_LABEL",
+            required: true,
+          },
+          {
+            stableKey: "count",
+            label: "人数",
+            columnType: "NUMBER",
+            semanticRole: "STAFFING_COUNT",
+            required: true,
+          },
+        ],
+        defaultRows: [{ position: "陪玩", count: 1 }],
+      },
+    ],
+    staffingSource: {
+      kind: "REPEATABLE_TABLE_SUM",
+      componentKey: "roster_table",
+      columnKey: "count",
+    },
+  };
+}
+
+interface S4Session {
+  token: string;
+  headers: { authorization: string; "content-type": string };
+}
+
+/** 用真实登录接口换 token（页面会话与夹具共用同一租户账号）。 */
+async function s4Session(
+  page: import("@playwright/test").Page,
+): Promise<S4Session> {
+  const res = await page.request.post(`${S4_API_ORIGIN}/api/v1/auth/login`, {
+    data: {
+      kind: "tenant",
+      tenantCode: S4_TENANT_CODE,
+      username: "owner",
+      password: S4_PASSWORD,
+    },
+  });
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as { data: { accessToken: string } };
+  return {
+    token: body.data.accessToken,
+    headers: {
+      authorization: `Bearer ${body.data.accessToken}`,
+      "content-type": "application/json",
+    },
+  };
+}
+
+/** 经真实接口建游戏（每次运行唯一命名，避免跨运行串数据）。 */
+async function s4CreateGame(
+  page: import("@playwright/test").Page,
+  session: S4Session,
+  name: string,
+): Promise<string> {
+  const res = await page.request.post(
+    `${S4_API_ORIGIN}/api/v1/tenant/catalog/games`,
+    { headers: session.headers, data: { name } },
+  );
+  expect(res.ok()).toBe(true);
+  const body = (await res.json()) as { data: { id: string } };
+  return body.data.id;
+}
+
+/** 建模板 → 存草稿 → 发布，返回锁定版本信息。 */
+async function s4PublishTemplate(
+  page: import("@playwright/test").Page,
+  session: S4Session,
+  gameId: string,
+  name: string,
+  options: { setDefault?: boolean } = {},
+): Promise<{ templateId: string; versionId: string; revision: number }> {
+  const base = `${S4_API_ORIGIN}/api/v1/tenant/game-dispatch-templates`;
+  const created = await page.request.post(base, {
+    headers: session.headers,
+    data: { gameId, name, description: null },
+  });
+  expect(created.ok()).toBe(true);
+  const createdBody = (await created.json()) as {
+    data: { id: string; revision: number };
+  };
+  const templateId = createdBody.data.id;
+
+  const saved = await page.request.patch(`${base}/${templateId}/draft`, {
+    headers: session.headers,
+    data: { expectedRevision: createdBody.data.revision, config: s4Config() },
+  });
+  expect(saved.ok()).toBe(true);
+  const savedBody = (await saved.json()) as { data: { revision: number } };
+
+  const published = await page.request.post(`${base}/${templateId}/publish`, {
+    headers: session.headers,
+    data: { expectedRevision: savedBody.data.revision, changeNote: "S4 E2E" },
+  });
+  expect(published.ok()).toBe(true);
+  const publishedBody = (await published.json()) as {
+    data: { revision: number; activeVersion: { id: string } };
+  };
+
+  // 设默认要求模板已有生效版本，因此放在发布之后（会用发布后的 revision）。
+  if (options.setDefault) {
+    const asDefault = await page.request.post(`${base}/${templateId}/default`, {
+      headers: session.headers,
+      data: { expectedRevision: publishedBody.data.revision },
+    });
+    expect(asDefault.ok()).toBe(true);
+  }
+  return {
+    templateId,
+    versionId: publishedBody.data.activeVersion.id,
+    revision: publishedBody.data.revision,
+  };
+}
+
+/** 页面登录（真实 UI 登录，用于把会话写进浏览器）。 */
+async function s4Login(page: import("@playwright/test").Page) {
+  await page.goto("/store/login");
+  await page.getByLabel("门店 code").fill(S4_TENANT_CODE);
+  await page.getByLabel("账号").fill("owner");
+  await page.getByLabel("密码").fill(S4_PASSWORD);
+  await page.getByRole("button", { name: "登录" }).click();
+  await expect(page).toHaveURL(/\/merchant-console\/work$/);
+}
+
+/** 走完「客户 → 游戏 → 模板」三个阶段。 */
+async function s4SelectContext(
+  page: import("@playwright/test").Page,
+  gameName: string,
+) {
+  await page.getByRole("combobox", { name: "老板客户" }).click();
+  await page.getByRole("option").first().click();
+  await page.getByRole("combobox", { name: "游戏" }).click();
+  await page.getByRole("option", { name: gameName, exact: true }).click();
+}
+
+test.describe("S4 新建派单主路径（真实本地 API）", () => {
+  test("S4 新建派单：按游戏选已发布模板 → 快照表单 → 创建 → 详情文案来自快照", async ({
+    page,
+  }) => {
+    const session = await s4Session(page);
+    const suffix = Date.now().toString(36);
+    const gameA = `英雄联盟 S4-${suffix}`;
+    const gameB = `无畏契约 S4-${suffix}`;
+    const gameAId = await s4CreateGame(page, session, gameA);
+    const gameBId = await s4CreateGame(page, session, gameB);
+    const templateA = await s4PublishTemplate(
+      page,
+      session,
+      gameAId,
+      `A 店排位陪练-${suffix}`,
+      { setDefault: true },
+    );
+    await s4PublishTemplate(page, session, gameBId, `B 店匹配陪练-${suffix}`);
+
+    await s4Login(page);
+    await page.goto("/merchant-console/dispatch/new");
+    await s4SelectContext(page, gameA);
+
+    // 只看到该游戏的模板，且默认模板有标记
+    await expect(
+      page.getByRole("button", { name: new RegExp(`A 店排位陪练-${suffix}`) }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: new RegExp(`B 店匹配陪练-${suffix}`) }),
+    ).toHaveCount(0);
+    await expect(page.getByText("默认", { exact: true })).toBeVisible();
+
+    await page
+      .getByRole("button", { name: new RegExp(`A 店排位陪练-${suffix}`) })
+      .click();
+    await expect(page.getByRole("heading", { name: "需求信息" })).toBeVisible();
+    await expect(page.getByText("请确认老板需求后再发布")).toBeVisible();
+
+    await page.getByLabel("区服").fill("艾欧尼亚");
+    await page.getByLabel("模式").selectOption("ranked");
+    await page.getByRole("button", { name: "添加行" }).click();
+    await page.getByLabel("岗位与人数 第 1 行 位置").fill("陪玩");
+    await page.getByLabel("岗位与人数 第 1 行 人数").fill("2");
+
+    await page.getByRole("button", { name: "创建派单草稿" }).click();
+    await expect(page).toHaveURL(/\/merchant-console\/dispatch\/.+kind=GD/);
+
+    // 详情文案来自订单快照（服务端生成），不读当前模板
+    await expect(page.getByRole("heading", { name: "派单文案" })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "艾欧尼亚" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "复制派单文案" }),
+    ).toBeVisible();
+    expect(templateA.versionId).not.toBe("");
+  });
+
+  test("S4 新建派单：模板归档后拒绝创建并保留已填内容", async ({ page }) => {
+    const session = await s4Session(page);
+    const suffix = Date.now().toString(36);
+    const gameName = `归档用例-${suffix}`;
+    const gameId = await s4CreateGame(page, session, gameName);
+    const template = await s4PublishTemplate(
+      page,
+      session,
+      gameId,
+      `待归档模板-${suffix}`,
+    );
+
+    await s4Login(page);
+    await page.goto("/merchant-console/dispatch/new");
+    await s4SelectContext(page, gameName);
+    await page
+      .getByRole("button", { name: new RegExp(`待归档模板-${suffix}`) })
+      .click();
+    await page.getByLabel("区服").fill("诺克萨斯");
+    await page.getByLabel("模式").selectOption("normal");
+
+    // 填写期间模板被归档：服务端必须拒绝，页面保留输入
+    const archived = await page.request.post(
+      `${S4_API_ORIGIN}/api/v1/tenant/game-dispatch-templates/${template.templateId}/archive`,
+      {
+        headers: session.headers,
+        data: { expectedRevision: template.revision },
+      },
+    );
+    expect(archived.ok()).toBe(true);
+
+    await page.getByRole("button", { name: "创建派单草稿" }).click();
+    await expect(
+      page.getByText(
+        "该模板已被归档，请重新选择可用模板（已填写的内容仍保留）。",
+      ),
+    ).toBeVisible();
+    await expect(page.getByLabel("区服")).toHaveValue("诺克萨斯");
+  });
+
+  test("S4 创建派单幂等：同一意图重复提交返回同一订单", async ({ page }) => {
+    const session = await s4Session(page);
+    const suffix = Date.now().toString(36);
+    const gameName = `幂等用例-${suffix}`;
+    const gameId = await s4CreateGame(page, session, gameName);
+    const template = await s4PublishTemplate(
+      page,
+      session,
+      gameId,
+      `幂等模板-${suffix}`,
+    );
+    const customers = await page.request.get(
+      `${S4_API_ORIGIN}/api/v1/tenant/customers`,
+      { headers: session.headers },
+    );
+    expect(customers.ok()).toBe(true);
+    const customerBody = (await customers.json()) as {
+      data: { id: string }[];
+    };
+    const customerProfileId = customerBody.data[0]?.id ?? "";
+    expect(customerProfileId).not.toBe("");
+
+    const payload = {
+      gameId,
+      templateId: template.templateId,
+      templateVersionId: template.versionId,
+      customerProfileId,
+      values: {
+        server: "艾欧尼亚",
+        mode: "normal",
+        roster_table: [{ position: "陪玩", count: 1 }],
+      },
+      durationMinutes: 60,
+    };
+    const key = `s4-idem-${suffix}`;
+    const headers = { ...session.headers, "idempotency-key": key };
+    const first = await page.request.post(
+      `${S4_API_ORIGIN}/api/v1/tenant/game-dispatch/template-orders`,
+      { headers, data: payload },
+    );
+    const second = await page.request.post(
+      `${S4_API_ORIGIN}/api/v1/tenant/game-dispatch/template-orders`,
+      { headers, data: payload },
+    );
+    expect(first.ok()).toBe(true);
+    expect(second.ok()).toBe(true);
+    const firstBody = (await first.json()) as {
+      data: { dispatchOrderId: string; staffingSummary: { total: number } };
+    };
+    const secondBody = (await second.json()) as {
+      data: { dispatchOrderId: string };
+    };
+    expect(secondBody.data.dispatchOrderId).toBe(
+      firstBody.data.dispatchOrderId,
+    );
+    expect(firstBody.data.staffingSummary.total).toBe(1);
   });
 });

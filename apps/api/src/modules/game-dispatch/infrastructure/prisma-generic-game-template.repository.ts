@@ -9,6 +9,12 @@ import type {
   PublishedConfigV2,
 } from "../domain/game-template-config-v2.js";
 import {
+  readPublishedConfig,
+  selectPublishedTemplates,
+  type PublishedTemplateForm,
+  type PublishedTemplateSummary,
+} from "../domain/game-template-published-read.js";
+import {
   GameTemplateRevisionConflictError,
   GenericTemplateError,
 } from "../domain/errors.js";
@@ -31,6 +37,12 @@ import {
   type SaveGenericTemplateDraftInput,
   type SaveGenericTemplateDraftResult,
 } from "../domain/game-template-management.js";
+
+/**
+ * 可派单模板列表的硬上限：派单选择是「单个游戏的模板」这一有界集合，
+ * 用固定上限约束响应体，避免无界列表（api-and-interface-design 的列表边界要求）。
+ */
+const PUBLISHED_TEMPLATE_LIMIT = 50;
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1127,6 +1139,88 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
       activeVersion ? toVersionSummary(activeVersion) : null,
       hasUnpublishedChanges,
     );
+  }
+
+  /** 该游戏可派单的模板摘要（未归档 + 有生效版本），顺序由领域规则决定。 */
+  async listPublishedTemplates(
+    tenantId: string,
+    gameId: string,
+  ): Promise<PublishedTemplateSummary[]> {
+    const templates = await this.client.gameDispatchTemplate.findMany({
+      where: {
+        tenantId,
+        gameId,
+        archivedAt: null,
+        activeVersionId: { not: null },
+      },
+      select: {
+        id: true,
+        gameId: true,
+        name: true,
+        description: true,
+        activeVersionId: true,
+        isDefault: true,
+        lastUsedAt: true,
+        updatedAt: true,
+        archivedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      take: PUBLISHED_TEMPLATE_LIMIT,
+    });
+    const versionIds = templates
+      .map((row) => row.activeVersionId)
+      .filter((id): id is string => id !== null);
+    const versions =
+      versionIds.length === 0
+        ? []
+        : await this.client.gameDispatchTemplateVersion.findMany({
+            where: { tenantId, id: { in: versionIds } },
+            select: { id: true, versionNo: true },
+          });
+    const versionNoById = new Map(
+      versions.map((row) => [row.id, row.versionNo] as const),
+    );
+
+    return selectPublishedTemplates(
+      templates.map((row) => ({
+        ...row,
+        activeVersionNo:
+          row.activeVersionId === null
+            ? null
+            : (versionNoById.get(row.activeVersionId) ?? null),
+      })),
+    );
+  }
+
+  /** 锁定版本的发布表单：版本不存在或发布配置不可用时返回 null。 */
+  async findPublishedVersionForm(
+    tenantId: string,
+    versionId: string,
+  ): Promise<PublishedTemplateForm | null> {
+    const version = await this.client.gameDispatchTemplateVersion.findFirst({
+      where: { tenantId, id: versionId },
+      select: {
+        id: true,
+        templateId: true,
+        versionNo: true,
+        configJson: true,
+      },
+    });
+    if (!version) return null;
+    const template = await this.client.gameDispatchTemplate.findFirst({
+      where: { tenantId, id: version.templateId },
+      select: { id: true, gameId: true },
+    });
+    if (!template) return null;
+    const config = readPublishedConfig(version.configJson);
+    if (config === null) return null;
+    return {
+      templateId: template.id,
+      gameId: template.gameId,
+      versionId: version.id,
+      versionNo: version.versionNo,
+      config,
+    };
   }
 }
 

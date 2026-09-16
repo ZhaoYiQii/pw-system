@@ -3289,7 +3289,7 @@ export type GenericGameTemplateListErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3308,7 +3308,7 @@ export type GenericGameTemplateListErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3436,7 +3436,7 @@ export type GenericGameTemplateCreateErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3455,7 +3455,7 @@ export type GenericGameTemplateCreateErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3474,7 +3474,7 @@ export type GenericGameTemplateCreateErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3493,7 +3493,7 @@ export type GenericGameTemplateCreateErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3938,16 +3938,130 @@ export type GenericGameTemplateCreateResponses = {
 
 export type GenericGameTemplateCreateResponse = GenericGameTemplateCreateResponses[keyof GenericGameTemplateCreateResponses];
 
-export type GenericGameTemplateGetDraftData = {
+export type GenericGameTemplateListPublishedData = {
     body?: never;
-    path: {
-        id: string;
+    path?: never;
+    query: {
+        /**
+         * 按游戏过滤
+         */
+        gameId: string;
     };
-    query?: never;
-    url: '/api/v1/tenant/game-dispatch-templates/{id}/draft';
+    url: '/api/v1/tenant/game-dispatch-templates/published';
 };
 
-export type GenericGameTemplateGetDraftErrors = {
+export type GenericGameTemplateListPublishedErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateListPublishedError = GenericGameTemplateListPublishedErrors[keyof GenericGameTemplateListPublishedErrors];
+
+export type GenericGameTemplateListPublishedResponses = {
+    /**
+     * 该游戏可派单的模板（默认优先，其次最近使用）
+     */
+    200: {
+        data: Array<{
+            /**
+             * 模板 id
+             */
+            templateId: string;
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description?: string | null;
+            /**
+             * 锁定的发布版本 id
+             */
+            versionId: string;
+            /**
+             * 版本号
+             */
+            versionNo: number;
+            /**
+             * 是否为该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+        }>;
+    };
+};
+
+export type GenericGameTemplateListPublishedResponse = GenericGameTemplateListPublishedResponses[keyof GenericGameTemplateListPublishedResponses];
+
+export type GenericGameTemplateGetVersionFormData = {
+    body?: never;
+    path: {
+        versionId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/versions/{versionId}/form';
+};
+
+export type GenericGameTemplateGetVersionFormErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
     /**
      * 受控业务错误（{ code, message, details? }）
      */
@@ -3955,7 +4069,7 @@ export type GenericGameTemplateGetDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -3974,7 +4088,399 @@ export type GenericGameTemplateGetDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GenericGameTemplateGetVersionFormError = GenericGameTemplateGetVersionFormErrors[keyof GenericGameTemplateGetVersionFormErrors];
+
+export type GenericGameTemplateGetVersionFormResponses = {
+    /**
+     * 锁定发布版本的派单表单配置
+     */
+    200: {
+        /**
+         * 发布版本派单表单
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            templateId: string;
+            /**
+             * 所属游戏 id（未归类模板为 null）
+             */
+            gameId: string | null;
+            /**
+             * 发布版本 id
+             */
+            versionId: string;
+            /**
+             * 版本号
+             */
+            versionNo: number;
+            /**
+             * 通用模板发布配置（不可变版本内容，服务端字段）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<{
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 字段类型
+                     */
+                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+                    /**
+                     * 业务语义角色（非 CUSTOM 时全局唯一）
+                     */
+                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                    /**
+                     * 是否必填
+                     */
+                    required: boolean;
+                    /**
+                     * 占位提示
+                     */
+                    placeholder?: string;
+                    /**
+                     * 选择项（选择类字段必须至少一个）
+                     */
+                    options?: Array<{
+                        /**
+                         * 选项值（稳定键）
+                         */
+                        value: string;
+                        /**
+                         * 选项名称
+                         */
+                        label: string;
+                        /**
+                         * 选项加价（十进制字符串分，禁止 number/浮点）
+                         */
+                        priceDeltaFen?: string;
+                    }>;
+                    /**
+                     * 多选字段的聚合策略（MULTI_SELECT 必填）
+                     */
+                    aggregationPolicy?: 'SUM' | 'MAX';
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 表格列（最多 10 列）
+                     */
+                    columns: Array<{
+                        /**
+                         * 列稳定键
+                         */
+                        stableKey: string;
+                        /**
+                         * 列名称
+                         */
+                        label: string;
+                        /**
+                         * 列类型
+                         */
+                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+                        /**
+                         * 业务语义角色
+                         */
+                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+                        /**
+                         * 是否必填
+                         */
+                        required: boolean;
+                        /**
+                         * 单选列的选项
+                         */
+                        options?: Array<{
+                            /**
+                             * 选项值（稳定键）
+                             */
+                            value: string;
+                            /**
+                             * 选项名称
+                             */
+                            label: string;
+                            /**
+                             * 选项加价（十进制字符串分，禁止 number/浮点）
+                             */
+                            priceDeltaFen?: string;
+                        }>;
+                    }>;
+                    /**
+                     * 默认行（键必须是已定义的列）
+                     */
+                    defaultRows: Array<{
+                        [key: string]: unknown;
+                    }>;
+                } | {
+                    /**
+                     * 组件类型
+                     */
+                    kind: string;
+                    /**
+                     * 组件稳定键
+                     */
+                    stableKey: string;
+                    /**
+                     * 所属区块稳定键
+                     */
+                    sectionKey: string;
+                    /**
+                     * 组件名称
+                     */
+                    label: string;
+                    /**
+                     * 组件说明
+                     */
+                    description?: string;
+                    /**
+                     * 组件是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 组件顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 组件布局
+                     */
+                    layout: {
+                        /**
+                         * 栅格宽度（1-4）
+                         */
+                        colSpan: 1 | 2 | 3 | 4;
+                        /**
+                         * 是否在此组件前换行
+                         */
+                        rowBreakBefore: boolean;
+                    };
+                    /**
+                     * 说明纯文本（不支持 HTML/脚本）
+                     */
+                    text: string;
+                }>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: {
+                    /**
+                     * 固定人数
+                     */
+                    kind: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                } | {
+                    /**
+                     * 取启用数字字段
+                     */
+                    kind: string;
+                    /**
+                     * 人数字段稳定键
+                     */
+                    componentKey: string;
+                } | {
+                    /**
+                     * 汇总表格列
+                     */
+                    kind: string;
+                    /**
+                     * 表格组件稳定键
+                     */
+                    componentKey: string;
+                    /**
+                     * STAFFING_COUNT 数字列稳定键
+                     */
+                    columnKey: string;
+                };
+                /**
+                 * 文案渲染器版本（仅由服务端写入）
+                 */
+                documentRendererVersion: 1;
+            };
+        };
+    };
+};
+
+export type GenericGameTemplateGetVersionFormResponse = GenericGameTemplateGetVersionFormResponses[keyof GenericGameTemplateGetVersionFormResponses];
+
+export type GenericGameTemplateGetDraftData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/draft';
+};
+
+export type GenericGameTemplateGetDraftErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4771,7 +5277,7 @@ export type GenericGameTemplateSaveDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4790,7 +5296,7 @@ export type GenericGameTemplateSaveDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4809,7 +5315,7 @@ export type GenericGameTemplateSaveDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4828,7 +5334,7 @@ export type GenericGameTemplateSaveDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4862,7 +5368,7 @@ export type GenericGameTemplateSaveDraftErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4976,7 +5482,7 @@ export type GenericGameTemplatePublishErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -4995,7 +5501,7 @@ export type GenericGameTemplatePublishErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5014,7 +5520,7 @@ export type GenericGameTemplatePublishErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5033,7 +5539,7 @@ export type GenericGameTemplatePublishErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5067,7 +5573,7 @@ export type GenericGameTemplatePublishErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5558,7 +6064,7 @@ export type GenericGameTemplateListVersionsErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5577,7 +6083,7 @@ export type GenericGameTemplateListVersionsErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5596,7 +6102,7 @@ export type GenericGameTemplateListVersionsErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5693,7 +6199,7 @@ export type GenericGameTemplateRestoreErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5712,7 +6218,7 @@ export type GenericGameTemplateRestoreErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5731,7 +6237,7 @@ export type GenericGameTemplateRestoreErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5750,7 +6256,7 @@ export type GenericGameTemplateRestoreErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -5784,7 +6290,7 @@ export type GenericGameTemplateRestoreErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6262,7 +6768,7 @@ export type GenericGameTemplateCopyErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6281,7 +6787,7 @@ export type GenericGameTemplateCopyErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6300,7 +6806,7 @@ export type GenericGameTemplateCopyErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6319,7 +6825,7 @@ export type GenericGameTemplateCopyErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6338,7 +6844,7 @@ export type GenericGameTemplateCopyErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6808,7 +7314,7 @@ export type GenericGameTemplateSetDefaultErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6827,7 +7333,7 @@ export type GenericGameTemplateSetDefaultErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6846,7 +7352,7 @@ export type GenericGameTemplateSetDefaultErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -6880,7 +7386,7 @@ export type GenericGameTemplateSetDefaultErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -7350,7 +7856,7 @@ export type GenericGameTemplateArchiveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -7369,7 +7875,7 @@ export type GenericGameTemplateArchiveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -7388,7 +7894,7 @@ export type GenericGameTemplateArchiveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -7873,7 +8379,7 @@ export type GenericGameTemplateUnarchiveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -7892,7 +8398,7 @@ export type GenericGameTemplateUnarchiveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -7911,7 +8417,7 @@ export type GenericGameTemplateUnarchiveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -8393,7 +8899,7 @@ export type GenericGameTemplateRemoveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -8412,7 +8918,7 @@ export type GenericGameTemplateRemoveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -8431,7 +8937,7 @@ export type GenericGameTemplateRemoveErrors = {
         /**
          * 受控业务错误码
          */
-        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED';
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
         /**
          * 错误说明
          */
@@ -8544,9 +9050,199 @@ export type GameDispatchViewData = {
     url: '/api/v1/tenant/game-dispatch/orders/{orderId}';
 };
 
-export type GameDispatchViewResponses = {
-    200: unknown;
+export type GameDispatchViewErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
 };
+
+export type GameDispatchViewError = GameDispatchViewErrors[keyof GameDispatchViewErrors];
+
+export type GameDispatchViewResponses = {
+    /**
+     * 派单详情（含 v2 自动文案）
+     */
+    200: {
+        /**
+         * 派单详情
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 派单 id
+             */
+            dispatchOrderId: string;
+            /**
+             * 派单号
+             */
+            dispatchNo: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 客户 id
+             */
+            customerProfileId: string;
+            /**
+             * 模板名称（旧字段，v2 订单可能为空串）
+             */
+            templateName: string;
+            /**
+             * 订单提交值（按 stableKey）
+             */
+            formValues: {
+                [key: string]: unknown;
+            };
+            /**
+             * 服务时长（分钟）
+             */
+            durationMinutes: number;
+            /**
+             * 期望开始时间
+             */
+            desiredStartAt: string | null;
+            /**
+             * 派单岗位行
+             */
+            lines: Array<{
+                /**
+                 * 岗位行 id
+                 */
+                id: string;
+                /**
+                 * 岗位名称
+                 */
+                positionLabel: string;
+                /**
+                 * 需要人数
+                 */
+                requiredCount: number;
+                /**
+                 * 报名记录
+                 */
+                applications: Array<{
+                    /**
+                     * 报名 id
+                     */
+                    id: string;
+                    /**
+                     * 陪玩 id
+                     */
+                    playerId: string;
+                    /**
+                     * 陪玩名称
+                     */
+                    playerName: string;
+                    /**
+                     * 报名岗位
+                     */
+                    positionLabel: string;
+                    /**
+                     * 报名状态
+                     */
+                    status: string;
+                    /**
+                     * 报名时间
+                     */
+                    createdAt: string;
+                }>;
+            }>;
+            /**
+             * 最新轮次（无轮次时为 null）
+             */
+            round: {
+                /**
+                 * 轮次序号
+                 */
+                roundNo: number;
+                /**
+                 * 开放时间
+                 */
+                opensAt: string;
+                /**
+                 * 关闭时间
+                 */
+                closesAt: string;
+                /**
+                 * 轮次状态
+                 */
+                status: string;
+            } | null;
+            /**
+             * 派单文案（旧字段）
+             */
+            copyText: string;
+            /**
+             * 陪玩报名链接（旧字段）
+             */
+            applyUrl: string;
+            /**
+             * 老板选人链接（旧字段）
+             */
+            bossUrl: string;
+            /**
+             * v2 订单自动文案（旧订单为 null）
+             */
+            document: {
+                /**
+                 * 文案结构版本
+                 */
+                schemaVersion: number;
+                /**
+                 * 文案渲染器版本
+                 */
+                rendererVersion: number;
+                /**
+                 * 文案行（区块 / 字段 / 值）
+                 */
+                rows: Array<{
+                    /**
+                     * 区块名称
+                     */
+                    sectionLabel: string;
+                    /**
+                     * 字段名称
+                     */
+                    fieldLabel: string;
+                    /**
+                     * 字段值
+                     */
+                    value: string;
+                }>;
+                /**
+                 * 可直接复制的纯文本文案
+                 */
+                plainText: string;
+                /**
+                 * 快照生成时间
+                 */
+                generatedFromSnapshotAt: string;
+            } | null;
+        };
+    };
+};
+
+export type GameDispatchViewResponse = GameDispatchViewResponses[keyof GameDispatchViewResponses];
 
 export type GameDispatchApplicationsData = {
     body?: never;
@@ -8691,6 +9387,237 @@ export type GameDispatchAssignData = {
 export type GameDispatchAssignResponses = {
     201: unknown;
 };
+
+export type GameDispatchTemplateOrderCreateData = {
+    /**
+     * 创建派单请求（幂等键在 Idempotency-Key 请求头）
+     */
+    body: {
+        /**
+         * 游戏 id
+         */
+        gameId: string;
+        /**
+         * 模板 id
+         */
+        templateId: string;
+        /**
+         * 锁定的发布版本 id
+         */
+        templateVersionId: string;
+        /**
+         * 客户 id
+         */
+        customerProfileId: string;
+        /**
+         * 通用组件值（按 stableKey 提交，不含最终人数或价格）
+         */
+        values: {
+            [key: string]: unknown;
+        };
+        /**
+         * 期望开始时间
+         */
+        desiredStartAt?: string | null;
+        /**
+         * 服务时长（分钟）
+         */
+        durationMinutes?: number;
+    };
+    headers: {
+        'idempotency-key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/template-orders';
+};
+
+export type GameDispatchTemplateOrderCreateErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GameDispatchTemplateOrderCreateError = GameDispatchTemplateOrderCreateErrors[keyof GameDispatchTemplateOrderCreateErrors];
+
+export type GameDispatchTemplateOrderCreateResponses = {
+    /**
+     * 创建派单结果（含服务端计算与自动文案）
+     */
+    201: {
+        /**
+         * 创建派单结果
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 派单 id
+             */
+            dispatchOrderId: string;
+            /**
+             * 本单锁定的发布版本 id
+             */
+            templateVersionId: string;
+            /**
+             * 服务端计算的人数摘要
+             */
+            staffingSummary: {
+                /**
+                 * 服务端计算的总人数
+                 */
+                total: number;
+                /**
+                 * 按发布快照分组的人数
+                 */
+                rows: Array<{
+                    /**
+                     * 分组名称
+                     */
+                    label: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                }>;
+            };
+            /**
+             * 服务端计算的加价合计（十进制字符串分）
+             */
+            priceAdjustmentFen: string;
+            /**
+             * 订单自动文案
+             */
+            document: {
+                /**
+                 * 文案结构版本
+                 */
+                schemaVersion: number;
+                /**
+                 * 文案渲染器版本
+                 */
+                rendererVersion: number;
+                /**
+                 * 文案行（区块 / 字段 / 值）
+                 */
+                rows: Array<{
+                    /**
+                     * 区块名称
+                     */
+                    sectionLabel: string;
+                    /**
+                     * 字段名称
+                     */
+                    fieldLabel: string;
+                    /**
+                     * 字段值
+                     */
+                    value: string;
+                }>;
+                /**
+                 * 可直接复制的纯文本文案
+                 */
+                plainText: string;
+            };
+        };
+    };
+};
+
+export type GameDispatchTemplateOrderCreateResponse = GameDispatchTemplateOrderCreateResponses[keyof GameDispatchTemplateOrderCreateResponses];
 
 export type SlotSessionServiceSlotsData = {
     body?: never;

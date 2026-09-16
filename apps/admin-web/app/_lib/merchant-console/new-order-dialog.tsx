@@ -29,10 +29,16 @@ export function McDialog({
     document.addEventListener("keydown", onKeyDown);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // 记住触发元素，关闭时把焦点还回去（弹窗无障碍的基本要求）。
+    const trigger =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     panelRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
+      trigger?.focus();
     };
   }, [open, onClose]);
 

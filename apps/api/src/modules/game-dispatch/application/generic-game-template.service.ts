@@ -23,6 +23,10 @@ import {
   type SaveGenericTemplateDraftInput,
   type SaveGenericTemplateDraftResult,
 } from "../domain/game-template-management.js";
+import {
+  type PublishedTemplateForm,
+  type PublishedTemplateSummary,
+} from "../domain/game-template-published-read.js";
 
 /** 版本历史的查询与分页形状（版本游标按 publishedAt+id 排序）。 */
 export interface GenericTemplateVersionsQuery {
@@ -105,6 +109,14 @@ export interface GenericGameTemplateRepository {
     id: string,
     input: ExpectedRevisionInput,
   ): Promise<void>;
+  listPublishedTemplates(
+    tenantId: string,
+    gameId: string,
+  ): Promise<PublishedTemplateSummary[]>;
+  findPublishedVersionForm(
+    tenantId: string,
+    versionId: string,
+  ): Promise<PublishedTemplateForm | null>;
 }
 
 const DEFAULT_LIMIT = 30;
@@ -204,6 +216,19 @@ function requireTemplateId(id: string): string {
     throw new GenericTemplateError("TEMPLATE_NOT_FOUND", "模板不存在", {
       templateId: id,
     });
+  }
+  return id;
+}
+
+/** 版本 id 同样先做形状校验，非法值按“版本不可用”返回 422。 */ function requireVersionId(
+  id: string,
+): string {
+  if (!UUID_PATTERN.test(id)) {
+    throw new GenericTemplateError(
+      "TEMPLATE_VERSION_UNAVAILABLE",
+      "发布版本不存在、不属于该模板或不受支持",
+      { versionId: id },
+    );
   }
   return id;
 }
@@ -367,5 +392,32 @@ export class GenericGameTemplateService {
       requireTemplateId(id),
       input,
     );
+  }
+
+  /** 该游戏可派单的模板摘要（默认优先、最近使用其次），不含 config。 */
+  async listPublished(
+    tenantId: string,
+    gameId: string,
+  ): Promise<PublishedTemplateSummary[]> {
+    return this.repository.listPublishedTemplates(tenantId, gameId);
+  }
+
+  /** 读取锁定版本的发布表单；不存在或配置不可用时 422 TEMPLATE_VERSION_UNAVAILABLE。 */
+  async getVersionForm(
+    tenantId: string,
+    versionId: string,
+  ): Promise<PublishedTemplateForm> {
+    const form = await this.repository.findPublishedVersionForm(
+      tenantId,
+      requireVersionId(versionId),
+    );
+    if (form === null) {
+      throw new GenericTemplateError(
+        "TEMPLATE_VERSION_UNAVAILABLE",
+        "发布版本不存在、不属于该模板或不受支持",
+        { versionId },
+      );
+    }
+    return form;
   }
 }

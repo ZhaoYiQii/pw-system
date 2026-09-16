@@ -10,7 +10,12 @@ import {
   Post,
   Req,
 } from "@nestjs/common";
+import { ApiNotFoundResponse, ApiOkResponse } from "@nestjs/swagger";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
+import {
+  gameDispatchOrderViewSchema,
+  genericTemplateErrorSchema,
+} from "../../../openapi/schemas.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { GameDispatchService } from "../application/game-dispatch.service.js";
 import {
@@ -166,6 +171,8 @@ export class GameDispatchController {
   @TenantScope()
   @Permissions("gameDispatch.manage")
   @Get("orders/:orderId")
+  @ApiOkResponse({ schema: gameDispatchOrderViewSchema as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
   async view(
     @Req() req: AuthenticatedRequest,
     @Param("orderId") orderId: string,

@@ -28,6 +28,18 @@ export interface DispatchApplicationView {
   createdAt: string;
 }
 
+/**
+ * v2 订单自动文案：只由订单自身快照生成（发布配置 + 提交值 + 快照时间），
+ * 不读取当前模板，也不暴露内部 stableKey、semanticRole 或数据库列名。
+ */
+export interface DispatchDocumentView {
+  schemaVersion: number;
+  rendererVersion: number;
+  rows: { sectionLabel: string; fieldLabel: string; value: string }[];
+  plainText: string;
+  generatedFromSnapshotAt: string;
+}
+
 export interface DispatchView {
   orderId: string;
   dispatchOrderId: string;
@@ -48,6 +60,8 @@ export interface DispatchView {
   copyText: string;
   applyUrl: string;
   bossUrl: string;
+  /** v2 订单的自动文案；旧订单或快照不可解析时为 null。 */
+  document: DispatchDocumentView | null;
 }
 
 export interface DispatchListRow {

@@ -1,16 +1,36 @@
 "use client";
 
+/**
+ * 订单详情（S4：整页迁移到新栈 + 挂载 v2 文案面板）。
+ *
+ * 迁移边界（仓库 AGENTS「改到即迁」）：
+ * - 不再使用 mc-* 旧类，也不再用 demo-ui 的旧弹窗/提示；改用 components/ui + Tailwind；
+ * - 数据流保持 TanStack Query，不改变接口、状态机、金额与权限判断；
+ * - 文案只展示服务端返回的 document（v2）或历史 copyText（旧订单），前端不做拼装。
+ */
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Clipboard, Copy, RefreshCw } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+  ArrowLeft,
+  ArrowRight,
+  Clipboard,
+  Copy,
+  RefreshCw,
+} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiFetch } from "../api";
 import { formatFenYuan } from "../money";
-import { DemoDialog, DemoEmptyState, useDemoToast } from "./demo-ui";
 import {
   type ApplicationView,
   type DispatchDetail,
@@ -20,7 +40,138 @@ import {
   statusLabel,
   toneFor,
 } from "./merchant-api";
+import { McDialog } from "./new-order-dialog";
+import { OrderDocumentPanel } from "./order-document-panel";
 import { useMerchantRole } from "./role-context";
+
+/** 新栈提示：右下角浮层 + aria-live，替代 demo-ui 的 mc-toast。 */
+function useToast(): {
+  toast: ReactNode;
+  showToast: (message: string) => void;
+} {
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
+  return {
+    toast: message ? (
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed bottom-6 right-6 z-50 rounded-lg bg-foreground px-4 py-2 text-sm text-background shadow-lg"
+      >
+        {message}
+      </div>
+    ) : null,
+    showToast: (text: string) => setMessage(text),
+  };
+}
+
+function statusVariant(tone: string) {
+  if (tone === "pending") return "outline" as const;
+  if (tone === "dispatch") return "default" as const;
+  if (tone === "assigned") return "secondary" as const;
+  if (tone === "running") return "default" as const;
+  if (tone === "done") return "secondary" as const;
+  if (tone === "danger") return "destructive" as const;
+  return "outline" as const;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <Badge variant={statusVariant(toneFor(status))}>
+      {statusLabel(status)}
+    </Badge>
+  );
+}
+
+/** 键值事实表。 */
+function Facts({ items }: { items: { label: string; value: string }[] }) {
+  return (
+    <dl className="grid gap-2 sm:grid-cols-2">
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex items-baseline justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+        >
+          <dt className="text-muted-foreground">{item.label}</dt>
+          <dd className="truncate font-mono text-xs">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function SectionHeading({
+  title,
+  hint,
+  extra,
+}: {
+  title: string;
+  hint?: string;
+  extra?: ReactNode;
+}) {
+  return (
+    <header className="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      </div>
+      {extra}
+    </header>
+  );
+}
+
+function ErrorNotice({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <p
+      role="alert"
+      className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+    >
+      {message}
+    </p>
+  );
+}
+
+/** 新栈确认弹窗：复用 McDialog 壳（Esc/遮罩/焦点恢复），按钮由调用方给出。 */
+function ConfirmDialog({
+  open,
+  title,
+  confirmLabel,
+  busy = false,
+  onCancel,
+  onConfirm,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  confirmLabel: string;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <McDialog open={open} title={title} onClose={onCancel}>
+      <div className="space-y-4">
+        <div className="text-sm text-muted-foreground">{children}</div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            取消
+          </Button>
+          <Button type="button" disabled={busy} onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </McDialog>
+  );
+}
 
 export function OrderDetailView({
   orderId,
@@ -37,15 +188,9 @@ export function OrderDetailView({
 }
 
 // ---------------------------------------------------------------- GD
-function GdOrderDetail({
-  orderId,
-  role,
-}: {
-  orderId: string;
-  role: string;
-}) {
+function GdOrderDetail({ orderId, role }: { orderId: string; role: string }) {
   const queryClient = useQueryClient();
-  const { toast, showToast } = useDemoToast();
+  const { toast, showToast } = useToast();
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [confirmAction, setConfirmAction] = useState<
     "publish" | "settle" | null
@@ -137,22 +282,21 @@ function GdOrderDetail({
   };
 
   if (query.isPending) {
-    return <div className="mc-empty">加载派单详情…</div>;
+    return <p className="p-6 text-sm text-muted-foreground">加载派单详情…</p>;
   }
   if (query.isError || !data) {
     return (
-      <section className="mc-panel">
-        <DemoEmptyState
-          title="没有找到这张派单"
-          description={
-            query.error instanceof Error ? query.error.message : "数据不存在"
-          }
-        >
-          <Link href="/merchant-console/dispatch" className="mc-btn">
-            返回订单台账
-          </Link>
-        </DemoEmptyState>
-      </section>
+      <Card>
+        <CardContent className="space-y-3 p-6">
+          <h1 className="text-base font-semibold">没有找到这张派单</h1>
+          <p className="text-sm text-muted-foreground">
+            {query.error instanceof Error ? query.error.message : "数据不存在"}
+          </p>
+          <Button asChild variant="outline">
+            <Link href="/merchant-console/dispatch">返回订单台账</Link>
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -163,34 +307,47 @@ function GdOrderDetail({
         .map((a) => `${a.playerName}（${line.positionLabel}）`),
     )
     .join("、");
+  const selectedCount = data.lines.reduce(
+    (sum, line) =>
+      sum + line.applications.filter((a) => a.status === "SELECTED").length,
+    0,
+  );
 
   return (
-    <div>
-      <Link href="/merchant-console/dispatch" className="mc-back">
-        <ArrowLeft size={15} /> 返回订单与派单
+    <div className="space-y-4">
+      <Link
+        href="/merchant-console/dispatch"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft size={15} aria-hidden="true" /> 返回订单与派单
       </Link>
-      <div className="mc-pagehead mc-detail-head">
+
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="mc-kicker">GAME_DISPATCH / DETAIL</div>
-          <div className="mc-detail-title">
-            <h1 className="mc-mono">{data.dispatchNo}</h1>
-            <span className={`mc-status st-${toneFor(data.status)}`}>
-              {statusLabel(data.status)}
-            </span>
+          <p className="font-mono text-xs text-muted-foreground">
+            GAME_DISPATCH / DETAIL
+          </p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-mono text-lg font-semibold">
+              {data.dispatchNo}
+            </h1>
+            <StatusBadge status={data.status} />
           </div>
-          <p>派单详情 · 复制文案后发送到陪玩群</p>
+          <p className="text-sm text-muted-foreground">
+            派单详情 · 复制文案后发送到陪玩群
+          </p>
         </div>
-        <div className="mc-button-row">
-          <button
+        <div className="flex flex-wrap gap-2">
+          <Button
             type="button"
-            className="mc-btn"
+            variant="outline"
             onClick={() => void copyText(data.copyText, "群文案")}
           >
-            <Clipboard size={15} /> 复制群文案
-          </button>
-          <button
+            <Clipboard size={15} aria-hidden="true" /> 复制群文案
+          </Button>
+          <Button
             type="button"
-            className="mc-btn"
+            variant="outline"
             onClick={() =>
               void copyText(
                 selectedText
@@ -200,206 +357,232 @@ function GdOrderDetail({
               )
             }
           >
-            <Copy size={15} /> 复制已选定
-          </button>
+            <Copy size={15} aria-hidden="true" /> 复制已选定
+          </Button>
         </div>
-      </div>
+      </header>
 
-      {error ? <div className="mc-notice">{error}</div> : null}
+      <ErrorNotice message={error} />
 
-      <div className="mc-detailgrid">
-        <div>
-          <section className="mc-panel mc-facts">
-            <dl className="mc-fact">
-              <dt>报名链接</dt>
-              <dd className="mc-mono">{data.applyUrl || "发布后生成"}</dd>
-            </dl>
-            <dl className="mc-fact">
-              <dt>老板选人链接</dt>
-              <dd className="mc-mono">{data.bossUrl || "发布后生成"}</dd>
-            </dl>
-            <dl className="mc-fact">
-              <dt>报名轮次</dt>
-              <dd className="mc-mono">
-                {data.round ? `第 ${data.round.roundNo} 轮` : "未开始"}
-              </dd>
-            </dl>
-            {data.round ? (
-              <dl className="mc-fact">
-                <dt>截止时间</dt>
-                <dd className="mc-mono">{dateTime(data.round.closesAt)}</dd>
-              </dl>
-            ) : null}
-          </section>
+      <OrderDocumentPanel
+        document={data.document ?? null}
+        fallbackText={data.copyText}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <SectionHeading
+                title="派单信息"
+                hint="发布后生成报名与选人链接"
+              />
+              <Facts
+                items={[
+                  { label: "报名链接", value: data.applyUrl || "发布后生成" },
+                  {
+                    label: "老板选人链接",
+                    value: data.bossUrl || "发布后生成",
+                  },
+                  {
+                    label: "报名轮次",
+                    value: data.round
+                      ? `第 ${data.round.roundNo} 轮`
+                      : "未开始",
+                  },
+                  {
+                    label: "截止时间",
+                    value: data.round ? dateTime(data.round.closesAt) : "-",
+                  },
+                ]}
+              />
+            </CardContent>
+          </Card>
 
           {data.lines.length ? (
-            <section className="mc-panel mc-applicants">
-              <div className="mc-section-head">
-                <div>
-                  <h2>报名席位</h2>
-                  <p>勾选报名中的陪玩后可批量确认</p>
-                </div>
-                <span className="mc-sub">{data.lines.length} 个岗位</span>
-              </div>
-              {data.lines.map((line) => {
-                const selected = line.applications.filter(
-                  (a) => a.status === "SELECTED",
-                ).length;
-                const canPick = data.status === "DISPATCHING";
-                return (
-                  <div key={line.id} className="mc-role-label">
-                    <span>
-                      {line.positionLabel} · 需要 {line.requiredCount} 人
+            <Card>
+              <CardContent className="space-y-3 p-4">
+                <SectionHeading
+                  title="报名席位"
+                  hint="勾选报名中的陪玩后可批量确认"
+                  extra={
+                    <span className="text-xs text-muted-foreground">
+                      {data.lines.length} 个岗位
                     </span>
-                    <span>
-                      {selected} / {line.requiredCount} 已确认
-                    </span>
-                    <div className="mc-seats mc-seats-inline">
-                      {line.applications.map((app) => {
-                        const chosen = checked.has(app.id);
-                        return (
-                          <div
-                            className={`mc-candidate${chosen ? " chosen" : ""}`}
-                            key={app.id}
-                          >
-                            <input
-                              type="checkbox"
-                              id={`pick-${app.id}`}
-                              disabled={!canOperate || !canPick}
-                              checked={
-                                app.status === "SELECTED" || chosen
-                              }
-                              onChange={() =>
-                                setChecked((prev) => {
-                                  const next = new Set(prev);
-                                  if (next.has(app.id)) next.delete(app.id);
-                                  else next.add(app.id);
-                                  return next;
-                                })
-                              }
-                            />
-                            <label htmlFor={`pick-${app.id}`}>
-                              <span className="mc-avatar mc-avatar-sm" aria-hidden="true">
-                                {app.playerName.slice(0, 1)}
-                              </span>
-                              <span>
-                                <b>{app.playerName}</b>
-                                <small>
-                                  {app.status === "APPLIED"
-                                    ? "已报名"
-                                    : app.status === "SELECTED"
-                                      ? "已确认"
-                                      : app.status}
-                                  {" · "}
-                                  {dateTime(app.createdAt)}
-                                </small>
-                              </span>
-                            </label>
-                            {canOperate && canPick && app.status === "APPLIED" ? (
-                              <button
-                                type="button"
-                                className="mc-remove"
-                                onClick={() => removeApp.mutate(app.id)}
-                              >
-                                移除
-                              </button>
-                            ) : null}
-                          </div>
-                        );
-                      })}
+                  }
+                />
+                {data.lines.map((line) => {
+                  const selected = line.applications.filter(
+                    (a) => a.status === "SELECTED",
+                  ).length;
+                  const canPick = data.status === "DISPATCHING";
+                  return (
+                    <div
+                      key={line.id}
+                      className="space-y-2 rounded-lg border p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span className="font-medium">
+                          {line.positionLabel} · 需要 {line.requiredCount} 人
+                        </span>
+                        <span className="text-muted-foreground">
+                          {selected} / {line.requiredCount} 已确认
+                        </span>
+                      </div>
                       {line.applications.length === 0 ? (
-                        <div className="mc-empty mc-empty-compact">
+                        <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
                           暂无报名，等待陪玩报名。
-                        </div>
+                        </p>
                       ) : null}
+                      <ul className="space-y-1">
+                        {line.applications.map((app) => {
+                          const chosen = checked.has(app.id);
+                          return (
+                            <li
+                              key={app.id}
+                              className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm ${
+                                chosen ? "border-primary bg-accent/40" : ""
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                id={`pick-${app.id}`}
+                                disabled={!canOperate || !canPick}
+                                checked={app.status === "SELECTED" || chosen}
+                                onChange={() =>
+                                  setChecked((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(app.id)) next.delete(app.id);
+                                    else next.add(app.id);
+                                    return next;
+                                  })
+                                }
+                              />
+                              <label
+                                htmlFor={`pick-${app.id}`}
+                                className="flex flex-1 items-center gap-2"
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className="flex size-7 items-center justify-center rounded-full bg-muted text-xs"
+                                >
+                                  {app.playerName.slice(0, 1)}
+                                </span>
+                                <span>
+                                  <b className="font-medium">
+                                    {app.playerName}
+                                  </b>
+                                  <small className="block text-xs text-muted-foreground">
+                                    {app.status === "APPLIED"
+                                      ? "已报名"
+                                      : app.status === "SELECTED"
+                                        ? "已确认"
+                                        : app.status}
+                                    {" · "}
+                                    {dateTime(app.createdAt)}
+                                  </small>
+                                </span>
+                              </label>
+                              {canOperate &&
+                              canPick &&
+                              app.status === "APPLIED" ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeApp.mutate(app.id)}
+                                >
+                                  移除
+                                </Button>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
                     </div>
-                  </div>
-                );
-              })}
-            </section>
+                  );
+                })}
+              </CardContent>
+            </Card>
           ) : null}
         </div>
 
-        <aside className="mc-panel mc-review">
-          <div className="mc-review-top">
-            <h2>派单动作</h2>
-            <span>{canOperate ? "按状态开放" : "只读"}</span>
-          </div>
-          <div className="mc-review-group">
-            <div className="mc-summary-line">
-              <span>当前状态</span>
-              <b>{statusLabel(data.status)}</b>
+        <Card className="h-fit">
+          <CardContent className="space-y-3 p-4">
+            <SectionHeading
+              title="派单动作"
+              hint={canOperate ? "按状态开放" : "只读"}
+            />
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">当前状态</span>
+                <b>{statusLabel(data.status)}</b>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">已选人数</span>
+                <b>{selectedCount}</b>
+              </div>
             </div>
-            <div className="mc-summary-line">
-              <span>已选人数</span>
-              <b>
-                {data.lines.reduce(
-                  (sum, line) =>
-                    sum +
-                    line.applications.filter(
-                      (a) => a.status === "SELECTED",
-                    ).length,
-                  0,
-                )}
-              </b>
-            </div>
-          </div>
-          {canOperate && ["DRAFT", "CONFIRMED"].includes(data.status) ? (
-            <button
+            {canOperate && ["DRAFT", "CONFIRMED"].includes(data.status) ? (
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => setConfirmAction("publish")}
+              >
+                发布派单
+              </Button>
+            ) : null}
+            {canOperate && data.status === "DISPATCHING" ? (
+              <Button
+                type="button"
+                className="w-full"
+                disabled={checked.size === 0 || assign.isPending}
+                onClick={() => assign.mutate()}
+              >
+                确认选中 · {checked.size} 人
+              </Button>
+            ) : null}
+            {canOperate && data.status === "PENDING_CONFIRMATION" ? (
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => setConfirmAction("settle")}
+              >
+                确认结算
+              </Button>
+            ) : null}
+            <Button
               type="button"
-              className="mc-btn mc-btn-primary mc-review-confirm"
-              onClick={() => setConfirmAction("publish")}
+              variant="outline"
+              className="w-full"
+              onClick={() => invalidate()}
             >
-              发布派单
-            </button>
-          ) : null}
-          {canOperate && data.status === "DISPATCHING" ? (
-            <button
-              type="button"
-              className="mc-btn mc-btn-primary mc-review-confirm"
-              disabled={checked.size === 0 || assign.isPending}
-              onClick={() => assign.mutate()}
-            >
-              确认选中 · {checked.size} 人
-            </button>
-          ) : null}
-          {canOperate && data.status === "PENDING_CONFIRMATION" ? (
-            <button
-              type="button"
-              className="mc-btn mc-btn-primary mc-review-confirm"
-              onClick={() => setConfirmAction("settle")}
-            >
-              确认结算
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="mc-btn mc-btn-ghost"
-            onClick={() => invalidate()}
-          >
-            <RefreshCw size={14} /> 刷新报名
-          </button>
-        </aside>
+              <RefreshCw size={14} aria-hidden="true" /> 刷新报名
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      <DemoDialog
+      <ConfirmDialog
         open={confirmAction === "publish"}
         title="发布派单"
         confirmLabel="发布派单"
+        busy={publish.isPending}
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => publish.mutate()}
       >
         <p>{data.dispatchNo} 发布后将开放报名通道。</p>
-      </DemoDialog>
-      <DemoDialog
+      </ConfirmDialog>
+      <ConfirmDialog
         open={confirmAction === "settle"}
         title="确认结算"
         confirmLabel="确认结算"
+        busy={settle.isPending}
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => settle.mutate()}
       >
         <p>确认按实际时长向老板扣费并结算陪玩收入？</p>
-      </DemoDialog>
+      </ConfirmDialog>
       {toast}
     </div>
   );
@@ -414,14 +597,13 @@ function ClassicOrderDetail({
   role: string;
 }) {
   const queryClient = useQueryClient();
-  const { toast, showToast } = useDemoToast();
+  const { toast, showToast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
 
   const detailQuery = useQuery({
     queryKey: ["merchant", "dispatch", "classic", orderId],
-    queryFn: () =>
-      apiFetch<OrderView>(`/api/v1/tenant/orders/${orderId}`),
+    queryFn: () => apiFetch<OrderView>(`/api/v1/tenant/orders/${orderId}`),
     retry: false,
   });
   const detail = detailQuery.data;
@@ -433,9 +615,13 @@ function ClassicOrderDetail({
       ),
     enabled:
       detail !== undefined &&
-      ["DISPATCHING", "ASSIGNED", "READY", "IN_PROGRESS", "PENDING_CONFIRMATION"].includes(
-        detail.status,
-      ),
+      [
+        "DISPATCHING",
+        "ASSIGNED",
+        "READY",
+        "IN_PROGRESS",
+        "PENDING_CONFIRMATION",
+      ].includes(detail.status),
     retry: false,
   });
   const sessionQuery = useQuery({
@@ -465,10 +651,7 @@ function ClassicOrderDetail({
   };
 
   const mutate = useMutation({
-    mutationFn: (payload: {
-      action: string;
-      body?: unknown;
-    }) =>
+    mutationFn: (payload: { action: string; body?: unknown }) =>
       apiFetch<unknown>(`/api/v1/tenant/orders/${orderId}/${payload.action}`, {
         method: "POST",
         ...(payload.body !== undefined
@@ -510,23 +693,24 @@ function ClassicOrderDetail({
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
 
-  if (detailQuery.isPending) return <div className="mc-empty">加载订单…</div>;
+  if (detailQuery.isPending) {
+    return <p className="p-6 text-sm text-muted-foreground">加载订单…</p>;
+  }
   if (detailQuery.isError || !detail) {
     return (
-      <section className="mc-panel">
-        <DemoEmptyState
-          title="没有找到这张订单"
-          description={
-            detailQuery.error instanceof Error
+      <Card>
+        <CardContent className="space-y-3 p-6">
+          <h1 className="text-base font-semibold">没有找到这张订单</h1>
+          <p className="text-sm text-muted-foreground">
+            {detailQuery.error instanceof Error
               ? detailQuery.error.message
-              : "订单不存在"
-          }
-        >
-          <Link href="/merchant-console/dispatch" className="mc-btn">
-            返回订单台账
-          </Link>
-        </DemoEmptyState>
-      </section>
+              : "订单不存在"}
+          </p>
+          <Button asChild variant="outline">
+            <Link href="/merchant-console/dispatch">返回订单台账</Link>
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -534,10 +718,7 @@ function ClassicOrderDetail({
     ? [
         { label: "客户", value: detail.customerName },
         { label: "需求描述", value: detail.requirement.description || "-" },
-        {
-          label: "服务产品",
-          value: detail.requirement.productName ?? "-",
-        },
+        { label: "服务产品", value: detail.requirement.productName ?? "-" },
         {
           label: "计划时长",
           value: detail.requirement.durationSeconds
@@ -552,267 +733,270 @@ function ClassicOrderDetail({
     : [{ label: "客户", value: detail.customerName }];
 
   return (
-    <div>
-      <Link href="/merchant-console/dispatch" className="mc-back">
-        <ArrowLeft size={15} /> 返回订单与派单
+    <div className="space-y-4">
+      <Link
+        href="/merchant-console/dispatch"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft size={15} aria-hidden="true" /> 返回订单与派单
       </Link>
-      <div className="mc-pagehead mc-detail-head">
-        <div>
-          <div className="mc-kicker">CLASSIC / DETAIL</div>
-          <div className="mc-detail-title">
-            <h1 className="mc-mono">{detail.orderNo}</h1>
-            <span className={`mc-status st-${toneFor(detail.status)}`}>
-              {statusLabel(detail.status)}
-            </span>
-          </div>
-          <p>{detail.customerName}</p>
-        </div>
-      </div>
-      {error ? <div className="mc-notice">{error}</div> : null}
 
-      <div className="mc-detailgrid">
-        <div>
-          <section className="mc-panel mc-facts">
-            {facts.map((fact) => (
-              <dl className="mc-fact" key={fact.label}>
-                <dt>{fact.label}</dt>
-                <dd>{fact.value}</dd>
-              </dl>
-            ))}
-          </section>
+      <header className="space-y-1">
+        <p className="font-mono text-xs text-muted-foreground">
+          CLASSIC / DETAIL
+        </p>
+        <div className="flex items-center gap-2">
+          <h1 className="font-mono text-lg font-semibold">{detail.orderNo}</h1>
+          <StatusBadge status={detail.status} />
+        </div>
+        <p className="text-sm text-muted-foreground">{detail.customerName}</p>
+      </header>
+
+      <ErrorNotice message={error} />
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <SectionHeading title="订单信息" />
+              <Facts items={facts} />
+            </CardContent>
+          </Card>
 
           {detail.snapshot && detail.snapshot.length > 0 ? (
-            <section className="mc-panel">
-              <div className="mc-section-head">
-                <div>
-                  <h2>价格快照</h2>
-                  <p>订单确认后冻结</p>
-                </div>
-              </div>
-              <div className="mc-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>产品</th>
-                      <th>单价</th>
-                      <th>小计</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.snapshot.map((s, i) => (
-                      <tr key={i}>
-                        <td>{s.productName}</td>
-                        <td>{formatFenYuan(s.unitPriceFen)}</td>
-                        <td>{formatFenYuan(s.lineTotalFen)}</td>
-                      </tr>
+            <Card>
+              <CardContent className="space-y-3 p-4">
+                <SectionHeading title="价格快照" hint="订单确认后冻结" />
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>产品</TableHead>
+                      <TableHead>单价</TableHead>
+                      <TableHead>小计</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {detail.snapshot.map((snapshot, index) => (
+                      <TableRow key={`${snapshot.productName}-${index}`}>
+                        <TableCell>{snapshot.productName}</TableCell>
+                        <TableCell>
+                          {formatFenYuan(snapshot.unitPriceFen)}
+                        </TableCell>
+                        <TableCell>
+                          {formatFenYuan(snapshot.lineTotalFen)}
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           ) : null}
 
           {applications.length > 0 &&
           ["DISPATCHING", "ASSIGNED"].includes(detail.status) ? (
-            <section className="mc-panel">
-              <div className="mc-section-head">
-                <div>
-                  <h2>报名（{applications.length}）</h2>
-                  <p>报名后先入候选，再指派对应陪玩</p>
-                </div>
-              </div>
-              <div className="mc-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>陪玩</th>
-                      <th>状态</th>
-                      <th>备注</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+            <Card>
+              <CardContent className="space-y-3 p-4">
+                <SectionHeading
+                  title={`报名（${applications.length}）`}
+                  hint="报名后先入候选，再指派对应陪玩"
+                />
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>陪玩</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>备注</TableHead>
+                      <TableHead>操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {applications.map((app) => (
-                      <tr key={app.id}>
-                        <td>{app.playerName}</td>
-                        <td>
-                          <span className={`mc-status st-${toneFor(app.status)}`}>
-                            {app.status}
-                          </span>
-                        </td>
-                        <td>{app.playerNote ?? "-"}</td>
-                        <td>
+                      <TableRow key={app.id}>
+                        <TableCell>{app.playerName}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={app.status} />
+                        </TableCell>
+                        <TableCell>{app.playerNote ?? "-"}</TableCell>
+                        <TableCell>
                           {detail.status === "DISPATCHING" ? (
-                            <div className="mc-button-row">
+                            <div className="flex gap-2">
                               {app.status === "APPLIED" ? (
-                                <button
+                                <Button
                                   type="button"
-                                  className="mc-btn mc-btn-ghost mc-btn-small"
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => shortlist.mutate(app.id)}
                                 >
                                   入候选
-                                </button>
+                                </Button>
                               ) : null}
                               {app.status === "SHORTLISTED" ? (
-                                <button
+                                <Button
                                   type="button"
-                                  className="mc-btn mc-btn-primary mc-btn-small"
+                                  size="sm"
                                   disabled={assign.isPending}
                                   onClick={() => {
                                     if (
                                       window.confirm(
                                         `确认指派 ${app.playerName}？`,
                                       )
-                                    )
+                                    ) {
                                       assign.mutate(app.id);
+                                    }
                                   }}
                                 >
                                   指派
-                                </button>
+                                </Button>
                               ) : null}
                             </div>
                           ) : null}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           ) : null}
 
-          <section className="mc-panel">
-            <div className="mc-section-head">
-              <div>
-                <h2>状态时间线</h2>
-                <p>服务端状态变更留痕</p>
-              </div>
-            </div>
-            {detail.timeline.length ? (
-              <ol className="mc-timeline">
-                {detail.timeline.map((e, idx) => (
-                  <li key={idx}>
-                    <time>{dateTime(e.occurredAt)}</time>
-                    <b>{e.eventType}</b>
-                    <p>
-                      {e.fromStatus ?? "—"} → {e.toStatus ?? "—"}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mc-muted-text">暂无状态变更记录。</p>
-            )}
-          </section>
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <SectionHeading title="状态时间线" hint="服务端状态变更留痕" />
+              {detail.timeline.length ? (
+                <ol className="space-y-2 text-sm">
+                  {detail.timeline.map((event, index) => (
+                    <li
+                      key={`${event.eventType}-${index}`}
+                      className="rounded-lg border px-3 py-2"
+                    >
+                      <time className="font-mono text-xs text-muted-foreground">
+                        {dateTime(event.occurredAt)}
+                      </time>
+                      <b className="ml-2">{event.eventType}</b>
+                      <p className="text-xs text-muted-foreground">
+                        {event.fromStatus ?? "—"} → {event.toStatus ?? "—"}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  暂无状态变更记录。
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        <aside className="mc-panel mc-review">
-          <div className="mc-review-top">
-            <h2>订单动作</h2>
-            <span>{canOperate ? "按状态开放" : "只读"}</span>
-          </div>
-          <div className="mc-review-group">
-            <div className="mc-summary-line">
-              <span>当前状态</span>
-              <b>{statusLabel(detail.status)}</b>
+        <Card className="h-fit">
+          <CardContent className="space-y-3 p-4">
+            <SectionHeading
+              title="订单动作"
+              hint={canOperate ? "按状态开放" : "只读"}
+            />
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">当前状态</span>
+                <b>{statusLabel(detail.status)}</b>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">数据来源</span>
+                <b>订单接口</b>
+              </div>
             </div>
-            <div className="mc-summary-line">
-              <span>数据来源</span>
-              <b>订单接口</b>
+            <div className="space-y-2">
+              {detail.status === "DRAFT" && canOperate ? (
+                <>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => mutate.mutate({ action: "confirm" })}
+                  >
+                    确认订单
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      mutate.mutate({
+                        action: "cancel",
+                        body: { reason: "手动取消" },
+                      })
+                    }
+                  >
+                    取消
+                  </Button>
+                </>
+              ) : null}
+              {detail.status === "CONFIRMED" && canOperate ? (
+                <>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => mutate.mutate({ action: "publish" })}
+                  >
+                    发布派单
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      mutate.mutate({
+                        action: "cancel",
+                        body: { reason: "手动取消" },
+                      })
+                    }
+                  >
+                    取消
+                  </Button>
+                </>
+              ) : null}
+              {["ASSIGNED", "READY"].includes(detail.status) && canOperate ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => mutate.mutate({ action: "session/start" })}
+                >
+                  开始场次
+                </Button>
+              ) : null}
+              {detail.status === "IN_PROGRESS" && canOperate ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => mutate.mutate({ action: "session/end" })}
+                >
+                  结束场次
+                </Button>
+              ) : null}
+              {detail.status === "PENDING_CONFIRMATION" && canOperate ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => mutate.mutate({ action: "staff-confirm" })}
+                >
+                  客服确认完成
+                </Button>
+              ) : null}
             </div>
-          </div>
-          <div className="mc-button-row">
-            {detail.status === "DRAFT" && canOperate ? (
-              <>
-                <button
-                  type="button"
-                  className="mc-btn mc-btn-primary"
-                  onClick={() => mutate.mutate({ action: "confirm" })}
-                >
-                  确认订单
-                </button>
-                <button
-                  type="button"
-                  className="mc-btn"
-                  onClick={() =>
-                    mutate.mutate({
-                      action: "cancel",
-                      body: { reason: "手动取消" },
-                    })
-                  }
-                >
-                  取消
-                </button>
-              </>
+            {sessionInfo ? (
+              <p className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                场次：{sessionInfo.status} · 开始{" "}
+                {dateTime(sessionInfo.startedAt)} · 结束{" "}
+                {dateTime(sessionInfo.endedAt)}
+              </p>
             ) : null}
-            {detail.status === "CONFIRMED" && canOperate ? (
-              <>
-                <button
-                  type="button"
-                  className="mc-btn mc-btn-primary"
-                  onClick={() => mutate.mutate({ action: "publish" })}
-                >
-                  发布派单
-                </button>
-                <button
-                  type="button"
-                  className="mc-btn"
-                  onClick={() =>
-                    mutate.mutate({
-                      action: "cancel",
-                      body: { reason: "手动取消" },
-                    })
-                  }
-                >
-                  取消
-                </button>
-              </>
-            ) : null}
-            {["ASSIGNED", "READY"].includes(detail.status) && canOperate ? (
-              <button
-                type="button"
-                className="mc-btn mc-btn-primary"
-                onClick={() =>
-                  mutate.mutate({ action: "session/start" })
-                }
-              >
-                开始场次
-              </button>
-            ) : null}
-            {detail.status === "IN_PROGRESS" && canOperate ? (
-              <button
-                type="button"
-                className="mc-btn mc-btn-primary"
-                onClick={() => mutate.mutate({ action: "session/end" })}
-              >
-                结束场次
-              </button>
-            ) : null}
-            {detail.status === "PENDING_CONFIRMATION" && canOperate ? (
-              <button
-                type="button"
-                className="mc-btn mc-btn-primary"
-                onClick={() => mutate.mutate({ action: "staff-confirm" })}
-              >
-                客服确认完成
-              </button>
-            ) : null}
-          </div>
-          {sessionInfo ? (
-            <div className="mc-notice">
-              场次：{sessionInfo.status} · 开始{" "}
-              {dateTime(sessionInfo.startedAt)} · 结束{" "}
-              {dateTime(sessionInfo.endedAt)}
-            </div>
-          ) : null}
-          <Link
-            href="/merchant-console/sessions"
-            className="mc-btn mc-btn-ghost"
-          >
-            查看场次与证据
-            <ArrowRight size={14} />
-          </Link>
-        </aside>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/merchant-console/sessions">
+                查看场次与证据
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
       {toast}
     </div>

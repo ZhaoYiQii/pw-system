@@ -5471,7 +5471,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -5515,7 +5518,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -6396,7 +6402,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -6440,7 +6449,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -6484,7 +6496,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -6528,7 +6543,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -6550,6 +6568,996 @@
           }
         },
         "summary": "创建模板（生成最小有效 v2 草稿）",
+        "tags": [
+          "通用派单模板（S2）",
+          "通用派单模板（S2）"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch-templates/published": {
+      "get": {
+        "operationId": "genericGameTemplate_listPublished",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "按游戏过滤"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "templateId",
+                          "name",
+                          "versionId",
+                          "versionNo",
+                          "isDefault",
+                          "lastUsedAt"
+                        ],
+                        "properties": {
+                          "templateId": {
+                            "type": "string",
+                            "description": "模板 id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "模板名称"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "模板说明"
+                          },
+                          "versionId": {
+                            "type": "string",
+                            "description": "锁定的发布版本 id"
+                          },
+                          "versionNo": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "版本号"
+                          },
+                          "isDefault": {
+                            "type": "boolean",
+                            "description": "是否为该游戏默认模板"
+                          },
+                          "lastUsedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "最近使用时间"
+                          }
+                        },
+                        "description": "可派单模板摘要"
+                      }
+                    }
+                  },
+                  "description": "该游戏可派单的模板（默认优先，其次最近使用）"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "该游戏可派单的模板（未归档且有生效版本，默认优先）",
+        "tags": [
+          "通用派单模板（S2）",
+          "通用派单模板（S2）"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch-templates/versions/{versionId}/form": {
+      "get": {
+        "operationId": "genericGameTemplate_getVersionForm",
+        "parameters": [
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "templateId",
+                        "gameId",
+                        "versionId",
+                        "versionNo",
+                        "config"
+                      ],
+                      "properties": {
+                        "templateId": {
+                          "type": "string",
+                          "description": "模板 id"
+                        },
+                        "gameId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true,
+                          "description": "所属游戏 id（未归类模板为 null）"
+                        },
+                        "versionId": {
+                          "type": "string",
+                          "description": "发布版本 id"
+                        },
+                        "versionNo": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "版本号"
+                        },
+                        "config": {
+                          "type": "object",
+                          "required": [
+                            "schemaVersion",
+                            "sections",
+                            "components",
+                            "staffingSource",
+                            "documentRendererVersion"
+                          ],
+                          "properties": {
+                            "schemaVersion": {
+                              "type": "integer",
+                              "enum": [
+                                2
+                              ],
+                              "description": "配置版本（固定 2）"
+                            },
+                            "sections": {
+                              "type": "array",
+                              "maxItems": 20,
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "stableKey",
+                                  "label",
+                                  "enabled",
+                                  "sortOrder",
+                                  "layout"
+                                ],
+                                "properties": {
+                                  "stableKey": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                    "description": "区块稳定键（发布后不可改）"
+                                  },
+                                  "label": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 50,
+                                    "description": "区块名称"
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "maxLength": 500,
+                                    "description": "区块说明"
+                                  },
+                                  "enabled": {
+                                    "type": "boolean",
+                                    "description": "区块是否启用"
+                                  },
+                                  "sortOrder": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "description": "区块顺序"
+                                  },
+                                  "layout": {
+                                    "type": "object",
+                                    "required": [
+                                      "columns"
+                                    ],
+                                    "properties": {
+                                      "columns": {
+                                        "type": "integer",
+                                        "enum": [
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ],
+                                        "description": "列数（1-4）"
+                                      },
+                                      "density": {
+                                        "type": "string",
+                                        "enum": [
+                                          "comfortable",
+                                          "compact"
+                                        ],
+                                        "description": "密度"
+                                      },
+                                      "align": {
+                                        "type": "string",
+                                        "enum": [
+                                          "left",
+                                          "center"
+                                        ],
+                                        "description": "对齐"
+                                      }
+                                    },
+                                    "description": "区块布局"
+                                  }
+                                },
+                                "description": "模板区块"
+                              },
+                              "description": "内容区块"
+                            },
+                            "components": {
+                              "type": "array",
+                              "maxItems": 100,
+                              "items": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "kind",
+                                      "stableKey",
+                                      "sectionKey",
+                                      "label",
+                                      "enabled",
+                                      "sortOrder",
+                                      "layout",
+                                      "fieldType",
+                                      "semanticRole",
+                                      "required"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "FIELD",
+                                        "description": "组件类型"
+                                      },
+                                      "stableKey": {
+                                        "type": "string",
+                                        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                        "description": "组件稳定键"
+                                      },
+                                      "sectionKey": {
+                                        "type": "string",
+                                        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                        "description": "所属区块稳定键"
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50,
+                                        "description": "组件名称"
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "description": "组件说明"
+                                      },
+                                      "enabled": {
+                                        "type": "boolean",
+                                        "description": "组件是否启用"
+                                      },
+                                      "sortOrder": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "组件顺序"
+                                      },
+                                      "layout": {
+                                        "type": "object",
+                                        "required": [
+                                          "colSpan",
+                                          "rowBreakBefore"
+                                        ],
+                                        "properties": {
+                                          "colSpan": {
+                                            "type": "integer",
+                                            "enum": [
+                                              1,
+                                              2,
+                                              3,
+                                              4
+                                            ],
+                                            "description": "栅格宽度（1-4）"
+                                          },
+                                          "rowBreakBefore": {
+                                            "type": "boolean",
+                                            "description": "是否在此组件前换行"
+                                          }
+                                        },
+                                        "description": "组件布局"
+                                      },
+                                      "fieldType": {
+                                        "type": "string",
+                                        "enum": [
+                                          "TEXT",
+                                          "TEXTAREA",
+                                          "NUMBER",
+                                          "MONEY_FEN",
+                                          "DATETIME",
+                                          "SINGLE_SELECT",
+                                          "MULTI_SELECT"
+                                        ],
+                                        "description": "字段类型"
+                                      },
+                                      "semanticRole": {
+                                        "type": "string",
+                                        "enum": [
+                                          "CUSTOM",
+                                          "MODE",
+                                          "TARGET_RANK",
+                                          "CURRENT_RANK",
+                                          "DURATION_MINUTES",
+                                          "SERVER_REGION",
+                                          "CONTACT",
+                                          "ORDER_NOTE",
+                                          "STAFFING_LABEL",
+                                          "STAFFING_COUNT"
+                                        ],
+                                        "description": "业务语义角色（非 CUSTOM 时全局唯一）"
+                                      },
+                                      "required": {
+                                        "type": "boolean",
+                                        "description": "是否必填"
+                                      },
+                                      "placeholder": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "description": "占位提示"
+                                      },
+                                      "options": {
+                                        "type": "array",
+                                        "maxItems": 100,
+                                        "items": {
+                                          "type": "object",
+                                          "required": [
+                                            "value",
+                                            "label"
+                                          ],
+                                          "properties": {
+                                            "value": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                              "description": "选项值（稳定键）"
+                                            },
+                                            "label": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 50,
+                                              "description": "选项名称"
+                                            },
+                                            "priceDeltaFen": {
+                                              "type": "string",
+                                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                                              "example": "1000",
+                                              "description": "选项加价（十进制字符串分，禁止 number/浮点）"
+                                            }
+                                          },
+                                          "description": "选择项（含可选加价）"
+                                        },
+                                        "description": "选择项（选择类字段必须至少一个）"
+                                      },
+                                      "aggregationPolicy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "SUM",
+                                          "MAX"
+                                        ],
+                                        "description": "多选字段的聚合策略（MULTI_SELECT 必填）"
+                                      }
+                                    },
+                                    "description": "FIELD 组件"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "kind",
+                                      "stableKey",
+                                      "sectionKey",
+                                      "label",
+                                      "enabled",
+                                      "sortOrder",
+                                      "layout",
+                                      "columns",
+                                      "defaultRows"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "REPEATABLE_TABLE",
+                                        "description": "组件类型"
+                                      },
+                                      "stableKey": {
+                                        "type": "string",
+                                        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                        "description": "组件稳定键"
+                                      },
+                                      "sectionKey": {
+                                        "type": "string",
+                                        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                        "description": "所属区块稳定键"
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50,
+                                        "description": "组件名称"
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "description": "组件说明"
+                                      },
+                                      "enabled": {
+                                        "type": "boolean",
+                                        "description": "组件是否启用"
+                                      },
+                                      "sortOrder": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "组件顺序"
+                                      },
+                                      "layout": {
+                                        "type": "object",
+                                        "required": [
+                                          "colSpan",
+                                          "rowBreakBefore"
+                                        ],
+                                        "properties": {
+                                          "colSpan": {
+                                            "type": "integer",
+                                            "enum": [
+                                              1,
+                                              2,
+                                              3,
+                                              4
+                                            ],
+                                            "description": "栅格宽度（1-4）"
+                                          },
+                                          "rowBreakBefore": {
+                                            "type": "boolean",
+                                            "description": "是否在此组件前换行"
+                                          }
+                                        },
+                                        "description": "组件布局"
+                                      },
+                                      "columns": {
+                                        "type": "array",
+                                        "maxItems": 10,
+                                        "items": {
+                                          "type": "object",
+                                          "required": [
+                                            "stableKey",
+                                            "label",
+                                            "columnType",
+                                            "semanticRole",
+                                            "required"
+                                          ],
+                                          "properties": {
+                                            "stableKey": {
+                                              "type": "string",
+                                              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                              "description": "列稳定键"
+                                            },
+                                            "label": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 50,
+                                              "description": "列名称"
+                                            },
+                                            "columnType": {
+                                              "type": "string",
+                                              "enum": [
+                                                "TEXT",
+                                                "NUMBER",
+                                                "SINGLE_SELECT"
+                                              ],
+                                              "description": "列类型"
+                                            },
+                                            "semanticRole": {
+                                              "type": "string",
+                                              "enum": [
+                                                "CUSTOM",
+                                                "MODE",
+                                                "TARGET_RANK",
+                                                "CURRENT_RANK",
+                                                "DURATION_MINUTES",
+                                                "SERVER_REGION",
+                                                "CONTACT",
+                                                "ORDER_NOTE",
+                                                "STAFFING_LABEL",
+                                                "STAFFING_COUNT"
+                                              ],
+                                              "description": "业务语义角色"
+                                            },
+                                            "required": {
+                                              "type": "boolean",
+                                              "description": "是否必填"
+                                            },
+                                            "options": {
+                                              "type": "array",
+                                              "maxItems": 100,
+                                              "items": {
+                                                "type": "object",
+                                                "required": [
+                                                  "value",
+                                                  "label"
+                                                ],
+                                                "properties": {
+                                                  "value": {
+                                                    "type": "string",
+                                                    "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                                    "description": "选项值（稳定键）"
+                                                  },
+                                                  "label": {
+                                                    "type": "string",
+                                                    "minLength": 1,
+                                                    "maxLength": 50,
+                                                    "description": "选项名称"
+                                                  },
+                                                  "priceDeltaFen": {
+                                                    "type": "string",
+                                                    "pattern": "^(?:0|[1-9][0-9]*)$",
+                                                    "example": "1000",
+                                                    "description": "选项加价（十进制字符串分，禁止 number/浮点）"
+                                                  }
+                                                },
+                                                "description": "选择项（含可选加价）"
+                                              },
+                                              "description": "单选列的选项"
+                                            }
+                                          },
+                                          "description": "可重复表格列"
+                                        },
+                                        "description": "表格列（最多 10 列）"
+                                      },
+                                      "defaultRows": {
+                                        "type": "array",
+                                        "maxItems": 50,
+                                        "items": {
+                                          "type": "object",
+                                          "additionalProperties": true
+                                        },
+                                        "description": "默认行（键必须是已定义的列）"
+                                      }
+                                    },
+                                    "description": "REPEATABLE_TABLE 组件"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "kind",
+                                      "stableKey",
+                                      "sectionKey",
+                                      "label",
+                                      "enabled",
+                                      "sortOrder",
+                                      "layout",
+                                      "text"
+                                    ],
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "NOTE",
+                                        "description": "组件类型"
+                                      },
+                                      "stableKey": {
+                                        "type": "string",
+                                        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                        "description": "组件稳定键"
+                                      },
+                                      "sectionKey": {
+                                        "type": "string",
+                                        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                        "description": "所属区块稳定键"
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50,
+                                        "description": "组件名称"
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "description": "组件说明"
+                                      },
+                                      "enabled": {
+                                        "type": "boolean",
+                                        "description": "组件是否启用"
+                                      },
+                                      "sortOrder": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "description": "组件顺序"
+                                      },
+                                      "layout": {
+                                        "type": "object",
+                                        "required": [
+                                          "colSpan",
+                                          "rowBreakBefore"
+                                        ],
+                                        "properties": {
+                                          "colSpan": {
+                                            "type": "integer",
+                                            "enum": [
+                                              1,
+                                              2,
+                                              3,
+                                              4
+                                            ],
+                                            "description": "栅格宽度（1-4）"
+                                          },
+                                          "rowBreakBefore": {
+                                            "type": "boolean",
+                                            "description": "是否在此组件前换行"
+                                          }
+                                        },
+                                        "description": "组件布局"
+                                      },
+                                      "text": {
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "description": "说明纯文本（不支持 HTML/脚本）"
+                                      }
+                                    },
+                                    "description": "NOTE 组件"
+                                  }
+                                ],
+                                "description": "模板组件（判别联合，按 kind 区分）"
+                              },
+                              "description": "通用组件"
+                            },
+                            "staffingSource": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "kind",
+                                    "count"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "FIXED",
+                                      "description": "固定人数"
+                                    },
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "description": "人数"
+                                    }
+                                  },
+                                  "description": "固定人数"
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "kind",
+                                    "componentKey"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "NUMBER_FIELD",
+                                      "description": "取启用数字字段"
+                                    },
+                                    "componentKey": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                      "description": "人数字段稳定键"
+                                    }
+                                  },
+                                  "description": "数字字段人数"
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "kind",
+                                    "componentKey",
+                                    "columnKey"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "REPEATABLE_TABLE_SUM",
+                                      "description": "汇总表格列"
+                                    },
+                                    "componentKey": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                      "description": "表格组件稳定键"
+                                    },
+                                    "columnKey": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                                      "description": "STAFFING_COUNT 数字列稳定键"
+                                    }
+                                  },
+                                  "description": "表格列求和人数"
+                                }
+                              ],
+                              "description": "人数来源（判别联合，按 kind 区分）"
+                            },
+                            "documentRendererVersion": {
+                              "type": "integer",
+                              "enum": [
+                                1
+                              ],
+                              "description": "文案渲染器版本（仅由服务端写入）"
+                            }
+                          },
+                          "description": "通用模板发布配置（不可变版本内容，服务端字段）"
+                        }
+                      },
+                      "description": "发布版本派单表单"
+                    }
+                  },
+                  "description": "锁定发布版本的派单表单配置"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "锁定发布版本的派单表单配置",
         "tags": [
           "通用派单模板（S2）",
           "通用派单模板（S2）"
@@ -7387,7 +8395,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -7431,7 +8442,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -8227,7 +9241,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -8271,7 +9288,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -8315,7 +9335,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -8360,7 +9383,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -8431,7 +9457,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9363,7 +10392,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9407,7 +10439,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9451,7 +10486,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9496,7 +10534,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9567,7 +10608,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9778,7 +10822,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9822,7 +10869,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -9866,7 +10916,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -10757,7 +11810,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -10801,7 +11857,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -10845,7 +11904,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -10890,7 +11952,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -10960,7 +12025,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -11847,7 +12915,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -11891,7 +12962,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -11935,7 +13009,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -11979,7 +13056,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -12023,7 +13103,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -12903,7 +13986,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -12947,7 +14033,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -12992,7 +14081,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -13062,7 +14154,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -13942,7 +15037,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -13986,7 +15084,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -14031,7 +15132,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -14937,7 +16041,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -14981,7 +16088,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -15026,7 +16136,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -15156,7 +16269,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -15200,7 +16316,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -15245,7 +16364,10 @@
                         "TEMPLATE_COMPONENT_INVALID",
                         "TEMPLATE_BINDING_INVALID",
                         "TEMPLATE_PRICE_RULE_INVALID",
-                        "TEMPLATE_LEGACY_REVIEW_REQUIRED"
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
                       ],
                       "description": "受控业务错误码"
                     },
@@ -15392,7 +16514,316 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "orderId",
+                        "dispatchOrderId",
+                        "dispatchNo",
+                        "status",
+                        "customerProfileId",
+                        "templateName",
+                        "formValues",
+                        "durationMinutes",
+                        "desiredStartAt",
+                        "lines",
+                        "round",
+                        "copyText",
+                        "applyUrl",
+                        "bossUrl",
+                        "document"
+                      ],
+                      "properties": {
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "订单 id"
+                        },
+                        "dispatchOrderId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "派单 id"
+                        },
+                        "dispatchNo": {
+                          "type": "string",
+                          "description": "派单号"
+                        },
+                        "status": {
+                          "type": "string",
+                          "description": "订单状态"
+                        },
+                        "customerProfileId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "客户 id"
+                        },
+                        "templateName": {
+                          "type": "string",
+                          "description": "模板名称（旧字段，v2 订单可能为空串）"
+                        },
+                        "formValues": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "description": "订单提交值（按 stableKey）"
+                        },
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "服务时长（分钟）"
+                        },
+                        "desiredStartAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "期望开始时间"
+                        },
+                        "lines": {
+                          "type": "array",
+                          "description": "派单岗位行",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "positionLabel",
+                              "requiredCount",
+                              "applications"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "岗位行 id"
+                              },
+                              "positionLabel": {
+                                "type": "string",
+                                "description": "岗位名称"
+                              },
+                              "requiredCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "需要人数"
+                              },
+                              "applications": {
+                                "type": "array",
+                                "description": "报名记录",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "playerId",
+                                    "playerName",
+                                    "positionLabel",
+                                    "status",
+                                    "createdAt"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "报名 id"
+                                    },
+                                    "playerId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "陪玩 id"
+                                    },
+                                    "playerName": {
+                                      "type": "string",
+                                      "description": "陪玩名称"
+                                    },
+                                    "positionLabel": {
+                                      "type": "string",
+                                      "description": "报名岗位"
+                                    },
+                                    "status": {
+                                      "type": "string",
+                                      "description": "报名状态"
+                                    },
+                                    "createdAt": {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "nullable": false,
+                                      "description": "报名时间"
+                                    }
+                                  },
+                                  "description": "报名记录"
+                                }
+                              }
+                            },
+                            "description": "派单岗位行"
+                          }
+                        },
+                        "round": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "最新轮次（无轮次时为 null）",
+                          "required": [
+                            "roundNo",
+                            "opensAt",
+                            "closesAt",
+                            "status"
+                          ],
+                          "properties": {
+                            "roundNo": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "轮次序号"
+                            },
+                            "opensAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "开放时间"
+                            },
+                            "closesAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "关闭时间"
+                            },
+                            "status": {
+                              "type": "string",
+                              "description": "轮次状态"
+                            }
+                          }
+                        },
+                        "copyText": {
+                          "type": "string",
+                          "description": "派单文案（旧字段）"
+                        },
+                        "applyUrl": {
+                          "type": "string",
+                          "description": "陪玩报名链接（旧字段）"
+                        },
+                        "bossUrl": {
+                          "type": "string",
+                          "description": "老板选人链接（旧字段）"
+                        },
+                        "document": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "v2 订单自动文案（旧订单为 null）",
+                          "required": [
+                            "schemaVersion",
+                            "rendererVersion",
+                            "rows",
+                            "plainText",
+                            "generatedFromSnapshotAt"
+                          ],
+                          "properties": {
+                            "schemaVersion": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "文案结构版本"
+                            },
+                            "rendererVersion": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "文案渲染器版本"
+                            },
+                            "rows": {
+                              "type": "array",
+                              "description": "文案行（区块 / 字段 / 值）",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "sectionLabel",
+                                  "fieldLabel",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "sectionLabel": {
+                                    "type": "string",
+                                    "description": "区块名称"
+                                  },
+                                  "fieldLabel": {
+                                    "type": "string",
+                                    "description": "字段名称"
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "description": "字段值"
+                                  }
+                                },
+                                "description": "文案行"
+                              }
+                            },
+                            "plainText": {
+                              "type": "string",
+                              "description": "可直接复制的纯文本文案"
+                            },
+                            "generatedFromSnapshotAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "快照生成时间"
+                            }
+                          }
+                        }
+                      },
+                      "description": "派单详情"
+                    }
+                  },
+                  "description": "派单详情（含 v2 自动文案）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -15658,6 +17089,459 @@
         },
         "tags": [
           "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/template-orders": {
+      "post": {
+        "description": "同一 Idempotency-Key 重试会回放首次结果；同键不同请求体返回 422；模板归档后返回 409 TEMPLATE_ARCHIVED。",
+        "operationId": "gameDispatchTemplateOrder_create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "gameId",
+                  "templateId",
+                  "templateVersionId",
+                  "customerProfileId",
+                  "values"
+                ],
+                "properties": {
+                  "gameId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "游戏 id"
+                  },
+                  "templateId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "模板 id"
+                  },
+                  "templateVersionId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "锁定的发布版本 id"
+                  },
+                  "customerProfileId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "客户 id"
+                  },
+                  "values": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "通用组件值（按 stableKey 提交，不含最终人数或价格）"
+                  },
+                  "desiredStartAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true,
+                    "description": "期望开始时间"
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "minimum": 15,
+                    "description": "服务时长（分钟）"
+                  }
+                },
+                "description": "创建派单请求（幂等键在 Idempotency-Key 请求头）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "orderId",
+                        "dispatchOrderId",
+                        "templateVersionId",
+                        "staffingSummary",
+                        "priceAdjustmentFen",
+                        "document"
+                      ],
+                      "properties": {
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "订单 id"
+                        },
+                        "dispatchOrderId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "派单 id"
+                        },
+                        "templateVersionId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "本单锁定的发布版本 id"
+                        },
+                        "staffingSummary": {
+                          "type": "object",
+                          "required": [
+                            "total",
+                            "rows"
+                          ],
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "服务端计算的总人数"
+                            },
+                            "rows": {
+                              "type": "array",
+                              "description": "按发布快照分组的人数",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "label",
+                                  "count"
+                                ],
+                                "properties": {
+                                  "label": {
+                                    "type": "string",
+                                    "description": "分组名称"
+                                  },
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "description": "人数"
+                                  }
+                                },
+                                "description": "人数分组"
+                              }
+                            }
+                          },
+                          "description": "服务端计算的人数摘要"
+                        },
+                        "priceAdjustmentFen": {
+                          "type": "string",
+                          "description": "服务端计算的加价合计（十进制字符串分）"
+                        },
+                        "document": {
+                          "type": "object",
+                          "required": [
+                            "schemaVersion",
+                            "rendererVersion",
+                            "rows",
+                            "plainText"
+                          ],
+                          "properties": {
+                            "schemaVersion": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "文案结构版本"
+                            },
+                            "rendererVersion": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "文案渲染器版本"
+                            },
+                            "rows": {
+                              "type": "array",
+                              "description": "文案行（区块 / 字段 / 值）",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "sectionLabel",
+                                  "fieldLabel",
+                                  "value"
+                                ],
+                                "properties": {
+                                  "sectionLabel": {
+                                    "type": "string",
+                                    "description": "区块名称"
+                                  },
+                                  "fieldLabel": {
+                                    "type": "string",
+                                    "description": "字段名称"
+                                  },
+                                  "value": {
+                                    "type": "string",
+                                    "description": "字段值"
+                                  }
+                                },
+                                "description": "文案行"
+                              }
+                            },
+                            "plainText": {
+                              "type": "string",
+                              "description": "可直接复制的纯文本文案"
+                            }
+                          },
+                          "description": "订单自动文案"
+                        }
+                      },
+                      "description": "创建派单结果"
+                    }
+                  },
+                  "description": "创建派单结果（含服务端计算与自动文案）"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "按锁定的发布版本创建派单（人数与价格由服务端计算）",
+        "tags": [
+          "通用派单模板（S2）"
         ]
       }
     },

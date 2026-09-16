@@ -727,6 +727,16 @@ routeValidations.set("GET /api/v1/tenant/game-dispatch-templates", {
   }),
 });
 
+routeValidations.set("GET /api/v1/tenant/game-dispatch-templates/published", {
+  query: z.strictObject({ gameId: z.string().uuid() }),
+});
+routeValidations.set(
+  "GET /api/v1/tenant/game-dispatch-templates/versions/:versionId/form",
+  {},
+);
+
+// S4 创建派单：幂等键在 Idempotency-Key 头（头校验由控制器执行，边界只校验 body）。 routeValidations.set("POST /api/v1/tenant/game-dispatch/template-orders", {   body: z.strictObject({     gameId: z.string().uuid(),     templateId: z.string().uuid(),     templateVersionId: z.string().uuid(),     customerProfileId: z.string().uuid(),     values: z.record(z.string(), z.unknown()),     desiredStartAt: z.string().datetime({ offset: true }).nullable().optional(),     durationMinutes: z.number().int().min(15).max(1440).optional(),   }), });
+
 routeValidations.set("POST /api/v1/tenant/game-dispatch-templates", {
   body: z.strictObject({
     gameId: z.string().uuid(),

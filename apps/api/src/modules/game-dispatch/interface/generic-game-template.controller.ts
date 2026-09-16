@@ -44,6 +44,7 @@ import {
   genericTemplateLimitQuerySchema,
   genericTemplateListPageSchema,
   genericTemplatePublishBodySchema,
+  genericTemplatePublishedListSchema,
   genericTemplateRestoreBodySchema,
   genericTemplateRestoreResultSchema,
   genericTemplateRevisionConflictErrorSchema,
@@ -53,6 +54,7 @@ import {
   genericTemplateSortQuerySchema,
   genericTemplateStatusQuerySchema,
   genericTemplateValidationErrorSchema,
+  genericTemplateVersionFormSchema,
   genericTemplateVersionsPageSchema,
 } from "../../../openapi/schemas.js";
 import {
@@ -196,6 +198,58 @@ export class GenericGameTemplateController {
     };
     try {
       return await this.templates.list(tenantId, parsed);
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Get("published")
+  @ApiOperation({
+    summary: "该游戏可派单的模板（未归档且有生效版本，默认优先）",
+  })
+  @ApiQuery({
+    name: "gameId",
+    required: true,
+    schema: genericTemplateGameIdQuerySchema as never,
+  })
+  @ApiOkResponse({ schema: genericTemplatePublishedListSchema as never })
+  @ApiBadRequestResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiForbiddenResponse({ schema: genericTemplateErrorSchema as never })
+  async listPublished(
+    @Req() req: AuthenticatedRequest,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const { tenantId } = principalOf(req);
+    try {
+      return {
+        data: await this.templates.listPublished(
+          tenantId,
+          String(query.gameId ?? ""),
+        ),
+      };
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Get("versions/:versionId/form")
+  @ApiOperation({ summary: "锁定发布版本的派单表单配置" })
+  @ApiOkResponse({ schema: genericTemplateVersionFormSchema as never })
+  @ApiForbiddenResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiUnprocessableEntityResponse({
+    schema: genericTemplateErrorSchema as never,
+  })
+  async getVersionForm(
+    @Req() req: AuthenticatedRequest,
+    @Param("versionId") versionId: string,
+  ) {
+    const { tenantId } = principalOf(req);
+    try {
+      return { data: await this.templates.getVersionForm(tenantId, versionId) };
     } catch (error) {
       this.fail(error);
     }

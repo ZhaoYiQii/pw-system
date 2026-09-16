@@ -972,6 +972,9 @@ export const genericTemplateErrorCodeSchema: SchemaProperty = {
     "TEMPLATE_BINDING_INVALID",
     "TEMPLATE_PRICE_RULE_INVALID",
     "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+    "TEMPLATE_IDEMPOTENCY_REQUIRED",
+    "TEMPLATE_IDEMPOTENCY_MISMATCH",
+    "TEMPLATE_IDEMPOTENCY_IN_FLIGHT",
   ],
   description: "受控业务错误码",
 };
@@ -1125,3 +1128,295 @@ export const genericTemplateDeleteResultSchema: OpenApiSchema = object(
   { ok: bool("是否删除成功") },
   "删除结果",
 );
+
+/** S4 新建派单：该游戏可派单的模板摘要（不含 config、不含草稿字段）。 */
+export const genericTemplatePublishedSummarySchema: OpenApiSchema = object(
+  ["templateId", "name", "versionId", "versionNo", "isDefault", "lastUsedAt"],
+  {
+    templateId: stringField("模板 id"),
+    name: stringField("模板名称"),
+    description: {
+      type: "string",
+      nullable: true,
+      description: "模板说明",
+    },
+    versionId: stringField("锁定的发布版本 id"),
+    versionNo: integer("版本号", 1),
+    isDefault: bool("是否为该游戏默认模板"),
+    lastUsedAt: dateTime("最近使用时间", true),
+  },
+  "可派单模板摘要",
+);
+
+export const genericTemplatePublishedListSchema: OpenApiSchema = {
+  ...dataArraySchema(genericTemplatePublishedSummarySchema),
+  description: "该游戏可派单的模板（默认优先，其次最近使用）",
+};
+
+/** S4 派单表单：锁定发布版本的完整发布配置。 */
+export const genericTemplateVersionFormSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      ["templateId", "gameId", "versionId", "versionNo", "config"],
+      {
+        templateId: stringField("模板 id"),
+        gameId: {
+          type: "string",
+          format: "uuid",
+          nullable: true,
+          description: "所属游戏 id（未归类模板为 null）",
+        },
+        versionId: stringField("发布版本 id"),
+        versionNo: integer("版本号", 1),
+        config: genericTemplatePublishedConfigSchema,
+      },
+      "发布版本派单表单",
+    ),
+  ),
+  description: "锁定发布版本的派单表单配置",
+};
+
+/** S4 创建派单：客户端只提交归属与通用组件值，人数与价格一律由服务端计算。 */
+export const genericTemplateOrderCreateBodySchema: OpenApiSchema = object(
+  ["gameId", "templateId", "templateVersionId", "customerProfileId", "values"],
+  {
+    gameId: { type: "string", format: "uuid", description: "游戏 id" },
+    templateId: { type: "string", format: "uuid", description: "模板 id" },
+    templateVersionId: {
+      type: "string",
+      format: "uuid",
+      description: "锁定的发布版本 id",
+    },
+    customerProfileId: {
+      type: "string",
+      format: "uuid",
+      description: "客户 id",
+    },
+    values: {
+      type: "object",
+      additionalProperties: true,
+      description: "通用组件值（按 stableKey 提交，不含最终人数或价格）",
+    },
+    desiredStartAt: dateTime("期望开始时间", true),
+    durationMinutes: integer("服务时长（分钟）", 15),
+  },
+  "创建派单请求（幂等键在 Idempotency-Key 请求头）",
+);
+
+export const genericTemplateOrderResultSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      [
+        "orderId",
+        "dispatchOrderId",
+        "templateVersionId",
+        "staffingSummary",
+        "priceAdjustmentFen",
+        "document",
+      ],
+      {
+        orderId: { type: "string", format: "uuid", description: "订单 id" },
+        dispatchOrderId: {
+          type: "string",
+          format: "uuid",
+          description: "派单 id",
+        },
+        templateVersionId: {
+          type: "string",
+          format: "uuid",
+          description: "本单锁定的发布版本 id",
+        },
+        staffingSummary: object(
+          ["total", "rows"],
+          {
+            total: integer("服务端计算的总人数", 0),
+            rows: {
+              type: "array",
+              description: "按发布快照分组的人数",
+              items: object(
+                ["label", "count"],
+                {
+                  label: stringField("分组名称"),
+                  count: integer("人数", 0),
+                },
+                "人数分组",
+              ),
+            },
+          },
+          "服务端计算的人数摘要",
+        ),
+        priceAdjustmentFen: {
+          type: "string",
+          description: "服务端计算的加价合计（十进制字符串分）",
+        },
+        document: object(
+          ["schemaVersion", "rendererVersion", "rows", "plainText"],
+          {
+            schemaVersion: integer("文案结构版本", 1),
+            rendererVersion: integer("文案渲染器版本", 1),
+            rows: {
+              type: "array",
+              description: "文案行（区块 / 字段 / 值）",
+              items: object(
+                ["sectionLabel", "fieldLabel", "value"],
+                {
+                  sectionLabel: stringField("区块名称"),
+                  fieldLabel: stringField("字段名称"),
+                  value: stringField("字段值"),
+                },
+                "文案行",
+              ),
+            },
+            plainText: stringField("可直接复制的纯文本文案"),
+          },
+          "订单自动文案",
+        ),
+      },
+      "创建派单结果",
+    ),
+  ),
+  description: "创建派单结果（含服务端计算与自动文案）",
+};
+
+/**
+ * S4 订单详情：既有字段（此前未在契约中描述）保持原样，
+ * 新增 document 为 v2 订单的自动文案；旧订单为 null。
+ */
+export const gameDispatchOrderViewSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      [
+        "orderId",
+        "dispatchOrderId",
+        "dispatchNo",
+        "status",
+        "customerProfileId",
+        "templateName",
+        "formValues",
+        "durationMinutes",
+        "desiredStartAt",
+        "lines",
+        "round",
+        "copyText",
+        "applyUrl",
+        "bossUrl",
+        "document",
+      ],
+      {
+        orderId: { type: "string", format: "uuid", description: "订单 id" },
+        dispatchOrderId: {
+          type: "string",
+          format: "uuid",
+          description: "派单 id",
+        },
+        dispatchNo: stringField("派单号"),
+        status: stringField("订单状态"),
+        customerProfileId: {
+          type: "string",
+          format: "uuid",
+          description: "客户 id",
+        },
+        templateName: stringField("模板名称（旧字段，v2 订单可能为空串）"),
+        formValues: {
+          type: "object",
+          additionalProperties: true,
+          description: "订单提交值（按 stableKey）",
+        },
+        durationMinutes: integer("服务时长（分钟）", 1),
+        desiredStartAt: dateTime("期望开始时间", true),
+        lines: {
+          type: "array",
+          description: "派单岗位行",
+          items: object(
+            ["id", "positionLabel", "requiredCount", "applications"],
+            {
+              id: { type: "string", format: "uuid", description: "岗位行 id" },
+              positionLabel: stringField("岗位名称"),
+              requiredCount: integer("需要人数", 0),
+              applications: {
+                type: "array",
+                description: "报名记录",
+                items: object(
+                  [
+                    "id",
+                    "playerId",
+                    "playerName",
+                    "positionLabel",
+                    "status",
+                    "createdAt",
+                  ],
+                  {
+                    id: {
+                      type: "string",
+                      format: "uuid",
+                      description: "报名 id",
+                    },
+                    playerId: {
+                      type: "string",
+                      format: "uuid",
+                      description: "陪玩 id",
+                    },
+                    playerName: stringField("陪玩名称"),
+                    positionLabel: stringField("报名岗位"),
+                    status: stringField("报名状态"),
+                    createdAt: dateTime("报名时间"),
+                  },
+                  "报名记录",
+                ),
+              },
+            },
+            "派单岗位行",
+          ),
+        },
+        round: {
+          type: "object",
+          nullable: true,
+          description: "最新轮次（无轮次时为 null）",
+          required: ["roundNo", "opensAt", "closesAt", "status"],
+          properties: {
+            roundNo: integer("轮次序号", 1),
+            opensAt: dateTime("开放时间"),
+            closesAt: dateTime("关闭时间"),
+            status: stringField("轮次状态"),
+          },
+        },
+        copyText: stringField("派单文案（旧字段）"),
+        applyUrl: stringField("陪玩报名链接（旧字段）"),
+        bossUrl: stringField("老板选人链接（旧字段）"),
+        document: {
+          type: "object",
+          nullable: true,
+          description: "v2 订单自动文案（旧订单为 null）",
+          required: [
+            "schemaVersion",
+            "rendererVersion",
+            "rows",
+            "plainText",
+            "generatedFromSnapshotAt",
+          ],
+          properties: {
+            schemaVersion: integer("文案结构版本", 1),
+            rendererVersion: integer("文案渲染器版本", 1),
+            rows: {
+              type: "array",
+              description: "文案行（区块 / 字段 / 值）",
+              items: object(
+                ["sectionLabel", "fieldLabel", "value"],
+                {
+                  sectionLabel: stringField("区块名称"),
+                  fieldLabel: stringField("字段名称"),
+                  value: stringField("字段值"),
+                },
+                "文案行",
+              ),
+            },
+            plainText: stringField("可直接复制的纯文本文案"),
+            generatedFromSnapshotAt: dateTime("快照生成时间"),
+          },
+        },
+      },
+      "派单详情",
+    ),
+  ),
+  description: "派单详情（含 v2 自动文案）",
+};

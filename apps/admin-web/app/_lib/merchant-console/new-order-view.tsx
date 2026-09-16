@@ -1,297 +1,548 @@
 "use client";
 
+/**
+ * S4 新建派单：三阶段弹窗（客户+游戏 → 该游戏已发布模板 → 填写并按快照创建）。
+ *
+ * 规则（设计规格 §10 / §11.2，仓库 AGENTS「改到即迁」）：
+ * - 本页整体迁移到新栈：Tailwind token + components/ui + TanStack Query，不再使用旧 .mc-* 类；
+ * - 阶段由 new-order-template-flow 派生；切换游戏清空、切换模板先确认再按会话缓存恢复；
+ * - 只展示该游戏未归档且有生效版本的模板（默认优先），无模板时给空状态与带 gameId 的入口；
+ * - 表单值只留在弹窗会话内存（不进 URL、不进 localStorage）；提交中禁用按钮；
+ * - 一次创建意图一个 Idempotency-Key，失败保留输入，按错误码决定下一步动作。
+ */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Plus, Save, ShieldAlert } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Plus, ShieldAlert } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { apiFetch } from "../api";
 import {
-  type CustomerRow,
-  type TemplateDetail,
-  type TemplateRow,
-} from "./merchant-api";
+  DEFAULT_ORDER_DURATION_MINUTES,
+  NewOrderFlowError,
+  buildCreateOrderRequest,
+  describeCreateError,
+  initialNewOrderState,
+  intentFor,
+  missingRequiredKeys,
+  needsTemplateSwitchConfirm,
+  newOrderStage,
+  resetIntent,
+  selectCustomer,
+  selectGame,
+  selectTemplate,
+  updateValue,
+  type NewOrderState,
+  type NewOrderTemplateOption,
+} from "./new-order-template-flow";
+import { toDraftConfig } from "./template-draft-state";
+import { TemplateOrderForm } from "./template-order-form";
+import {
+  createTemplateOrder,
+  fetchPublishedTemplates,
+  fetchPublishedVersionForm,
+  type PublishedVersionForm,
+} from "./template-order-api";
+import { TemplateApiError } from "./template-api";
 import { useMerchantRole } from "./role-context";
 
-export function NewOrderView() {
+interface CustomerRow {
+  id: string;
+  name: string;
+}
+
+interface GameRow {
+  id: string;
+  name: string;
+  enabled?: boolean;
+}
+
+const STAGE_LABELS: Record<ReturnType<typeof newOrderStage>, string> = {
+  PARTY: "1 客户与游戏",
+  TEMPLATE: "2 选择模板",
+  FORM: "3 填写并创建",
+};
+
+/** 新栈风格的搜索选择器：单一 combobox + listbox，键盘与 aria 状态完整。 */
+function SearchPicker({
+  id,
+  label,
+  options,
+  selectedId,
+  placeholder,
+  disabled = false,
+  onSelect,
+}: {
+  id: string;
+  label: string;
+  options: { id: string; label: string }[];
+  selectedId: string;
+  placeholder: string;
+  disabled?: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const selected = options.find((option) => option.id === selectedId);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const listboxId = `${id}-options`;
+  const text = query !== "" ? query : (selected?.label ?? "");
+  const keyword = text.trim().toLowerCase();
+  const filtered = keyword
+    ? options.filter((option) => option.label.toLowerCase().includes(keyword))
+    : options;
+
+  // 打开时按 Esc 或点击外部关闭（旧实现的行为，迁移后必须保持）。
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="space-y-1.5" ref={rootRef}>
+      <label htmlFor={id} className="text-sm text-foreground">
+        {label}
+      </label>
+      <div className="relative">
+        <Input
+          id={id}
+          value={text}
+          disabled={disabled}
+          placeholder={placeholder}
+          role="combobox"
+          aria-label={label}
+          aria-autocomplete="list"
+          aria-expanded={open && !disabled}
+          aria-controls={listboxId}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+            if (event.target.value !== (selected?.label ?? "")) onSelect("");
+          }}
+          onFocus={() => setOpen(true)}
+        />
+        {open && !disabled ? (
+          <ul
+            id={listboxId}
+            role="listbox"
+            aria-label={`${label}选项`}
+            className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
+          >
+            {filtered.length > 0 ? (
+              filtered.map((option) => (
+                <li key={option.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={option.id === selectedId}
+                    className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+                    onClick={() => {
+                      setQuery("");
+                      setOpen(false);
+                      onSelect(option.id);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li className="px-3 py-2 text-sm text-muted-foreground">
+                没有匹配项
+              </li>
+            )}
+          </ul>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function NewOrderView({
+  embedded = false,
+  onCreated,
+}: {
+  embedded?: boolean;
+  onCreated?: (orderId: string) => void;
+} = {}) {
   const router = useRouter();
   const { role } = useMerchantRole();
   const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
-  const [templateId, setTemplateId] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [duration, setDuration] = useState("60");
-  const [error, setError] = useState<string | null>(null);
 
-  const templatesQuery = useQuery({
-    queryKey: ["merchant", "new-order", "templates"],
-    queryFn: () => apiFetch<TemplateRow[]>("/api/v1/tenant/game-templates"),
-  });
+  const [state, setState] = useState<NewOrderState>(initialNewOrderState);
+  const [notice, setNotice] = useState("");
+  const [durationText, setDurationText] = useState(
+    String(DEFAULT_ORDER_DURATION_MINUTES),
+  );
+  /** 弹窗会话内的值缓存：按 templateVersionId 保存，切回时恢复。 */
+  const valueCache = useRef(new Map<string, Record<string, unknown>>());
+  const stage = newOrderStage(state);
+
   const customersQuery = useQuery({
     queryKey: ["merchant", "new-order", "customers"],
     queryFn: () => apiFetch<CustomerRow[]>("/api/v1/tenant/customers"),
+    enabled: canOperate,
   });
-  const templateQuery = useQuery({
-    queryKey: ["merchant", "new-order", "template", templateId],
-    queryFn: () =>
-      apiFetch<TemplateDetail>(`/api/v1/tenant/game-templates/${templateId}`),
-    enabled: templateId.length > 0,
+  const gamesQuery = useQuery({
+    queryKey: ["merchant", "new-order", "games"],
+    queryFn: () => apiFetch<GameRow[]>("/api/v1/tenant/catalog/games"),
+    enabled: canOperate,
+    staleTime: 5 * 60_000,
+  });
+  const templatesQuery = useQuery({
+    queryKey: ["merchant", "new-order", "published", state.gameId],
+    queryFn: () => fetchPublishedTemplates(state.gameId),
+    enabled: canOperate && state.gameId !== "",
+  });
+  const formQuery = useQuery({
+    queryKey: [
+      "merchant",
+      "new-order",
+      "form",
+      state.template?.versionId ?? "",
+    ],
+    queryFn: () => fetchPublishedVersionForm(state.template!.versionId),
+    enabled: canOperate && state.template !== null,
+    staleTime: 0,
   });
 
-  const template = templateQuery.data;
-
-  useEffect(() => {
-    if (template) {
-      setValues({});
-      setCounts({});
-      const dt = template.fields.find((f) => f.fieldType === "datetime");
-      if (dt) setValues((prev) => ({ ...prev, [dt.fieldKey]: "" }));
-    }
-  }, [templateId, template]);
+  const form: PublishedVersionForm | undefined = formQuery.data;
+  /** 契约类型（生成）经 S3 的边界转换进入编辑器镜像类型，再交给渲染组件。 */
+  const formConfig = useMemo(
+    () => (form === undefined ? undefined : toDraftConfig(form.config)),
+    [form],
+  );
+  const missingKeys = useMemo(
+    () =>
+      formConfig === undefined
+        ? []
+        : missingRequiredKeys(formConfig, state.values),
+    [formConfig, state.values],
+  );
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!template) throw new Error("请先选择游戏模板");
-      if (!customerId) throw new Error("请选择老板客户");
-      const formValues: Record<string, string> = {};
-      for (const field of template.fields) {
-        if (field.fieldType === "duration") continue;
-        const value = (values[field.fieldKey] ?? "").trim();
-        if (field.required && !value) throw new Error(`请填写${field.label}`);
-        if (value) formValues[field.fieldKey] = value;
+      const request = buildCreateOrderRequest(state);
+      const intent = intentFor(state, () => crypto.randomUUID());
+      setState((current) => ({ ...current, intent }));
+      return createTemplateOrder(request, intent.key);
+    },
+    onSuccess: (created) => {
+      setNotice("");
+      setState((current) => resetIntent(current));
+      if (onCreated) {
+        onCreated(created.orderId);
+        return;
       }
-      const dtField = template.fields.find(
-        (field) => field.fieldType === "datetime",
-      );
-      const desired = dtField
-        ? values[dtField.fieldKey]?.trim() ?? ""
-        : "";
-      const lines = template.positions.map((position) => ({
-        positionLabel: position.label,
-        requiredCount: Math.max(1, counts[position.id] ?? position.defaultCount),
-      }));
-      if (lines.length === 0) throw new Error("模板至少需要一个岗位");
-      const minutes = Number(duration);
-      if (!Number.isFinite(minutes) || minutes < 1)
-        throw new Error("请填写有效的目标时长");
-      return apiFetch<{ orderId: string }>(
-        "/api/v1/tenant/game-dispatch/orders",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            templateId,
-            customerProfileId: customerId,
-            formValues,
-            ...(desired
-              ? { desiredStartAt: new Date(desired).toISOString() }
-              : {}),
-            durationMinutes: minutes,
-            lines,
-          }),
-        },
-      );
+      router.push(`/merchant-console/dispatch/${created.orderId}?kind=GD`);
     },
-    onSuccess: (row) => {
-      setError(null);
-      router.push(`/merchant-console/dispatch/${row.orderId}?kind=GD`);
+    onError: (error: unknown) => {
+      const code = error instanceof TemplateApiError ? error.code : "UNKNOWN";
+      const hint = describeCreateError(code);
+      setNotice(hint.message);
+      if (hint.action === "RESET_INTENT") {
+        setState((current) => resetIntent(current));
+        return;
+      }
+      if (hint.action === "RESELECT_TEMPLATE") {
+        // 保留当前模板与已填内容：用户需要看到自己填过什么再重新选择，
+        // 界面不静默换模板（规格 §11.2）。
+        return;
+      }
+      if (hint.action === "RELOAD_FORM") {
+        void formQuery.refetch();
+      }
     },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
+
+  const chooseGame = useCallback((gameId: string) => {
+    setNotice("");
+    setState((current) => selectGame(current, gameId));
+  }, []);
+
+  const chooseTemplate = useCallback((template: NewOrderTemplateOption) => {
+    setNotice("");
+    setState((current) => {
+      if (needsTemplateSwitchConfirm(current, template.templateId)) {
+        const confirmed =
+          typeof window === "undefined"
+            ? true
+            : window.confirm("当前模板已填写内容，切换会暂存本次输入。继续？");
+        if (!confirmed) return current;
+      }
+      if (current.template !== null) {
+        valueCache.current.set(current.template.versionId, current.values);
+      }
+      return selectTemplate(
+        current,
+        template,
+        valueCache.current.get(template.versionId),
+      );
+    });
+  }, []);
 
   if (!canOperate) {
     return (
-      <section className="mc-panel mc-forbidden">
-        <div className="mc-forbidden-mark" aria-hidden="true">
-          <ShieldAlert size={26} />
-        </div>
-        <h1>只读角色 · 403</h1>
-        <p>新建派单需要店老板、店长或客服角色。</p>
-        <Link href="/merchant-console/dispatch" className="mc-btn">
-          回到订单台账
-        </Link>
-      </section>
+      <Card>
+        <CardContent className="flex flex-col items-start gap-3 p-6">
+          <span className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <ShieldAlert size={20} aria-hidden="true" />
+          </span>
+          <h1 className="text-base font-semibold">只读角色 · 403</h1>
+          <p className="text-sm text-muted-foreground">
+            新建派单需要店老板、店长或客服角色。
+          </p>
+          {embedded ? null : (
+            <Button asChild variant="outline">
+              <Link href="/merchant-console/dispatch">回到订单台账</Link>
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
-  const selectTemplate = (id: string) => {
-    setTemplateId(id);
-    setCustomerId("");
-    setDuration("60");
-  };
+  const templates = templatesQuery.data ?? [];
 
   return (
-    <div>
-      <div className="mc-pagehead">
-        <div>
-          <div className="mc-kicker">ORDER CREATE / GD</div>
-          <h1>新建派单</h1>
-          <p>选择游戏模板与老板客户，创建后到详情页发布开放报名。</p>
-        </div>
-        <Link href="/merchant-console/dispatch" className="mc-btn">
-          返回订单台账
-        </Link>
+    <div className="space-y-4">
+      {embedded ? null : (
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs text-muted-foreground">
+              ORDER CREATE / GD
+            </p>
+            <h1 className="text-lg font-semibold">新建派单</h1>
+            <p className="text-sm text-muted-foreground">
+              选择客户与游戏，锁定一个已发布模板版本后创建派单。
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/merchant-console/dispatch">返回订单台账</Link>
+          </Button>
+        </header>
+      )}
+
+      <ol className="flex flex-wrap items-center gap-2 text-xs">
+        {(["PARTY", "TEMPLATE", "FORM"] as const).map((key) => (
+          <li key={key}>
+            <Badge variant={stage === key ? "default" : "outline"}>
+              {STAGE_LABELS[key]}
+            </Badge>
+          </li>
+        ))}
+      </ol>
+
+      <div
+        aria-live="polite"
+        role="status"
+        className="text-sm text-destructive"
+      >
+        {notice}
       </div>
 
-      {error ? <div className="mc-notice">{error}</div> : null}
+      <Card>
+        <CardContent className="grid gap-4 p-4 sm:grid-cols-2">
+          <SearchPicker
+            id="customer-picker"
+            label="老板客户"
+            placeholder="输入姓名搜索或选择客户…"
+            options={(customersQuery.data ?? []).map((customer) => ({
+              id: customer.id,
+              label: customer.name,
+            }))}
+            selectedId={state.customerId}
+            onSelect={(id) => {
+              setNotice("");
+              setState((current) => selectCustomer(current, id));
+            }}
+          />
+          <SearchPicker
+            id="game-picker"
+            label="游戏"
+            placeholder="输入游戏名搜索或选择…"
+            options={(gamesQuery.data ?? [])
+              .filter((game) => game.enabled !== false)
+              .map((game) => ({ id: game.id, label: game.name }))}
+            selectedId={state.gameId}
+            onSelect={chooseGame}
+          />
+        </CardContent>
+      </Card>
 
-      <section className="mc-panel mc-form-panel">
-        <div className="mc-form-grid">
-          <label className="mc-field">
-            <span>游戏模板</span>
-            <select value={templateId} onChange={(e) => selectTemplate(e.target.value)}>
-              <option value="">选择模板…</option>
-              {(templatesQuery.data ?? [])
-                .filter((t) => t.enabled)
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="mc-field">
-            <span>老板客户</span>
-            <select
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              disabled={!template}
-            >
-              <option value="">选择客户…</option>
-              {(customersQuery.data ?? []).map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </section>
+      {stage === "PARTY" ? (
+        <p className="text-sm text-muted-foreground">
+          先选择老板客户与游戏，再挑该游戏的已发布模板。
+        </p>
+      ) : null}
 
-      {template ? (
-        <section className="mc-panel mc-form-panel">
-          <div className="mc-settings-section-title">
-            <h2>{template.name} · 下单信息</h2>
-            <p>带 * 为必填；解析与填写结果可直接用于发布。</p>
-          </div>
-          <div className="mc-form-grid">
-            {template.fields
-              .filter((field) => field.fieldType !== "duration")
-              .map((field) => (
-                <label className="mc-field" key={field.fieldKey}>
-                  <span>
-                    {field.label}
-                    {field.required ? " *" : ""}
-                  </span>
-                  {field.fieldType === "multiline" ? (
-                    <textarea
-                      value={values[field.fieldKey] ?? ""}
-                      onChange={(e) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          [field.fieldKey]: e.target.value,
-                        }))
-                      }
-                    />
-                  ) : field.fieldType === "select" ? (
-                    <select
-                      value={values[field.fieldKey] ?? ""}
-                      onChange={(e) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          [field.fieldKey]: e.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">请选择…</option>
-                      {field.options.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type={field.fieldType === "datetime" ? "datetime-local" : "text"}
-                      value={values[field.fieldKey] ?? ""}
-                      onChange={(e) =>
-                        setValues((prev) => ({
-                          ...prev,
-                          [field.fieldKey]: e.target.value,
-                        }))
-                      }
-                    />
-                  )}
-                </label>
+      {stage !== "PARTY" ? (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">游戏模板</h2>
+              <span className="text-xs text-muted-foreground">
+                只显示未归档且有生效版本的模板
+              </span>
+            </div>
+            {templatesQuery.isPending ? (
+              <p className="text-sm text-muted-foreground">正在加载模板…</p>
+            ) : null}
+            {templatesQuery.isError ? (
+              <p className="text-sm text-destructive">
+                模板列表加载失败，请稍后重试。
+              </p>
+            ) : null}
+            {!templatesQuery.isPending && templates.length === 0 ? (
+              <div className="space-y-2 rounded-lg border border-dashed p-4">
+                <p className="text-sm text-muted-foreground">
+                  该游戏还没有已发布模板，先创建并发布一个模板再下单。
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link
+                    href={`/merchant-console/dispatch/templates?game=${state.gameId}`}
+                  >
+                    去模板管理
+                  </Link>
+                </Button>
+              </div>
+            ) : null}
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {templates.map((template) => (
+                <li key={template.templateId}>
+                  <button
+                    type="button"
+                    aria-pressed={
+                      state.template?.templateId === template.templateId
+                    }
+                    className="w-full rounded-lg border p-3 text-left transition-colors hover:bg-accent aria-[pressed=true]:border-primary"
+                    onClick={() => chooseTemplate(template)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {template.name}
+                      </span>
+                      {template.isDefault ? (
+                        <Badge variant="secondary">默认</Badge>
+                      ) : null}
+                    </span>
+                    <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                      v{template.versionNo}
+                      {template.lastUsedAt ? " · 最近使用" : ""}
+                    </span>
+                    {template.description ? (
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {template.description}
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
               ))}
-            <label className="mc-field">
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {stage === "FORM" && form !== undefined && formConfig !== undefined ? (
+        <Card>
+          <CardContent className="space-y-4 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold">
+                {state.template?.name ?? "下单信息"}
+              </h2>
+              <Badge variant="outline">
+                锁定 v{form.versionNo}（{form.versionId.slice(0, 8)}）
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              人数与加价由服务端按该发布版本快照计算，创建后在订单详情查看结果。
+            </p>
+
+            <TemplateOrderForm
+              config={formConfig}
+              values={state.values}
+              missingKeys={missingKeys}
+              onValueChange={(stableKey, value) => {
+                setNotice("");
+                setState((current) => updateValue(current, stableKey, value));
+              }}
+            />
+
+            <label className="block max-w-[200px] text-sm">
               <span>目标时长（分钟）</span>
-              <input
-                type="number"
-                min={1}
-                max={1440}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
+              <Input
+                aria-label="目标时长（分钟）"
+                className="mt-1"
+                inputMode="numeric"
+                value={durationText}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setDurationText(next);
+                  const minutes = Number(next);
+                  if (Number.isFinite(minutes) && minutes >= 15) {
+                    setState((current) => ({
+                      ...current,
+                      durationMinutes: Math.trunc(minutes),
+                      intent: null,
+                    }));
+                  }
+                }}
               />
             </label>
-          </div>
 
-          <div className="mc-seat-editor">
-            <div className="mc-seat-editor-head">
-              <div>
-                <h2>岗位席位</h2>
-                <p>按模板预置岗位，可调整每岗需要人数</p>
-              </div>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                disabled={
+                  create.isPending ||
+                  state.template === null ||
+                  state.customerId === ""
+                }
+                onClick={() => {
+                  try {
+                    buildCreateOrderRequest(state);
+                  } catch (error) {
+                    if (error instanceof NewOrderFlowError)
+                      setNotice(error.message);
+                    return;
+                  }
+                  create.mutate();
+                }}
+              >
+                <Plus size={15} aria-hidden="true" />
+                {create.isPending ? "创建中…" : "创建派单草稿"}
+              </Button>
+              {missingKeys.length > 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  还有 {missingKeys.length} 个必填项未填写
+                </span>
+              ) : null}
             </div>
-            <div className="mc-role-editor-rows">
-              {template.positions.map((position) => (
-                <div className="mc-role-editor-row" key={position.id}>
-                  <span className="mc-field">
-                    <b>{position.label}</b>
-                  </span>
-                  <label className="mc-field mc-field-narrow">
-                    <span>需要人数</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={counts[position.id] ?? position.defaultCount}
-                      onChange={(e) =>
-                        setCounts((prev) => ({
-                          ...prev,
-                          [position.id]: Math.max(
-                            1,
-                            Number(e.target.value) || 1,
-                          ),
-                        }))
-                      }
-                    />
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
-          <div className="mc-button-row mc-form-actions">
-            <button
-              type="button"
-              className="mc-btn mc-btn-primary"
-              disabled={
-                create.isPending || !customerId || Number(duration) <= 0
-              }
-              onClick={() => create.mutate()}
-            >
-              <Save size={15} />
-              {create.isPending ? "创建中…" : "创建派单草稿"}
-            </button>
-          </div>
-        </section>
-      ) : (
-        <div className="mc-empty">
-          <Plus size={22} aria-hidden="true" />
-          <p>选择模板后，可配置下单字段与岗位。</p>
-        </div>
-      )}
+      {stage === "TEMPLATE" ? (
+        <p className="text-sm text-muted-foreground">
+          选择模板后即可按发布快照填写下单信息。
+        </p>
+      ) : null}
     </div>
   );
 }
