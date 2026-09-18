@@ -25,6 +25,8 @@ export const ADDON_FEATURES = [
   "addon.enterprise_wechat_notifications",
   "addon.chain_stores",
   "addon.open_api",
+  // S5：通用派单模板 v2 的租户级开关（灰度与回退用；默认未开通）。
+  "addon.game_dispatch_template_v2",
 ] as const;
 
 export const FEATURE_KEYS = [...CORE_FEATURES, ...ADDON_FEATURES] as const;

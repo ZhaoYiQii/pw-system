@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 import { tenantGuarded } from "../../apps/api/src/common/database/tenant-guard.js";
-import { buildTemplateOrderDraft } from "../../apps/api/src/modules/game-dispatch/domain/game-template-order-draft.js";
+import type { PublishedConfigV2 } from "../../apps/api/src/modules/game-dispatch/domain/game-template-config-v2.js";
+import { buildTemplateOrderDraftForAudience } from "../../apps/api/src/modules/game-dispatch/domain/game-template-order-draft.js";
 import { DispatchInputError } from "../../apps/api/src/modules/game-dispatch/domain/dispatch-errors.js";
 import { PrismaGameDispatchTemplateOrderRepository } from "../../apps/api/src/modules/game-dispatch/infrastructure/prisma-game-dispatch-template-order.repository.js";
 
@@ -10,6 +11,17 @@ function envOrThrow(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`missing env ${name}`);
   return v;
+}
+
+/**
+ * 仓储端口回调的替身：与应用层同样的写法——按写入方端口（客服）产出草稿、
+ * 落库值与被丢弃的键。回调返回的 `storedValues` 是仓储写入 `formValuesJson` 的来源。
+ */
+function buildTemplateOrderDraft(
+  config: PublishedConfigV2,
+  values: Record<string, unknown>,
+) {
+  return buildTemplateOrderDraftForAudience(config, values, "CS");
 }
 
 /** 一个最小但完整可下单的发布配置：固定人数 1。 */

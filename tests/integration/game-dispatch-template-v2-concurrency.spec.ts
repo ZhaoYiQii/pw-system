@@ -74,6 +74,14 @@ describe("Game Dispatch generic templates v2 并发发布与版本不可变", ()
       data: { code: tenantCode, name: "并发模板店" },
     });
     tenantId = tenant.id;
+    // S5 门禁是 opt-in：夹具必须显式开通 v2 addon。
+    await client.tenantEntitlement.create({
+      data: {
+        tenantId: tenantId,
+        featureKey: "addon.game_dispatch_template_v2",
+        enabled: true,
+      },
+    });
     const owner = await client.tenantAccount.create({
       data: { tenantId, username: "boss", passwordHash: hash },
     });
@@ -114,6 +122,8 @@ describe("Game Dispatch generic templates v2 并发发布与版本不可变", ()
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
       await client.game.deleteMany({ where: { tenantId } });
+      // S5 门禁是 opt-in：夹具写入了 entitlement，收尾必须先删（外键 Restrict）。
+      await client.tenantEntitlement.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
       await client.$disconnect();
     }
