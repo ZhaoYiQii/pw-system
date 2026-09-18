@@ -3,7 +3,6 @@
 import { cn } from "@/lib/utils";
 import {
   clampColumns,
-  columnSpanLabel,
   fieldsForSection,
   formSections,
   formSectionStyle,
@@ -13,6 +12,7 @@ import {
   type FormSectionLike,
 } from "./form-layout";
 import type { DraftComponentV2, DraftSectionV2 } from "./template-draft-state";
+import { fenToYuanInput } from "./template-editor-meta";
 
 export interface TemplateFormField extends FormFieldLike {
   label: string;
@@ -155,12 +155,29 @@ export function TemplateFormRenderer({
  * 与 v1 的 TemplateFormRenderer 并存：旧调用方（新建派单页）继续用 v1。
  * ------------------------------------------------------------------ */
 
+/** 只读预览给输入框的提示：不暴露字段类型枚举。 */
+const PREVIEW_HINTS: Record<string, string> = {
+  TEXT: "请填写",
+  TEXTAREA: "请填写",
+  NUMBER: "请填写数字",
+  MONEY_FEN: "¥ 0.00",
+  DATETIME: "选择日期时间",
+  SINGLE_SELECT: "请选择",
+  MULTI_SELECT: "请选择",
+};
+
 export interface TemplateDraftRendererProps {
   sections: DraftSectionV2[];
   components: DraftComponentV2[];
   /** 编辑器需要看到停用项；预览默认不显示。 */
   includeDisabled?: boolean;
   className?: string;
+  /** 与编辑器清单共用同一套编号；传入后每个组件左上角显示编号。 */
+  numberOf?: (stableKey: string) => number | undefined;
+  /** 当前与编辑器联动高亮的组件。 */
+  activeKey?: string | null;
+  /** 鼠标进出组件时回报给编辑器，实现双向联动。 */
+  onHoverComponent?: (stableKey: string | null) => void;
 }
 
 export function TemplateDraftRenderer({
@@ -168,38 +185,36 @@ export function TemplateDraftRenderer({
   components,
   includeDisabled = false,
   className,
+  numberOf,
+  activeKey = null,
+  onHoverComponent,
 }: TemplateDraftRendererProps) {
   const layout = layoutV2Rows(sections, components, { includeDisabled });
   if (layout.length === 0) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>
-        还没有内容区块。先添加一个分区，再往里加字段。
+      <p className={cn("mc-preview-empty", className)}>
+        还没有内容。加上字段后，这里会显示客户看到的样子。
       </p>
     );
   }
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("mc-preview", className)}>
       {layout.map(({ section, columns, rows }) => (
-        <section key={section.stableKey} className="space-y-2">
-          <header className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">
-              {section.label}
-              {section.enabled ? "" : "（已停用）"}
-            </h3>
-            <span className="font-mono text-xs text-muted-foreground">
-              {columns} 列
-            </span>
+        <section key={section.stableKey} className="mc-preview-group">
+          <header className="mc-preview-grouphead">
+            <h3>{section.label || "未命名分组"}</h3>
+            {section.enabled ? null : (
+              <span className="mc-preview-off">已停用</span>
+            )}
           </header>
           {rows.length === 0 ? (
-            <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-              这个区块还是空的。
-            </p>
+            <p className="mc-preview-empty">这个分组还是空的。</p>
           ) : null}
-          <div className="space-y-2">
+          <div className="mc-preview-rows">
             {rows.map((row, rowIndex) => (
               <div
                 key={`${section.stableKey}-row-${rowIndex}`}
-                className="grid gap-2"
+                className="mc-preview-row"
                 style={{
                   gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 }}
@@ -210,74 +225,120 @@ export function TemplateDraftRenderer({
                     columns,
                   );
                   const disabled = !component.enabled;
+                  const previewRows =
+                    component.kind === "REPEATABLE_TABLE"
+                      ? Math.max(
+                          1,
+                          Math.min(component.defaultRows.length || 1, 3),
+                        )
+                      : 0;
                   return (
                     <div
                       key={component.stableKey}
+                      data-component-key={component.stableKey}
+                      data-preview-item={component.stableKey}
                       style={{ gridColumn: `span ${span} / span ${span}` }}
+                      onMouseEnter={() =>
+                        onHoverComponent?.(component.stableKey)
+                      }
+                      onMouseLeave={() => onHoverComponent?.(null)}
                       className={cn(
-                        "rounded-lg border p-3",
-                        disabled &&
-                          "border-dashed bg-muted/40 text-muted-foreground",
+                        "mc-preview-item",
+                        disabled && "is-off",
+                        activeKey === component.stableKey && "is-active",
                       )}
                     >
-                      <p className="flex items-center justify-between gap-2 text-sm font-medium">
-                        <span>{component.label}</span>
-                        <span className="font-mono text-[11px] text-muted-foreground">
-                          {columnSpanLabel(columns, component.layout.colSpan)}
-                        </span>
-                      </p>
+                      {component.kind === "NOTE" ? null : (
+                        <p className="mc-preview-label">
+                          {typeof numberOf?.(component.stableKey) ===
+                          "number" ? (
+                            <span
+                              data-preview-number={component.stableKey}
+                              className="mc-preview-no"
+                            >
+                              {numberOf(component.stableKey)}
+                            </span>
+                          ) : null}
+                          {component.label || "未命名内容"}
+                          {component.kind === "FIELD" && component.required ? (
+                            <em>*</em>
+                          ) : null}
+                        </p>
+                      )}
                       {component.description ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mc-preview-hint">
                           {component.description}
                         </p>
                       ) : null}
                       {component.kind === "NOTE" ? (
-                        <p className="mt-2 whitespace-pre-wrap text-xs">
-                          {component.text}
+                        <p className="mc-preview-note">
+                          {component.text || "（说明是空的）"}
                         </p>
                       ) : null}
                       {component.kind === "FIELD" ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {component.fieldType}
-                          {component.required ? " · 必填" : ""}
-                          {component.semanticRole === "CUSTOM"
-                            ? ""
-                            : ` · ${component.semanticRole}`}
-                          {component.options && component.options.length > 0
-                            ? ` · ${component.options.length} 个选项`
-                            : ""}
-                        </p>
+                        component.fieldType === "SINGLE_SELECT" ||
+                        component.fieldType === "MULTI_SELECT" ? (
+                          <div className="mc-preview-choices">
+                            {(component.options ?? []).length === 0 ? (
+                              <span className="mc-preview-hint">
+                                还没有选项
+                              </span>
+                            ) : null}
+                            {(component.options ?? []).map((option) => (
+                              <span
+                                key={option.value}
+                                className="mc-preview-choice"
+                              >
+                                {option.label || "未命名选项"}
+                                {option.priceDeltaFen === undefined ? null : (
+                                  <i>
+                                    +¥{fenToYuanInput(option.priceDeltaFen)}
+                                  </i>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div
+                            className={cn(
+                              "mc-preview-stub",
+                              component.fieldType === "TEXTAREA" && "is-area",
+                            )}
+                          >
+                            {component.placeholder ||
+                              PREVIEW_HINTS[component.fieldType] ||
+                              "请填写"}
+                          </div>
+                        )
                       ) : null}
                       {component.kind === "REPEATABLE_TABLE" ? (
-                        <div className="mt-2 overflow-hidden rounded border">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-muted">
-                              <tr>
-                                {component.columns.map((column) => (
-                                  <th
-                                    key={column.stableKey}
-                                    className="px-2 py-1 font-medium"
-                                  >
-                                    {column.label}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {component.defaultRows.map((row, index) => (
-                                <tr key={`${component.stableKey}-row-${index}`}>
-                                  {component.columns.map((column) => (
-                                    <td
-                                      key={column.stableKey}
-                                      className="px-2 py-1"
-                                    >
-                                      {String(row[column.stableKey] ?? "")}
-                                    </td>
-                                  ))}
-                                </tr>
+                        <div className="mc-preview-table">
+                          <div className="mc-preview-thead">
+                            {component.columns.length === 0 ? (
+                              <span>还没有列</span>
+                            ) : null}
+                            {component.columns.map((column) => (
+                              <span key={column.stableKey}>
+                                {column.label || "未命名列"}
+                                {column.required ? " *" : ""}
+                              </span>
+                            ))}
+                          </div>
+                          {[...Array(previewRows).keys()].map((index) => (
+                            <div
+                              key={`${component.stableKey}-prow-${index}`}
+                              className="mc-preview-trow"
+                            >
+                              {component.columns.map((column) => (
+                                <span key={column.stableKey}>
+                                  {column.columnType === "NUMBER"
+                                    ? "0"
+                                    : "请填写"}
+                                </span>
                               ))}
-                            </tbody>
-                          </table>
+                            </div>
+                          ))}
+                          <div className="mc-preview-tadd">＋ 添加一行</div>
                         </div>
                       ) : null}
                     </div>

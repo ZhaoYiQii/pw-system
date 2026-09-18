@@ -30,7 +30,6 @@ import {
   type TemplateListPage,
   type TemplateStatusFilter,
 } from "./template-api";
-import { TemplateEditorBinding } from "./template-editor-binding";
 import { TemplateEditorContent } from "./template-editor-content";
 import {
   collectDraftIssues,
@@ -40,7 +39,6 @@ import {
 } from "./template-binding";
 import { announceIssue } from "./template-a11y";
 import { previewTemplateDocument } from "./template-document-preview";
-import { TemplateDraftRenderer } from "./template-form-renderer";
 import {
   isDirty,
   toContractConfig,
@@ -58,6 +56,10 @@ import {
   type TemplateListSearch,
   type TemplateTab,
 } from "./template-list-state";
+import {
+  GAME_DISPATCH_TEMPLATE_V2_FEATURE,
+  useTemplateV2Feature,
+} from "./feature-flags";
 import { useMerchantRole } from "./role-context";
 
 type TemplateSummary = TemplateListPage["data"][number];
@@ -86,6 +88,9 @@ const TAB_LABELS: Record<TemplateTab, string> = {
   release: "发布设置与版本历史",
 };
 
+/** 算价配置不属于派单模板模块，只保留内容设计与发布两个 Tab。 */
+const VISIBLE_TABS: readonly TemplateTab[] = ["content", "release"];
+
 interface GameOption {
   id: string;
   name: string;
@@ -112,6 +117,7 @@ function formatDateTime(value: string): string {
 
 export function TemplateManagerView() {
   const { role, ready, unauthorized } = useMerchantRole();
+  const v2Feature = useTemplateV2Feature();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -142,6 +148,8 @@ export function TemplateManagerView() {
   } | null>(null);
   const [changeNote, setChangeNote] = useState("");
   const [copyTargetGameId, setCopyTargetGameId] = useState("");
+  /** 隐藏左侧模板列表，把宽度让给编辑区。 */
+  const [listHidden, setListHidden] = useState(false);
   const [copyName, setCopyName] = useState("");
 
   const updateSearch = useCallback(
@@ -194,7 +202,7 @@ export function TemplateManagerView() {
   /** 定位到校验问题：切到对应标签，滚动并把焦点移到区块/组件。 */
   const locateIssue = useCallback(
     (issue: LocatedIssue) => {
-      updateSearch({ tab: issue.tab });
+      updateSearch({ tab: issue.tab === "binding" ? "content" : issue.tab });
       setNotice(announceIssue(issue));
       const selector = issue.componentKey
         ? `[data-component-key="${issue.componentKey}"]`
@@ -518,6 +526,25 @@ export function TemplateManagerView() {
     );
   }
 
+  if (v2Feature.ready && !v2Feature.enabled) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 p-6">
+          <h1 className="text-base font-semibold">
+            该门店尚未开通通用派单模板
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            需要平台开通能力位
+            <code className="font-mono text-xs">
+              {GAME_DISPATCH_TEMPLATE_V2_FEATURE}
+            </code>
+            ，开通后本页可用。
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!canView) {
     return (
       <Card>
@@ -540,18 +567,28 @@ export function TemplateManagerView() {
             按游戏维护派单表单；保存草稿不影响线上，发布后新版本才生效。
           </p>
         </div>
-        {canManage ? (
+        <div className="flex items-center gap-2">
           <Button
-            onClick={(event) => {
-              setLastTrigger(event.currentTarget);
-              setCreateOpen(true);
-            }}
+            variant="outline"
+            aria-pressed={listHidden}
+            aria-controls="tpl-list"
+            onClick={() => setListHidden((value) => !value)}
           >
-            新建模板
+            {listHidden ? "显示模板列表" : "隐藏模板列表"}
           </Button>
-        ) : (
-          <Badge variant="secondary">客服只读</Badge>
-        )}
+          {canManage ? (
+            <Button
+              onClick={(event) => {
+                setLastTrigger(event.currentTarget);
+                setCreateOpen(true);
+              }}
+            >
+              新建模板
+            </Button>
+          ) : (
+            <Badge variant="secondary">客服只读</Badge>
+          )}
+        </div>
       </header>
 
       <section
@@ -639,8 +676,12 @@ export function TemplateManagerView() {
         </p>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
-        <section aria-label="模板列表" className="space-y-3">
+      <div
+        className={`mc-tpl-layout grid gap-6 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]${
+          listHidden ? " is-list-hidden" : ""
+        }`}
+      >
+        <section aria-label="模板列表" id="tpl-list" className="space-y-3">
           {listQuery.isPending ? (
             <div className="space-y-3" role="status" aria-live="polite">
               <div className="h-20 animate-pulse rounded-xl border bg-muted" />
@@ -819,7 +860,7 @@ export function TemplateManagerView() {
                   aria-label="编辑标签"
                   className="flex gap-2 border-b pb-2"
                 >
-                  {(Object.keys(TAB_LABELS) as TemplateTab[]).map((tab) => (
+                  {VISIBLE_TABS.map((tab) => (
                     <button
                       key={tab}
                       type="button"
@@ -940,7 +981,7 @@ export function TemplateManagerView() {
                   </div>
                 ) : null}
 
-                {search.tab === "content" ? (
+                {search.tab === "content" || search.tab === "binding" ? (
                   draft ? (
                     <div className="space-y-4">
                       <TemplateEditorContent
@@ -948,31 +989,7 @@ export function TemplateManagerView() {
                         onChange={setDraft}
                         onNotice={setNotice}
                       />
-                      <div className="rounded-lg border bg-muted/20 p-3">
-                        <p className="mb-2 text-xs text-muted-foreground">
-                          草稿预览（与派单表单共用同一套装箱规则；停用项不显示）
-                        </p>
-                        <TemplateDraftRenderer
-                          sections={draft.sections}
-                          components={draft.components}
-                        />
-                      </div>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      正在准备草稿…
-                    </p>
-                  )
-                ) : null}
-
-                {search.tab === "binding" ? (
-                  draft ? (
-                    <TemplateEditorBinding
-                      draft={draft}
-                      onChange={setDraft}
-                      onNotice={setNotice}
-                      onLocate={locateIssue}
-                    />
                   ) : (
                     <p className="text-sm text-muted-foreground">
                       正在准备草稿…

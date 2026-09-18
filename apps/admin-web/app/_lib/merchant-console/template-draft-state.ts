@@ -513,6 +513,7 @@ export function updateComponent(
     text?: string;
     fieldType?: FieldComponent["fieldType"];
     semanticRole?: FieldComponent["semanticRole"];
+    placeholder?: string;
   },
 ): DraftConfigV2 {
   const target = componentOf(config, stableKey);
@@ -540,6 +541,9 @@ export function updateComponent(
       : {}),
     ...(target.kind === "FIELD" && patch.semanticRole !== undefined
       ? { semanticRole: patch.semanticRole }
+      : {}),
+    ...(target.kind === "FIELD" && patch.placeholder !== undefined
+      ? { placeholder: patch.placeholder.slice(0, 200) }
       : {}),
     ...(target.kind === "NOTE" && patch.text !== undefined
       ? { text: patch.text.slice(0, 500) }
@@ -610,6 +614,71 @@ export function moveComponent(
   });
 }
 
+export function reorderComponent(
+  config: DraftConfigV2,
+  stableKey: string,
+  targetKey: string,
+  position: "before" | "after",
+): DraftConfigV2 {
+  if (stableKey === targetKey) return config;
+  const moving = componentOf(config, stableKey);
+  const anchor = componentOf(config, targetKey);
+  if (!moving || !anchor) return config;
+  const movingSection = moving.sectionKey;
+  const targetSection = anchor.sectionKey;
+  if (movingSection === targetSection) {
+    const rest = config.components
+      .filter(
+        (component) =>
+          component.sectionKey === targetSection &&
+          component.stableKey !== stableKey,
+      )
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const at = rest.findIndex((component) => component.stableKey === targetKey);
+    if (at < 0) return config;
+    const insertAt = position === "before" ? at : at + 1;
+    const reordered = [
+      ...rest.slice(0, insertAt),
+      moving,
+      ...rest.slice(insertAt),
+    ].map((component, index) => ({ ...component, sortOrder: index }));
+    const others = config.components.filter(
+      (component) => component.sectionKey !== targetSection,
+    );
+    return reindex({ ...config, components: [...others, ...reordered] });
+  }
+  const source = config.components
+    .filter(
+      (component) =>
+        component.sectionKey === movingSection &&
+        component.stableKey !== stableKey,
+    )
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((component, index) => ({ ...component, sortOrder: index }));
+  const destination = config.components
+    .filter((component) => component.sectionKey === targetSection)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const at = destination.findIndex(
+    (component) => component.stableKey === targetKey,
+  );
+  if (at < 0) return config;
+  const insertAt = position === "before" ? at : at + 1;
+  const moved = { ...moving, sectionKey: targetSection };
+  const nextDestination = [
+    ...destination.slice(0, insertAt),
+    moved,
+    ...destination.slice(insertAt),
+  ].map((component, index) => ({ ...component, sortOrder: index }));
+  const others = config.components.filter(
+    (component) =>
+      component.sectionKey !== movingSection &&
+      component.sectionKey !== targetSection,
+  );
+  return reindex({
+    ...config,
+    components: [...others, ...source, ...nextDestination],
+  });
+}
 /* --------------------------------------------------------- 参考预设 */
 
 export function insertPreset(

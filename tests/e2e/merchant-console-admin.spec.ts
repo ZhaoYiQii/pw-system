@@ -8,6 +8,8 @@ const PASSWORD = "zcloud1024";
  */
 const S3_TENANT_CODE = process.env.S3_E2E_TENANT_CODE ?? "s3e2e";
 const S3_PASSWORD = process.env.S3_E2E_PASSWORD ?? "zcloud1024";
+/** 开发库种子门店 code；可用 E2E_TENANT_CODE 覆盖，默认沿用历史的 c1。 */
+const DEV_TENANT_CODE = process.env.E2E_TENANT_CODE ?? "c1";
 
 async function loginAsS3Owner(page: import("@playwright/test").Page) {
   await page.goto("/store/login");
@@ -30,9 +32,71 @@ async function createS3Template(
   await expect(page.getByRole("heading", { name })).toBeVisible();
 }
 
+/** 带三级子项的模块在导航里是「组按钮」，必须先展开再点子项。 */
+async function openNavGroup(
+  page: import("@playwright/test").Page,
+  group: string,
+  child: string,
+) {
+  const visible = async (locator: import("@playwright/test").Locator) =>
+    (await locator.count()) > 0 && (await locator.isVisible());
+  const trigger = page.getByRole("button", { name: group }).first();
+  if (!(await visible(trigger))) {
+    const domains = page.locator(
+      "nav.mc-nav .mc-nav-domain > button[aria-expanded]",
+    );
+    const total = await domains.count();
+    for (let index = 0; index < total; index += 1) {
+      if (await visible(trigger)) break;
+      await domains.nth(index).click();
+    }
+  }
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") {
+    await trigger.click();
+  }
+  const link = page.getByRole("link", { name: child }).first();
+  await expect(link).toBeVisible();
+  return link;
+}
+
+/**
+ * 商家端导航按「业务域」折叠，模块链接只在展开的域里可见。 * 商家端导航按「业务域」折叠，模块链接只在展开的域里可见。
+ * 依次展开每个业务域，直到候选名称之一出现；避免在测试里硬编码模块归属。
+ */
+async function openNavItem(
+  page: import("@playwright/test").Page,
+  names: readonly string[],
+) {
+  const find = async () => {
+    for (const name of names) {
+      const links = page.getByRole("link", { name });
+      const total = await links.count();
+      for (let index = 0; index < total; index += 1) {
+        const link = links.nth(index);
+        if (await link.isVisible()) return link;
+      }
+    }
+    return null;
+  };
+  const direct = await find();
+  if (direct) return direct;
+  const domains = page.locator(
+    "nav.mc-nav .mc-nav-domain > button[aria-expanded]",
+  );
+  const total = await domains.count();
+  for (let index = 0; index < total; index += 1) {
+    const trigger = domains.nth(index);
+    if ((await trigger.getAttribute("aria-expanded")) === "true") continue;
+    await trigger.click();
+    const found = await find();
+    if (found) return found;
+  }
+  throw new Error(`导航里找不到「${names.join(" / ")}」`);
+}
+
 async function loginAsOwner(page: import("@playwright/test").Page) {
   await page.goto("/store/login");
-  await page.getByLabel("门店 code").fill("c1");
+  await page.getByLabel("门店 code").fill(DEV_TENANT_CODE);
   await page.getByLabel("账号").fill("owner");
   await page.getByLabel("密码").fill(PASSWORD);
   await page.getByRole("button", { name: "登录" }).click();
@@ -168,6 +232,10 @@ async function openMockedNewOrder(page: import("@playwright/test").Page) {
           },
         ],
         // S4：新建派单改为三阶段 + v2 契约（游戏 → 已发布模板 → 发布快照表单）
+        // S5：前端先读能力位；mock 里显式开通，否则 v2 入口显示"未开通"。
+        "/api/v1/tenant/features": [
+          { featureKey: "addon.game_dispatch_template_v2", enabled: true },
+        ],
         "/api/v1/tenant/catalog/games": [
           { id: "game-1", name: "英雄联盟", enabled: true },
         ],
@@ -242,33 +310,58 @@ test("店长登录后进入新商家控制台工作台并看到真实导航", as
   await expect(
     page.getByRole("heading", { name: /工作台|owner/ }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "订单台账" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "客户档案" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "陪玩档案" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "门店与套餐" })).toBeVisible();
+  await expect(
+    await openNavGroup(page, "订单中心", "派单工作台"),
+  ).toBeVisible();
+  await expect(await openNavItem(page, ["客户档案"])).toBeVisible();
+  await expect(await openNavItem(page, ["陪玩档案"])).toBeVisible();
+  await expect(await openNavItem(page, ["门店与套餐"])).toBeVisible();
 });
 
 test("记录台客户与陪玩从真实接口读取", async ({ page }) => {
   await loginAsOwner(page);
-  await page.getByRole("link", { name: "客户档案" }).click();
+  await (await openNavItem(page, ["客户档案"])).click();
   await expect(page.getByRole("heading", { name: "客户档案" })).toBeVisible();
   await expect(page.getByText("老王")).toBeVisible();
 
-  await page.getByRole("link", { name: "陪玩档案" }).click();
+  await (await openNavItem(page, ["陪玩档案"])).click();
   await expect(page.getByRole("heading", { name: "陪玩档案" })).toBeVisible();
   await expect(page.getByText("阿伟")).toBeVisible();
 });
 
 test("订单与派单台账读取真实订单数据", async ({ page }) => {
-  await loginAsOwner(page);
-  await page.getByRole("link", { name: "订单台账" }).click();
+  // 先按真实 API 流程造一条派单，再断言台账里看得到（自给自足，不依赖门店预置数据）
+  const session = await s4Session(page);
+  const suffix = Date.now().toString(36);
+  const gameName = `台账用例-${suffix}`;
+  const gameId = await s4CreateGame(page, session, gameName);
+  await s4PublishTemplate(page, session, gameId, `台账模板-${suffix}`, {
+    setDefault: true,
+  });
+
+  await s4Login(page);
+  await page.goto("/merchant-console/dispatch/new");
+  await s4SelectContext(page, gameName);
+  await page
+    .getByRole("button", { name: new RegExp(`台账模板-${suffix}`) })
+    .click();
+  await page.getByLabel("区服").fill("艾欧尼亚");
+  await page.getByLabel("模式").selectOption("ranked");
+  await page.getByRole("button", { name: "添加行" }).click();
+  await page.getByLabel("岗位与人数 第 1 行 位置").fill("陪玩");
+  await page.getByLabel("岗位与人数 第 1 行 人数").fill("1");
+  await page.getByRole("button", { name: "创建派单草稿" }).click();
+  await expect(page).toHaveURL(/\/merchant-console\/dispatch\/.+kind=GD/);
+
+  // 台账里应当出现这一条
+  await page.goto("/merchant-console/dispatch");
   await expect(page.getByRole("heading", { name: "订单与派单" })).toBeVisible();
   await expect(page.locator("table tbody tr").first()).toBeVisible();
 });
 
 test("门店设置读取真实配置并可切换分区", async ({ page }) => {
   await loginAsOwner(page);
-  await page.getByRole("link", { name: "门店与套餐" }).click();
+  await (await openNavItem(page, ["门店与套餐"])).click();
   await expect(page.getByRole("heading", { name: "门店设置" })).toBeVisible();
   await expect(page.locator(".mc-settings-tabs button")).toHaveCount(5);
   await page.getByRole("tab", { name: "员工与角色" }).click();
@@ -407,24 +500,101 @@ test("新建派单按发布快照渲染启用区块与字段", async ({ page }) 
 });
 
 test.describe("S3 模板管理主路径（真实本地 API）", () => {
-  test("S3 模板管理：新建 → 加内容与预设 → 保存草稿 → 发布 v1 → 归档", async ({
+  test("S3 模板管理：新建 → 加内容 → 保存草稿 → 发布 v1 → 归档", async ({
     page,
   }) => {
     const name = `E2E 排位陪练 ${Date.now().toString(36)}`;
     await loginAsS3Owner(page);
     await createS3Template(page, name);
 
-    // 内容设计：先加分区，再插入「岗位与人数」参考预设
-    await page.getByRole("button", { name: "+ 新分区" }).click();
-    await page.getByRole("button", { name: "岗位与人数" }).click();
+    // 内容设计：只给原语，不给预设——分组与内容全部自建
+    await page.getByRole("button", { name: "+ 新建分组" }).click();
+    await page.getByRole("button", { name: "+ 新建字段" }).click();
+    await page.getByLabel("名称", { exact: true }).fill("区服");
+    await page.getByRole("button", { name: "单选", exact: true }).click();
     await expect(
-      page.locator('[data-component-key] input[aria-label="组件名称"]').first(),
-    ).toHaveValue("岗位与人数");
+      page.locator("[data-template-editor] [data-component-key]"),
+    ).toHaveCount(1);
 
-    // 业务绑定与计算：参考预设已显式绑定人数来源（表格列汇总 → 人数列）
-    await page.getByRole("tab", { name: "业务绑定与计算" }).click();
-    await expect(page.getByRole("heading", { name: "人数来源" })).toBeVisible();
-    await expect(page.getByLabel("表格列汇总")).toBeChecked();
+    // 表格的列由店主自己定义
+    await page.getByRole("button", { name: "+ 新建表格" }).click();
+    await page.getByLabel("列 1 名称").fill("岗位");
+    await page.getByRole("button", { name: "+ 添加列" }).click();
+    await page.getByLabel("列 2 名称").fill("人数");
+    await page.getByLabel("列 2 类型").selectOption("NUMBER");
+    await expect(
+      page.locator("[data-template-editor] [data-component-key]"),
+    ).toHaveCount(2);
+
+    // 编号留在清单里；客户视角收在「渲染」弹层（D-16 / D-22）
+    const editorRows = page.locator(
+      "[data-template-editor] [data-component-key]",
+    );
+    await expect(editorRows.nth(0).locator("[data-row-number]")).toHaveText(
+      "1",
+    );
+    await expect(editorRows.nth(1).locator("[data-row-number]")).toHaveText(
+      "2",
+    );
+    await expect(page.locator("[data-preview-item]")).toHaveCount(0);
+    if (process.env.S3_E2E_SHOTS) {
+      await page.screenshot({
+        path: "work/screenshots/template-editor.png",
+        fullPage: true,
+      });
+    }
+    // 像素级视觉回归基线（首次用 --update-snapshots 生成）。
+    // 只截编辑器本体：模板名含时间戳，全页快照每次都不同。
+    await expect(page.locator("[data-template-editor]")).toHaveScreenshot(
+      "template-editor.png",
+      { animations: "disabled", maxDiffPixels: 150 },
+    );
+
+    // 「渲染」按钮弹出客户视角
+    await page.getByRole("button", { name: "渲染" }).click();
+    const renderDialog = page.getByRole("dialog", { name: "客户看到的样子" });
+    await expect(renderDialog).toBeVisible();
+    const previewItems = renderDialog.locator("[data-preview-item]");
+    await expect(previewItems).toHaveCount(2);
+    await expect(
+      previewItems.nth(0).locator("[data-preview-number]"),
+    ).toHaveText("1");
+    await expect(renderDialog).toContainText("区服");
+    if (process.env.S3_E2E_SHOTS) {
+      await page.screenshot({
+        path: "work/screenshots/template-editor-render.png",
+        fullPage: false,
+      });
+    }
+    await expect(renderDialog).toHaveScreenshot("template-render-dialog.png", {
+      animations: "disabled",
+      maxDiffPixels: 150,
+    });
+    await page.getByRole("button", { name: "关闭" }).click();
+    await expect(renderDialog).toBeHidden();
+
+    // 模板列表可隐藏，编辑区随之变宽
+    const composerWidth = () =>
+      page
+        .locator("[data-template-editor]")
+        .evaluate((el) => Math.round(el.getBoundingClientRect().width));
+    const widthBefore = await composerWidth();
+    await page.getByRole("button", { name: "隐藏模板列表" }).click();
+    await expect(page.locator('[aria-label="模板列表"]')).toBeHidden();
+    expect(await composerWidth()).toBeGreaterThan(widthBefore);
+    if (process.env.S3_E2E_SHOTS) {
+      await page.screenshot({
+        path: "work/screenshots/template-list-hidden.png",
+        fullPage: true,
+      });
+    }
+    await page.getByRole("button", { name: "显示模板列表" }).click();
+    await expect(page.locator('[aria-label="模板列表"]')).toBeVisible();
+
+    // 算价配置不属于派单模板模块：「业务绑定与计算」这一屏已取消
+    await expect(page.getByRole("tab", { name: "业务绑定与计算" })).toHaveCount(
+      0,
+    );
 
     // 保存草稿（expectedRevision 乐观锁）
     await page.getByRole("button", { name: "保存草稿" }).click();
@@ -443,8 +613,7 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
 
     // 文案预览：按当前草稿生成表格与纯文本（区块标题 + 岗位人数默认行）
     await expect(page.getByText("文案预览（按当前草稿）")).toBeVisible();
-    await expect(page.getByText(/【新分区】/).first()).toBeVisible();
-    await expect(page.getByText(/人数：1/).first()).toBeVisible();
+    await expect(page.getByText(/【新分组】/).first()).toBeVisible();
 
     // 次级操作：归档后保存草稿与发布都不可用（提示走 aria-live 状态区）
     await page.getByRole("button", { name: "归档", exact: true }).click();
@@ -462,7 +631,7 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
       page.getByRole("status").filter({ hasText: "已取消归档" }),
     ).toBeVisible();
     await page.getByRole("tab", { name: "内容设计" }).click();
-    await page.getByRole("button", { name: "+ 字段", exact: true }).click();
+    await page.getByRole("button", { name: "+ 新建字段" }).click();
     await page.getByRole("button", { name: "保存草稿" }).click();
     await expect(page.getByText(/草稿已保存 · r\d+/)).toBeVisible();
     await expect(
@@ -484,7 +653,7 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
       const pageA = await contextA.newPage();
       await loginAsS3Owner(pageA);
       await createS3Template(pageA, name);
-      await pageA.getByRole("button", { name: "+ 新分区" }).click();
+      await pageA.getByRole("button", { name: "+ 新建分组" }).click();
       await pageA.getByRole("button", { name: "保存草稿" }).click();
       await expect(pageA.getByText(/草稿已保存 · r\d+/)).toBeVisible();
 
@@ -496,12 +665,12 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
         .getByRole("button", { name: new RegExp(name) })
         .first()
         .click();
-      await pageB.getByRole("button", { name: "+ 字段", exact: true }).click();
+      await pageB.getByRole("button", { name: "+ 新建字段" }).click();
       await pageB.getByRole("button", { name: "保存草稿" }).click();
       await expect(pageB.getByText(/草稿已保存 · r\d+/)).toBeVisible();
 
       // A 手里还是旧 revision：再保存必须 409，并给出冲突处理选项
-      await pageA.getByRole("button", { name: "+ 字段", exact: true }).click();
+      await pageA.getByRole("button", { name: "+ 新建字段" }).click();
       await pageA.getByRole("button", { name: "保存草稿" }).click();
       await expect(pageA.getByText(/另一个管理员刚保存过/)).toBeVisible();
       await expect(
@@ -513,7 +682,7 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
 
       // 冲突期间本地草稿保留：A 刚加的字段还在
       await expect(
-        pageA.locator('[data-component-key] input[aria-label="组件名称"]'),
+        pageA.locator("[data-template-editor] [data-component-key]"),
       ).toHaveCount(1);
     } finally {
       await contextA.close();
@@ -526,20 +695,16 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
     await loginAsS3Owner(page);
     await createS3Template(page, name);
 
-    await page.getByRole("button", { name: "+ 新分区" }).click();
-    await page.getByRole("button", { name: "+ 字段", exact: true }).click();
-    await page.getByRole("button", { name: "+ 字段", exact: true }).click();
+    await page.getByRole("button", { name: "+ 新建分组" }).click();
+    await page.getByRole("button", { name: "+ 新建字段" }).click();
+    await page.getByLabel("名称", { exact: true }).fill("字段 A");
+    await page.getByRole("button", { name: "+ 新建字段" }).click();
+    await page.getByLabel("名称", { exact: true }).fill("字段 B");
 
-    const nameInputs = page.locator(
-      '[data-component-key] input[aria-label="组件名称"]',
-    );
-    await expect(nameInputs).toHaveCount(2);
-    await nameInputs.nth(0).fill("字段 A");
-    await nameInputs.nth(1).fill("字段 B");
+    const rows = page.locator("[data-template-editor] [data-component-key]");
+    await expect(rows).toHaveCount(2);
 
-    const moveUpButtons = page.locator(
-      '[data-component-key] button[data-action="move-up"]',
-    );
+    const moveUpButtons = rows.locator('button[data-action="move-up"]');
     await moveUpButtons.nth(1).focus();
     const focusedBefore = await page.evaluate(() =>
       document.activeElement
@@ -550,9 +715,11 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByText(/已把「字段 B」上移到第 1 位/)).toBeVisible();
 
-    const values = await nameInputs.evaluateAll((elements) =>
-      elements.map((element) => (element as HTMLInputElement).value),
-    );
+    const values = await rows
+      .locator("button[aria-expanded]")
+      .evaluateAll((elements) =>
+        elements.map((element) => element.textContent?.trim() ?? ""),
+      );
     expect(values).toEqual(["字段 B", "字段 A"]);
 
     const focusedAfter = await page.evaluate(() =>
