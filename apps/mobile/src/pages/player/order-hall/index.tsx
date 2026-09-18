@@ -348,7 +348,9 @@ export default function OrderHallPage() {
           </View>
           {hall.length === 0 ? (
             <View className="hall-empty-state">
-              <View className="hall-empty-mark"><View /></View>
+              <View className="hall-empty-mark">
+                <View />
+              </View>
               <Text className="hall-empty-title">当前没有新订单</Text>
               <Text className="hall-empty-copy">
                 大厅会自动同步，保持可接单状态即可

@@ -39,7 +39,13 @@ function RoleNotice({ role }: { role: MerchantRole }) {
   );
 }
 
-function EmptyBlock({ title, description }: { title: string; description: string }) {
+function EmptyBlock({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-6 text-center">
       <Sparkles className="mb-3 size-5 text-teal-600" aria-hidden="true" />
@@ -57,19 +63,31 @@ function AttentionRow({
   index: number;
 }) {
   return (
-    <article className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-4 border-b border-slate-100 px-1 py-4 last:border-b-0" key={item.id}>
+    <article
+      className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-4 border-b border-slate-100 px-1 py-4 last:border-b-0"
+      key={item.id}
+    >
       <span className="font-mono text-xs font-semibold text-slate-400">
         {String(index + 1).padStart(2, "0")}
       </span>
       <div className="min-w-0">
-        <strong className="block truncate text-sm text-slate-900">{item.title}</strong>
-        <p className="mt-1 truncate text-xs text-slate-500">{item.subtitle ?? item.refNo}</p>
+        <strong className="block truncate text-sm text-slate-900">
+          {item.title}
+        </strong>
+        <p className="mt-1 truncate text-xs text-slate-500">
+          {item.subtitle ?? item.refNo}
+        </p>
         <p className="mt-1 text-xs text-slate-400">
           {item.priority === "HIGH" ? "高优先级 · " : "常规 · "}
           点击进入对应记录处理
         </p>
       </div>
-      <Button asChild variant="outline" size="sm" className="rounded-lg shadow-none">
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="rounded-lg shadow-none"
+      >
         <Link href={attentionHref(item)}>
           {actionLabel(item.action)} <ArrowRight aria-hidden="true" />
         </Link>
@@ -80,7 +98,10 @@ function AttentionRow({
 
 function RiskRow({ item }: { item: DashboardRiskItem }) {
   return (
-    <Link className="grid grid-cols-[42px_minmax(0,1fr)_16px] items-center gap-3 rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-amber-200 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500" href={riskHref(item)}>
+    <Link
+      className="grid grid-cols-[42px_minmax(0,1fr)_16px] items-center gap-3 rounded-xl border border-transparent px-3 py-3 transition-colors hover:border-amber-200 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+      href={riskHref(item)}
+    >
       <time className="rounded-md bg-amber-100 px-1.5 py-1 text-center font-mono text-xs font-semibold text-amber-800">
         {item.kind === "SETTLEMENT_TODO"
           ? "结算"
@@ -114,8 +135,12 @@ function SignalTile({
 }) {
   const content = (
     <>
-      <span className="text-xs font-semibold tracking-wide text-slate-400">{label}</span>
-      <b className="mt-5 block whitespace-nowrap font-mono text-[clamp(1.25rem,1.8vw,1.75rem)] font-semibold tracking-tight text-white">{value}</b>
+      <span className="text-xs font-semibold tracking-wide text-slate-400">
+        {label}
+      </span>
+      <b className="mt-5 block whitespace-nowrap font-mono text-[clamp(1.25rem,1.8vw,1.75rem)] font-semibold tracking-tight text-white">
+        {value}
+      </b>
       <span className="mt-4 flex items-center gap-1 text-xs text-slate-400">
         {helper}
         {href ? <ArrowRight className="size-3" aria-hidden="true" /> : null}
@@ -131,7 +156,10 @@ function SignalTile({
       {content}
     </Link>
   ) : (
-    <div className="min-w-0 border-l border-white/10 px-5 py-1 first:border-l-0" aria-disabled="true">
+    <div
+      className="min-w-0 border-l border-white/10 px-5 py-1 first:border-l-0"
+      aria-disabled="true"
+    >
       {content}
     </div>
   );
@@ -156,14 +184,19 @@ export function WorkView() {
   if (summaryQuery.isPending) {
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-8">
-        <div className="animate-pulse text-sm text-slate-500">经营工作台加载中…</div>
+        <div className="animate-pulse text-sm text-slate-500">
+          经营工作台加载中…
+        </div>
       </section>
     );
   }
 
   if (summaryQuery.isError || !summary) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+      <div
+        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        role="alert"
+      >
         经营工作台数据加载失败：
         {summaryQuery.error instanceof Error
           ? summaryQuery.error.message
@@ -195,9 +228,12 @@ export function WorkView() {
       <header className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <div className="flex items-center gap-2 font-mono text-xs font-semibold tracking-[0.18em] text-teal-700">
-            <Radio className="size-3.5" aria-hidden="true" /> 今日作战台 · {dateLabel}
+            <Radio className="size-3.5" aria-hidden="true" /> 今日作战台 ·{" "}
+            {dateLabel}
           </div>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">经营工作台</h1>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            经营工作台
+          </h1>
           <p className="mt-2 text-sm text-slate-600">
             今日已服务 {metrics.todayServiceCount} 单 · 进行中{" "}
             {metrics.liveSessions} 场
@@ -205,7 +241,11 @@ export function WorkView() {
           <RoleNotice role={role} />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="h-10 rounded-lg bg-white shadow-none">
+          <Button
+            asChild
+            variant="outline"
+            className="h-10 rounded-lg bg-white shadow-none"
+          >
             <Link href="/merchant-console/ai">AI 录单</Link>
           </Button>
           <NewOrderButton className="inline-flex h-10 items-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white shadow-none transition-colors hover:bg-teal-700" />
@@ -229,18 +269,29 @@ export function WorkView() {
         <Card className="rounded-2xl border-slate-200 shadow-[0_8px_30px_rgba(21,32,43,0.05)]">
           <CardHeader className="flex-row items-start justify-between space-y-0 border-b border-slate-100 p-6">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-slate-950">需要处理</h2>
-              <p className="mt-1 text-sm text-slate-500">订单 / 场次 / 结算 / 争议按时间倒序</p>
+              <h2 className="text-lg font-bold tracking-tight text-slate-950">
+                需要处理
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                订单 / 场次 / 结算 / 争议按时间倒序
+              </p>
             </div>
-            <span className="rounded-full bg-teal-50 px-2.5 py-1 font-mono text-xs font-semibold text-teal-700">{summary.attention.length} 项</span>
+            <span className="rounded-full bg-teal-50 px-2.5 py-1 font-mono text-xs font-semibold text-teal-700">
+              {summary.attention.length} 项
+            </span>
           </CardHeader>
           <CardContent className="p-6">
             {summary.attention.length > 0 ? (
-              summary.attention.slice(0, 8).map((item, index) => (
-                <AttentionRow key={item.id} item={item} index={index} />
-              ))
+              summary.attention
+                .slice(0, 8)
+                .map((item, index) => (
+                  <AttentionRow key={item.id} item={item} index={index} />
+                ))
             ) : (
-              <EmptyBlock title="当前没有待办" description="全部订单、场次与结算均已处理。" />
+              <EmptyBlock
+                title="当前没有待办"
+                description="全部订单、场次与结算均已处理。"
+              />
             )}
           </CardContent>
         </Card>
@@ -249,18 +300,31 @@ export function WorkView() {
           <Card className="rounded-2xl border-slate-200 shadow-[0_8px_30px_rgba(21,32,43,0.05)]">
             <CardHeader className="flex-row items-start justify-between space-y-0 border-b border-slate-100 p-5">
               <div>
-                <h2 className="flex items-center gap-2 text-base font-bold text-slate-950"><CircleAlert className="size-4 text-amber-600" aria-hidden="true" />风险与提醒</h2>
-                <p className="mt-1 text-xs text-slate-500">调整待复核 / 结算 / 争议</p>
+                <h2 className="flex items-center gap-2 text-base font-bold text-slate-950">
+                  <CircleAlert
+                    className="size-4 text-amber-600"
+                    aria-hidden="true"
+                  />
+                  风险与提醒
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  调整待复核 / 结算 / 争议
+                </p>
               </div>
-              <span className="font-mono text-xs text-slate-500">{summary.riskFeed.length} 项</span>
+              <span className="font-mono text-xs text-slate-500">
+                {summary.riskFeed.length} 项
+              </span>
             </CardHeader>
             <CardContent className="p-3">
               {summary.riskFeed.length > 0 ? (
-                summary.riskFeed.slice(0, 5).map((item) => (
-                  <RiskRow key={item.id} item={item} />
-                ))
+                summary.riskFeed
+                  .slice(0, 5)
+                  .map((item) => <RiskRow key={item.id} item={item} />)
               ) : (
-                <EmptyBlock title="暂无风险提醒" description="当前没有需要留意的经营异常。" />
+                <EmptyBlock
+                  title="暂无风险提醒"
+                  description="当前没有需要留意的经营异常。"
+                />
               )}
             </CardContent>
           </Card>
@@ -271,14 +335,42 @@ export function WorkView() {
               <p className="text-xs text-slate-500">高频经营入口</p>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2 p-5 pt-1">
-              <Button asChild variant="outline" size="sm" className="rounded-lg shadow-none"><Link href="/merchant-console/ai">AI 录单</Link></Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-lg shadow-none"
+              >
+                <Link href="/merchant-console/ai">AI 录单</Link>
+              </Button>
               {canSeeFinance(role) ? (
                 <>
-                  <Button asChild variant="outline" size="sm" className="rounded-lg shadow-none"><Link href="/merchant-console/settlements">结算批次</Link></Button>
-                  <Button asChild variant="outline" size="sm" className="rounded-lg shadow-none"><Link href="/merchant-console/finrisk">财务风险</Link></Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg shadow-none"
+                  >
+                    <Link href="/merchant-console/settlements">结算批次</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg shadow-none"
+                  >
+                    <Link href="/merchant-console/finrisk">财务风险</Link>
+                  </Button>
                 </>
               ) : null}
-              <Button asChild variant="outline" size="sm" className="rounded-lg shadow-none"><Link href="/merchant-console/disputes">争议处理</Link></Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-lg shadow-none"
+              >
+                <Link href="/merchant-console/disputes">争议处理</Link>
+              </Button>
             </CardContent>
           </Card>
 

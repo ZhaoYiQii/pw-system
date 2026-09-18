@@ -2,15 +2,10 @@ import { formatFenYuan } from "../money";
 import type { MerchantRole } from "./modules";
 
 export type DashboardAttentionKind =
-  | "ORDER_TODO"
-  | "SESSION_TODO"
-  | "SETTLEMENT_TODO"
-  | "DISPUTE_TODO";
+  "ORDER_TODO" | "SESSION_TODO" | "SETTLEMENT_TODO" | "DISPUTE_TODO";
 
 export type DashboardRiskKind =
-  | "ADJUSTMENT_TODO"
-  | "SETTLEMENT_TODO"
-  | "DISPUTE_TODO";
+  "ADJUSTMENT_TODO" | "SETTLEMENT_TODO" | "DISPUTE_TODO";
 
 export interface DashboardMetrics {
   todoOrders: number;

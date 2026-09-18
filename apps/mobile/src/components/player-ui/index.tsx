@@ -67,7 +67,10 @@ export function PlayerPage({
             className={`pw-nav-item ${activeNav === item.key ? "is-active" : ""}`}
             onClick={() => void Taro.reLaunch({ url: item.url })}
           >
-            <View className={`pw-nav-icon pw-nav-icon-${item.icon}`} aria-hidden="true">
+            <View
+              className={`pw-nav-icon pw-nav-icon-${item.icon}`}
+              aria-hidden="true"
+            >
               <View className="pw-nav-icon-detail" />
             </View>
             <Text>{item.label}</Text>
