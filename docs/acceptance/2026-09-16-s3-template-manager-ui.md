@@ -132,6 +132,7 @@ from game_dispatch_template_versions order by version_no;
 - **其他既有 E2E 未运行**：`tests/e2e/admin.spec.ts`、`tests/e2e/mobile.spec.ts` 依赖开发库 `pw_saas`，超出本次数据库授权，未执行。
 - **冲突用例的收敛路径未端到端验证**：已证明 409 冲突块出现、本地草稿保留、「重新加载服务端」按钮存在；未验证点击后在真实并发下合入的最终结果。
 - **契约缺口：`game=unclassified`**：列表契约 `gameId` 只接受 uuid，无法用参数表达「未归类」，界面只在已加载结果内筛选；如需要服务端语义，需改契约（需单独批准）。
+- **生成契约的判别字段：已解决（2026-09-17）**。生成脚本新增归一化：20 处内联 oneOf 的成员提升为 6 个 components/schemas 具名组件并改写为 $ref + discriminator.mapping，判别字段的 const 归一化为单值 enum（该生成器只认 enum）。结果：types.gen.ts 的 `kind: string` 从 60 处降到 0、`kind: 'FIELD'` 等字面量 36 处，联合变成 Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>。证据：契约套件 18 通过（含 $ref+mapping 与字面量断言）、api/api-client/admin typecheck 全 0。
 - **生成契约的判别字段**：oneOf 未生成 discriminator，生成类型把判别字段渲染为 `kind: string`；admin 用精确镜像类型 + 编译期兼容断言规避，根治需修改生成器（属契约变更，需批准）。
 - **主操作色对比度：已修复**。`--mc-accent` 由 `#189c91`（白字 3.39:1）改为 `#11786f`；白字 5.33:1，作为文字在 `--mc-paper` / `--mc-paper-2` / `--mc-accent-2` / `--mc-bg` 上分别为 5.33 / 5.05 / 4.72 / 4.91:1，全部达 AA（复核见 §5）。排除项：`#0f7f76` 在 `--mc-accent-2` 上仅 4.31:1，未达 AA。
 - **移动端同一问题未处理**：`apps/mobile/src/components/player-ui/styles.css` 的 `--pw-primary: #189c91` 与本次同值，白字同样约 3.39:1；属另一个 app 的视觉决策，未在 S3 授权范围内改动，建议单独开任务。

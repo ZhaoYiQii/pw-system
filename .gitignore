@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 .turbo/
 .next/
+.swc/
 dist/
 build/
 coverage/
@@ -23,6 +24,7 @@ logs/
 tmp/
 temp/
 data/
+work/backups/
 
 # Editors and operating systems
 .idea/

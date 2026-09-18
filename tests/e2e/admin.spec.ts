@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const PASSWORD = "Dev-Password-123";
+const PASSWORD = "zcloud1024";
 
 test("平台管理员可登录总览并进入门店管理", async ({ page }) => {
   await page.goto("/login");
