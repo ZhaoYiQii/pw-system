@@ -474,7 +474,7 @@ function PlayerDetailView({ id }: { id: string }) {
         <div className="mc-section-head">
           <div><h2>技能标签</h2><p>绑定门店已启用的游戏。</p></div>
           <div className="mc-button-row">
-            <select className="mc-select" value={skillGameId} onChange={(e) => setSkillGameId(e.target.value)}>
+            <select className="mc-select" aria-label="选择技能游戏" value={skillGameId} onChange={(e) => setSkillGameId(e.target.value)}>
               <option value="">选择游戏…</option>
               {(gamesQuery.data ?? []).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
@@ -501,7 +501,7 @@ function PlayerDetailView({ id }: { id: string }) {
           <div className="mc-button-row">
             <input className="mc-input" style={{ maxWidth: 170 }} type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="开始" />
             <input className="mc-input" style={{ maxWidth: 170 }} type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} aria-label="结束" />
-            <input className="mc-input" style={{ maxWidth: 130 }} placeholder="原因" value={reason} onChange={(e) => setReason(e.target.value)} />
+            <input className="mc-input" style={{ maxWidth: 130 }} placeholder="原因" aria-label="不可接单原因" value={reason} onChange={(e) => setReason(e.target.value)} />
             <button type="button" className="mc-btn mc-btn-small" disabled={!from || !to} onClick={() => addAvailability.mutate()}><Plus size={14} /> 添加</button>
           </div>
         </div>
@@ -783,7 +783,7 @@ function DisputeDetailView({ id }: { id: string }) {
         </div>
         {dispute.status === "OPEN" ? (
           <div className="mc-button-row">
-            <textarea className="mc-input" style={{ minHeight: 64 }} placeholder="填写处理结论" value={resolution} onChange={(e) => setResolution(e.target.value)} />
+            <textarea className="mc-input" style={{ minHeight: 64 }} placeholder="填写处理结论" aria-label="处理结论" value={resolution} onChange={(e) => setResolution(e.target.value)} />
             <button type="button" className="mc-btn mc-btn-primary" disabled={!resolution.trim() || resolve.isPending} onClick={() => resolve.mutate()}>提交处理</button>
           </div>
         ) : null}

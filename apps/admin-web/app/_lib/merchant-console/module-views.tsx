@@ -280,18 +280,21 @@ export function CustomersModuleView() {
           <input
             className="mc-input"
             placeholder="姓名 *"
+            aria-label="客户姓名"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <input
             className="mc-input"
             placeholder="手机（可选）"
+            aria-label="客户手机"
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
           />
           <input
             className="mc-input"
             placeholder="备注（可选）"
+            aria-label="客户备注"
             value={remark}
             onChange={(e) => setRemark(e.target.value)}
           />
@@ -419,9 +422,9 @@ export function PlayersModuleView() {
           </div>
         </div>
         <div className="mc-form-grid">
-          <input className="mc-input" placeholder="姓名 *" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="mc-input" placeholder="手机（可选）" value={mobile} onChange={(e) => setMobile(e.target.value)} />
-          <input className="mc-input" placeholder="基础小时价(元)" inputMode="decimal" value={priceYuan} onChange={(e) => setPriceYuan(e.target.value)} />
+          <input className="mc-input" placeholder="姓名 *" aria-label="陪玩姓名" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="mc-input" placeholder="手机（可选）" aria-label="陪玩手机" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          <input className="mc-input" placeholder="基础小时价(元)" aria-label="基础小时价（元）" inputMode="decimal" value={priceYuan} onChange={(e) => setPriceYuan(e.target.value)} />
           <button type="button" className="mc-btn mc-btn-primary" disabled={create.isPending} onClick={() => create.mutate()}>
             <UserPlus size={15} /> 新建
           </button>
@@ -609,7 +612,7 @@ export function CatalogModuleView() {
           <div><h2>游戏与产品</h2><p>启停与增删会真实写入目录。</p></div>
         </div>
         <div className="mc-form-grid">
-          <input className="mc-input" placeholder="新游戏名称" value={gameName} onChange={(e) => setGameName(e.target.value)} />
+          <input className="mc-input" placeholder="新游戏名称" aria-label="新游戏名称" value={gameName} onChange={(e) => setGameName(e.target.value)} />
           <button type="button" className="mc-btn" disabled={!gameName.trim()} onClick={() => void addGame()}>添加游戏</button>
         </div>
         <div className="mc-form-grid">
@@ -959,7 +962,7 @@ export function SettlementsModuleView() {
               <tbody>
                 {earnings.map((e) => (
                   <tr key={e.id}>
-                    <td><input type="checkbox" checked={pendingIds.includes(e.id)} onChange={() => setPendingIds((prev) => prev.includes(e.id) ? prev.filter((x) => x !== e.id) : [...prev, e.id])} /></td>
+                    <td><input type="checkbox" aria-label={`选择订单 ${e.orderNo}`} checked={pendingIds.includes(e.id)} onChange={() => setPendingIds((prev) => prev.includes(e.id) ? prev.filter((x) => x !== e.id) : [...prev, e.id])} /></td>
                     <td>{e.orderNo}</td><td>{e.playerName}</td><td>{e.source}</td><td>{formatFenYuan(e.amountFen)}</td><td>{dateTime(e.createdAt)}</td>
                   </tr>
                 ))}
@@ -1075,7 +1078,7 @@ export function AuditModuleView() {
             <Search size={15} aria-hidden="true" />
             <input value={keyword} onChange={(e) => { setKeyword(e.target.value); setOffset(0); }} placeholder="搜索摘要/操作" aria-label="搜索审计" />
           </label>
-          <input className="mc-input" style={{ maxWidth: 180 }} placeholder="动作名" value={action} onChange={(e) => { setAction(e.target.value); setOffset(0); }} />
+          <input className="mc-input" style={{ maxWidth: 180 }} placeholder="动作名" aria-label="按动作名筛选" value={action} onChange={(e) => { setAction(e.target.value); setOffset(0); }} />
         </div>
         {rows.length ? (
           <div className="mc-table-wrap">

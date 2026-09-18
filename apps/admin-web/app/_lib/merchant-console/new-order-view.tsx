@@ -47,6 +47,10 @@ import {
   type PublishedVersionForm,
 } from "./template-order-api";
 import { TemplateApiError } from "./template-api";
+import {
+  GAME_DISPATCH_TEMPLATE_V2_FEATURE,
+  useTemplateV2Feature,
+} from "./feature-flags";
 import { useMerchantRole } from "./role-context";
 
 interface CustomerRow {
@@ -183,6 +187,7 @@ export function NewOrderView({
 } = {}) {
   const router = useRouter();
   const { role } = useMerchantRole();
+  const v2Feature = useTemplateV2Feature();
   const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
 
   const [state, setState] = useState<NewOrderState>(initialNewOrderState);
@@ -296,6 +301,25 @@ export function NewOrderView({
       );
     });
   }, []);
+
+  if (v2Feature.ready && !v2Feature.enabled) {
+    return (
+      <Card>
+        <CardContent className="space-y-2 p-6">
+          <h1 className="text-base font-semibold">
+            该门店尚未开通通用派单模板
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            新建派单需要能力位
+            <code className="font-mono text-xs">
+              {GAME_DISPATCH_TEMPLATE_V2_FEATURE}
+            </code>
+            ，请联系平台开通。
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!canOperate) {
     return (

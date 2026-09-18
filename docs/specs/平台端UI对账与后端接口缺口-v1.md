@@ -10,14 +10,14 @@
 | 功能模块 | UI 路由 | UI 状态 | 已就绪接口 | 待补接口 |
 | --- | --- | --- | --- | --- |
 | 平台登录 | `/login` | 完整 | POST `/auth/login`、POST `/auth/logout`、GET `/platform/me` | 无 |
-| 平台总览 | `/overview` | 完整框架 | GET `/platform/tenants`（门店总数/营业中/本月新增） | 总览聚合（待续费/健康指标） |
+| 平台总览 | `/overview` | 完整 | GET `/platform/overview`、GET `/platform/subscriptions` | 存储用量等无数据字段返回 `unavailable` |
 | 门店管理 | `/tenants` | 完整 | GET `/platform/tenants`、POST deactivate/activate | 无 |
-| 门店详情 | `/tenants/[id]` | 完整框架 | GET tenants、entitlements | 店主/套餐/到期/分账/品牌补充接口 |
-| 一键开店 | `/onboard` | 完整 | GET `/platform/packages`、POST `/platform/onboarding/tenants` | 无（保存草稿未设计） |
+| 门店详情 | `/tenants/[id]` | 完整 | GET `/platform/tenants/{tenantId}/detail`、GET `/platform/tenants/{tenantId}/entitlements` | 无 |
+| 一键开店 | `/onboard` | 完整 | GET `/platform/packages`、POST `/platform/onboarding/tenants`（提交后自动创建店主账号并交付 H5 入口） | 草稿态未设计 |
 | 套餐与增值功能 | `/packages` | 完整 | GET packages/entitlements、POST entitlements/package | 无 |
-| 订阅与用量 | `/subscriptions` | 页面就位，数据待接入 | 无 | 订阅列表、用量、续费 |
-| 平台账号 | `/accounts` | 页面就位，仅当前账号 | GET `/platform/me` | 账号列表/CRUD/角色/临时授权 |
-| 审计与访问 | `/platform/audit` | 可查单店审计 | GET `/platform/tenants/{tenantId}/audit`（需 reason） | 平台级审计列表、导出 |
+| 订阅与用量 | `/subscriptions` | 完整 | GET `/platform/subscriptions`、POST `/platform/subscriptions/{subscriptionId}/renew` | 用量字段部分为 null（无计费数据） |
+| 平台账号 | `/accounts` | 完整 | GET/POST `/platform/accounts`、POST `/platform/accounts/{id}/status`、POST `/platform/accounts/{id}/role`、GET/POST `/platform/grants`、POST `/platform/grants/{id}/revoke` | 无 |
+| 审计与访问 | `/platform/audit` | 完整 | GET `/platform/audit`（跨租户汇总 + CSV 导出）、GET `/platform/tenants/{tenantId}/audit`（需 reason） | 无 |
 
 ## 现有平台接口（openapi.yaml，2026-09-08）
 
@@ -34,6 +34,8 @@ POST /api/v1/platform/onboarding/tenants
 POST /api/v1/platform/tenants/:tenantId/package
 POST /api/v1/platform/tenants/:tenantId/activate
 ```
+
+> 2026-09-11 更新：下文 P-B1 / P-B2 / P-B3 三个切片均已落地并接线（详见文末 2026-09-09 完成记录与上方矩阵）；本节保留原建议文本仅作追溯。
 
 ## 待补缺口与建议切片
 
