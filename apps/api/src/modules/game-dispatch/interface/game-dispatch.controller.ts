@@ -178,7 +178,8 @@ export class GameDispatchController {
     @Param("orderId") orderId: string,
   ) {
     try {
-      return { data: await this.dispatch.view(tenantIdOf(req), orderId) };
+      // 商家端订单详情：按 CS 端口过滤（客户自查走 customer/orders/:orderId/select）。
+      return { data: await this.dispatch.view(tenantIdOf(req), orderId, "CS") };
     } catch (error) {
       this.mapError(error);
     }

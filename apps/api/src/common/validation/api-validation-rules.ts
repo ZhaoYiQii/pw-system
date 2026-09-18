@@ -560,6 +560,12 @@ const genericTemplateLayout = z.strictObject({
   colSpan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   rowBreakBefore: z.boolean(),
 });
+/** 端口可见性（设计规格 v0.1，V-1 / V-2）：去重后至少一个端口，空数组即 400。 */
+const genericTemplateAudiences = z
+  .array(z.enum(["CS", "CUSTOMER"]))
+  .refine((list) => new Set(list).size >= 1, {
+    message: "端口可见性标记至少选择一个端口",
+  });
 const genericTemplateOption = z.strictObject({
   value: stableKey,
   label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
@@ -574,6 +580,7 @@ const genericTemplateFieldComponent = z.strictObject({
     .string()
     .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
     .optional(),
+  audiences: genericTemplateAudiences.optional(),
   enabled: z.boolean(),
   sortOrder: z.number().int().min(0),
   layout: genericTemplateLayout,
@@ -618,6 +625,7 @@ const genericTemplateTableComponent = z.strictObject({
     .string()
     .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
     .optional(),
+  audiences: genericTemplateAudiences.optional(),
   enabled: z.boolean(),
   sortOrder: z.number().int().min(0),
   layout: genericTemplateLayout,
@@ -637,6 +645,7 @@ const genericTemplateNoteComponent = z.strictObject({
     .string()
     .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
     .optional(),
+  audiences: genericTemplateAudiences.optional(),
   enabled: z.boolean(),
   sortOrder: z.number().int().min(0),
   layout: genericTemplateLayout,
@@ -663,6 +672,7 @@ const genericTemplateDraftConfig = z
             .string()
             .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
             .optional(),
+          audiences: genericTemplateAudiences.optional(),
           enabled: z.boolean(),
           sortOrder: z.number().int().min(0),
           layout: z.strictObject({

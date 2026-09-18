@@ -209,37 +209,69 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
     );
   });
 
-  it("配置为 schemaVersion=2 判别联合，priceDeltaFen 是十进制字符串而非 number", () => {
+  it("配置为 schemaVersion=2 判别联合（$ref + discriminator），priceDeltaFen 是十进制字符串而非 number", () => {
     const saveBody = requestSchema(`${BASE}/{id}/draft`, "patch");
     const config = schemaAt(saveBody, "config", "properties");
     expect(schemaAt(config, "schemaVersion")["enum"]).toEqual([2]);
     expect(schemaAt(config, "sections")["maxItems"]).toBe(20);
     expect(schemaAt(config, "components")["maxItems"]).toBe(100);
 
-    const componentKinds = (
-      schemaAt(config, "components", "items")["oneOf"] as Array<
-        Record<string, unknown>
-      >
-    ).map((variant) => schemaAt(variant, "properties", "kind")["const"]);
-    expect(componentKinds).toEqual(["FIELD", "REPEATABLE_TABLE", "NOTE"]);
-
-    const staffingKinds = (
-      schemaAt(config, "staffingSource")["oneOf"] as Array<
-        Record<string, unknown>
-      >
-    ).map((variant) => schemaAt(variant, "properties", "kind")["const"]);
-    expect(staffingKinds).toEqual([
-      "FIXED",
-      "NUMBER_FIELD",
-      "REPEATABLE_TABLE_SUM",
+    // 联合成员必须是 $ref 组件 + discriminator.mapping，否则生成器只会给出 kind: string。
+    const componentsUnion = schemaAt(config, "components", "items");
+    expect(
+      (componentsUnion["oneOf"] as Array<{ $ref: string }>).map(
+        (variant) => variant.$ref,
+      ),
+    ).toEqual([
+      "#/components/schemas/TemplateFieldComponentV2",
+      "#/components/schemas/TemplateTableComponentV2",
+      "#/components/schemas/TemplateNoteComponentV2",
     ]);
+    expect(componentsUnion["discriminator"]).toMatchObject({
+      propertyName: "kind",
+      mapping: {
+        FIELD: "#/components/schemas/TemplateFieldComponentV2",
+        REPEATABLE_TABLE: "#/components/schemas/TemplateTableComponentV2",
+        NOTE: "#/components/schemas/TemplateNoteComponentV2",
+      },
+    });
+
+    const staffingUnion = schemaAt(config, "staffingSource");
+    expect(
+      (staffingUnion["oneOf"] as Array<{ $ref: string }>).map(
+        (variant) => variant.$ref,
+      ),
+    ).toEqual([
+      "#/components/schemas/TemplateStaffingFixedV2",
+      "#/components/schemas/TemplateStaffingNumberFieldV2",
+      "#/components/schemas/TemplateStaffingTableSumV2",
+    ]);
+    expect(staffingUnion["discriminator"]).toMatchObject({
+      propertyName: "kind",
+    });
+
+    // 判别字段是单值 enum（生成器据此产出字面量联合）……
+    const componentSchemas = (
+      document as unknown as {
+        components: { schemas: Record<string, Record<string, any>> };
+      }
+    ).components.schemas;
+    expect(
+      componentSchemas.TemplateFieldComponentV2?.properties?.kind?.enum,
+    ).toEqual(["FIELD"]);
+    // ……并且生成出来的客户端类型里确实是字面量，而不是 string。
+    const generatedTypes = readFileSync(
+      path.join(root, "packages/api-client/src/types.gen.ts"),
+      "utf8",
+    );
+    expect(generatedTypes).toContain("kind: 'FIELD'");
+    expect(generatedTypes).not.toContain("kind: string");
 
     // 选项加价：FIELD 选项与表格列选项都必须是 decimal string。
-    const fieldVariant = (
-      schemaAt(config, "components", "items")["oneOf"] as Array<
-        Record<string, unknown>
-      >
-    )[0] as Record<string, unknown>;
+    const fieldVariant = componentSchemas.TemplateFieldComponentV2 as Record<
+      string,
+      unknown
+    >;
     const fieldPrice = schemaAt(
       fieldVariant,
       "properties",
@@ -251,11 +283,10 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
     expect(fieldPrice["type"]).toBe("string");
     expect(String(fieldPrice["pattern"])).toContain("[0-9]");
 
-    const tableVariant = (
-      schemaAt(config, "components", "items")["oneOf"] as Array<
-        Record<string, unknown>
-      >
-    )[1] as Record<string, unknown>;
+    const tableVariant = componentSchemas.TemplateTableComponentV2 as Record<
+      string,
+      unknown
+    >;
     const columnOptions = schemaAt(
       tableVariant,
       "properties",
@@ -267,6 +298,42 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
       "properties",
     );
     expect(schemaAt(columnOptions, "priceDeltaFen")["type"]).toBe("string");
+  });
+
+  it("端口可见性 audiences 是可选加性属性：区块与三种组件都有，且不在 required 里", () => {
+    const saveBody = requestSchema(`${BASE}/{id}/draft`, "patch");
+    const config = schemaAt(saveBody, "config", "properties");
+
+    const sectionItem = schemaAt(config, "sections", "items");
+    const sectionAudiences = schemaAt(sectionItem, "properties", "audiences");
+    expect(sectionAudiences["type"]).toBe("array");
+    expect(sectionAudiences["minItems"]).toBe(1);
+    expect(schemaAt(sectionAudiences, "items")["enum"]).toEqual([
+      "CS",
+      "CUSTOMER",
+    ]);
+    expect(sectionItem["required"]).not.toContain("audiences");
+
+    const componentSchemas = (
+      document as unknown as {
+        components: { schemas: Record<string, Record<string, unknown>> };
+      }
+    ).components.schemas;
+    for (const name of [
+      "TemplateFieldComponentV2",
+      "TemplateTableComponentV2",
+      "TemplateNoteComponentV2",
+    ]) {
+      const variant = componentSchemas[name] as Record<string, unknown>;
+      const audiences = schemaAt(variant, "properties", "audiences");
+      expect(audiences["type"], name).toBe("array");
+      expect(audiences["minItems"], name).toBe(1);
+      expect(schemaAt(audiences, "items")["enum"], name).toEqual([
+        "CS",
+        "CUSTOMER",
+      ]);
+      expect(variant["required"], name).not.toContain("audiences");
+    }
   });
 
   it("rendererVersion 不出现在任何可写 body；发布响应只返回草稿与版本摘要", () => {

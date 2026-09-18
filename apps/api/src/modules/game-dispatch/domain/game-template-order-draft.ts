@@ -14,7 +14,15 @@ import {
   calculateTemplateStaffing,
   TemplateRuntimeValueError,
 } from "./game-template-calculations.js";
-import type { PublishedConfigV2 } from "./game-template-config-v2.js";
+import type {
+  PublishedConfigV2,
+  TemplateAudienceV2,
+} from "./game-template-config-v2.js";
+import {
+  billingComponentsHiddenFromV2,
+  partitionValuesV2,
+  visibleConfigV2,
+} from "./game-template-config-v2.js";
 import {
   renderDispatchDocument,
   type DispatchDocumentV1,
@@ -32,6 +40,13 @@ export interface TemplateOrderDraft {
   staffing: TemplateOrderStaffing;
   priceAdjustmentFen: string;
   document: DispatchDocumentV1;
+}
+
+/** 写入侧的端口过滤结果：真正落库的值 + 被丢弃的键（V-5）。 */
+export interface TemplateOrderDraftOutcome {
+  draft: TemplateOrderDraft;
+  storedValues: Record<string, unknown>;
+  droppedKeys: string[];
 }
 
 /**
@@ -87,4 +102,37 @@ export function buildTemplateOrderDraft(
     }
     throw error;
   }
+}
+
+/**
+ * 按写入方端口生成订单草稿（V-5 / V-6 / V-10）：
+ * 先把手里的配置与提交值都收敛到该端口可见的部分，再交给上面的纯计算——
+ * 于是"看不见的字段"既不参与必填校验（V-10），它的值也不会落库或进文案。
+ *
+ * 注意：配置里根本不存在的键不在这里丢弃，继续走既有的未知字段拒绝（422）。
+ */
+export function buildTemplateOrderDraftForAudience(
+  config: PublishedConfigV2,
+  values: TemplateOrderValues,
+  audience: TemplateAudienceV2,
+): TemplateOrderDraftOutcome {
+  // 参与算价或人数的内容若对这个端口不可见，宁可不写这单，也不静默少算
+  // （发布校验已阻断这类配置；这里是给"规则上线前发布的历史版本"兜底）。
+  const hiddenBilling = billingComponentsHiddenFromV2(config, audience);
+  if (hiddenBilling.length > 0) {
+    const names = hiddenBilling
+      .map((component) => `「${component.label}」`)
+      .join("、");
+    throw new GenericTemplateError(
+      "TEMPLATE_COMPONENT_INVALID",
+      `${names}参与算价或人数，却被标成对写入端口不可见，无法下单：请先改标记并重新发布`,
+      { path: `$.components.${hiddenBilling[0]?.stableKey ?? ""}.audiences` },
+    );
+  }
+  const { visible, droppedKeys } = partitionValuesV2(config, values, audience);
+  return {
+    draft: buildTemplateOrderDraft(visibleConfigV2(config, audience), visible),
+    storedValues: visible,
+    droppedKeys,
+  };
 }

@@ -4,6 +4,294 @@ export type ClientOptions = {
     baseUrl: string;
 };
 
+/**
+ * FIELD 组件
+ */
+export type TemplateFieldComponentV2 = {
+    /**
+     * 组件类型
+     */
+    kind: 'FIELD';
+    /**
+     * 组件稳定键
+     */
+    stableKey: string;
+    /**
+     * 所属区块稳定键
+     */
+    sectionKey: string;
+    /**
+     * 组件名称
+     */
+    label: string;
+    /**
+     * 组件说明
+     */
+    description?: string;
+    /**
+     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）
+     */
+    audiences?: Array<'CS' | 'CUSTOMER'>;
+    /**
+     * 组件是否启用
+     */
+    enabled: boolean;
+    /**
+     * 组件顺序
+     */
+    sortOrder: number;
+    /**
+     * 组件布局
+     */
+    layout: {
+        /**
+         * 栅格宽度（1-4）
+         */
+        colSpan: 1 | 2 | 3 | 4;
+        /**
+         * 是否在此组件前换行
+         */
+        rowBreakBefore: boolean;
+    };
+    /**
+     * 字段类型
+     */
+    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
+    /**
+     * 业务语义角色（非 CUSTOM 时全局唯一）
+     */
+    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+    /**
+     * 是否必填
+     */
+    required: boolean;
+    /**
+     * 占位提示
+     */
+    placeholder?: string;
+    /**
+     * 选择项（选择类字段必须至少一个）
+     */
+    options?: Array<{
+        /**
+         * 选项值（稳定键）
+         */
+        value: string;
+        /**
+         * 选项名称
+         */
+        label: string;
+        /**
+         * 选项加价（十进制字符串分，禁止 number/浮点）
+         */
+        priceDeltaFen?: string;
+    }>;
+    /**
+     * 多选字段的聚合策略（MULTI_SELECT 必填）
+     */
+    aggregationPolicy?: 'SUM' | 'MAX';
+};
+
+/**
+ * REPEATABLE_TABLE 组件
+ */
+export type TemplateTableComponentV2 = {
+    /**
+     * 组件类型
+     */
+    kind: 'REPEATABLE_TABLE';
+    /**
+     * 组件稳定键
+     */
+    stableKey: string;
+    /**
+     * 所属区块稳定键
+     */
+    sectionKey: string;
+    /**
+     * 组件名称
+     */
+    label: string;
+    /**
+     * 组件说明
+     */
+    description?: string;
+    /**
+     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）
+     */
+    audiences?: Array<'CS' | 'CUSTOMER'>;
+    /**
+     * 组件是否启用
+     */
+    enabled: boolean;
+    /**
+     * 组件顺序
+     */
+    sortOrder: number;
+    /**
+     * 组件布局
+     */
+    layout: {
+        /**
+         * 栅格宽度（1-4）
+         */
+        colSpan: 1 | 2 | 3 | 4;
+        /**
+         * 是否在此组件前换行
+         */
+        rowBreakBefore: boolean;
+    };
+    /**
+     * 表格列（最多 10 列）
+     */
+    columns: Array<{
+        /**
+         * 列稳定键
+         */
+        stableKey: string;
+        /**
+         * 列名称
+         */
+        label: string;
+        /**
+         * 列类型
+         */
+        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
+        /**
+         * 业务语义角色
+         */
+        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
+        /**
+         * 是否必填
+         */
+        required: boolean;
+        /**
+         * 单选列的选项
+         */
+        options?: Array<{
+            /**
+             * 选项值（稳定键）
+             */
+            value: string;
+            /**
+             * 选项名称
+             */
+            label: string;
+            /**
+             * 选项加价（十进制字符串分，禁止 number/浮点）
+             */
+            priceDeltaFen?: string;
+        }>;
+    }>;
+    /**
+     * 默认行（键必须是已定义的列）
+     */
+    defaultRows: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+/**
+ * NOTE 组件
+ */
+export type TemplateNoteComponentV2 = {
+    /**
+     * 组件类型
+     */
+    kind: 'NOTE';
+    /**
+     * 组件稳定键
+     */
+    stableKey: string;
+    /**
+     * 所属区块稳定键
+     */
+    sectionKey: string;
+    /**
+     * 组件名称
+     */
+    label: string;
+    /**
+     * 组件说明
+     */
+    description?: string;
+    /**
+     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）
+     */
+    audiences?: Array<'CS' | 'CUSTOMER'>;
+    /**
+     * 组件是否启用
+     */
+    enabled: boolean;
+    /**
+     * 组件顺序
+     */
+    sortOrder: number;
+    /**
+     * 组件布局
+     */
+    layout: {
+        /**
+         * 栅格宽度（1-4）
+         */
+        colSpan: 1 | 2 | 3 | 4;
+        /**
+         * 是否在此组件前换行
+         */
+        rowBreakBefore: boolean;
+    };
+    /**
+     * 说明纯文本（不支持 HTML/脚本）
+     */
+    text: string;
+};
+
+/**
+ * 固定人数
+ */
+export type TemplateStaffingFixedV2 = {
+    /**
+     * 固定人数
+     */
+    kind: 'FIXED';
+    /**
+     * 人数
+     */
+    count: number;
+};
+
+/**
+ * 数字字段人数
+ */
+export type TemplateStaffingNumberFieldV2 = {
+    /**
+     * 取启用数字字段
+     */
+    kind: 'NUMBER_FIELD';
+    /**
+     * 人数字段稳定键
+     */
+    componentKey: string;
+};
+
+/**
+ * 表格列求和人数
+ */
+export type TemplateStaffingTableSumV2 = {
+    /**
+     * 汇总表格列
+     */
+    kind: 'REPEATABLE_TABLE_SUM';
+    /**
+     * 表格组件稳定键
+     */
+    componentKey: string;
+    /**
+     * STAFFING_COUNT 数字列稳定键
+     */
+    columnKey: string;
+};
+
 export type HealthGetHealthData = {
     body?: never;
     path?: never;
@@ -3601,6 +3889,10 @@ export type GenericGameTemplateCreateResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -3629,257 +3921,17 @@ export type GenericGameTemplateCreateResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -4158,6 +4210,10 @@ export type GenericGameTemplateGetVersionFormResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -4186,257 +4242,17 @@ export type GenericGameTemplateGetVersionFormResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 文案渲染器版本（仅由服务端写入）
                  */
@@ -4588,6 +4404,10 @@ export type GenericGameTemplateGetDraftResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -4616,257 +4436,17 @@ export type GenericGameTemplateGetDraftResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -4963,6 +4543,10 @@ export type GenericGameTemplateSaveDraftData = {
                  */
                 description?: string;
                 /**
+                 * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                 */
+                audiences?: Array<'CS' | 'CUSTOMER'>;
+                /**
                  * 区块是否启用
                  */
                 enabled: boolean;
@@ -4991,257 +4575,17 @@ export type GenericGameTemplateSaveDraftData = {
             /**
              * 模板组件（判别联合，按 kind 区分）
              */
-            components: Array<{
-                /**
-                 * 组件类型
-                 */
-                kind: string;
-                /**
-                 * 组件稳定键
-                 */
-                stableKey: string;
-                /**
-                 * 所属区块稳定键
-                 */
-                sectionKey: string;
-                /**
-                 * 组件名称
-                 */
-                label: string;
-                /**
-                 * 组件说明
-                 */
-                description?: string;
-                /**
-                 * 组件是否启用
-                 */
-                enabled: boolean;
-                /**
-                 * 组件顺序
-                 */
-                sortOrder: number;
-                /**
-                 * 组件布局
-                 */
-                layout: {
-                    /**
-                     * 栅格宽度（1-4）
-                     */
-                    colSpan: 1 | 2 | 3 | 4;
-                    /**
-                     * 是否在此组件前换行
-                     */
-                    rowBreakBefore: boolean;
-                };
-                /**
-                 * 字段类型
-                 */
-                fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                /**
-                 * 业务语义角色（非 CUSTOM 时全局唯一）
-                 */
-                semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                /**
-                 * 是否必填
-                 */
-                required: boolean;
-                /**
-                 * 占位提示
-                 */
-                placeholder?: string;
-                /**
-                 * 选择项（选择类字段必须至少一个）
-                 */
-                options?: Array<{
-                    /**
-                     * 选项值（稳定键）
-                     */
-                    value: string;
-                    /**
-                     * 选项名称
-                     */
-                    label: string;
-                    /**
-                     * 选项加价（十进制字符串分，禁止 number/浮点）
-                     */
-                    priceDeltaFen?: string;
-                }>;
-                /**
-                 * 多选字段的聚合策略（MULTI_SELECT 必填）
-                 */
-                aggregationPolicy?: 'SUM' | 'MAX';
-            } | {
-                /**
-                 * 组件类型
-                 */
-                kind: string;
-                /**
-                 * 组件稳定键
-                 */
-                stableKey: string;
-                /**
-                 * 所属区块稳定键
-                 */
-                sectionKey: string;
-                /**
-                 * 组件名称
-                 */
-                label: string;
-                /**
-                 * 组件说明
-                 */
-                description?: string;
-                /**
-                 * 组件是否启用
-                 */
-                enabled: boolean;
-                /**
-                 * 组件顺序
-                 */
-                sortOrder: number;
-                /**
-                 * 组件布局
-                 */
-                layout: {
-                    /**
-                     * 栅格宽度（1-4）
-                     */
-                    colSpan: 1 | 2 | 3 | 4;
-                    /**
-                     * 是否在此组件前换行
-                     */
-                    rowBreakBefore: boolean;
-                };
-                /**
-                 * 表格列（最多 10 列）
-                 */
-                columns: Array<{
-                    /**
-                     * 列稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 列名称
-                     */
-                    label: string;
-                    /**
-                     * 列类型
-                     */
-                    columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                    /**
-                     * 业务语义角色
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 单选列的选项
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                }>;
-                /**
-                 * 默认行（键必须是已定义的列）
-                 */
-                defaultRows: Array<{
-                    [key: string]: unknown;
-                }>;
-            } | {
-                /**
-                 * 组件类型
-                 */
-                kind: string;
-                /**
-                 * 组件稳定键
-                 */
-                stableKey: string;
-                /**
-                 * 所属区块稳定键
-                 */
-                sectionKey: string;
-                /**
-                 * 组件名称
-                 */
-                label: string;
-                /**
-                 * 组件说明
-                 */
-                description?: string;
-                /**
-                 * 组件是否启用
-                 */
-                enabled: boolean;
-                /**
-                 * 组件顺序
-                 */
-                sortOrder: number;
-                /**
-                 * 组件布局
-                 */
-                layout: {
-                    /**
-                     * 栅格宽度（1-4）
-                     */
-                    colSpan: 1 | 2 | 3 | 4;
-                    /**
-                     * 是否在此组件前换行
-                     */
-                    rowBreakBefore: boolean;
-                };
-                /**
-                 * 说明纯文本（不支持 HTML/脚本）
-                 */
-                text: string;
-            }>;
+            components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
             /**
              * 人数来源（判别联合，按 kind 区分）
              */
-            staffingSource: {
-                /**
-                 * 固定人数
-                 */
-                kind: string;
-                /**
-                 * 人数
-                 */
-                count: number;
-            } | {
-                /**
-                 * 取启用数字字段
-                 */
-                kind: string;
-                /**
-                 * 人数字段稳定键
-                 */
-                componentKey: string;
-            } | {
-                /**
-                 * 汇总表格列
-                 */
-                kind: string;
-                /**
-                 * 表格组件稳定键
-                 */
-                componentKey: string;
-                /**
-                 * STAFFING_COUNT 数字列稳定键
-                 */
-                columnKey: string;
-            };
+            staffingSource: ({
+                kind: 'FIXED';
+            } & TemplateStaffingFixedV2) | ({
+                kind: 'NUMBER_FIELD';
+            } & TemplateStaffingNumberFieldV2) | ({
+                kind: 'REPEATABLE_TABLE_SUM';
+            } & TemplateStaffingTableSumV2);
             /**
              * 旧模板迁移兼容信息（发布配置中会被移除）
              */
@@ -5701,6 +5045,10 @@ export type GenericGameTemplatePublishResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -5729,257 +5077,17 @@ export type GenericGameTemplatePublishResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -6398,6 +5506,10 @@ export type GenericGameTemplateRestoreResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -6426,257 +5538,17 @@ export type GenericGameTemplateRestoreResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -6952,6 +5824,10 @@ export type GenericGameTemplateCopyResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -6980,257 +5856,17 @@ export type GenericGameTemplateCopyResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -7494,6 +6130,10 @@ export type GenericGameTemplateSetDefaultResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -7522,257 +6162,17 @@ export type GenericGameTemplateSetDefaultResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -8017,6 +6417,10 @@ export type GenericGameTemplateArchiveResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -8045,257 +6449,17 @@ export type GenericGameTemplateArchiveResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
@@ -8540,6 +6704,10 @@ export type GenericGameTemplateUnarchiveResponses = {
                      */
                     description?: string;
                     /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
                      * 区块是否启用
                      */
                     enabled: boolean;
@@ -8568,257 +6736,17 @@ export type GenericGameTemplateUnarchiveResponses = {
                 /**
                  * 模板组件（判别联合，按 kind 区分）
                  */
-                components: Array<{
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 字段类型
-                     */
-                    fieldType: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'MONEY_FEN' | 'DATETIME' | 'SINGLE_SELECT' | 'MULTI_SELECT';
-                    /**
-                     * 业务语义角色（非 CUSTOM 时全局唯一）
-                     */
-                    semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                    /**
-                     * 是否必填
-                     */
-                    required: boolean;
-                    /**
-                     * 占位提示
-                     */
-                    placeholder?: string;
-                    /**
-                     * 选择项（选择类字段必须至少一个）
-                     */
-                    options?: Array<{
-                        /**
-                         * 选项值（稳定键）
-                         */
-                        value: string;
-                        /**
-                         * 选项名称
-                         */
-                        label: string;
-                        /**
-                         * 选项加价（十进制字符串分，禁止 number/浮点）
-                         */
-                        priceDeltaFen?: string;
-                    }>;
-                    /**
-                     * 多选字段的聚合策略（MULTI_SELECT 必填）
-                     */
-                    aggregationPolicy?: 'SUM' | 'MAX';
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 表格列（最多 10 列）
-                     */
-                    columns: Array<{
-                        /**
-                         * 列稳定键
-                         */
-                        stableKey: string;
-                        /**
-                         * 列名称
-                         */
-                        label: string;
-                        /**
-                         * 列类型
-                         */
-                        columnType: 'TEXT' | 'NUMBER' | 'SINGLE_SELECT';
-                        /**
-                         * 业务语义角色
-                         */
-                        semanticRole: 'CUSTOM' | 'MODE' | 'TARGET_RANK' | 'CURRENT_RANK' | 'DURATION_MINUTES' | 'SERVER_REGION' | 'CONTACT' | 'ORDER_NOTE' | 'STAFFING_LABEL' | 'STAFFING_COUNT';
-                        /**
-                         * 是否必填
-                         */
-                        required: boolean;
-                        /**
-                         * 单选列的选项
-                         */
-                        options?: Array<{
-                            /**
-                             * 选项值（稳定键）
-                             */
-                            value: string;
-                            /**
-                             * 选项名称
-                             */
-                            label: string;
-                            /**
-                             * 选项加价（十进制字符串分，禁止 number/浮点）
-                             */
-                            priceDeltaFen?: string;
-                        }>;
-                    }>;
-                    /**
-                     * 默认行（键必须是已定义的列）
-                     */
-                    defaultRows: Array<{
-                        [key: string]: unknown;
-                    }>;
-                } | {
-                    /**
-                     * 组件类型
-                     */
-                    kind: string;
-                    /**
-                     * 组件稳定键
-                     */
-                    stableKey: string;
-                    /**
-                     * 所属区块稳定键
-                     */
-                    sectionKey: string;
-                    /**
-                     * 组件名称
-                     */
-                    label: string;
-                    /**
-                     * 组件说明
-                     */
-                    description?: string;
-                    /**
-                     * 组件是否启用
-                     */
-                    enabled: boolean;
-                    /**
-                     * 组件顺序
-                     */
-                    sortOrder: number;
-                    /**
-                     * 组件布局
-                     */
-                    layout: {
-                        /**
-                         * 栅格宽度（1-4）
-                         */
-                        colSpan: 1 | 2 | 3 | 4;
-                        /**
-                         * 是否在此组件前换行
-                         */
-                        rowBreakBefore: boolean;
-                    };
-                    /**
-                     * 说明纯文本（不支持 HTML/脚本）
-                     */
-                    text: string;
-                }>;
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
                 /**
                  * 人数来源（判别联合，按 kind 区分）
                  */
-                staffingSource: {
-                    /**
-                     * 固定人数
-                     */
-                    kind: string;
-                    /**
-                     * 人数
-                     */
-                    count: number;
-                } | {
-                    /**
-                     * 取启用数字字段
-                     */
-                    kind: string;
-                    /**
-                     * 人数字段稳定键
-                     */
-                    componentKey: string;
-                } | {
-                    /**
-                     * 汇总表格列
-                     */
-                    kind: string;
-                    /**
-                     * 表格组件稳定键
-                     */
-                    componentKey: string;
-                    /**
-                     * STAFFING_COUNT 数字列稳定键
-                     */
-                    columnKey: string;
-                };
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
                 /**
                  * 旧模板迁移兼容信息（发布配置中会被移除）
                  */
