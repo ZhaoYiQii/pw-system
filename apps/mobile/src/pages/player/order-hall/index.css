@@ -1,5 +1,126 @@
 .hall-order-card {
+  gap: 18px;
+  overflow: hidden;
+  padding-top: 0;
+}
+.hall-command-card {
+  position: relative;
+  overflow: hidden;
+  gap: 10px;
+}
+.hall-command-card::after {
+  position: absolute;
+  top: -50px;
+  right: -24px;
+  width: 180px;
+  height: 180px;
+  background: rgba(17, 120, 111, 0.2);
+  border-radius: 50%;
+  filter: blur(6px);
+  content: "";
+}
+.hall-command-label,
+.hall-command-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+}
+.hall-command-label {
+  gap: 12px;
+}
+.hall-command-main {
+  gap: 12px;
+}
+.hall-live-dot {
+  width: 12px;
+  height: 12px;
+  background: #38cbbd;
+  border-radius: 50%;
+  box-shadow: 0 0 0 8px rgba(56, 203, 189, 0.12);
+}
+.hall-command-unit {
+  padding-top: 18px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 24px;
+  font-weight: 700;
+}
+.hall-match-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -26px;
+  padding: 14px 26px;
+  color: #d9fffa;
+  background: var(--pw-ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.hall-order-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16px;
+}
+.hall-order-no {
+  color: var(--pw-muted);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 18px;
+}
+.hall-empty-state {
+  display: flex;
+  min-height: 300px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  border: 1px dashed #cbd6dc;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+  text-align: center;
+}
+.hall-empty-mark {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 22px;
+  border: 3px solid var(--pw-primary);
+  border-radius: 50%;
+}
+.hall-empty-mark::before,
+.hall-empty-mark::after,
+.hall-empty-mark > view {
+  position: absolute;
+  left: 50%;
+  width: 3px;
+  height: 74px;
+  background: rgba(17, 120, 111, 0.18);
+  content: "";
+  transform-origin: center;
+}
+.hall-empty-mark::before {
+  top: -10px;
+  transform: translateX(-50%) rotate(60deg);
+}
+.hall-empty-mark::after {
+  top: -10px;
+  transform: translateX(-50%) rotate(-60deg);
+}
+.hall-empty-mark > view {
+  top: -10px;
+  transform: translateX(-50%);
+}
+.hall-empty-title {
+  color: var(--pw-ink);
+  font-size: 28px;
+  font-weight: 800;
+}
+.hall-empty-copy {
+  margin-top: 8px;
+  color: var(--pw-muted);
+  font-size: 22px;
 }
 .hall-order-meta {
   display: flex;
