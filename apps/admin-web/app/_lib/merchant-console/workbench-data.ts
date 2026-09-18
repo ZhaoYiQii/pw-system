@@ -117,7 +117,7 @@ export function financeCards(
     },
     {
       id: "receivable-placeholder",
-      label: "经营入账（应收/实收/毛利）",
+      label: "经营入账",
       value: "待开通",
       href: null,
     },
