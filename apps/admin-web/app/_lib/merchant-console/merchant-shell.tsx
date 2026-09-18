@@ -39,8 +39,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const moduleId = moduleIdFromPath(pathname);
   const currentDomainId = getModuleDomain(moduleId)?.id ?? "business";
-  const { role, principal, ready, unauthorized, forbidden } =
-    useMerchantRole();
+  const { role, principal, ready, unauthorized, forbidden } = useMerchantRole();
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedDomain, setExpandedDomain] =
     useState<MerchantNavDomainId>(currentDomainId);
@@ -74,8 +73,9 @@ export function MerchantShell({ children }: { children: ReactNode }) {
     const activeGroup = getVisibleNavDomains(role)
       .flatMap((domain) => domain.activeItems)
       .find((item) =>
-        (item.children ?? []).some((child) =>
-          pathname === child.href || pathname.startsWith(`${child.href}/`),
+        (item.children ?? []).some(
+          (child) =>
+            pathname === child.href || pathname.startsWith(`${child.href}/`),
         ),
       );
     setExpandedGroup(activeGroup?.id ?? null);
@@ -151,9 +151,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
             <i aria-hidden="true" />
             <div>
               <b>{principal?.username ?? "商家员工"}</b>
-              <span>
-                {roleMeta.label} · 真实角色授权
-              </span>
+              <span>{roleMeta.label} · 真实角色授权</span>
             </div>
           </div>
 
@@ -168,7 +166,11 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                 <div className="mc-nav-domain" key={domain.id}>
                   <button
                     type="button"
-                    className={expanded ? "mc-domain-trigger is-open" : "mc-domain-trigger"}
+                    className={
+                      expanded
+                        ? "mc-domain-trigger is-open"
+                        : "mc-domain-trigger"
+                    }
                     aria-expanded={expanded}
                     aria-controls={panelId}
                     onClick={() =>
@@ -183,7 +185,10 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                       <small>{domain.description}</small>
                     </span>
                     {futureCount > 0 ? (
-                      <span className="mc-domain-count" title={`${futureCount} 项建设能力`}>
+                      <span
+                        className="mc-domain-count"
+                        title={`${futureCount} 项建设能力`}
+                      >
                         {futureCount}
                       </span>
                     ) : null}
@@ -244,7 +249,9 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                                         key={child.id}
                                         href={child.href}
                                         className={
-                                          childIsActive ? "mc-active" : undefined
+                                          childIsActive
+                                            ? "mc-active"
+                                            : undefined
                                         }
                                         aria-current={
                                           childIsActive ? "page" : undefined
@@ -271,7 +278,10 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                           >
                             <Icon className="mc-icon" size={15} />
                             <span>{item.label}</span>
-                            <i className="mc-state-dot mc-state-active" title="已启用" />
+                            <i
+                              className="mc-state-dot mc-state-active"
+                              title="已启用"
+                            />
                           </Link>
                         );
                       })}
@@ -290,7 +300,9 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                         <button
                           type="button"
                           className="mc-planned-trigger"
-                          onClick={() => setPreviewItem(domain.plannedItems[0] ?? null)}
+                          onClick={() =>
+                            setPreviewItem(domain.plannedItems[0] ?? null)
+                          }
                         >
                           <span>规划中的功能</span>
                           <span>{domain.plannedItems.length}</span>
@@ -401,19 +413,22 @@ export function MerchantShell({ children }: { children: ReactNode }) {
             {previewDomain ? (
               <div className="mc-preview-roadmap">
                 <b>{previewDomain.label} · 建设清单</b>
-                {[...previewDomain.previewItems, ...previewDomain.plannedItems].map(
-                  (item) => (
-                    <button
-                      type="button"
-                      className={item.id === previewItem.id ? "is-current" : undefined}
-                      key={item.id}
-                      onClick={() => setPreviewItem(item)}
-                    >
-                      <span>{item.label}</span>
-                      <small>{item.status === "preview" ? "预览" : "规划"}</small>
-                    </button>
-                  ),
-                )}
+                {[
+                  ...previewDomain.previewItems,
+                  ...previewDomain.plannedItems,
+                ].map((item) => (
+                  <button
+                    type="button"
+                    className={
+                      item.id === previewItem.id ? "is-current" : undefined
+                    }
+                    key={item.id}
+                    onClick={() => setPreviewItem(item)}
+                  >
+                    <span>{item.label}</span>
+                    <small>{item.status === "preview" ? "预览" : "规划"}</small>
+                  </button>
+                ))}
               </div>
             ) : null}
           </section>
