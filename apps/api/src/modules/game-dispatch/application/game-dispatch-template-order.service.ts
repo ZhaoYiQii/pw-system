@@ -6,11 +6,15 @@
  * - 仓储在单个事务内完成幂等声明、版本锁定、快照写入、审计与 lastUsedAt 更新。
  */
 import { createHash } from "node:crypto";
+import {
+  TEMPLATE_EVENTS,
+  emitTemplateEvent,
+} from "./game-template-observability.js";
 import type { PublishedConfigV2 } from "../domain/game-template-config-v2.js";
 import type { DispatchDocumentV1 } from "../domain/game-template-document.js";
 import {
-  buildTemplateOrderDraft,
-  type TemplateOrderDraft,
+  buildTemplateOrderDraftForAudience,
+  type TemplateOrderDraftOutcome,
 } from "../domain/game-template-order-draft.js";
 
 /** 未指定服务时长时的默认值（分钟）。 */
@@ -59,9 +63,15 @@ export interface GameDispatchTemplateOrderRepository {
     buildDraft: (
       config: PublishedConfigV2,
       values: Record<string, unknown>,
-    ) => TemplateOrderDraft,
+    ) => TemplateOrderDraftOutcome,
   ): Promise<CreateTemplateOrderOutput>;
 }
+
+/**
+ * 端口可见性的写入方端口：当前唯一的下单入口是客服端 `POST template-orders`。
+ * 客户自助的 v2 下单面尚不存在；一旦出现，它必须按 CUSTOMER 调用并各自校验必填（V-10）。
+ */
+export const TEMPLATE_ORDER_WRITER_AUDIENCE = "CS";
 
 /** 键序无关的规范化 JSON：保证「同一意图」重试得到同一哈希。 */
 function stableStringify(value: unknown): string {
@@ -107,15 +117,58 @@ export class GameDispatchTemplateOrderService {
     idempotencyKey: string,
     input: CreateTemplateOrderInput,
   ): Promise<CreateTemplateOrderOutput> {
-    return this.repository.createFromPublishedVersion(
-      {
+    // 端口过滤发生在这条回调里（配置只在事务内可见），把被丢弃的键带出来记一条受控事件。
+    let droppedKeys: string[] = [];
+    try {
+      const output = await this.repository.createFromPublishedVersion(
+        {
+          tenantId,
+          actorId,
+          idempotencyKey,
+          input,
+          requestHash: templateOrderRequestHash(input),
+        },
+        (config, values) => {
+          const outcome = buildTemplateOrderDraftForAudience(
+            config,
+            values,
+            TEMPLATE_ORDER_WRITER_AUDIENCE,
+          );
+          droppedKeys = outcome.droppedKeys;
+          return outcome;
+        },
+      );
+      if (droppedKeys.length > 0) {
+        emitTemplateEvent(TEMPLATE_EVENTS.FIELD_VALUES_DROPPED, {
+          tenantId,
+          actorId,
+          templateId: input.templateId,
+          versionId: input.templateVersionId,
+          // 只记录条数：被丢弃的键与值都可能带业务含义，事件白名单不放业务数据。
+          count: droppedKeys.length,
+          outcome: "ok",
+        });
+      }
+      return output;
+    } catch (error) {
+      const code = (error as { code?: unknown } | null)?.code;
+      emitTemplateEvent(TEMPLATE_EVENTS.ORDER_CREATE_FAILED, {
         tenantId,
         actorId,
-        idempotencyKey,
-        input,
-        requestHash: templateOrderRequestHash(input),
-      },
-      buildTemplateOrderDraft,
-    );
+        templateId: input.templateId,
+        versionId: input.templateVersionId,
+        ...(typeof code === "string" ? { code } : {}),
+        outcome: "failed",
+      });
+      if (code === "TEMPLATE_VERSION_UNAVAILABLE") {
+        emitTemplateEvent(TEMPLATE_EVENTS.VERSION_MISMATCH, {
+          tenantId,
+          templateId: input.templateId,
+          versionId: input.templateVersionId,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 }

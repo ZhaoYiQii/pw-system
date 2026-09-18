@@ -116,6 +116,7 @@ describe("S4 新建派单：模板读取与创建", () => {
   let csToken = "";
   let playerToken = "";
   let foreignToken = "";
+  let customerToken = "";
   let main: { templateId: string; versionId: string } = {
     templateId: "",
     versionId: "",
@@ -168,6 +169,21 @@ describe("S4 新建派单：模板读取与创建", () => {
       data: { tenantId, name: "S4 测试客户" },
     });
     customerId = customer.id;
+    // 端口可见性需要一个真的"客户身份"账号：绑定到该老板档案后才能自查订单。
+    const customerAccount = await client.tenantAccount.create({
+      data: { tenantId, username: `cb_${suffix}`, passwordHash: hash },
+    });
+    await client.tenantAccountRole.create({
+      data: {
+        tenantId,
+        tenantAccountId: customerAccount.id,
+        role: "CUSTOMER",
+      },
+    });
+    await client.customerProfile.update({
+      where: { id: customer.id },
+      data: { tenantAccountId: customerAccount.id },
+    });
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -187,6 +203,7 @@ describe("S4 新建派单：模板读取与创建", () => {
     csToken = await login(tenantCode, "service");
     playerToken = await login(tenantCode, `p_${suffix}`);
     foreignToken = await login(otherTenantCode, "boss");
+    customerToken = await login(tenantCode, `cb_${suffix}`);
   });
 
   afterAll(async () => {
@@ -804,5 +821,200 @@ describe("S4 新建派单：模板读取与创建", () => {
     expect((second.body as OrderDetailBody).data.document).toEqual(
       firstDocument,
     );
+  });
+
+  /** 端口可见性夹具：在 orderConfig 上加只给客服 / 只给客户（且必填）的两个字段。 */
+  function audienceOrderConfig(): Record<string, unknown> {
+    const config = orderConfig();
+    const components = config.components as Record<string, unknown>[];
+    components.push(
+      {
+        kind: "FIELD",
+        stableKey: "internal_note",
+        sectionKey: "basic",
+        label: "内部备注",
+        enabled: true,
+        sortOrder: 2,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "TEXT",
+        semanticRole: "CUSTOM",
+        required: false,
+        audiences: ["CS"],
+      },
+      {
+        kind: "FIELD",
+        stableKey: "customer_note",
+        sectionKey: "basic",
+        label: "客户备注",
+        enabled: true,
+        sortOrder: 3,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "TEXTAREA",
+        semanticRole: "ORDER_NOTE",
+        required: true,
+        audiences: ["CUSTOMER"],
+      },
+    );
+    return config;
+  }
+
+  it("端口可见性：客服表单只给 CS 字段，客户端提交的不可见字段值不落库也不进文案", async () => {
+    // 这条用例要验证"不可见字段的值被丢弃 / 客户看不到 CS 字段"，
+    // 而按现行发布规则，值类内容只给客户是不允许发布的（没人能填）。
+    // 所以这里先正常发布，再直接把版本快照改写成带标记的样子，
+    // 模拟"规则上线前发布的历史版本"——运行期兜底要处理的就是这类数据。
+    const template = await createPublishedTemplate(
+      ownerToken,
+      "S6 端口模板",
+      gameId,
+      orderConfig(),
+    );
+    await client.gameDispatchTemplateVersion.update({
+      where: { id: template.versionId },
+      data: {
+        configJson: {
+          ...audienceOrderConfig(),
+          documentRendererVersion: 1,
+        } as never,
+      },
+    });
+
+    // ① 客服端读发布表单：看得到 CS 专属字段，看不到客户专属字段。
+    const form = await req(csToken)
+      .get(`${BASE}/versions/${template.versionId}/form`)
+      .expect(200);
+    const formKeys = (
+      (form.body as { data: { config: { components: unknown[] } } }).data.config
+        .components as Array<{ stableKey: string }>
+    ).map((component) => component.stableKey);
+    expect(formKeys).toContain("internal_note");
+    expect(formKeys).not.toContain("customer_note");
+
+    // ② 客服下单时硬塞了客户专属（且必填）字段的值：丢弃而不是 422，必填也不参与校验（V-10）。
+    const created = await request(app.getHttpServer())
+      .post("/api/v1/tenant/game-dispatch/template-orders")
+      .set({
+        authorization: `Bearer ${ownerToken}`,
+        "idempotency-key": `k-${suffix}-audience`,
+      })
+      .send(
+        orderBody({
+          templateId: template.templateId,
+          templateVersionId: template.versionId,
+          values: {
+            mode: "ranked",
+            roster_table: [{ position: "陪玩", count: 2 }],
+            internal_note: "内部话术",
+            customer_note: "客户话术",
+          },
+        }),
+      )
+      .expect(201);
+    const createdResult = (created.body as { data: CreateOrderResult }).data;
+    expect(createdResult.staffingSummary.total).toBe(2);
+    expect(createdResult.document.plainText).toContain("内部备注：内部话术");
+    expect(createdResult.document.plainText).not.toContain("客户话术");
+
+    // ③ 落库的值里没有客户专属字段。
+    const stored = await client.gameDispatchOrder.findFirstOrThrow({
+      where: { tenantId, orderId: createdResult.orderId },
+    });
+    expect(stored.formValuesJson).toEqual({
+      mode: "ranked",
+      roster_table: [{ position: "陪玩", count: 2 }],
+      internal_note: "内部话术",
+    });
+
+    // ④ 客户自查该订单：CS 专属字段的值与文案都不出现。
+    const customerView = await req(customerToken)
+      .get(
+        `/api/v1/tenant/game-dispatch/customer/orders/${createdResult.orderId}/select`,
+      )
+      .expect(200);
+    const customerData = (customerView.body as { data: unknown }).data as {
+      formValues: Record<string, string>;
+      document: { plainText: string } | null;
+    };
+    expect(customerData.formValues).not.toHaveProperty("internal_note");
+    expect(customerData.formValues).toEqual({
+      mode: "ranked",
+      roster_table: [{ position: "陪玩", count: 2 }],
+    });
+    expect(customerData.document?.plainText ?? "").not.toContain("内部话术");
+
+    // ⑤ 客服看同一张订单时照旧看得到 CS 字段（"保持 CS 可见"）。
+    const csView = await req(csToken)
+      .get(`/api/v1/tenant/game-dispatch/orders/${createdResult.orderId}`)
+      .expect(200);
+    const csData = (csView.body as { data: unknown }).data as {
+      formValues: Record<string, string>;
+      document: { plainText: string } | null;
+    };
+    expect(csData.formValues.internal_note).toBe("内部话术");
+    expect(csData.document?.plainText ?? "").toContain("内部备注：内部话术");
+  });
+
+  it("快照损坏时：客户侧宁可少给，客服侧保留原值以便排查", async () => {
+    // 用"先发布再改写版本快照"的方式拿到一张可下单的订单，然后把订单快照改坏。
+    const template = await createPublishedTemplate(
+      ownerToken,
+      "S6 坏快照",
+      gameId,
+      orderConfig(),
+    );
+    await client.gameDispatchTemplateVersion.update({
+      where: { id: template.versionId },
+      data: {
+        configJson: {
+          ...audienceOrderConfig(),
+          documentRendererVersion: 1,
+        } as never,
+      },
+    });
+    const created = await request(app.getHttpServer())
+      .post("/api/v1/tenant/game-dispatch/template-orders")
+      .set({
+        authorization: `Bearer ${ownerToken}`,
+        "idempotency-key": `k-${suffix}-broken`,
+      })
+      .send(
+        orderBody({
+          templateId: template.templateId,
+          templateVersionId: template.versionId,
+          values: {
+            mode: "ranked",
+            roster_table: [{ position: "陪玩", count: 1 }],
+            internal_note: "内部话术",
+          },
+        }),
+      )
+      .expect(201);
+    const orderId = (created.body as { data: CreateOrderResult }).data.orderId;
+
+    // 把订单自己的快照改坏（schemaVersion 2 但配置解析不出来）
+    await client.gameDispatchTemplateSnapshot.update({
+      where: { tenantId_orderId: { tenantId, orderId } },
+      data: { configJson: { schemaVersion: 2, sections: "坏了" } as never },
+    });
+
+    const customerView = await req(customerToken)
+      .get(`/api/v1/tenant/game-dispatch/customer/orders/${orderId}/select`)
+      .expect(200);
+    const customerData = (customerView.body as { data: unknown }).data as {
+      formValues: Record<string, string>;
+      document: unknown;
+    };
+    expect(customerData.formValues).toEqual({});
+    expect(customerData.document).toBeNull();
+
+    const csView = await req(csToken)
+      .get(`/api/v1/tenant/game-dispatch/orders/${orderId}`)
+      .expect(200);
+    const csData = (csView.body as { data: unknown }).data as {
+      formValues: Record<string, string>;
+      document: unknown;
+    };
+    expect(csData.formValues.internal_note).toBe("内部话术");
+    expect(csData.document).toBeNull();
   });
 });

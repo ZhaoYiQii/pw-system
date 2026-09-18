@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   reorderComponent,
   updateComponent,
+  updateSection,
   type DraftConfigV2,
   type DraftFieldComponentV2,
   type DraftNoteComponentV2,
@@ -151,5 +152,53 @@ describe("reorderComponent：拖拽排序", () => {
     const config = twoSections();
     expect(reorderComponent(config, "missing", "a", "before")).toBe(config);
     expect(reorderComponent(config, "a", "missing", "before")).toBe(config);
+  });
+});
+
+describe("端口可见性补丁：组件声明与分组声明", () => {
+  const componentOf = (config: DraftConfigV2) => config.components[0];
+
+  it("组件可以显式声明端口，重复项被去重", () => {
+    const config = baseConfig([field()]);
+    const next = updateComponent(config, "f1", { audiences: ["CS", "CS"] });
+    expect(componentOf(next)?.audiences).toEqual(["CS"]);
+    // 不改原对象
+    expect(componentOf(config)?.audiences).toBeUndefined();
+  });
+
+  it("传 null 清掉声明，回到跟随分组（V-3）", () => {
+    const declared = updateComponent(baseConfig([field()]), "f1", {
+      audiences: ["CUSTOMER"],
+    });
+    const cleared = updateComponent(declared, "f1", { audiences: null });
+    expect(componentOf(cleared)).not.toHaveProperty("audiences");
+  });
+
+  it("两个端口都不给时保持原状：模型不接受空标记（V-2）", () => {
+    const config = baseConfig([field({ audiences: ["CS"] })]);
+    expect(
+      componentOf(updateComponent(config, "f1", { audiences: [] }))?.audiences,
+    ).toEqual(["CS"]);
+    expect(
+      componentOf(
+        updateComponent(config, "f1", { audiences: ["BOSS" as never] }),
+      )?.audiences,
+    ).toEqual(["CS"]);
+  });
+
+  it("分组可以声明与清空端口", () => {
+    const config = baseConfig([field()]);
+    const declared = updateSection(config, "s1", { audiences: ["CUSTOMER"] });
+    expect(declared.sections[0]?.audiences).toEqual(["CUSTOMER"]);
+    const cleared = updateSection(declared, "s1", { audiences: null });
+    expect(cleared.sections[0]).not.toHaveProperty("audiences");
+  });
+
+  it("未知分组原样返回", () => {
+    const config = baseConfig([field()]);
+    // updateSection 一律经 reindex 重建对象，所以这里断言内容不变。
+    expect(updateSection(config, "missing", { audiences: ["CS"] })).toEqual(
+      config,
+    );
   });
 });

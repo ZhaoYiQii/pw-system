@@ -4,10 +4,17 @@ import type {
   TemplateConfigIssue,
 } from "../domain/game-template-config-v2.js";
 import {
+  collectPublishBlockingIssuesV2,
   validateDraftConfigV2,
   validatePublishedConfigV2,
+  visibleConfigV2,
 } from "../domain/game-template-config-v2.js";
 import { GenericTemplateError } from "../domain/errors.js";
+import {
+  TEMPLATE_EVENTS,
+  emitTemplateEvent,
+  withTemplateTiming,
+} from "./game-template-observability.js";
 import {
   type CursorPage,
   decodeTemplateCursor,
@@ -181,6 +188,9 @@ function buildPublishedConfig(draft: unknown): PublishedConfigV2 {
   };
   const issues = validatePublishedConfigV2(candidate);
   if (issues.length > 0) throw validationFailed(issues);
+  // 发布专属阻断项：值类内容必须留给能填写下单的端口（读取与历史版本不受影响）。
+  const publishBlocking = collectPublishBlockingIssuesV2(candidate);
+  if (publishBlocking.length > 0) throw validationFailed(publishBlocking);
 
   const published: Record<string, unknown> = { ...candidate };
   delete published.legacyCompatibility;
@@ -418,6 +428,7 @@ export class GenericGameTemplateService {
         { versionId },
       );
     }
-    return form;
+    // 客服端按 CS 端口过滤（V-5 / V-6：过滤权威在服务端，前端过滤只是呈现）。
+    return { ...form, config: visibleConfigV2(form.config, "CS") };
   }
 }

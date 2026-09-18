@@ -1,5 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { Logger } from "@nestjs/common";
+import {
+  TEMPLATE_EVENTS,
+  emitTemplateEvent,
+} from "./game-template-observability.js";
 import type { PrismaClient, DbTransaction } from "@pw/database";
 import type {
   DispatchApplicationView,
@@ -17,6 +21,11 @@ import {
   DispatchStateError,
 } from "../domain/dispatch-errors.js";
 import { renderDispatchDocument } from "../domain/game-template-document.js";
+import {
+  partitionValuesV2,
+  visibleConfigV2,
+  type TemplateAudienceV2,
+} from "../domain/game-template-config-v2.js";
 import { readPublishedConfig } from "../domain/game-template-published-read.js";
 import {
   activeTemplateFields,
@@ -379,7 +388,8 @@ export class GameDispatchService {
       });
       return foundLocal;
     });
-    return this.view(tenantId, orderId);
+    // 发布派单是商家端动作：回读时按 CS 端口过滤。
+    return this.view(tenantId, orderId, "CS");
   }
 
   async applications(
@@ -473,7 +483,7 @@ export class GameDispatchService {
     orderId: string,
   ): Promise<DispatchView> {
     await this.customerOf(tenantId, customerAccountId, orderId);
-    return this.view(tenantId, orderId);
+    return this.view(tenantId, orderId, "CUSTOMER");
   }
 
   async customerAssign(
@@ -1086,13 +1096,22 @@ export class GameDispatchService {
         },
       });
     });
-    return this.view(tenantId, orderId);
+    // 选定陪玩由客服执行：回读时按 CS 端口过滤。
+    return this.view(tenantId, orderId, "CS");
   }
 
-  async view(tenantId: string, orderId: string): Promise<DispatchView> {
+  /**
+   * 订单视图。`audience` 决定这个端口能看到的字段与值（V-5 / V-6）：
+   * 商家端传 "CS"，客户自查传 "CUSTOMER"，两边看到的字段集可能不同。
+   */
+  async view(
+    tenantId: string,
+    orderId: string,
+    audience: TemplateAudienceV2,
+  ): Promise<DispatchView> {
     const found = await this.findDispatch(tenantId, orderId);
     if (!found) throw new DispatchNotFoundError();
-    return this.viewWith(tenantId, orderId, found);
+    return this.viewWith(tenantId, orderId, found, audience);
   }
 
   async copy(tenantId: string, orderId: string): Promise<DispatchCopyResult> {
@@ -1108,6 +1127,7 @@ export class GameDispatchService {
     found: NonNullable<
       Awaited<ReturnType<GameDispatchService["findDispatch"]>>
     >,
+    audience: TemplateAudienceV2,
   ): Promise<DispatchView> {
     const lines = await this.lines(tenantId, found.gd.id, orderId);
     const round = await this.client.gameDispatchRound.findFirst({
@@ -1115,6 +1135,12 @@ export class GameDispatchService {
       orderBy: { roundNo: "desc" },
     });
     const copy = await this.copyResult(tenantId, orderId, found);
+    const snapshotView = await this.orderSnapshotView(
+      tenantId,
+      orderId,
+      (found.gd.formValuesJson ?? {}) as Record<string, unknown>,
+      audience,
+    );
     return {
       orderId,
       dispatchOrderId: found.gd.id,
@@ -1122,12 +1148,8 @@ export class GameDispatchService {
       status: found.order.status,
       customerProfileId: found.order.customerProfileId,
       templateName: "",
-      formValues: (found.gd.formValuesJson ?? {}) as Record<string, string>,
-      document: await this.snapshotDocument(
-        tenantId,
-        orderId,
-        found.gd.formValuesJson,
-      ),
+      formValues: snapshotView.values as Record<string, string>,
+      document: snapshotView.document,
       durationMinutes: found.gd.durationMinutes,
       desiredStartAt: found.gd.desiredStartAt
         ? found.gd.desiredStartAt.toISOString()
@@ -1146,41 +1168,69 @@ export class GameDispatchService {
   }
 
   /**
-   * 订单文案：只读该订单自己的快照（配置 + 值 + 快照时间）。
-   * 旧订单（schemaVersion 非 2）或快照不可解析时返回 null 并留一条 warn，
-   * 不影响既有字段，也不回退去读当前模板。
+   * 订单快照的端口视图：一次读取订单自己的快照（配置 + 值 + 快照时间），
+   * 同时产出"这个端口能看到的字段值"与按同一端口过滤后的自动文案（V-5 / V-6）。
+   *
+   * 旧订单（schemaVersion 非 2）或快照不可解析时不做端口过滤（既有的 v1 值原样返回）、
+   * document 降级为 null 并留一条 warn，不影响既有字段，也不回退去读当前模板。
    */
-  private async snapshotDocument(
+  private async orderSnapshotView(
     tenantId: string,
     orderId: string,
-    rawValues: unknown,
-  ): Promise<DispatchDocumentView | null> {
+    rawValues: Record<string, unknown>,
+    audience: TemplateAudienceV2,
+  ): Promise<{
+    values: Record<string, unknown>;
+    document: DispatchDocumentView | null;
+  }> {
     const snapshot = await this.client.gameDispatchTemplateSnapshot.findFirst({
       where: { tenantId, orderId },
       select: { schemaVersion: true, configJson: true, createdAt: true },
     });
-    if (!snapshot || snapshot.schemaVersion !== 2) return null;
+    if (!snapshot || snapshot.schemaVersion !== 2) {
+      return { values: rawValues, document: null };
+    }
     const config = readPublishedConfig(snapshot.configJson);
     if (config === null) {
       this.logger.warn(
         `订单 ${orderId} 的快照配置不可解析，自动文案降级为 null`,
       );
-      return null;
+      emitTemplateEvent(TEMPLATE_EVENTS.DOCUMENT_FAILED, {
+        tenantId,
+        orderId,
+        code: "TEMPLATE_COMPONENT_INVALID",
+        outcome: "failed",
+      });
+      // 快照坏了就无法判定端口可见性：客户侧宁可少给（V-6），
+      // 商家端保留原值以便排查——这是自己门店的数据。
+      return {
+        values: audience === "CUSTOMER" ? {} : rawValues,
+        document: null,
+      };
     }
+    const values = partitionValuesV2(config, rawValues, audience).visible;
     try {
       const document = renderDispatchDocument(
-        config,
-        (rawValues ?? {}) as Record<string, unknown>,
+        visibleConfigV2(config, audience),
+        values,
       );
       return {
-        ...document,
-        generatedFromSnapshotAt: snapshot.createdAt.toISOString(),
+        values,
+        document: {
+          ...document,
+          generatedFromSnapshotAt: snapshot.createdAt.toISOString(),
+        },
       };
     } catch (error) {
       this.logger.warn(
         `订单 ${orderId} 自动文案生成失败：${error instanceof Error ? error.message : String(error)}`,
       );
-      return null;
+      emitTemplateEvent(TEMPLATE_EVENTS.DOCUMENT_FAILED, {
+        tenantId,
+        orderId,
+        outcome: "failed",
+      });
+      return { values, document: null };
     }
   }
 

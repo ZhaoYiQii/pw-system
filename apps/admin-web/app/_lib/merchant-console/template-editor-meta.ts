@@ -1,4 +1,11 @@
 import { collectDraftIssues } from "./template-binding";
+import {
+  ALL_AUDIENCES,
+  DEFAULT_AUDIENCES,
+  effectiveAudiencesOf,
+  sanitizeAudiences,
+  type TemplateAudience,
+} from "./template-draft-state";
 import type {
   DraftComponentV2,
   DraftConfigV2,
@@ -6,6 +13,11 @@ import type {
   DraftSemanticRoleV2,
   DraftTableColumnTypeV2,
 } from "./template-draft-state";
+
+// 端口可见性的类型与「读一份声明」住在模型层（template-draft-state）；
+// 这里转出去，保持 Task 1 已有的引用面不变。
+export { ALL_AUDIENCES, DEFAULT_AUDIENCES, sanitizeAudiences };
+export type { TemplateAudience };
 /**
  * 模板编辑器（内容设计）视图层的纯函数与文案表。
  *
@@ -133,4 +145,69 @@ export function fenToYuanInput(fen: string | undefined): string {
   const whole = padded.slice(0, -2).replace(/^0+(?=\d)/, "");
   const fraction = padded.slice(-2);
   return fraction === "00" ? whole : `${whole}.${fraction}`;
+}
+
+/* ── 端口可见性（设计规格 v0.1，V-1 至 V-11）────────────────────────── */
+
+const AUDIENCE_LABELS: Record<TemplateAudience, string> = {
+  CS: "客服",
+  CUSTOMER: "客户",
+};
+
+/** 单个端口的中文短名，给开关与行内标签用。 */
+export function audienceLabel(audience: TemplateAudience): string {
+  return AUDIENCE_LABELS[audience];
+}
+
+/** 对任意对象解析生效端口：解析规则住在模型层（effectiveAudiencesOf）。 */
+export function audiencesOf(
+  component: unknown,
+  section?: unknown,
+): TemplateAudience[] {
+  return effectiveAudiencesOf(component, section);
+}
+
+/** 这个端口能不能看见这个组件（V-5：看不见的端口也不记录）。 */
+export function canSee(
+  component: unknown,
+  section: unknown,
+  audience: TemplateAudience,
+): boolean {
+  return audiencesOf(component, section).includes(audience);
+}
+
+/**
+ * 按端口过滤：只保留该端口可见的组件；过滤后为空的分组不再返回。
+ * 装箱规则交给 layoutV2Rows，本函数只决定"谁能看见什么"。
+ */
+export function visibleForAudience(
+  config: DraftConfigV2,
+  audience: TemplateAudience,
+): DraftConfigV2 {
+  const sections = config.sections.filter((section) =>
+    config.components.some(
+      (component) =>
+        component.sectionKey === section.stableKey &&
+        canSee(component, section, audience),
+    ),
+  );
+  const components = config.components.filter((component) =>
+    canSee(
+      component,
+      config.sections.find((item) => item.stableKey === component.sectionKey) ??
+        null,
+      audience,
+    ),
+  );
+  return { ...config, sections, components };
+}
+
+/**
+ * 行标签用的白话文案。固定按 ALL_AUDIENCES 的顺序渲染，
+ * 免得"先去掉客服再点回来"之后显示成「客户·客服」这种顺序漂移。
+ */
+export function describeAudiences(list: readonly TemplateAudience[]): string {
+  return ALL_AUDIENCES.filter((audience) => list.includes(audience))
+    .map((audience) => AUDIENCE_LABELS[audience])
+    .join("·");
 }

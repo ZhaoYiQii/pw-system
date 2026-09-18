@@ -286,3 +286,101 @@ describe("template-binding：即时校验与定位", () => {
     expect(located[2]?.tab).toBe("binding");
   });
 });
+
+describe("template-binding：端口可见性阻断（与后端空标记规则一致）", () => {
+  it("组件两个端口都不给时判为问题，并按组件定位", () => {
+    const { config, sectionKey } = base();
+    const created = addComponent(config, "FIELD", sectionKey);
+    if (!created.ok) throw new Error("field failed");
+    const empty = updateComponent(created.config, created.stableKey, {
+      audiences: [],
+    });
+    // 模型不接受空标记：先确认它确实没被写进去，也就不会产生假问题
+    expect(
+      empty.components.find((item) => item.stableKey === created.stableKey),
+    ).not.toHaveProperty("audiences");
+
+    // 脏数据（例如历史草稿或外部写入）仍必须被校验拦下
+    const dirty: DraftConfigV2 = {
+      ...empty,
+      components: empty.components.map((item) =>
+        item.stableKey === created.stableKey
+          ? { ...item, audiences: [] }
+          : item,
+      ),
+    };
+    const issues = collectDraftIssues(dirty);
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        componentKey: created.stableKey,
+        message: expect.stringContaining("至少"),
+      }),
+    );
+  });
+
+  it("分组两个端口都不给时同样判为问题", () => {
+    const { config, sectionKey } = base();
+    const dirty: DraftConfigV2 = {
+      ...config,
+      sections: config.sections.map((section) =>
+        section.stableKey === sectionKey
+          ? { ...section, audiences: [] }
+          : section,
+      ),
+    };
+    expect(collectDraftIssues(dirty)).toContainEqual(
+      expect.objectContaining({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        path: "$.sections[0].audiences",
+      }),
+    );
+  });
+});
+
+describe("template-binding：值类内容必须留给可写入端口（产品规则）", () => {
+  it("字段被标成只给客户时报问题：客服是目前唯一能填写的端口", () => {
+    const { config, sectionKey } = base();
+    const created = addComponent(config, "FIELD", sectionKey);
+    if (!created.ok) throw new Error("field failed");
+    const dirty = updateComponent(created.config, created.stableKey, {
+      audiences: ["CUSTOMER"],
+    });
+    expect(collectDraftIssues(dirty)).toContainEqual(
+      expect.objectContaining({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        componentKey: created.stableKey,
+        message: expect.stringContaining("客服"),
+      }),
+    );
+  });
+
+  it("说明类只给客户看不算问题（它不需要被填写）", () => {
+    const { config, sectionKey } = base();
+    const note = addComponent(config, "NOTE", sectionKey);
+    if (!note.ok) throw new Error("note failed");
+    const dirty = updateComponent(note.config, note.stableKey, {
+      audiences: ["CUSTOMER"],
+    });
+    expect(
+      collectDraftIssues(dirty).filter(
+        (issue) => issue.componentKey === note.stableKey,
+      ),
+    ).toEqual([]);
+  });
+
+  it("整组只给客户时，组内的字段同样报问题（继承）", () => {
+    const { config, sectionKey } = base();
+    const created = addComponent(config, "FIELD", sectionKey);
+    if (!created.ok) throw new Error("field failed");
+    const dirty = updateSection(created.config, sectionKey, {
+      audiences: ["CUSTOMER"],
+    });
+    expect(collectDraftIssues(dirty)).toContainEqual(
+      expect.objectContaining({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        componentKey: created.stableKey,
+      }),
+    );
+  });
+});

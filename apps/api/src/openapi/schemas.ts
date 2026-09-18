@@ -347,6 +347,17 @@ export const priceDeltaFenSchema: SchemaProperty = {
   description: "选项加价（十进制字符串分，禁止 number/浮点）",
 };
 
+/**
+ * 端口可见性（设计规格 v0.1，V-1 / V-2）：
+ * 可选；缺省表示继承（组件 → 分组 → 两个端口全选，V-3 / V-8）；显式声明时至少一个端口。
+ */
+const templateAudiences = (description: string): SchemaProperty => ({
+  type: "array",
+  items: { type: "string", enum: ["CS", "CUSTOMER"] },
+  minItems: 1,
+  description,
+});
+
 const templateLayout = (description: string): OpenApiSchema =>
   object(
     ["colSpan", "rowBreakBefore"],
@@ -367,6 +378,9 @@ export const genericTemplateSectionSchema: OpenApiSchema = object(
     stableKey: templateStableKey("区块稳定键（发布后不可改）"),
     label: templateLabel("区块名称"),
     description: templateHelpText("区块说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）",
+    ),
     enabled: bool("区块是否启用"),
     sortOrder: integer("区块顺序"),
     layout: object(
@@ -423,6 +437,9 @@ export const genericTemplateFieldComponentSchema: OpenApiSchema = object(
     sectionKey: templateStableKey("所属区块稳定键"),
     label: templateLabel("组件名称"),
     description: templateHelpText("组件说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）",
+    ),
     enabled: bool("组件是否启用"),
     sortOrder: integer("组件顺序"),
     layout: templateLayout("组件布局"),
@@ -531,6 +548,9 @@ export const genericTemplateTableComponentSchema: OpenApiSchema = object(
     sectionKey: templateStableKey("所属区块稳定键"),
     label: templateLabel("组件名称"),
     description: templateHelpText("组件说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）",
+    ),
     enabled: bool("组件是否启用"),
     sortOrder: integer("组件顺序"),
     layout: templateLayout("组件布局"),
@@ -567,6 +587,9 @@ export const genericTemplateNoteComponentSchema: OpenApiSchema = object(
     sectionKey: templateStableKey("所属区块稳定键"),
     label: templateLabel("组件名称"),
     description: templateHelpText("组件说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）",
+    ),
     enabled: bool("组件是否启用"),
     sortOrder: integer("组件顺序"),
     layout: templateLayout("组件布局"),

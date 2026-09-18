@@ -21,7 +21,7 @@ import {
 import { DispatchInputError } from "../domain/dispatch-errors.js";
 import { GenericTemplateError } from "../domain/errors.js";
 import type { PublishedConfigV2 } from "../domain/game-template-config-v2.js";
-import type { TemplateOrderDraft } from "../domain/game-template-order-draft.js";
+import type { TemplateOrderDraftOutcome } from "../domain/game-template-order-draft.js";
 import { readPublishedConfig } from "../domain/game-template-published-read.js";
 
 const IDEMPOTENCY_OPERATION = "game_dispatch.template_order.create";
@@ -98,7 +98,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
     buildDraft: (
       config: PublishedConfigV2,
       values: Record<string, unknown>,
-    ) => TemplateOrderDraft,
+    ) => TemplateOrderDraftOutcome,
   ): Promise<CreateTemplateOrderOutput> {
     try {
       return await this.client.$transaction(async (tx) => {
@@ -156,7 +156,11 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
         if (!customer) throw new DispatchInputError("客户不存在");
 
         // 人数、价格与文案只由发布快照计算；客户端多传的键会在领域层被拒。
-        const draft = buildDraft(config, command.input.values);
+        // 端口过滤在领域层完成：看不见的字段既不参与计算，值也不落库（V-5）。
+        const { draft, storedValues } = buildDraft(
+          config,
+          command.input.values,
+        );
         const durationMinutes =
           command.input.durationMinutes ??
           DEFAULT_TEMPLATE_ORDER_DURATION_MINUTES;
@@ -181,7 +185,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
             gameId: command.input.gameId,
             templateVersionId: version.id,
             dispatchNo: `GD${code()}`,
-            formValuesJson: command.input.values as never,
+            formValuesJson: storedValues as never,
             durationMinutes,
             desiredStartAt,
           },

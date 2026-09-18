@@ -9,6 +9,8 @@
  * - 这里做即时校验（界面反馈），服务端仍是唯一权威。
  */
 import { fenToYuanText, yuanToFenString } from "../money";
+import { WRITABLE_AUDIENCES } from "./template-draft-state";
+import { valueComponentsOutsideAudiences } from "./template-draft-state";
 import type {
   DraftConfigV2,
   DraftFieldComponentV2,
@@ -221,6 +223,31 @@ export function parseYuanToFen(text: string): string | null {
 export function collectDraftIssues(config: DraftConfigV2): DraftIssue[] {
   const issues: DraftIssue[] = [];
 
+  config.sections.forEach((section, index) => {
+    if (section.audiences !== undefined && section.audiences.length === 0) {
+      issues.push({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        path: `$.sections[${index}].audiences`,
+        message: "分组至少要对一个端口可见（客服或客户）",
+      });
+    }
+  });
+
+  // 值类内容必须留给能填写的端口：客服是目前唯一能下单填写的端口，
+  // 把字段/表格标成只给客户就没人能填（参与算价或人数的内容更会静默少算）。
+  for (const component of valueComponentsOutsideAudiences(
+    config,
+    WRITABLE_AUDIENCES,
+  )) {
+    const index = config.components.indexOf(component);
+    issues.push({
+      code: "TEMPLATE_COMPONENT_INVALID",
+      path: `$.components[${index}].audiences`,
+      componentKey: component.stableKey,
+      message: `「${component.label || "未命名"}」没留给能填写的端口：客服是目前唯一能下单填写的端口，请让它对客服可见，或改成说明类内容`,
+    });
+  }
+
   const source = config.staffingSource;
   if (source.kind === "FIXED") {
     if (!Number.isInteger(source.count) || source.count <= 0) {
@@ -253,6 +280,14 @@ export function collectDraftIssues(config: DraftConfigV2): DraftIssue[] {
   }
 
   config.components.forEach((component, index) => {
+    if (component.audiences !== undefined && component.audiences.length === 0) {
+      issues.push({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        path: `$.components[${index}].audiences`,
+        componentKey: component.stableKey,
+        message: "内容至少要对一个端口可见（客服或客户）",
+      });
+    }
     if (component.kind === "FIELD") {
       const choice =
         component.fieldType === "SINGLE_SELECT" ||

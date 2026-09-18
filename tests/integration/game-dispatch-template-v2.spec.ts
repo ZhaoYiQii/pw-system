@@ -98,6 +98,33 @@ function draftWithDisabledNote(noteEnabled: boolean): Record<string, unknown> {
   };
 }
 
+/**
+ * 端口可见性夹具：分组声明 CUSTOMER，数字字段按参数覆盖（`undefined` = 不声明、跟随分组），
+ * 说明组件始终不声明。用来分别覆盖"组件覆盖分组"与"未声明继承"两种情况。
+ */
+function audienceDraft(
+  componentAudiences: string[] | undefined,
+): Record<string, unknown> {
+  const draft = draftWithDisabledNote(true);
+  const sections = draft.sections as Array<Record<string, unknown>>;
+  if (sections[0]) sections[0].audiences = ["CUSTOMER"];
+  const components = draft.components as Array<Record<string, unknown>>;
+  if (components[0] && componentAudiences !== undefined) {
+    components[0].audiences = componentAudiences;
+  }
+  return draft;
+}
+
+/** 读取草稿 / 发布快照里某个区块或组件的端口标记（未声明时为 undefined）。 */
+function audiencesAt(
+  config: Record<string, unknown>,
+  list: "sections" | "components",
+  index: number,
+): unknown {
+  const entries = config[list] as Array<Record<string, unknown>> | undefined;
+  return entries?.[index]?.audiences;
+}
+
 /** 统计 Prisma 调用次数，用于证明列表查询不随模板数量增长。 */
 function countingPrisma(base: PrismaClient): {
   client: PrismaClient;
@@ -874,6 +901,128 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
     const published = version.configJson as Record<string, unknown>;
     expect(published.components).toEqual(draft.components);
     expect(published.staffingSource).toEqual(draft.staffingSource);
+  });
+
+  it("端口可见性：空标记与未知端口在 API 边界 400，合法标记保存并发布原样落地", async () => {
+    const created = await createTemplate({
+      gameId: gameAId,
+      name: `端口可见性-${suffix}`,
+    });
+
+    // V-2：至少一个端口。空数组由边界拒绝，并指明出错字段，不写库。
+    const empty = await req(ownerToken)
+      .patch(`${base}/${created.id}/draft`, {
+        expectedRevision: 1,
+        config: audienceDraft([]),
+      })
+      .expect(400);
+    // 报错必须来自"至少一个端口"这条规则本身，而不是"未知字段被拒"。
+    const emptyErrors = (
+      empty.body as { fieldErrors?: Record<string, string[]> }
+    ).fieldErrors;
+    expect(emptyErrors?.config?.join(" ")).toContain("端口");
+    expect((await templateRow(created.id)).revision).toBe(1);
+
+    // 枚举之外的端口同样被边界拒绝。
+    await req(ownerToken)
+      .patch(`${base}/${created.id}/draft`, {
+        expectedRevision: 1,
+        config: audienceDraft(["BOSS"]),
+      })
+      .expect(400);
+    expect((await templateRow(created.id)).revision).toBe(1);
+
+    // 合法标记：组件覆盖分组（CS），说明组件继承分组（CUSTOMER）。
+    const draft = audienceDraft(["CS"]);
+    await req(ownerToken)
+      .patch(`${base}/${created.id}/draft`, {
+        expectedRevision: 1,
+        config: draft,
+      })
+      .expect(200);
+
+    const view = await req(ownerToken)
+      .get(`${base}/${created.id}/draft`)
+      .expect(200);
+    const saved = (view.body as { data: DraftView }).data;
+    expect(audiencesAt(saved.config, "sections", 0)).toEqual(["CUSTOMER"]);
+    expect(audiencesAt(saved.config, "components", 0)).toEqual(["CS"]);
+    expect(audiencesAt(saved.config, "components", 1)).toBeUndefined();
+
+    // 发布：版本快照与草稿逐字节一致，不凭空补未声明的键，因此发布后没有未发布改动。
+    const published = await publishDraft(created.id, 2);
+    expect(published.hasUnpublishedChanges).toBe(false);
+
+    const version = await versionRow(created.id, 1);
+    const config = version.configJson as Record<string, unknown>;
+    expect(audiencesAt(config, "sections", 0)).toEqual(["CUSTOMER"]);
+    expect(audiencesAt(config, "components", 0)).toEqual(["CS"]);
+    expect(audiencesAt(config, "components", 1)).toBeUndefined();
+    expect(config.components).toEqual(draft.components);
+    expect(config.sections).toEqual(draft.sections);
+  });
+
+  it("端口可见性：历史模板没有标记照常发布（V-8 回落两个端口全选）", async () => {
+    const created = await createTemplate({
+      gameId: gameAId,
+      name: `历史无标记-${suffix}`,
+    });
+    const draft = draftWithDisabledNote(true);
+    await req(ownerToken)
+      .patch(`${base}/${created.id}/draft`, {
+        expectedRevision: 1,
+        config: draft,
+      })
+      .expect(200);
+
+    const published = await publishDraft(created.id, 2);
+    expect(published.hasUnpublishedChanges).toBe(false);
+
+    const version = await versionRow(created.id, 1);
+    const config = version.configJson as Record<string, unknown>;
+    expect(audiencesAt(config, "sections", 0)).toBeUndefined();
+    expect(audiencesAt(config, "components", 0)).toBeUndefined();
+    expect(config.components).toEqual(draft.components);
+  });
+
+  it("值类内容只给客户时：草稿可存，发布被拒（客服是唯一能填写下单的端口）", async () => {
+    const created = await createTemplate({
+      gameId: gameAId,
+      name: `端口阻断-${suffix}`,
+    });
+    const draft = draftWithDisabledNote(true);
+    const components = draft.components as Array<Record<string, unknown>>;
+    if (components[0]) components[0].audiences = ["CUSTOMER"];
+
+    // 草稿保存不设这条规则（只有发布才阻断），否则店主没法在半成品上继续改
+    await req(ownerToken)
+      .patch(`${base}/${created.id}/draft`, {
+        expectedRevision: 1,
+        config: draft,
+      })
+      .expect(200);
+
+    const rejected = await req(ownerToken)
+      .post(`${base}/${created.id}/publish`, { expectedRevision: 2 })
+      .expect(422);
+    const issues = (
+      rejected.body as {
+        details: { issues: Array<{ code: string; componentKey?: string }> };
+      }
+    ).details.issues;
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: "TEMPLATE_COMPONENT_INVALID",
+        componentKey: "player_count",
+      }),
+    );
+    // 没有产生版本，也没有推进 revision
+    expect(
+      await client.gameDispatchTemplateVersion.count({
+        where: { tenantId, templateId: created.id },
+      }),
+    ).toBe(0);
+    expect((await templateRow(created.id)).revision).toBe(2);
   });
 
   it("versions：游标分页只返回摘要，schemaVersion 1 版本可列出", async () => {
