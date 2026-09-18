@@ -17,7 +17,7 @@ const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is required");
 
 const client = createDatabaseClient(url);
-const devPassword = "Dev-Password-123";
+const devPassword = "zcloud1024";
 const hash = await hashPassword(devPassword);
 
 // 平台超管

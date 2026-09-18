@@ -1,5 +1,5 @@
 // 开发 seed：为指定门店准备「客户自助下单 + 陪玩接单大厅」联调数据。
-// 幂等（upsert/更新，不删除已有数据）；账号密码沿用 seed-dev 的 Dev-Password-123。
+// 幂等（upsert/更新，不删除已有数据）；账号密码沿用 seed-dev 的 zcloud1024。
 // 用法：
 //   DATABASE_URL=postgresql://pw:pw_dev_only@127.0.0.1:5433/pw_saas?schema=public \
 //   SEED_TENANT_CODE=c1 node scripts/seed-store-demo.mjs
