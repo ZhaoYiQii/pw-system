@@ -905,71 +905,77 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
     id: string,
     input: ExpectedRevisionInput,
   ): Promise<GenericTemplateDraftView> {
-    return await this.client.$transaction(async (tx) => {
-      const current = await lockTemplate(tx, tenantId, id);
-      assertNotArchived(current, id, "设为默认");
-      assertRevision(current, input.expectedRevision);
+    try {
+      return await this.client.$transaction(async (tx) => {
+        const current = await lockTemplate(tx, tenantId, id);
+        assertNotArchived(current, id, "设为默认");
+        assertRevision(current, input.expectedRevision);
 
-      if (current.game_id === null) {
-        throw new GenericTemplateError(
-          "TEMPLATE_BINDING_INVALID",
-          "未归类模板不能设为默认",
-          { templateId: id },
-        );
-      }
-      if (
-        current.status !== "PUBLISHED" ||
-        current.active_version_id === null
-      ) {
-        throw new GenericTemplateError(
-          "TEMPLATE_VERSION_UNAVAILABLE",
-          "只有已发布且存在生效版本的模板可以设为默认",
-          {
-            templateId: id,
-            status: current.status,
-            activeVersionId: current.active_version_id,
-          },
-        );
-      }
+        if (current.game_id === null) {
+          throw new GenericTemplateError(
+            "TEMPLATE_BINDING_INVALID",
+            "未归类模板不能设为默认",
+            { templateId: id },
+          );
+        }
+        if (
+          current.status !== "PUBLISHED" ||
+          current.active_version_id === null
+        ) {
+          throw new GenericTemplateError(
+            "TEMPLATE_VERSION_UNAVAILABLE",
+            "只有已发布且存在生效版本的模板可以设为默认",
+            {
+              templateId: id,
+              status: current.status,
+              activeVersionId: current.active_version_id,
+            },
+          );
+        }
 
-      // 锁定游戏行，串行化同游戏的默认切换，避免部分唯一索引竞态。
-      await tx.$queryRaw<Array<{ id: string }>>`
+        // 锁定游戏行，串行化同游戏的默认切换，避免部分唯一索引竞态。
+        await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM games
         WHERE tenant_id = ${tenantId}::uuid AND id = ${current.game_id}::uuid
         FOR UPDATE`;
 
-      // 先清除同游戏旧默认（不改旧模板 revision），再设置目标模板。
-      await tx.gameDispatchTemplate.updateMany({
-        where: {
-          tenantId,
-          gameId: current.game_id,
-          isDefault: true,
-          id: { not: current.id },
-        },
-        data: { isDefault: false },
-      });
-      await tx.gameDispatchTemplate.update({
-        where: { id: current.id },
-        data: {
-          isDefault: true,
-          revision: current.revision + 1,
-          updatedBy: actorId,
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          tenantId,
-          actorType: "tenant_account",
-          actorId,
-          action: "game_template.v2.set_default",
-          resourceType: "game_dispatch_template",
-          resourceId: current.id,
-          summary: `设置通用模板默认「${current.name}」r${current.revision + 1}`,
-        },
-      });
+        // 先清除同游戏旧默认（不改旧模板 revision），再设置目标模板。
+        await tx.gameDispatchTemplate.updateMany({
+          where: {
+            tenantId,
+            gameId: current.game_id,
+            isDefault: true,
+            id: { not: current.id },
+          },
+          data: { isDefault: false },
+        });
+        await tx.gameDispatchTemplate.update({
+          where: { id: current.id },
+          data: {
+            isDefault: true,
+            revision: current.revision + 1,
+            updatedBy: actorId,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            tenantId,
+            actorType: "tenant_account",
+            actorId,
+            action: "game_template.v2.set_default",
+            resourceType: "game_dispatch_template",
+            resourceId: current.id,
+            summary: `设置通用模板默认「${current.name}」r${current.revision + 1}`,
+          },
+        });
 
-      return await this.draftViewAfterMutation(tx, tenantId, current.id);
-    });
+        return await this.draftViewAfterMutation(tx, tenantId, current.id);
+      });
+    } catch (error) {
+      const conflict = mapConcurrentConflict(error, id);
+      if (conflict) throw conflict;
+      throw error;
+    }
   }
 
   async archiveTemplate(
@@ -1227,6 +1233,28 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
   }
 }
 
+/**
+ * 并发写冲突 → 受控 409。
+ *
+ * 单机唯一索引/写冲突（P2002 唯一约束、P2034 序列化或死锁回滚）在不做映射时
+ * 会变成 500；这类冲突对调用方就是"重试或重新加载"的语义，与服务端既有
+ * TEMPLATE_REVISION_CONFLICT 一致（同文件其他写路径已有 P2002 → 409 的先例）。
+ */
+function mapConcurrentConflict(
+  error: unknown,
+  templateId: string,
+): GenericTemplateError | null {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code !== "P2002" && code !== "P2034") return null;
+  return new GenericTemplateError(
+    "TEMPLATE_REVISION_CONFLICT",
+    "并发写入冲突，请重新加载后重试",
+    {
+      templateId,
+      reason: code === "P2002" ? "UNIQUE_CONFLICT" : "WRITE_CONFLICT",
+    },
+  );
+}
 function notFound(id: string): GenericTemplateError {
   return new GenericTemplateError("TEMPLATE_NOT_FOUND", "模板不存在", {
     templateId: id,

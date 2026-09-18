@@ -1,4 +1,5 @@
 import {
+  FEATURE_KEYS,
   isCoreFeature,
   isFeatureKey,
   type FeatureKey,
@@ -21,9 +22,7 @@ export interface TenantSubscriptionView {
 export interface EntitlementRepository {
   list(tenantId: string): Promise<FeatureRow[]>;
   set(tenantId: string, featureKey: string, enabled: boolean): Promise<void>;
-  getSubscription(
-    tenantId: string,
-  ): Promise<TenantSubscriptionView | null>;
+  getSubscription(tenantId: string): Promise<TenantSubscriptionView | null>;
 }
 
 export interface FeatureState extends FeatureRow {
@@ -39,30 +38,8 @@ export class EntitlementsService {
       rows.filter((r) => r.enabled).map((r) => r.featureKey),
     );
     const all: FeatureState[] = [];
-    for (const key of [
-      "core.tenancy",
-      "core.identity",
-      "core.audit",
-      "core.customers",
-      "core.players",
-      "core.catalog",
-      "core.orders",
-      "core.dispatch",
-      "core.sessions",
-      "core.settlements",
-      "addon.customer_self_service",
-      "addon.player_order_hall",
-      "addon.ai_requirement_parser",
-      "addon.ai_match_recommendation",
-      "addon.ai_anomaly_detection",
-      "addon.advanced_reports",
-      "addon.custom_domain",
-      "addon.independent_miniprogram",
-      "addon.online_payment",
-      "addon.enterprise_wechat_notifications",
-      "addon.chain_stores",
-      "addon.open_api",
-    ]) {
+    // 以 features.ts 的目录为单一事实源：新增 addon 时不再需要改这里。
+    for (const key of FEATURE_KEYS) {
       all.push({
         featureKey: key,
         core: isCoreFeature(key),

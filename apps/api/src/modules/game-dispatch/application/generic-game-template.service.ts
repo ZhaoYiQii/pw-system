@@ -156,6 +156,12 @@ function validationFailed(issues: TemplateConfigIssue[]): GenericTemplateError {
   });
 }
 
+/** 观测用：安全取受控错误码（非受控错误不写入日志）。 */
+function errorCodeOf(error: unknown): string | undefined {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
 function clampLimit(limit: number): number {
   if (!Number.isFinite(limit)) return DEFAULT_LIMIT;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);
@@ -254,10 +260,12 @@ export class GenericGameTemplateService {
     if (query.cursor !== undefined) {
       decodeTemplateCursor(query.cursor, query.sort);
     }
-    return this.repository.list(tenantId, {
-      ...query,
-      limit: clampLimit(query.limit),
-    });
+    return withTemplateTiming(TEMPLATE_EVENTS.LIST, { tenantId }, () =>
+      this.repository.list(tenantId, {
+        ...query,
+        limit: clampLimit(query.limit),
+      }),
+    );
   }
 
   async createDraft(
@@ -283,13 +291,43 @@ export class GenericGameTemplateService {
   ): Promise<SaveGenericTemplateDraftResult> {
     // 先做纯领域校验，再锁行核对 revision；失败时数据库零写入。
     const issues = validateDraftConfigV2(input.config);
-    if (issues.length > 0) throw validationFailed(issues);
-    return this.repository.saveDraft(
-      tenantId,
-      actorId,
-      requireTemplateId(id),
-      input,
-    );
+    if (issues.length > 0) {
+      emitTemplateEvent(TEMPLATE_EVENTS.VALIDATION_ISSUE, {
+        tenantId,
+        actorId,
+        templateId: id,
+        issueCode: issues[0]?.code,
+        outcome: "failed",
+      });
+      throw validationFailed(issues);
+    }
+    try {
+      return await this.repository.saveDraft(
+        tenantId,
+        actorId,
+        requireTemplateId(id),
+        input,
+      );
+    } catch (error) {
+      const code = errorCodeOf(error);
+      emitTemplateEvent(TEMPLATE_EVENTS.DRAFT_SAVE_FAILED, {
+        tenantId,
+        actorId,
+        templateId: id,
+        code,
+        outcome: "failed",
+      });
+      if (code === "TEMPLATE_REVISION_CONFLICT") {
+        emitTemplateEvent(TEMPLATE_EVENTS.REVISION_CONFLICT, {
+          tenantId,
+          actorId,
+          templateId: id,
+          code,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 
   async publish(
@@ -299,13 +337,33 @@ export class GenericGameTemplateService {
     input: PublishGenericTemplateInput,
   ): Promise<GenericTemplateDraftView> {
     // 行锁在 repository 内获取；发布配置只由服务端当前草稿生成。
-    return this.repository.publish(
-      tenantId,
-      actorId,
-      requireTemplateId(id),
-      input,
-      buildPublishedConfig,
-    );
+    try {
+      return await this.repository.publish(
+        tenantId,
+        actorId,
+        requireTemplateId(id),
+        input,
+        buildPublishedConfig,
+      );
+    } catch (error) {
+      const code = errorCodeOf(error);
+      emitTemplateEvent(TEMPLATE_EVENTS.PUBLISH_FAILED, {
+        tenantId,
+        actorId,
+        templateId: id,
+        code,
+        outcome: "failed",
+      });
+      if (code === "TEMPLATE_VERSION_UNAVAILABLE") {
+        emitTemplateEvent(TEMPLATE_EVENTS.VERSION_MISMATCH, {
+          tenantId,
+          templateId: id,
+          code,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 
   async listVersions(
@@ -325,13 +383,28 @@ export class GenericGameTemplateService {
     id: string,
     input: RestoreGenericTemplateInput,
   ): Promise<GenericTemplateDraftView & { sourceVersionId: string }> {
-    return this.repository.restoreVersion(
-      tenantId,
-      actorId,
-      requireTemplateId(id),
-      input,
-      buildDraftFromVersion,
-    );
+    try {
+      return await this.repository.restoreVersion(
+        tenantId,
+        actorId,
+        requireTemplateId(id),
+        input,
+        buildDraftFromVersion,
+      );
+    } catch (error) {
+      const code = errorCodeOf(error);
+      if (code === "TEMPLATE_VERSION_UNAVAILABLE") {
+        emitTemplateEvent(TEMPLATE_EVENTS.VERSION_MISMATCH, {
+          tenantId,
+          actorId,
+          templateId: id,
+          versionId: input.versionId,
+          code,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 
   async copyTemplate(

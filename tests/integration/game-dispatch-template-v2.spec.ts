@@ -182,6 +182,22 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
       data: { code: otherTenantCode, name: "别家店" },
     });
     otherTenantId = other.id;
+    // S5 门禁是 opt-in：夹具必须显式开通 v2 addon。
+    await client.tenantEntitlement.create({
+      data: {
+        tenantId: tenantId,
+        featureKey: "addon.game_dispatch_template_v2",
+        enabled: true,
+      },
+    });
+    // S5 门禁是 opt-in：夹具必须显式开通 v2 addon。
+    await client.tenantEntitlement.create({
+      data: {
+        tenantId: otherTenantId,
+        featureKey: "addon.game_dispatch_template_v2",
+        enabled: true,
+      },
+    });
 
     async function addAccount(
       tid: string,
@@ -256,6 +272,10 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
         where: { tenantId: { in: tids } },
       });
       await client.game.deleteMany({ where: { tenantId: { in: tids } } });
+      // S5 门禁是 opt-in：夹具写入了 entitlement，收尾必须先删（外键 Restrict）。
+      await client.tenantEntitlement.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
       await client.tenant.deleteMany({ where: { id: { in: tids } } });
       await client.$disconnect();
     }
