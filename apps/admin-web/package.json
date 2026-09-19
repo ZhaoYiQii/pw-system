@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@pw/api-client": "workspace:*",
     "@radix-ui/react-slot": "^1.3.3",
     "@tanstack/react-query": "^5.102.8",
     "class-variance-authority": "^0.7.1",

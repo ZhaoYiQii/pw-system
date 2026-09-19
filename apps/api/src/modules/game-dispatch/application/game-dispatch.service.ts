@@ -1,10 +1,12 @@
 import { randomBytes } from "node:crypto";
+import { Logger } from "@nestjs/common";
 import type { PrismaClient, DbTransaction } from "@pw/database";
 import type {
   DispatchApplicationView,
   DispatchCopyResult,
   DispatchDraftInput,
   DispatchListRow,
+  DispatchDocumentView,
   DispatchLineView,
   DispatchView,
 } from "../domain/dispatch.js";
@@ -14,6 +16,13 @@ import {
   DispatchNotFoundError,
   DispatchStateError,
 } from "../domain/dispatch-errors.js";
+import { renderDispatchDocument } from "../domain/game-template-document.js";
+import { readPublishedConfig } from "../domain/game-template-published-read.js";
+import {
+  activeTemplateFields,
+  activeTemplateValues,
+  templateFormValueError,
+} from "../domain/game-template-values.js";
 
 type Tx = DbTransaction;
 
@@ -39,6 +48,7 @@ function fen(fenString: string): bigint {
 }
 
 export class GameDispatchService {
+  private readonly logger = new Logger(GameDispatchService.name);
   public client: PrismaClient;
 
   constructor(client: PrismaClient) {
@@ -123,10 +133,31 @@ export class GameDispatchService {
       where: { templateId: template.id },
       orderBy: { sortOrder: "asc" },
     });
-    const formValues = input.formValues ?? {};
+    const templateSections =
+      await this.client.gameDispatchTemplateSection.findMany({
+        where: { templateId: template.id },
+        orderBy: { sortOrder: "asc" },
+      });
+    const submittedFormValues = input.formValues ?? {};
+    const effectiveTemplateFields = activeTemplateFields(
+      templateSections,
+      templateFields,
+    );
+    const formValues = activeTemplateValues(
+      effectiveTemplateFields,
+      submittedFormValues,
+    );
+    const valueError = templateFormValueError(
+      effectiveTemplateFields,
+      formValues,
+    );
+    if (valueError) throw new DispatchInputError(valueError);
+    const effectiveTemplateSections = templateSections.filter(
+      (section) => section.enabled,
+    );
     const mode =
       typeof formValues["mode"] === "string" ? formValues["mode"] : null;
-    const rankField = templateFields.find(
+    const rankField = effectiveTemplateFields.find(
       (f) => f.fieldKey.includes("rank") || f.label.includes("段位"),
     );
     const targetRank =
@@ -157,11 +188,23 @@ export class GameDispatchService {
           templateName: template.name,
           fieldsJson: JSON.parse(
             JSON.stringify(
-              templateFields.map((f) => ({
+              effectiveTemplateFields.map((f) => ({
                 fieldKey: f.fieldKey,
                 label: f.label,
                 fieldType: f.fieldType,
                 options: f.options ?? [],
+                sectionId: f.sectionId,
+                colSpan: f.colSpan,
+                rowBreakBefore: f.rowBreakBefore,
+              })),
+            ),
+          ),
+          sectionsJson: JSON.parse(
+            JSON.stringify(
+              effectiveTemplateSections.map((s) => ({
+                name: s.name,
+                columns: s.columns,
+                sortOrder: s.sortOrder,
               })),
             ),
           ),
@@ -1080,6 +1123,11 @@ export class GameDispatchService {
       customerProfileId: found.order.customerProfileId,
       templateName: "",
       formValues: (found.gd.formValuesJson ?? {}) as Record<string, string>,
+      document: await this.snapshotDocument(
+        tenantId,
+        orderId,
+        found.gd.formValuesJson,
+      ),
       durationMinutes: found.gd.durationMinutes,
       desiredStartAt: found.gd.desiredStartAt
         ? found.gd.desiredStartAt.toISOString()
@@ -1095,6 +1143,45 @@ export class GameDispatchService {
         : null,
       ...copy,
     };
+  }
+
+  /**
+   * 订单文案：只读该订单自己的快照（配置 + 值 + 快照时间）。
+   * 旧订单（schemaVersion 非 2）或快照不可解析时返回 null 并留一条 warn，
+   * 不影响既有字段，也不回退去读当前模板。
+   */
+  private async snapshotDocument(
+    tenantId: string,
+    orderId: string,
+    rawValues: unknown,
+  ): Promise<DispatchDocumentView | null> {
+    const snapshot = await this.client.gameDispatchTemplateSnapshot.findFirst({
+      where: { tenantId, orderId },
+      select: { schemaVersion: true, configJson: true, createdAt: true },
+    });
+    if (!snapshot || snapshot.schemaVersion !== 2) return null;
+    const config = readPublishedConfig(snapshot.configJson);
+    if (config === null) {
+      this.logger.warn(
+        `订单 ${orderId} 的快照配置不可解析，自动文案降级为 null`,
+      );
+      return null;
+    }
+    try {
+      const document = renderDispatchDocument(
+        config,
+        (rawValues ?? {}) as Record<string, unknown>,
+      );
+      return {
+        ...document,
+        generatedFromSnapshotAt: snapshot.createdAt.toISOString(),
+      };
+    } catch (error) {
+      this.logger.warn(
+        `订单 ${orderId} 自动文案生成失败：${error instanceof Error ? error.message : String(error)}`,
+      );
+      return null;
+    }
   }
 
   private async lines(

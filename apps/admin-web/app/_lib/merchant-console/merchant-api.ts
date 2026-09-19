@@ -222,6 +222,17 @@ export interface DispatchDetail {
   bossUrl: string;
   lines: DispatchLine[];
   round: { roundNo: number; closesAt: string; status: string } | null;
+  /** S4：v2 订单按快照生成的文案；旧订单为 null 或缺失。 */
+  document?: OrderDocumentView | null;
+}
+
+/** 与 order-document.ts 对齐的 v2 文案视图（服务端返回，界面只读展示）。 */
+export interface OrderDocumentView {
+  schemaVersion: number;
+  rendererVersion: number;
+  rows: { sectionLabel: string; fieldLabel: string; value: string }[];
+  plainText: string;
+  generatedFromSnapshotAt: string;
 }
 
 // ---------------- 客户 / 陪玩 / 场次 / 财务 ----------------

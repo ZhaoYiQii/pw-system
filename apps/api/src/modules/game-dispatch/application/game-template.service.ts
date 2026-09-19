@@ -1,13 +1,22 @@
 import type {
   CreateGameTemplateInput,
   GameTemplateView,
+  TemplateBlockLabels,
   TemplateCopyLineInput,
   TemplateFieldInput,
   TemplatePositionInput,
   TemplateRankRuleInput,
+  TemplateSectionStyle,
+  TemplateSectionInput,
   UpdateGameTemplateInput,
 } from "../domain/game-template.js";
-import { GAME_TEMPLATE_FIELD_TYPES } from "../domain/game-template.js";
+import {
+  BLOCK_LABEL_KEYS,
+  GAME_TEMPLATE_FIELD_TYPES,
+  SECTION_ALIGNS,
+  SECTION_DENSITIES,
+  SECTION_VARIANTS,
+} from "../domain/game-template.js";
 import {
   DuplicateGameTemplateError,
   InvalidGameTemplateError,
@@ -37,6 +46,9 @@ export interface GameTemplateRepository {
 
 const NAME_MAX = 60;
 const KEY_PATTERN = /^[a-z][a-z0-9_]{0,39}$/;
+const SECTION_NAME_MAX = 30;
+const SECTION_COLUMNS_MAX = 4;
+const BLOCK_LABEL_MAX = 20;
 
 function trimRequired(value: unknown, label: string, max: number): string {
   if (typeof value !== "string" || value.trim().length < 1) {
@@ -88,6 +100,12 @@ function cleanFields(fields: unknown): TemplateFieldInput[] | undefined {
       required: raw.required === true,
       options: options as string[],
       placeholder: typeof raw.placeholder === "string" ? raw.placeholder : null,
+      sectionId:
+        typeof raw.sectionId === "string" && raw.sectionId.length > 0
+          ? raw.sectionId
+          : null,
+      colSpan: Number.isInteger(raw.colSpan) ? Number(raw.colSpan) : 1,
+      rowBreakBefore: raw.rowBreakBefore === true,
       sortOrder,
       enabled: raw.enabled !== false,
     };
@@ -161,6 +179,155 @@ function cleanCopyLines(
   });
 }
 
+/** 分区（模块）：名称唯一、列数 1–4，顺序按提交顺序。 */
+function cleanSections(sections: unknown): TemplateSectionInput[] | undefined {
+  if (sections === undefined) return undefined;
+  if (!Array.isArray(sections)) {
+    throw new InvalidGameTemplateError("sections 必须为数组");
+  }
+  const seen = new Set<string>();
+  return sections.map((value, index) => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const name = trimRequired(raw.name, "分区名称", SECTION_NAME_MAX);
+    if (seen.has(name)) {
+      throw new InvalidGameTemplateError(`分区名称重复：${name}`);
+    }
+    seen.add(name);
+    const columns = raw.columns === undefined ? 1 : Number(raw.columns);
+    if (
+      !Number.isInteger(columns) ||
+      columns < 1 ||
+      columns > SECTION_COLUMNS_MAX
+    ) {
+      throw new InvalidGameTemplateError(
+        `分区「${name}」的列数必须是 1-${SECTION_COLUMNS_MAX} 的整数`,
+      );
+    }
+    return {
+      name,
+      columns,
+      sortOrder: Number.isInteger(raw.sortOrder)
+        ? Number(raw.sortOrder)
+        : index,
+      enabled: raw.enabled !== false,
+    };
+  });
+}
+
+/** 系统区块标题：白名单键、值 1–20 字符；空串表示使用默认标题。 */
+function cleanBlockLabels(input: unknown): TemplateBlockLabels | undefined {
+  if (input === undefined) return undefined;
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new InvalidGameTemplateError("blockLabels 必须为对象");
+  }
+  const raw = input as Record<string, unknown>;
+  const labels: TemplateBlockLabels = {};
+  for (const key of BLOCK_LABEL_KEYS) {
+    const value = raw[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== "string") {
+      throw new InvalidGameTemplateError(`区块标题 ${key} 必须是字符串`);
+    }
+    const clean = value.trim();
+    if (clean.length === 0) continue;
+    if (clean.length > BLOCK_LABEL_MAX) {
+      throw new InvalidGameTemplateError(
+        `区块标题 ${key} 超过 ${BLOCK_LABEL_MAX} 字符`,
+      );
+    }
+    labels[key] = clean;
+  }
+  const sections = raw["sections"];
+  if (sections !== undefined) {
+    if (
+      sections === null ||
+      typeof sections !== "object" ||
+      Array.isArray(sections)
+    ) {
+      throw new InvalidGameTemplateError("blockLabels.sections 必须为对象");
+    }
+    const styles: Record<string, TemplateSectionStyle> = {};
+    for (const [name, value] of Object.entries(
+      sections as Record<string, unknown>,
+    )) {
+      if (name.trim().length === 0) {
+        throw new InvalidGameTemplateError("区块样式缺少区块名称");
+      }
+      if (value === null || typeof value !== "object" || Array.isArray(value)) {
+        throw new InvalidGameTemplateError(`区块「${name}」的样式必须为对象`);
+      }
+      const rawStyle = value as Record<string, unknown>;
+      const style: TemplateSectionStyle = {};
+      if (rawStyle.variant !== undefined) {
+        if (!SECTION_VARIANTS.includes(rawStyle.variant as never)) {
+          throw new InvalidGameTemplateError(
+            `区块「${name}」的外观只支持 ${SECTION_VARIANTS.join(" / ")}`,
+          );
+        }
+        style.variant = rawStyle.variant as NonNullable<
+          TemplateSectionStyle["variant"]
+        >;
+      }
+      if (rawStyle.density !== undefined) {
+        if (!SECTION_DENSITIES.includes(rawStyle.density as never)) {
+          throw new InvalidGameTemplateError(
+            `区块「${name}」的密度只支持 ${SECTION_DENSITIES.join(" / ")}`,
+          );
+        }
+        style.density = rawStyle.density as NonNullable<
+          TemplateSectionStyle["density"]
+        >;
+      }
+      if (rawStyle.align !== undefined) {
+        if (!SECTION_ALIGNS.includes(rawStyle.align as never)) {
+          throw new InvalidGameTemplateError(
+            `区块「${name}」的标题对齐只支持 ${SECTION_ALIGNS.join(" / ")}`,
+          );
+        }
+        style.align = rawStyle.align as NonNullable<
+          TemplateSectionStyle["align"]
+        >;
+      }
+      styles[name] = style;
+    }
+    labels.sections = styles;
+  }
+  return labels;
+}
+
+/** 字段列宽必须落在所属分区的列数内；分区未提交时按最大列数放行。 */
+function validateFieldLayout(
+  fields: TemplateFieldInput[] | undefined,
+  sections: TemplateSectionInput[] | undefined,
+): void {
+  if (!fields) return;
+  const columnsOf = (sectionRef: string | null | undefined): number => {
+    if (!sections || sections.length === 0) return SECTION_COLUMNS_MAX;
+    const fallback = sections[0]?.columns ?? 1;
+    if (!sectionRef) return fallback;
+    const matched = sections.find((section) => section.name === sectionRef);
+    return matched?.columns ?? fallback;
+  };
+  for (const field of fields) {
+    const colSpan = field.colSpan ?? 1;
+    if (
+      !Number.isInteger(colSpan) ||
+      colSpan < 1 ||
+      colSpan > SECTION_COLUMNS_MAX
+    ) {
+      throw new InvalidGameTemplateError(
+        `字段「${field.label}」的列宽必须是 1-${SECTION_COLUMNS_MAX} 的整数`,
+      );
+    }
+    const columns = columnsOf(field.sectionId);
+    if (colSpan > columns) {
+      throw new InvalidGameTemplateError(
+        `字段「${field.label}」跨 ${colSpan} 列，超过所属分区的 ${columns} 列`,
+      );
+    }
+  }
+}
+
 export class GameTemplateService {
   constructor(private readonly repository: GameTemplateRepository) {}
 
@@ -185,6 +352,11 @@ export class GameTemplateService {
     };
     const fields = cleanFields(input.fields);
     if (fields) payload.fields = fields;
+    const sections = cleanSections(input.sections);
+    if (sections) payload.sections = sections;
+    const blockLabels = cleanBlockLabels(input.blockLabels);
+    if (blockLabels) payload.blockLabels = blockLabels;
+    validateFieldLayout(fields, sections);
     const positions = cleanPositions(input.positions);
     if (positions) payload.positions = positions;
     const rankRules = cleanRankRules(input.rankRules);
@@ -212,6 +384,11 @@ export class GameTemplateService {
     if (input.enabled !== undefined) clean.enabled = input.enabled;
     const fields = cleanFields(input.fields);
     if (fields) clean.fields = fields;
+    const sections = cleanSections(input.sections);
+    if (sections) clean.sections = sections;
+    const blockLabels = cleanBlockLabels(input.blockLabels);
+    if (blockLabels) clean.blockLabels = blockLabels;
+    validateFieldLayout(fields, sections);
     const positions = cleanPositions(input.positions);
     if (positions) clean.positions = positions;
     const rankRules = cleanRankRules(input.rankRules);

@@ -2,18 +2,26 @@ import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
 import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { GameDispatchService } from "./application/game-dispatch.service.js";
+import { GameDispatchTemplateOrderService } from "./application/game-dispatch-template-order.service.js";
 import { GameTemplateService } from "./application/game-template.service.js";
+import { GenericGameTemplateService } from "./application/generic-game-template.service.js";
 import { PrismaGameTemplateRepository } from "./infrastructure/prisma-game-template.repository.js";
+import { PrismaGenericGameTemplateRepository } from "./infrastructure/prisma-generic-game-template.repository.js";
+import { PrismaGameDispatchTemplateOrderRepository } from "./infrastructure/prisma-game-dispatch-template-order.repository.js";
 import { GameDispatchController } from "./interface/game-dispatch.controller.js";
+import { GameDispatchTemplateOrderController } from "./interface/game-dispatch-template-order.controller.js";
 import { SlotSessionController } from "./interface/slot-session.controller.js";
 import { GameTemplateController } from "./interface/game-template.controller.js";
+import { GenericGameTemplateController } from "./interface/generic-game-template.controller.js";
 
 export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
 
 @Module({
   controllers: [
     GameTemplateController,
+    GenericGameTemplateController,
     GameDispatchController,
+    GameDispatchTemplateOrderController,
     SlotSessionController,
   ],
   providers: [
@@ -36,6 +44,33 @@ export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
       useFactory: (repo: PrismaGameTemplateRepository) =>
         new GameTemplateService(repo),
       inject: [PrismaGameTemplateRepository],
+    },
+    {
+      provide: PrismaGenericGameTemplateRepository,
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaGenericGameTemplateRepository(client)),
+      inject: [GAME_DISPATCH_DB_CLIENT],
+    },
+    {
+      provide: GenericGameTemplateService,
+      useFactory: (repo: PrismaGenericGameTemplateRepository) =>
+        new GenericGameTemplateService(repo),
+      inject: [PrismaGenericGameTemplateRepository],
+    },
+    {
+      provide: PrismaGameDispatchTemplateOrderRepository,
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(
+          client,
+          new PrismaGameDispatchTemplateOrderRepository(client),
+        ),
+      inject: [GAME_DISPATCH_DB_CLIENT],
+    },
+    {
+      provide: GameDispatchTemplateOrderService,
+      useFactory: (repo: PrismaGameDispatchTemplateOrderRepository) =>
+        new GameDispatchTemplateOrderService(repo),
+      inject: [PrismaGameDispatchTemplateOrderRepository],
     },
     {
       provide: GameDispatchService,

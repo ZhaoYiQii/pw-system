@@ -54,7 +54,15 @@ export class ValidationInterceptor implements NestInterceptor {
           fieldErrorsFromIssues(parsed.error.issues as never),
         );
       }
-      req.query = parsed.data as Request["query"];
+      // Express 5 把 req.query 定义成请求原型上的只读 getter：
+      // 直接赋值在严格模式下抛 TypeError，在非严格模式下静默失效。
+      // 必须在本实例上重新定义为普通数据属性。
+      Object.defineProperty(req, "query", {
+        value: parsed.data as Request["query"],
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
     return next.handle();
   }

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AccountingAccountingData, AccountingAccountingResponses, AiCapabilitiesData, AiCapabilitiesResponses, AiParseData, AiParseResponses, AiRecommendData, AiRecommendResponses, AuditExportData, AuditExportResponses, AuditListData, AuditListResponses, AuthLoginData, AuthLoginResponses, AuthLogoutData, AuthLogoutResponses, AuthMeData, AuthMeResponses, AuthPhoneLoginData, AuthPhoneLoginResponses, AuthRefreshData, AuthRefreshResponses, AuthSwitchContextData, AuthSwitchContextResponses, CatalogCreateGameData, CatalogCreateGameResponses, CatalogCreateProductData, CatalogCreateProductResponses, CatalogCreateRegionData, CatalogCreateRegionResponses, CatalogCreateRuleData, CatalogCreateRuleResponses, CatalogListGamesData, CatalogListGamesResponses, CatalogListProductsData, CatalogListProductsResponses, CatalogListRegionsData, CatalogListRegionsResponses, CatalogListRulesData, CatalogListRulesResponses, CatalogRemoveGameData, CatalogRemoveGameResponses, CatalogRemoveProductData, CatalogRemoveProductResponses, CatalogRemoveRegionData, CatalogRemoveRegionResponses, CatalogRemoveRuleData, CatalogRemoveRuleResponses, CatalogUpdateGameData, CatalogUpdateGameResponses, CatalogUpdateProductData, CatalogUpdateProductResponses, CatalogUpdateRegionData, CatalogUpdateRegionResponses, CatalogUpdateRuleData, CatalogUpdateRuleResponses, CustomersAccountData, CustomersAccountResponses, CustomersBindData, CustomersBindResponses, CustomersCreateData, CustomersCreateResponses, CustomerSelfCatalogData, CustomerSelfCatalogResponses, CustomerSelfConfirmCompleteData, CustomerSelfConfirmCompleteResponses, CustomerSelfCreateOrderData, CustomerSelfCreateOrderResponses, CustomerSelfMeData, CustomerSelfMeResponses, CustomerSelfMyOrdersData, CustomerSelfMyOrdersResponses, CustomersGetData, CustomersGetResponses, CustomersListData, CustomersListResponses, CustomersOrdersData, CustomersOrdersResponses, CustomersRemoveData, CustomersRemoveResponses, CustomersUpdateData, CustomersUpdateResponses, DashboardSummarySummaryData, DashboardSummarySummaryResponses, DispatchAdminApplicationsData, DispatchAdminApplicationsResponses, DispatchAdminAssignData, DispatchAdminAssignResponses, DispatchAdminPublishData, DispatchAdminPublishResponses, DispatchAdminShortlistData, DispatchAdminShortlistResponses, DispatchCustomerCandidatesData, DispatchCustomerCandidatesResponses, DispatchCustomerSelectData, DispatchCustomerSelectResponses, DispatchPlayerApplyData, DispatchPlayerApplyResponses, DispatchPlayerHallData, DispatchPlayerHallResponses, DispatchPlayerMineData, DispatchPlayerMineResponses, DisputesCustomerMineData, DisputesCustomerMineResponses, DisputesDetailData, DisputesDetailResponses, DisputesListAllData, DisputesListAllResponses, DisputesListData, DisputesListResponses, DisputesOpenData, DisputesOpenResponses, DisputesPlayerMineData, DisputesPlayerMineResponses, DisputesResolveData, DisputesResolveResponses, EntitlementsAddonCapabilityData, EntitlementsAddonCapabilityResponses, EntitlementsListEntitlementsData, EntitlementsListEntitlementsResponses, EntitlementsListTenantFeaturesData, EntitlementsListTenantFeaturesResponses, EntitlementsSetEntitlementData, EntitlementsSetEntitlementResponses, EntitlementsSubscriptionData, EntitlementsSubscriptionResponses, EvidenceCaptureData, EvidenceCaptureResponses, EvidenceDownloadData, EvidenceDownloadResponses, EvidenceDownloadSlotEvidenceData, EvidenceDownloadSlotEvidenceResponses, EvidenceUploadData, EvidenceUploadResponses, GameDispatchApplicationsData, GameDispatchApplicationsResponses, GameDispatchApplyData, GameDispatchApplyResponses, GameDispatchAssignData, GameDispatchAssignResponses, GameDispatchConfirmSettlementData, GameDispatchConfirmSettlementResponses, GameDispatchCopyData, GameDispatchCopyResponses, GameDispatchCreateDraftData, GameDispatchCreateDraftResponses, GameDispatchCustomerAssignData, GameDispatchCustomerAssignResponses, GameDispatchCustomerCreateDraftData, GameDispatchCustomerCreateDraftResponses, GameDispatchCustomerSelectData, GameDispatchCustomerSelectResponses, GameDispatchCustomerTemplateData, GameDispatchCustomerTemplateResponses, GameDispatchCustomerTemplatesData, GameDispatchCustomerTemplatesResponses, GameDispatchListData, GameDispatchListResponses, GameDispatchPlayerSignupData, GameDispatchPlayerSignupResponses, GameDispatchPublishData, GameDispatchPublishResponses, GameDispatchStaffRemoveData, GameDispatchStaffRemoveResponses, GameDispatchViewData, GameDispatchViewResponses, GameDispatchWithdrawData, GameDispatchWithdrawResponses, GameTemplateCopyData, GameTemplateCopyResponses, GameTemplateCreateData, GameTemplateCreateResponses, GameTemplateGetData, GameTemplateGetResponses, GameTemplateListData, GameTemplateListResponses, GameTemplateRemoveData, GameTemplateRemoveResponses, GameTemplateUpdateData, GameTemplateUpdateResponses, HealthGetHealthData, HealthGetHealthResponses, MePlatformMeData, MePlatformMeResponses, MeTenantMeData, MeTenantMeResponses, NotificationsListData, NotificationsListResponses, NotificationsMarkAllReadData, NotificationsMarkAllReadResponses, NotificationsMarkReadData, NotificationsMarkReadResponses, NotificationsUnreadCountData, NotificationsUnreadCountResponses, OrdersCancelData, OrdersCancelResponses, OrdersConfirmData, OrdersConfirmResponses, OrdersCreateData, OrdersCreateResponses, OrdersGetData, OrdersGetResponses, OrdersListData, OrdersListResponses, OrdersStaffConfirmData, OrdersStaffConfirmResponses, PhoneVerificationSendCodeData, PhoneVerificationSendCodeResponses, PlatformAccountsCreateData, PlatformAccountsCreateResponses, PlatformAccountsListData, PlatformAccountsListResponses, PlatformAccountsSetRoleData, PlatformAccountsSetRoleResponses, PlatformAccountsSetStatusData, PlatformAccountsSetStatusResponses, PlatformAuditAggregateAggregateData, PlatformAuditAggregateAggregateResponses, PlatformAuditPlatformListData, PlatformAuditPlatformListResponses, PlatformBillingActivateData, PlatformBillingActivateResponses, PlatformBillingAssignData, PlatformBillingAssignResponses, PlatformBillingOnboardData, PlatformBillingOnboardResponses, PlatformBillingPackagesData, PlatformBillingPackagesResponses, PlatformBillingRenewData, PlatformBillingRenewResponses, PlatformFinanceGetData, PlatformFinanceGetResponses, PlatformFinanceSetData, PlatformFinanceSetResponses, PlatformGrantsCreateData, PlatformGrantsCreateResponses, PlatformGrantsListData, PlatformGrantsListResponses, PlatformGrantsRevokeData, PlatformGrantsRevokeResponses, PlatformOpsOverviewData, PlatformOpsOverviewResponses, PlatformOpsSubscriptionsData, PlatformOpsSubscriptionsResponses, PlatformOpsTenantDetailData, PlatformOpsTenantDetailResponses, PlayerApplicationsApplyData, PlayerApplicationsApplyResponses, PlayerApplicationsApproveData, PlayerApplicationsApproveResponses, PlayerApplicationsListData, PlayerApplicationsListResponses, PlayerApplicationsRejectData, PlayerApplicationsRejectResponses, PlayerFinanceFinanceData, PlayerFinanceFinanceResponses, PlayerFinanceIncomeData, PlayerFinanceIncomeResponses, PlayersAccountData, PlayersAccountResponses, PlayersAddAvailabilityData, PlayersAddAvailabilityResponses, PlayersAddSkillData, PlayersAddSkillResponses, PlayersBindData, PlayersBindResponses, PlayersCreateData, PlayersCreateResponses, PlayerSelfAddAvailabilityData, PlayerSelfAddAvailabilityResponses, PlayerSelfMeData, PlayerSelfMeResponses, PlayerSelfRemoveAvailabilityData, PlayerSelfRemoveAvailabilityResponses, PlayerSelfUpdateMeData, PlayerSelfUpdateMeResponses, PlayersGetData, PlayersGetResponses, PlayersListData, PlayersListResponses, PlayersRemoveAvailabilityData, PlayersRemoveAvailabilityResponses, PlayersRemoveData, PlayersRemoveResponses, PlayersRemoveSkillData, PlayersRemoveSkillResponses, PlayersUpdateData, PlayersUpdateResponses, ReadyReadyData, ReadyReadyResponses, SessionsAdjustData, SessionsAdjustResponses, SessionsDetailData, SessionsDetailResponses, SessionsEndData, SessionsEndResponses, SessionsListData, SessionsListResponses, SessionsReviewData, SessionsReviewResponses, SessionsSessionData, SessionsSessionResponses, SessionsStartData, SessionsStartResponses, SettlementsAddItemsData, SettlementsAddItemsResponses, SettlementsApproveData, SettlementsApproveResponses, SettlementsCreateData, SettlementsCreateResponses, SettlementsDetailData, SettlementsDetailResponses, SettlementsFinanceLedgerData, SettlementsFinanceLedgerResponses, SettlementsListData, SettlementsListEarningsData, SettlementsListEarningsResponses, SettlementsListResponses, SettlementsPayData, SettlementsPayResponses, SettlementsReviewData, SettlementsReviewResponses, SettlementsVoidBatchData, SettlementsVoidBatchResponses, SlotSessionCaptureData, SlotSessionCaptureResponses, SlotSessionEndData, SlotSessionEndResponses, SlotSessionEvidenceData, SlotSessionEvidenceResponses, SlotSessionServiceSlotsData, SlotSessionServiceSlotsResponses, SlotSessionStartData, SlotSessionStartResponses, StorefrontConfigGetConfigData, StorefrontConfigGetConfigResponses, TenancyCreateTenantData, TenancyCreateTenantResponses, TenancyDeactivateTenantData, TenancyDeactivateTenantResponses, TenancyListTenantsData, TenancyListTenantsResponses, TenancyResolveTenantData, TenancyResolveTenantResponses, TenantAccountsCreateData, TenantAccountsCreateResponses, TenantAccountsListData, TenantAccountsListResponses, TenantAccountsSetRolesData, TenantAccountsSetRolesResponses, TenantAccountsSetStatusData, TenantAccountsSetStatusResponses, TenantConfigGetData, TenantConfigGetResponses, TenantConfigRollbackData, TenantConfigRollbackResponses, TenantConfigSaveData, TenantConfigSaveResponses, TenantConfigVersionsData, TenantConfigVersionsResponses, TenantFinanceGetData, TenantFinanceGetResponses, TenantFinancePreviewData, TenantFinancePreviewResponses, TenantFinanceSetStoreCutData, TenantFinanceSetStoreCutResponses, WalletGetData, WalletGetResponses, WalletRechargeData, WalletRechargeResponses } from './types.gen';
+import type { AccountingAccountingData, AccountingAccountingResponses, AiCapabilitiesData, AiCapabilitiesResponses, AiParseData, AiParseResponses, AiRecommendData, AiRecommendResponses, AuditExportData, AuditExportResponses, AuditListData, AuditListResponses, AuthLoginData, AuthLoginResponses, AuthLogoutData, AuthLogoutResponses, AuthMeData, AuthMeResponses, AuthPhoneLoginData, AuthPhoneLoginResponses, AuthRefreshData, AuthRefreshResponses, AuthSwitchContextData, AuthSwitchContextResponses, CatalogCreateGameData, CatalogCreateGameResponses, CatalogCreateProductData, CatalogCreateProductResponses, CatalogCreateRegionData, CatalogCreateRegionResponses, CatalogCreateRuleData, CatalogCreateRuleResponses, CatalogListGamesData, CatalogListGamesResponses, CatalogListProductsData, CatalogListProductsResponses, CatalogListRegionsData, CatalogListRegionsResponses, CatalogListRulesData, CatalogListRulesResponses, CatalogRemoveGameData, CatalogRemoveGameResponses, CatalogRemoveProductData, CatalogRemoveProductResponses, CatalogRemoveRegionData, CatalogRemoveRegionResponses, CatalogRemoveRuleData, CatalogRemoveRuleResponses, CatalogUpdateGameData, CatalogUpdateGameResponses, CatalogUpdateProductData, CatalogUpdateProductResponses, CatalogUpdateRegionData, CatalogUpdateRegionResponses, CatalogUpdateRuleData, CatalogUpdateRuleResponses, CustomersAccountData, CustomersAccountResponses, CustomersBindData, CustomersBindResponses, CustomersCreateData, CustomersCreateResponses, CustomerSelfCatalogData, CustomerSelfCatalogResponses, CustomerSelfConfirmCompleteData, CustomerSelfConfirmCompleteResponses, CustomerSelfCreateOrderData, CustomerSelfCreateOrderResponses, CustomerSelfMeData, CustomerSelfMeResponses, CustomerSelfMyOrdersData, CustomerSelfMyOrdersResponses, CustomersGetData, CustomersGetResponses, CustomersListData, CustomersListResponses, CustomersOrdersData, CustomersOrdersResponses, CustomersRemoveData, CustomersRemoveResponses, CustomersUpdateData, CustomersUpdateResponses, DashboardSummarySummaryData, DashboardSummarySummaryResponses, DispatchAdminApplicationsData, DispatchAdminApplicationsResponses, DispatchAdminAssignData, DispatchAdminAssignResponses, DispatchAdminPublishData, DispatchAdminPublishResponses, DispatchAdminShortlistData, DispatchAdminShortlistResponses, DispatchCustomerCandidatesData, DispatchCustomerCandidatesResponses, DispatchCustomerSelectData, DispatchCustomerSelectResponses, DispatchPlayerApplyData, DispatchPlayerApplyResponses, DispatchPlayerHallData, DispatchPlayerHallResponses, DispatchPlayerMineData, DispatchPlayerMineResponses, DisputesCustomerMineData, DisputesCustomerMineResponses, DisputesDetailData, DisputesDetailResponses, DisputesListAllData, DisputesListAllResponses, DisputesListData, DisputesListResponses, DisputesOpenData, DisputesOpenResponses, DisputesPlayerMineData, DisputesPlayerMineResponses, DisputesResolveData, DisputesResolveResponses, EntitlementsAddonCapabilityData, EntitlementsAddonCapabilityResponses, EntitlementsListEntitlementsData, EntitlementsListEntitlementsResponses, EntitlementsListTenantFeaturesData, EntitlementsListTenantFeaturesResponses, EntitlementsSetEntitlementData, EntitlementsSetEntitlementResponses, EntitlementsSubscriptionData, EntitlementsSubscriptionResponses, EvidenceCaptureData, EvidenceCaptureResponses, EvidenceDownloadData, EvidenceDownloadResponses, EvidenceDownloadSlotEvidenceData, EvidenceDownloadSlotEvidenceResponses, EvidenceUploadData, EvidenceUploadResponses, GameDispatchApplicationsData, GameDispatchApplicationsResponses, GameDispatchApplyData, GameDispatchApplyResponses, GameDispatchAssignData, GameDispatchAssignResponses, GameDispatchConfirmSettlementData, GameDispatchConfirmSettlementResponses, GameDispatchCopyData, GameDispatchCopyResponses, GameDispatchCreateDraftData, GameDispatchCreateDraftResponses, GameDispatchCustomerAssignData, GameDispatchCustomerAssignResponses, GameDispatchCustomerCreateDraftData, GameDispatchCustomerCreateDraftResponses, GameDispatchCustomerSelectData, GameDispatchCustomerSelectResponses, GameDispatchCustomerTemplateData, GameDispatchCustomerTemplateResponses, GameDispatchCustomerTemplatesData, GameDispatchCustomerTemplatesResponses, GameDispatchListData, GameDispatchListResponses, GameDispatchPlayerSignupData, GameDispatchPlayerSignupResponses, GameDispatchPublishData, GameDispatchPublishResponses, GameDispatchStaffRemoveData, GameDispatchStaffRemoveResponses, GameDispatchTemplateOrderCreateData, GameDispatchTemplateOrderCreateErrors, GameDispatchTemplateOrderCreateResponses, GameDispatchViewData, GameDispatchViewErrors, GameDispatchViewResponses, GameDispatchWithdrawData, GameDispatchWithdrawResponses, GameTemplateCopyData, GameTemplateCopyResponses, GameTemplateCreateData, GameTemplateCreateResponses, GameTemplateGetData, GameTemplateGetResponses, GameTemplateListData, GameTemplateListResponses, GameTemplateRemoveData, GameTemplateRemoveResponses, GameTemplateUpdateData, GameTemplateUpdateResponses, GenericGameTemplateArchiveData, GenericGameTemplateArchiveErrors, GenericGameTemplateArchiveResponses, GenericGameTemplateCopyData, GenericGameTemplateCopyErrors, GenericGameTemplateCopyResponses, GenericGameTemplateCreateData, GenericGameTemplateCreateErrors, GenericGameTemplateCreateResponses, GenericGameTemplateGetDraftData, GenericGameTemplateGetDraftErrors, GenericGameTemplateGetDraftResponses, GenericGameTemplateGetVersionFormData, GenericGameTemplateGetVersionFormErrors, GenericGameTemplateGetVersionFormResponses, GenericGameTemplateListData, GenericGameTemplateListErrors, GenericGameTemplateListPublishedData, GenericGameTemplateListPublishedErrors, GenericGameTemplateListPublishedResponses, GenericGameTemplateListResponses, GenericGameTemplateListVersionsData, GenericGameTemplateListVersionsErrors, GenericGameTemplateListVersionsResponses, GenericGameTemplatePublishData, GenericGameTemplatePublishErrors, GenericGameTemplatePublishResponses, GenericGameTemplateRemoveData, GenericGameTemplateRemoveErrors, GenericGameTemplateRemoveResponses, GenericGameTemplateRestoreData, GenericGameTemplateRestoreErrors, GenericGameTemplateRestoreResponses, GenericGameTemplateSaveDraftData, GenericGameTemplateSaveDraftErrors, GenericGameTemplateSaveDraftResponses, GenericGameTemplateSetDefaultData, GenericGameTemplateSetDefaultErrors, GenericGameTemplateSetDefaultResponses, GenericGameTemplateUnarchiveData, GenericGameTemplateUnarchiveErrors, GenericGameTemplateUnarchiveResponses, HealthGetHealthData, HealthGetHealthResponses, MePlatformMeData, MePlatformMeResponses, MeTenantMeData, MeTenantMeResponses, NotificationsListData, NotificationsListResponses, NotificationsMarkAllReadData, NotificationsMarkAllReadResponses, NotificationsMarkReadData, NotificationsMarkReadResponses, NotificationsUnreadCountData, NotificationsUnreadCountResponses, OrdersCancelData, OrdersCancelResponses, OrdersConfirmData, OrdersConfirmResponses, OrdersCreateData, OrdersCreateResponses, OrdersGetData, OrdersGetResponses, OrdersListData, OrdersListResponses, OrdersStaffConfirmData, OrdersStaffConfirmResponses, PhoneVerificationSendCodeData, PhoneVerificationSendCodeResponses, PlatformAccountsCreateData, PlatformAccountsCreateResponses, PlatformAccountsListData, PlatformAccountsListResponses, PlatformAccountsSetRoleData, PlatformAccountsSetRoleResponses, PlatformAccountsSetStatusData, PlatformAccountsSetStatusResponses, PlatformAuditAggregateAggregateData, PlatformAuditAggregateAggregateResponses, PlatformAuditPlatformListData, PlatformAuditPlatformListResponses, PlatformBillingActivateData, PlatformBillingActivateResponses, PlatformBillingAssignData, PlatformBillingAssignResponses, PlatformBillingOnboardData, PlatformBillingOnboardResponses, PlatformBillingPackagesData, PlatformBillingPackagesResponses, PlatformBillingRenewData, PlatformBillingRenewResponses, PlatformFinanceGetData, PlatformFinanceGetResponses, PlatformFinanceSetData, PlatformFinanceSetResponses, PlatformGrantsCreateData, PlatformGrantsCreateResponses, PlatformGrantsListData, PlatformGrantsListResponses, PlatformGrantsRevokeData, PlatformGrantsRevokeResponses, PlatformOpsOverviewData, PlatformOpsOverviewResponses, PlatformOpsSubscriptionsData, PlatformOpsSubscriptionsResponses, PlatformOpsTenantDetailData, PlatformOpsTenantDetailResponses, PlayerApplicationsApplyData, PlayerApplicationsApplyResponses, PlayerApplicationsApproveData, PlayerApplicationsApproveResponses, PlayerApplicationsListData, PlayerApplicationsListResponses, PlayerApplicationsRejectData, PlayerApplicationsRejectResponses, PlayerFinanceFinanceData, PlayerFinanceFinanceResponses, PlayerFinanceIncomeData, PlayerFinanceIncomeResponses, PlayersAccountData, PlayersAccountResponses, PlayersAddAvailabilityData, PlayersAddAvailabilityResponses, PlayersAddSkillData, PlayersAddSkillResponses, PlayersBindData, PlayersBindResponses, PlayersCreateData, PlayersCreateResponses, PlayerSelfAddAvailabilityData, PlayerSelfAddAvailabilityResponses, PlayerSelfMeData, PlayerSelfMeResponses, PlayerSelfRemoveAvailabilityData, PlayerSelfRemoveAvailabilityResponses, PlayerSelfUpdateMeData, PlayerSelfUpdateMeResponses, PlayersGetData, PlayersGetResponses, PlayersListData, PlayersListResponses, PlayersRemoveAvailabilityData, PlayersRemoveAvailabilityResponses, PlayersRemoveData, PlayersRemoveResponses, PlayersRemoveSkillData, PlayersRemoveSkillResponses, PlayersUpdateData, PlayersUpdateResponses, ReadyReadyData, ReadyReadyResponses, SessionsAdjustData, SessionsAdjustResponses, SessionsDetailData, SessionsDetailResponses, SessionsEndData, SessionsEndResponses, SessionsListData, SessionsListResponses, SessionsReviewData, SessionsReviewResponses, SessionsSessionData, SessionsSessionResponses, SessionsStartData, SessionsStartResponses, SettlementsAddItemsData, SettlementsAddItemsResponses, SettlementsApproveData, SettlementsApproveResponses, SettlementsCreateData, SettlementsCreateResponses, SettlementsDetailData, SettlementsDetailResponses, SettlementsFinanceLedgerData, SettlementsFinanceLedgerResponses, SettlementsListData, SettlementsListEarningsData, SettlementsListEarningsResponses, SettlementsListResponses, SettlementsPayData, SettlementsPayResponses, SettlementsReviewData, SettlementsReviewResponses, SettlementsVoidBatchData, SettlementsVoidBatchResponses, SlotSessionCaptureData, SlotSessionCaptureResponses, SlotSessionEndData, SlotSessionEndResponses, SlotSessionEvidenceData, SlotSessionEvidenceResponses, SlotSessionServiceSlotsData, SlotSessionServiceSlotsResponses, SlotSessionStartData, SlotSessionStartResponses, StorefrontConfigGetConfigData, StorefrontConfigGetConfigResponses, TenancyCreateTenantData, TenancyCreateTenantResponses, TenancyDeactivateTenantData, TenancyDeactivateTenantResponses, TenancyListTenantsData, TenancyListTenantsResponses, TenancyResolveTenantData, TenancyResolveTenantResponses, TenantAccountsCreateData, TenantAccountsCreateResponses, TenantAccountsListData, TenantAccountsListResponses, TenantAccountsSetRolesData, TenantAccountsSetRolesResponses, TenantAccountsSetStatusData, TenantAccountsSetStatusResponses, TenantConfigGetData, TenantConfigGetResponses, TenantConfigRollbackData, TenantConfigRollbackResponses, TenantConfigSaveData, TenantConfigSaveResponses, TenantConfigVersionsData, TenantConfigVersionsResponses, TenantFinanceGetData, TenantFinanceGetResponses, TenantFinancePreviewData, TenantFinancePreviewResponses, TenantFinanceSetStoreCutData, TenantFinanceSetStoreCutResponses, WalletGetData, WalletGetResponses, WalletRechargeData, WalletRechargeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -351,6 +351,132 @@ export const gameTemplateUpdate = <ThrowOnError extends boolean = false>(options
 
 export const gameTemplateCopy = <ThrowOnError extends boolean = false>(options: Options<GameTemplateCopyData, ThrowOnError>): RequestResult<GameTemplateCopyResponses, unknown, ThrowOnError> => (options.client ?? client).post<GameTemplateCopyResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-templates/{id}/copy', ...options });
 
+/**
+ * 模板摘要列表（游标分页，不含 config）
+ */
+export const genericGameTemplateList = <ThrowOnError extends boolean = false>(options?: Options<GenericGameTemplateListData, ThrowOnError>): RequestResult<GenericGameTemplateListResponses, GenericGameTemplateListErrors, ThrowOnError> => (options?.client ?? client).get<GenericGameTemplateListResponses, GenericGameTemplateListErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch-templates', ...options });
+
+/**
+ * 创建模板（生成最小有效 v2 草稿）
+ */
+export const genericGameTemplateCreate = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateCreateData, ThrowOnError>): RequestResult<GenericGameTemplateCreateResponses, GenericGameTemplateCreateErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplateCreateResponses, GenericGameTemplateCreateErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 该游戏可派单的模板（未归档且有生效版本，默认优先）
+ */
+export const genericGameTemplateListPublished = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateListPublishedData, ThrowOnError>): RequestResult<GenericGameTemplateListPublishedResponses, GenericGameTemplateListPublishedErrors, ThrowOnError> => (options.client ?? client).get<GenericGameTemplateListPublishedResponses, GenericGameTemplateListPublishedErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch-templates/published', ...options });
+
+/**
+ * 锁定发布版本的派单表单配置
+ */
+export const genericGameTemplateGetVersionForm = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateGetVersionFormData, ThrowOnError>): RequestResult<GenericGameTemplateGetVersionFormResponses, GenericGameTemplateGetVersionFormErrors, ThrowOnError> => (options.client ?? client).get<GenericGameTemplateGetVersionFormResponses, GenericGameTemplateGetVersionFormErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch-templates/versions/{versionId}/form', ...options });
+
+/**
+ * 读取草稿与生效版本摘要
+ */
+export const genericGameTemplateGetDraft = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateGetDraftData, ThrowOnError>): RequestResult<GenericGameTemplateGetDraftResponses, GenericGameTemplateGetDraftErrors, ThrowOnError> => (options.client ?? client).get<GenericGameTemplateGetDraftResponses, GenericGameTemplateGetDraftErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch-templates/{id}/draft', ...options });
+
+/**
+ * 整份保存草稿（expectedRevision 乐观锁）
+ */
+export const genericGameTemplateSaveDraft = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateSaveDraftData, ThrowOnError>): RequestResult<GenericGameTemplateSaveDraftResponses, GenericGameTemplateSaveDraftErrors, ThrowOnError> => (options.client ?? client).patch<GenericGameTemplateSaveDraftResponses, GenericGameTemplateSaveDraftErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/draft',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 发布当前草稿为不可变版本
+ */
+export const genericGameTemplatePublish = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplatePublishData, ThrowOnError>): RequestResult<GenericGameTemplatePublishResponses, GenericGameTemplatePublishErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplatePublishResponses, GenericGameTemplatePublishErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/publish',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 版本历史（游标分页，只返回摘要）
+ */
+export const genericGameTemplateListVersions = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateListVersionsData, ThrowOnError>): RequestResult<GenericGameTemplateListVersionsResponses, GenericGameTemplateListVersionsErrors, ThrowOnError> => (options.client ?? client).get<GenericGameTemplateListVersionsResponses, GenericGameTemplateListVersionsErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch-templates/{id}/versions', ...options });
+
+/**
+ * 把历史 v2 版本还原为草稿（不直接上线）
+ */
+export const genericGameTemplateRestore = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateRestoreData, ThrowOnError>): RequestResult<GenericGameTemplateRestoreResponses, GenericGameTemplateRestoreErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplateRestoreResponses, GenericGameTemplateRestoreErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/restore',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 复制当前草稿到同租户目标游戏（独立 DRAFT）
+ */
+export const genericGameTemplateCopy = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateCopyData, ThrowOnError>): RequestResult<GenericGameTemplateCopyResponses, GenericGameTemplateCopyErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplateCopyResponses, GenericGameTemplateCopyErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/copy',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 设为该游戏默认模板（同游戏唯一）
+ */
+export const genericGameTemplateSetDefault = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateSetDefaultData, ThrowOnError>): RequestResult<GenericGameTemplateSetDefaultResponses, GenericGameTemplateSetDefaultErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplateSetDefaultResponses, GenericGameTemplateSetDefaultErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/default',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 归档模板（保留草稿/版本/历史）
+ */
+export const genericGameTemplateArchive = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateArchiveData, ThrowOnError>): RequestResult<GenericGameTemplateArchiveResponses, GenericGameTemplateArchiveErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplateArchiveResponses, GenericGameTemplateArchiveErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/archive',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 取消归档（按 activeVersionId 恢复状态）
+ */
+export const genericGameTemplateUnarchive = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateUnarchiveData, ThrowOnError>): RequestResult<GenericGameTemplateUnarchiveResponses, GenericGameTemplateUnarchiveErrors, ThrowOnError> => (options.client ?? client).post<GenericGameTemplateUnarchiveResponses, GenericGameTemplateUnarchiveErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch-templates/{id}/unarchive',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 删除未发布且无引用的模板（否则应归档）
+ */
+export const genericGameTemplateRemove = <ThrowOnError extends boolean = false>(options: Options<GenericGameTemplateRemoveData, ThrowOnError>): RequestResult<GenericGameTemplateRemoveResponses, GenericGameTemplateRemoveErrors, ThrowOnError> => (options.client ?? client).delete<GenericGameTemplateRemoveResponses, GenericGameTemplateRemoveErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch-templates/{id}', ...options });
+
 export const gameDispatchList = <ThrowOnError extends boolean = false>(options?: Options<GameDispatchListData, ThrowOnError>): RequestResult<GameDispatchListResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GameDispatchListResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch', ...options });
 
 export const gameDispatchCreateDraft = <ThrowOnError extends boolean = false>(options?: Options<GameDispatchCreateDraftData, ThrowOnError>): RequestResult<GameDispatchCreateDraftResponses, unknown, ThrowOnError> => (options?.client ?? client).post<GameDispatchCreateDraftResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/orders', ...options });
@@ -361,7 +487,7 @@ export const gameDispatchCustomerTemplates = <ThrowOnError extends boolean = fal
 
 export const gameDispatchCustomerTemplate = <ThrowOnError extends boolean = false>(options: Options<GameDispatchCustomerTemplateData, ThrowOnError>): RequestResult<GameDispatchCustomerTemplateResponses, unknown, ThrowOnError> => (options.client ?? client).get<GameDispatchCustomerTemplateResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/customer/templates/{id}', ...options });
 
-export const gameDispatchView = <ThrowOnError extends boolean = false>(options: Options<GameDispatchViewData, ThrowOnError>): RequestResult<GameDispatchViewResponses, unknown, ThrowOnError> => (options.client ?? client).get<GameDispatchViewResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/orders/{orderId}', ...options });
+export const gameDispatchView = <ThrowOnError extends boolean = false>(options: Options<GameDispatchViewData, ThrowOnError>): RequestResult<GameDispatchViewResponses, GameDispatchViewErrors, ThrowOnError> => (options.client ?? client).get<GameDispatchViewResponses, GameDispatchViewErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/orders/{orderId}', ...options });
 
 export const gameDispatchApplications = <ThrowOnError extends boolean = false>(options: Options<GameDispatchApplicationsData, ThrowOnError>): RequestResult<GameDispatchApplicationsResponses, unknown, ThrowOnError> => (options.client ?? client).get<GameDispatchApplicationsResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/orders/{orderId}/applications', ...options });
 
@@ -384,6 +510,20 @@ export const gameDispatchWithdraw = <ThrowOnError extends boolean = false>(optio
 export const gameDispatchStaffRemove = <ThrowOnError extends boolean = false>(options: Options<GameDispatchStaffRemoveData, ThrowOnError>): RequestResult<GameDispatchStaffRemoveResponses, unknown, ThrowOnError> => (options.client ?? client).delete<GameDispatchStaffRemoveResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/applications/{id}', ...options });
 
 export const gameDispatchAssign = <ThrowOnError extends boolean = false>(options: Options<GameDispatchAssignData, ThrowOnError>): RequestResult<GameDispatchAssignResponses, unknown, ThrowOnError> => (options.client ?? client).post<GameDispatchAssignResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/orders/{orderId}/assignment', ...options });
+
+/**
+ * 按锁定的发布版本创建派单（人数与价格由服务端计算）
+ *
+ * 同一 Idempotency-Key 重试会回放首次结果；同键不同请求体返回 422；模板归档后返回 409 TEMPLATE_ARCHIVED。
+ */
+export const gameDispatchTemplateOrderCreate = <ThrowOnError extends boolean = false>(options: Options<GameDispatchTemplateOrderCreateData, ThrowOnError>): RequestResult<GameDispatchTemplateOrderCreateResponses, GameDispatchTemplateOrderCreateErrors, ThrowOnError> => (options.client ?? client).post<GameDispatchTemplateOrderCreateResponses, GameDispatchTemplateOrderCreateErrors, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch/template-orders',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const slotSessionServiceSlots = <ThrowOnError extends boolean = false>(options: Options<SlotSessionServiceSlotsData, ThrowOnError>): RequestResult<SlotSessionServiceSlotsResponses, unknown, ThrowOnError> => (options.client ?? client).get<SlotSessionServiceSlotsResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots', ...options });
 
