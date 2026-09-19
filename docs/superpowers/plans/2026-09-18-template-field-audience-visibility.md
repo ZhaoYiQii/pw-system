@@ -164,7 +164,7 @@ Tailwind 工具类写在组件里（`aria-pressed:` / `group-aria-pressed:` 变�
       `template-render-dialog-customer-*.png` 两页各一张，旧 `template-render-dialog-*.png` 已删除。
 - [x] 门禁：`@pw/api`、`@pw/admin-web`、`@pw/mobile` typecheck 0；api / admin 单测、契约、集成、租户隔离、关键路径套件全绿；
       eslint / prettier 0。
-- [x] 验收记录 `docs/acceptance/2026-09-18-template-field-audience-visibility.md` 与 `work/session-state-2026-09-18.md` 已更新。
+- [x] 验收记录 `docs/acceptance/2026-09-18-template-field-audience-visibility.md` 已更新。
 
 剩余一步：**E2E 三条 + 视觉基线重生成**（要起本地 API 与 admin dev server，属独立动作，需单独确认）。
 
