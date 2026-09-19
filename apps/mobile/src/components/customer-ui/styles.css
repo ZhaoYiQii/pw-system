@@ -21,11 +21,18 @@
     sans-serif;
 }
 
+/* H5 下 Taro 组件渲染成自定义元素（taro-view-core 等），只写 HTML 标签选择器不会命中：
+   少了这组兜底，width:100% + padding + border 会按 content-box 撑出容器并横向溢出。 */
 .cu-page View,
 .cu-page Text,
 .cu-page Button,
 .cu-page Input,
-.cu-page Textarea {
+.cu-page Textarea,
+.cu-page taro-view-core,
+.cu-page taro-text-core,
+.cu-page taro-button-core,
+.cu-page taro-input-core,
+.cu-page taro-textarea-core {
   box-sizing: border-box;
 }
 
@@ -241,6 +248,186 @@
   overflow-x: auto;
   margin-bottom: 22px;
 }
+
+/* v2 自助下单：游戏 / 模板选择行（比 cu-tab 多一行说明与右侧标记） */
+.cu-choice {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  min-height: 92px;
+  margin: 0 0 16px;
+  padding: 22px 24px;
+  border: 1px solid var(--cu-line);
+  border-radius: 24px;
+  background: var(--cu-card);
+  color: var(--cu-ink);
+  font-size: 25px;
+  line-height: 1.35;
+  text-align: left;
+}
+.cu-choice::after {
+  border: 0;
+}
+.cu-choice.is-active {
+  border-color: var(--cu-primary);
+  background: var(--cu-primary-soft);
+}
+.cu-choice-badge {
+  flex: none;
+  min-width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: var(--cu-paper);
+  color: var(--cu-muted);
+  font:
+    600 22px ui-monospace,
+    Consolas,
+    monospace;
+}
+.cu-choice.is-active .cu-choice-badge {
+  background: var(--cu-pine-soft);
+  color: var(--cu-pine);
+}
+.cu-choice-title {
+  display: block;
+  font-size: 27px;
+  font-weight: 700;
+}
+.cu-choice-note {
+  display: block;
+  margin-top: 4px;
+  color: var(--cu-muted);
+  font-size: 21px;
+}
+.cu-choice-tag {
+  flex: none;
+  padding: 5px 14px;
+  border-radius: 10px;
+  background: var(--cu-amber-soft);
+  color: var(--cu-amber);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* 选项组（单选 / 多选，含选项加价文案） */
+.cu-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.cu-seg-option {
+  margin: 0;
+  padding: 16px 22px;
+  border: 1px solid var(--cu-line);
+  border-radius: 16px;
+  background: var(--cu-card);
+  color: var(--cu-ink);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1.3;
+}
+.cu-seg-option::after {
+  border: 0;
+}
+.cu-seg-option.is-active {
+  border-color: var(--cu-primary);
+  background: var(--cu-primary-soft);
+  color: var(--cu-primary);
+  font-weight: 700;
+}
+
+/* 说明类内容（NOTE） */
+.cu-note {
+  margin-top: 14px;
+  padding: 20px 22px;
+  border: 1px dashed var(--cu-line);
+  border-radius: 20px;
+  background: var(--cu-paper);
+  color: var(--cu-muted);
+  font-size: 22px;
+  line-height: 1.7;
+}
+.cu-note-title {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--cu-ink);
+  font-weight: 700;
+}
+
+/* 可重复表格：表头一行 + 数据行（与原型一致），窄屏用 flex 列宽而不是堆叠小卡片 */
+.cu-table {
+  margin-top: 6px;
+  border: 1px solid var(--cu-line);
+  border-radius: 18px;
+  background: var(--cu-card);
+  overflow: hidden;
+}
+.cu-table-head {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--cu-paper);
+  color: var(--cu-muted);
+  font-size: 19px;
+  font-weight: 600;
+}
+.cu-table-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--cu-line);
+}
+.cu-table-empty {
+  display: block;
+  padding: 16px 18px;
+  border-top: 1px solid var(--cu-line);
+  color: var(--cu-muted);
+  font-size: 19px;
+}
+.cu-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.cu-col-count {
+  flex: 0 0 78px;
+}
+.cu-col-action {
+  flex: 0 0 56px;
+  display: flex;
+  justify-content: flex-end;
+}
+.cu-table-delete {
+  width: 56px;
+  min-width: 56px;
+  height: 38px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--cu-line);
+  border-radius: 12px;
+  background: var(--cu-card);
+  color: var(--cu-muted);
+  font-size: 19px;
+  line-height: 1;
+}
+.cu-table-delete::after {
+  border: 0;
+}
+.cu-field-hint {
+  display: block;
+  color: var(--cu-amber);
+  font-size: 21px;
+  font-weight: 600;
+}
 .cu-tab {
   flex: 1;
   min-width: 120px;
@@ -270,6 +457,23 @@
   flex-direction: column;
   gap: 10px;
 }
+/* 表单字段：标签用正文色 + 中黑，说明用次级小字，避免"标签像说明、说明像标签" */
+.cu-field-label {
+  display: block;
+  color: var(--cu-ink);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.cu-required {
+  color: var(--cu-primary);
+}
+.cu-field-note {
+  display: block;
+  color: var(--cu-muted);
+  font-size: 20px;
+  line-height: 1.5;
+}
 .cu-label {
   color: var(--cu-muted);
   font-size: 22px;
@@ -288,6 +492,22 @@
 }
 .cu-input {
   height: 76px;
+}
+/* H5 下 Taro 把 input 渲染成 taro-input-core + 内层 input，内层高度按字号顶在顶部
+   （实测修前上间隙 1px / 下间隙 18.6px），所以在宿主上做垂直居中。
+   只在 taro-*-core 上生效：weapp 里这两个选择器不命中，不影响原生 input。 */
+taro-input-core.cu-input {
+  display: flex;
+  align-items: center;
+}
+taro-input-core.cu-input input {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
 }
 .cu-textarea {
   min-height: 190px;
