@@ -506,11 +506,13 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
       "customerGameTemplate_listGames",
     );
     // 第一步只暴露「游戏 id + 名称」，不能带出模板内容或配置
-    const gamesData = operation(`${customerBase}/games`, "get").responses?.[
+    const gamesSchema = operation(`${customerBase}/games`, "get").responses?.[
       "200"
-    ]?.content?.["application/json"]?.schema?.properties?.data as
-      { items?: { required?: string[] } } | undefined;
-    expect(gamesData?.items?.required).toEqual(["gameId", "name"]);
+    ]?.content?.["application/json"]?.schema as SchemaFragment | undefined;
+    expect(gamesSchema?.properties?.data?.items?.required).toEqual([
+      "gameId",
+      "name",
+    ]);
 
     expect(operation(`${customerBase}/published`, "get").operationId).toBe(
       "customerGameTemplate_listPublished",
