@@ -24,5 +24,11 @@ export default defineConfig({
       testMatch: /mobile\.spec\.ts/,
       use: { baseURL: process.env.H5_ORIGIN ?? "http://localhost:3101" },
     },
+    {
+      // 跨入口用例：同时驱动商家端(3005)与客户 H5(3101)，所以单独一个 project。
+      name: "cross-entry",
+      testMatch: /customer-self-service\.spec\.ts/,
+      use: { baseURL: process.env.ADMIN_ORIGIN ?? "http://localhost:3005" },
+    },
   ],
 });

@@ -165,3 +165,12 @@ E2E 的环境前提：`ADMIN_ORIGIN=http://localhost:3005`、`S3_E2E_TENANT_CODE
 | `corepack pnpm --filter @pw/admin-web typecheck` | 0 | 无输出 |
 
 未验证：其它客户页未逐页复测（共用类受益但未逐页测量）；weapp 仅构建、未跑真机。
+
+## 9. 跨入口 E2E（客户 H5 下单 → 客服在商家端看到该单）
+
+- 新增：`tests/e2e/customer-self-service.spec.ts` + `playwright.config.ts` 的 `cross-entry` project。
+- 环境前提（三个服务同时运行）：3100 API 必须是**当前构建**（旧构建没有 `customer/published`、`customer/template-orders`，页面会回退 v1）；3005 admin dev；3101 H5 dev（`/api` 代理到 3100）。
+- 夹具：用例内用真实 API 在 `s3e2e` 租户上建客户账号 + 客户档案 + 已发布 v2 模板；租户与 owner 来自 `work/s3-e2e-seed.mjs`，该脚本现在也会开通 `addon.customer_self_service`（缺失会让 H5 显示"未开通"）。
+- 实测：`node node_modules/@playwright/test/cli.js test --project=cross-entry`（env: ADMIN_ORIGIN / H5_ORIGIN / S3_E2E_TENANT_CODE）→ **1 passed**。
+- 断言：客户侧不渲染 CS-only 的「内部备注」；下单成功；客服侧 API 视图 `formValues.server_region="艾欧尼亚"` 且文案含「艾欧尼亚 / 打野」；商家端订单详情页可见该单与客户填写的值。
+- 未覆盖：客服在已建订单上补填字段值（C-10，另立切片）。
