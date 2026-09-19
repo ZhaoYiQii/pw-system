@@ -49,7 +49,9 @@ jobs:
 
       - name: Apply migrations
         env:
-          DATABASE_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
+          # 迁移必须用 owner 连接：pw_runtime 角色由迁移自身创建并授权（20260906000100_tenancy），
+          # 用运行时角色跑迁移会 P1000（角色尚不存在）。
+          DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
         run: pnpm --filter @pw/database exec prisma migrate deploy
 
       - run: pnpm lint
@@ -60,7 +62,10 @@ jobs:
       - run: pnpm test:contract
       - run: pnpm test:coverage
       - run: pnpm test:coverage:critical
-      - run: pnpm db:migrate:check
+      - name: 迁移状态检查（owner 连接：_prisma_migrations 对运行时角色不可读）
+        env:
+          DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
+        run: pnpm db:migrate:check
       - run: pnpm format:check
       - run: pnpm openapi:check
       - run: pnpm build
