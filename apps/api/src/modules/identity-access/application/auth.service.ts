@@ -46,8 +46,7 @@ export class AuthService {
     account: TenantAccountRecord,
     overrideRole?: RoleKey,
   ): AccessPrincipal {
-    const role =
-      overrideRole ?? ((account.roles[0] ?? "CUSTOMER") as RoleKey);
+    const role = overrideRole ?? ((account.roles[0] ?? "CUSTOMER") as RoleKey);
     return {
       sub: account.id,
       scope: "tenant",
@@ -153,9 +152,7 @@ export class AuthService {
     if (!account.roles.includes("CUSTOMER")) {
       throw new InvalidCredentialsError();
     }
-    const bundle = await this.issue(
-      this.tenantPrincipal(account, "CUSTOMER"),
-    );
+    const bundle = await this.issue(this.tenantPrincipal(account, "CUSTOMER"));
     await this.repository.recordAudit({
       tenantId: account.tenantId,
       actorType: "tenant_account",

@@ -102,7 +102,12 @@ export class SessionsController {
     @Query("status") status?: unknown,
   ) {
     const role = req.principal?.role;
-    if (role !== "TENANT_OWNER" && role !== "TENANT_ADMIN" && role !== "CUSTOMER_SERVICE" && role !== "FINANCE")
+    if (
+      role !== "TENANT_OWNER" &&
+      role !== "TENANT_ADMIN" &&
+      role !== "CUSTOMER_SERVICE" &&
+      role !== "FINANCE"
+    )
       throw new ForbiddenException("仅门店员工可查看场次台账");
     const s = typeof status === "string" && status ? status : undefined;
     return {
@@ -117,7 +122,12 @@ export class SessionsController {
     @Param("sessionId") sessionId: string,
   ) {
     const role = req.principal?.role;
-    if (role !== "TENANT_OWNER" && role !== "TENANT_ADMIN" && role !== "CUSTOMER_SERVICE" && role !== "FINANCE")
+    if (
+      role !== "TENANT_OWNER" &&
+      role !== "TENANT_ADMIN" &&
+      role !== "CUSTOMER_SERVICE" &&
+      role !== "FINANCE"
+    )
       throw new ForbiddenException("仅门店员工可查看场次详情");
     const view = await this.repo.detailById(tenantIdOf(req), sessionId);
     if (!view) throw new HttpException("场次不存在", HttpStatus.NOT_FOUND);

@@ -70,14 +70,10 @@ export class SettlementsController {
   @TenantScope()
   @Permissions("finance.manage")
   @Get(":id")
-  async detail(
-    @Req() req: AuthenticatedRequest,
-    @Param("id") id: string,
-  ) {
+  async detail(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     this.guard(req);
     const view = await this.repo.detail(tenantIdOf(req), id);
-    if (!view)
-      throw new HttpException("批次不存在", HttpStatus.NOT_FOUND);
+    if (!view) throw new HttpException("批次不存在", HttpStatus.NOT_FOUND);
     return { data: view };
   }
 

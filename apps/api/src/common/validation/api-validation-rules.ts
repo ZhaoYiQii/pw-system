@@ -209,8 +209,7 @@ routeValidations.set("POST /api/v1/tenant/settlements/:id/items", {
     })
     .refine(
       (v) =>
-        (v.earningIds?.length ?? 0) > 0 ||
-        (v.slotEarningIds?.length ?? 0) > 0,
+        (v.earningIds?.length ?? 0) > 0 || (v.slotEarningIds?.length ?? 0) > 0,
       { message: "至少提供一个 earningIds 或 slotEarningIds" },
     ),
 });

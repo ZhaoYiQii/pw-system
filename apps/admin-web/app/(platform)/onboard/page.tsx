@@ -35,7 +35,13 @@ interface OnboardResult {
   primaryHost: string;
 }
 
-const WIZARD_STEPS = ["基本信息", "品牌与域名", "店主账号", "套餐开通", "确认开通"];
+const WIZARD_STEPS = [
+  "基本信息",
+  "品牌与域名",
+  "店主账号",
+  "套餐开通",
+  "确认开通",
+];
 const CODE_PATTERN = /^[a-z0-9][a-z0-9_-]{1,31}$/;
 const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
@@ -93,7 +99,8 @@ function Inner() {
 
   const onboard = useMutation({
     mutationFn: (): Promise<OnboardResult> => {
-      const resolvedHost = host.trim() !== "" ? host.trim() : defaultHostFor(code);
+      const resolvedHost =
+        host.trim() !== "" ? host.trim() : defaultHostFor(code);
       return apiFetch<OnboardResult>("/api/v1/platform/onboarding/tenants", {
         method: "POST",
         body: JSON.stringify({
@@ -103,7 +110,9 @@ function Inner() {
           ownerUsername: ownerUsername.trim(),
           ownerPassword,
           brandPrimary,
-          ...(brandAccent.trim() !== "" ? { brandAccent: brandAccent.trim() } : {}),
+          ...(brandAccent.trim() !== ""
+            ? { brandAccent: brandAccent.trim() }
+            : {}),
           ...(logoText.trim() !== "" ? { logoText: logoText.trim() } : {}),
           storeCutBp: Number(storeCutBp),
           packageCode,
@@ -125,10 +134,7 @@ function Inner() {
   const resolvedHost = host.trim() !== "" ? host.trim() : defaultHostFor(code);
   const bp = Number(storeCutBp);
   const bpValid =
-    storeCutBp.trim() !== "" &&
-    Number.isInteger(bp) &&
-    bp >= 0 &&
-    bp <= 9700;
+    storeCutBp.trim() !== "" && Number.isInteger(bp) && bp >= 0 && bp <= 9700;
 
   const validate = (): boolean => {
     setFormError(null);
@@ -150,7 +156,10 @@ function Inner() {
         setFormError("品牌主色必须是 #RRGGBB 格式。");
         return false;
       }
-      if (brandAccent.trim() !== "" && !COLOR_PATTERN.test(brandAccent.trim())) {
+      if (
+        brandAccent.trim() !== "" &&
+        !COLOR_PATTERN.test(brandAccent.trim())
+      ) {
         setFormError("品牌点缀色必须是 #RRGGBB 格式。");
         return false;
       }
@@ -226,7 +235,10 @@ function Inner() {
               <div className="pw-detail-grid">
                 <div className="pw-field">
                   <label>门店</label>
-                  <input value={`${name.trim()}（${created.tenantCode}）`} readOnly />
+                  <input
+                    value={`${name.trim()}（${created.tenantCode}）`}
+                    readOnly
+                  />
                 </div>
                 <div className="pw-field">
                   <label>品牌 H5 门面</label>
@@ -248,7 +260,8 @@ function Inner() {
                 </div>
               </div>
               <div className="pw-notice">
-                临时密码仅本次交付店主；平台不留存明文。请把 H5 门面与店主账号交付给门店。
+                临时密码仅本次交付店主；平台不留存明文。请把 H5
+                门面与店主账号交付给门店。
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <a
@@ -259,10 +272,7 @@ function Inner() {
                 >
                   打开 H5 门面
                 </a>
-                <Link
-                  className="pw-btn"
-                  href="/store/login"
-                >
+                <Link className="pw-btn" href="/store/login">
                   登录商家端
                 </Link>
                 <button type="button" className="pw-btn" onClick={copyDelivery}>
@@ -292,7 +302,11 @@ function Inner() {
       <div className="pw-wizard">
         {WIZARD_STEPS.map((label, index) => {
           const cls =
-            index < step ? "pw-wz pw-done" : index === step ? "pw-wz pw-now" : "pw-wz";
+            index < step
+              ? "pw-wz pw-done"
+              : index === step
+                ? "pw-wz pw-now"
+                : "pw-wz";
           return (
             <button
               key={label}
@@ -330,7 +344,10 @@ function Inner() {
           {formError ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-red-soft)", color: "var(--pw-red)" }}
+              style={{
+                background: "var(--pw-red-soft)",
+                color: "var(--pw-red)",
+              }}
             >
               {formError}
             </div>
@@ -348,7 +365,11 @@ function Inner() {
                   required
                 />
               </Field>
-              <Field label="门店 Code" htmlFor="code" hint="小写字母/数字开头，2–32 位，全局唯一">
+              <Field
+                label="门店 Code"
+                htmlFor="code"
+                hint="小写字母/数字开头，2–32 位，全局唯一"
+              >
                 <input
                   id="code"
                   value={code}
@@ -373,7 +394,9 @@ function Inner() {
                   id="host"
                   value={host}
                   onChange={(event) => setHost(event.target.value)}
-                  placeholder={defaultHostFor(code) || `shop.${tenantHostSuffix}`}
+                  placeholder={
+                    defaultHostFor(code) || `shop.${tenantHostSuffix}`
+                  }
                   autoComplete="off"
                 />
               </Field>
@@ -394,7 +417,10 @@ function Inner() {
                     onChange={(event) => setBrandPrimary(event.target.value)}
                     style={{ width: 52 }}
                   />
-                  <span className="pw-mono" style={{ color: "var(--pw-muted)" }}>
+                  <span
+                    className="pw-mono"
+                    style={{ color: "var(--pw-muted)" }}
+                  >
                     {brandPrimary}
                   </span>
                 </div>
@@ -408,7 +434,10 @@ function Inner() {
                     onChange={(event) => setBrandAccent(event.target.value)}
                     style={{ width: 52 }}
                   />
-                  <span className="pw-mono" style={{ color: "var(--pw-muted)" }}>
+                  <span
+                    className="pw-mono"
+                    style={{ color: "var(--pw-muted)" }}
+                  >
                     {brandAccent}
                   </span>
                 </div>
@@ -476,7 +505,9 @@ function Inner() {
                       >
                         {pkg.durationDays} 天 ·{" "}
                         {pkg.addons.length > 0
-                          ? pkg.addons.map((key) => featureLabel(key)).join(" · ")
+                          ? pkg.addons
+                              .map((key) => featureLabel(key))
+                              .join(" · ")
                           : "仅核心功能"}
                       </span>
                     </span>
@@ -523,7 +554,9 @@ function Inner() {
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 10 }}
+      >
         <button
           type="button"
           className="pw-btn"

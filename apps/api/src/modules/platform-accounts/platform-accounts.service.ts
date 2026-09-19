@@ -43,13 +43,10 @@ export class PlatformAccountsService {
   ): Promise<PlatformAccountView> {
     const username =
       typeof input.username === "string" ? input.username.trim() : "";
-    const password =
-      typeof input.password === "string" ? input.password : "";
+    const password = typeof input.password === "string" ? input.password : "";
     const role = this.platformRole(input.role, "role");
     if (!USERNAME_PATTERN.test(username))
-      throw new Error(
-        "账号需为 3-32 位小写字母/数字开头，可用 _ 或 -",
-      );
+      throw new Error("账号需为 3-32 位小写字母/数字开头，可用 _ 或 -");
     if (password.length < 8 || password.length > 128)
       throw new Error("初始密码长度需为 8-128 位");
 
@@ -114,8 +111,7 @@ export class PlatformAccountsService {
       where: { id: accountId },
     });
     if (!account) throw new NotFoundError("平台账号不存在");
-    if (accountId === actorId)
-      throw new Error("不能修改自己的角色");
+    if (accountId === actorId) throw new Error("不能修改自己的角色");
     if (
       account.role === "PLATFORM_SUPER_ADMIN" &&
       nextRole !== "PLATFORM_SUPER_ADMIN"
@@ -169,16 +165,14 @@ export class PlatformAccountsService {
     });
   }
 
-  private view(
-    row: {
-      id: string;
-      username: string;
-      role: string;
-      status: string;
-      createdAt: Date;
-      updatedAt: Date;
-    },
-  ): PlatformAccountView {
+  private view(row: {
+    id: string;
+    username: string;
+    role: string;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }): PlatformAccountView {
     return {
       id: row.id,
       username: row.username,

@@ -12,10 +12,7 @@ import {
 import { PlatformBillingService } from "./platform-billing.service.js";
 import { PlatformScope, Permissions } from "../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../common/auth/auth.guard.js";
-import {
-  HostTakenError,
-  TenantCodeTakenError,
-} from "./domain/errors.js";
+import { HostTakenError, TenantCodeTakenError } from "./domain/errors.js";
 
 function bad(error: unknown): never {
   throw new HttpException(

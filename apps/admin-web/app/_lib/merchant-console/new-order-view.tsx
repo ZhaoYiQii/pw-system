@@ -64,12 +64,13 @@ export function NewOrderView() {
       const dtField = template.fields.find(
         (field) => field.fieldType === "datetime",
       );
-      const desired = dtField
-        ? values[dtField.fieldKey]?.trim() ?? ""
-        : "";
+      const desired = dtField ? (values[dtField.fieldKey]?.trim() ?? "") : "";
       const lines = template.positions.map((position) => ({
         positionLabel: position.label,
-        requiredCount: Math.max(1, counts[position.id] ?? position.defaultCount),
+        requiredCount: Math.max(
+          1,
+          counts[position.id] ?? position.defaultCount,
+        ),
       }));
       if (lines.length === 0) throw new Error("模板至少需要一个岗位");
       const minutes = Number(duration);
@@ -139,7 +140,10 @@ export function NewOrderView() {
         <div className="mc-form-grid">
           <label className="mc-field">
             <span>游戏模板</span>
-            <select value={templateId} onChange={(e) => selectTemplate(e.target.value)}>
+            <select
+              value={templateId}
+              onChange={(e) => selectTemplate(e.target.value)}
+            >
               <option value="">选择模板…</option>
               {(templatesQuery.data ?? [])
                 .filter((t) => t.enabled)
@@ -212,7 +216,11 @@ export function NewOrderView() {
                     </select>
                   ) : (
                     <input
-                      type={field.fieldType === "datetime" ? "datetime-local" : "text"}
+                      type={
+                        field.fieldType === "datetime"
+                          ? "datetime-local"
+                          : "text"
+                      }
                       value={values[field.fieldKey] ?? ""}
                       onChange={(e) =>
                         setValues((prev) => ({

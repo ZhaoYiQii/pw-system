@@ -16,26 +16,26 @@
 - 若某环节没有对应 skill 或 skill 缺失：停下说明缺口，不静默降级；可以回退到通用能力，但必须明确报告“未使用 skill”。
 - 本表 2026-09-07 由用户批准；`code-review` 与 `frontend-design` 保留本机 Codex 版，禁止再安装同名外部版本覆盖。（2026-09-08 新增“前端 UI 任务入口”行：`pw-frontend-ui`，其余行与条款不变。）
 
-| 开发环节 | 必须使用的 skill | 说明/触发 |
-| --- | --- | --- |
-| 需求/产品设计 | brainstorming | 出现需求不清、方案选择、架构/行为不确定性时 |
-| 切片/实现计划 | writing-plans | 已批准架构设计后进入可执行计划时 |
-| 多阶段流程路由 | development-lifecycle-router | 一个请求跨越多个开发/审查/发布阶段时 |
-| 架构与代码库改进 | improve-codebase-architecture | 重构、模块边界、依赖设计、代码组织 |
-| API/接口设计 | api-and-interface-design | 设计或审查 REST/接口契约、schema、边界 |
-| 前端 UI 任务入口 | pw-frontend-ui | admin/mobile 任何 UI 任务先由本技能判型并选定唯一子技能，随后按需进入“前端 UI 设计”“React/Next 编码”等行；判型前禁止并行叠加多个 UI 技能 |
-| 前端 UI 设计 | frontend-design | 新建/重做 UI 的视觉与体验方向 |
-| React/Next 编码 | vercel-react-best-practices | 编写/审查 React、Next、服务端组件性能模式 |
-| 数据库/迁移设计 | supabase-postgres-best-practices | 写表/列/迁移/索引/CHECK/RLS 前必须读取 |
-| 测试驱动实现 | tdd | 有可执行测试缝隙的行为先红后绿 |
-| E2E/浏览器回归 | playwright-skill | 提交持久 Playwright 测试时 |
-| 排错/根因分析 | systematic-debugging | 失败、异常行为、门禁故障时先定位根因 |
-| 安全加固 | security-and-hardening | 涉及鉴权、密钥、加密、外部输入、数据边界 |
-| 性能优化 | performance-optimization | 慢查询、慢页面、构建/运行性能问题 |
-| 无障碍 | accessibility | 检查/修复 UI 可访问性 |
-| Git/版本流程 | git-workflow-and-versioning | commit 规范、分支策略、冲突处理 |
-| 代码审查 | code-review | 提交前后/阶段收口对改动做只读审查 |
-| 完成声明 | verification-before-completion | 声称“完成/通过/可部署”前采集当前证据 |
+| 开发环节         | 必须使用的 skill                 | 说明/触发                                                                                                                                |
+| ---------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 需求/产品设计    | brainstorming                    | 出现需求不清、方案选择、架构/行为不确定性时                                                                                              |
+| 切片/实现计划    | writing-plans                    | 已批准架构设计后进入可执行计划时                                                                                                         |
+| 多阶段流程路由   | development-lifecycle-router     | 一个请求跨越多个开发/审查/发布阶段时                                                                                                     |
+| 架构与代码库改进 | improve-codebase-architecture    | 重构、模块边界、依赖设计、代码组织                                                                                                       |
+| API/接口设计     | api-and-interface-design         | 设计或审查 REST/接口契约、schema、边界                                                                                                   |
+| 前端 UI 任务入口 | pw-frontend-ui                   | admin/mobile 任何 UI 任务先由本技能判型并选定唯一子技能，随后按需进入“前端 UI 设计”“React/Next 编码”等行；判型前禁止并行叠加多个 UI 技能 |
+| 前端 UI 设计     | frontend-design                  | 新建/重做 UI 的视觉与体验方向                                                                                                            |
+| React/Next 编码  | vercel-react-best-practices      | 编写/审查 React、Next、服务端组件性能模式                                                                                                |
+| 数据库/迁移设计  | supabase-postgres-best-practices | 写表/列/迁移/索引/CHECK/RLS 前必须读取                                                                                                   |
+| 测试驱动实现     | tdd                              | 有可执行测试缝隙的行为先红后绿                                                                                                           |
+| E2E/浏览器回归   | playwright-skill                 | 提交持久 Playwright 测试时                                                                                                               |
+| 排错/根因分析    | systematic-debugging             | 失败、异常行为、门禁故障时先定位根因                                                                                                     |
+| 安全加固         | security-and-hardening           | 涉及鉴权、密钥、加密、外部输入、数据边界                                                                                                 |
+| 性能优化         | performance-optimization         | 慢查询、慢页面、构建/运行性能问题                                                                                                        |
+| 无障碍           | accessibility                    | 检查/修复 UI 可访问性                                                                                                                    |
+| Git/版本流程     | git-workflow-and-versioning      | commit 规范、分支策略、冲突处理                                                                                                          |
+| 代码审查         | code-review                      | 提交前后/阶段收口对改动做只读审查                                                                                                        |
+| 完成声明         | verification-before-completion   | 声称“完成/通过/可部署”前采集当前证据                                                                                                     |
 
 ## 事实与冲突优先级
 

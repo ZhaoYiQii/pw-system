@@ -73,9 +73,15 @@ function Inner({ disputeId }: { disputeId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { data, isPending, isError, error: queryError } = useQuery({
+  const {
+    data,
+    isPending,
+    isError,
+    error: queryError,
+  } = useQuery({
     queryKey: ["dispute-detail", disputeId],
-    queryFn: () => apiFetch<DisputeDetail>(`/api/v1/tenant/disputes/${disputeId}`),
+    queryFn: () =>
+      apiFetch<DisputeDetail>(`/api/v1/tenant/disputes/${disputeId}`),
   });
 
   const resolve = useMutation({
@@ -115,17 +121,13 @@ function Inner({ disputeId }: { disputeId: string }) {
     return (
       <p className="text-sm text-destructive">
         加载失败：
-        {queryError instanceof Error
-          ? queryError.message
-          : String(queryError)}
+        {queryError instanceof Error ? queryError.message : String(queryError)}
       </p>
     );
   }
   if (isPending || !data) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        加载中…
-      </p>
+      <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
     );
   }
 
@@ -171,8 +173,8 @@ function Inner({ disputeId }: { disputeId: string }) {
             <div className="rounded-md border px-3 py-2 text-sm">
               <p className="text-muted-foreground">应收与结算冻结</p>
               <p>
-                应收金额 {formatFenYuan(data.earning.amountFen)} · earning
-                状态 {data.earning.status}
+                应收金额 {formatFenYuan(data.earning.amountFen)} · earning 状态{" "}
+                {data.earning.status}
               </p>
               <p>
                 结算批次：

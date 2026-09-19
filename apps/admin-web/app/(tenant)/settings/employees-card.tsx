@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,14 +44,15 @@ interface Me {
   sub: string;
 }
 
-const ROLE_OPTIONS: Array<{ value: TenantRole; label: string; desc: string }> = [
-  { value: "TENANT_OWNER", label: "店老板", desc: "全模块管理" },
-  { value: "TENANT_ADMIN", label: "店长", desc: "经营与配置" },
-  { value: "CUSTOMER_SERVICE", label: "客服", desc: "订单与派单" },
-  { value: "FINANCE", label: "财务", desc: "结算与风控" },
-  { value: "PLAYER", label: "陪玩", desc: "接单档案" },
-  { value: "CUSTOMER", label: "老板/客户", desc: "客户档案" },
-];
+const ROLE_OPTIONS: Array<{ value: TenantRole; label: string; desc: string }> =
+  [
+    { value: "TENANT_OWNER", label: "店老板", desc: "全模块管理" },
+    { value: "TENANT_ADMIN", label: "店长", desc: "经营与配置" },
+    { value: "CUSTOMER_SERVICE", label: "客服", desc: "订单与派单" },
+    { value: "FINANCE", label: "财务", desc: "结算与风控" },
+    { value: "PLAYER", label: "陪玩", desc: "接单档案" },
+    { value: "CUSTOMER", label: "老板/客户", desc: "客户档案" },
+  ];
 
 const ROLE_LABEL = Object.fromEntries(
   ROLE_OPTIONS.map((option) => [option.value, option.label]),

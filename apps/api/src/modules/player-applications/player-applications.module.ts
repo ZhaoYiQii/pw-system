@@ -3,8 +3,7 @@ import { createDatabaseClient } from "@pw/database";
 import { PlayerApplicationsController } from "./player-applications.controller.js";
 import { PlayerApplicationsService } from "./player-applications.service.js";
 
-export const PLAYER_APPLICATIONS_DB_CLIENT =
-  "PLAYER_APPLICATIONS_DB_CLIENT";
+export const PLAYER_APPLICATIONS_DB_CLIENT = "PLAYER_APPLICATIONS_DB_CLIENT";
 
 @Module({
   controllers: [PlayerApplicationsController],

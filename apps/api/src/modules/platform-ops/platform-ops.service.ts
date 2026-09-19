@@ -191,7 +191,9 @@ export class PlatformOpsService {
         account.roles.some((role) => role.role === "TENANT_OWNER"),
       ) ?? null;
     const parsedConfig = config ? safeParseTenantConfig(config.config) : null;
-    const pkg = subscription ? packageByCode(subscription.packageCode) : undefined;
+    const pkg = subscription
+      ? packageByCode(subscription.packageCode)
+      : undefined;
 
     return {
       id: tenant.id,
@@ -209,8 +211,12 @@ export class PlatformOpsService {
       endsAt: subscription?.endsAt ?? null,
       platformFeeBp: rule?.platformFeeBp ?? null,
       storeCutBp: rule?.storeCutBp ?? null,
-      brandPrimary: parsedConfig?.success ? parsedConfig.data.brand.primaryColor : null,
-      brandAccent: parsedConfig?.success ? parsedConfig.data.brand.accentColor : null,
+      brandPrimary: parsedConfig?.success
+        ? parsedConfig.data.brand.primaryColor
+        : null,
+      brandAccent: parsedConfig?.success
+        ? parsedConfig.data.brand.accentColor
+        : null,
       logoText: parsedConfig?.success ? parsedConfig.data.brand.logoText : null,
     };
   }

@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Clipboard, Copy, RefreshCw } from "lucide-react";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+  ArrowLeft,
+  ArrowRight,
+  Clipboard,
+  Copy,
+  RefreshCw,
+} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../api";
 import { formatFenYuan } from "../money";
 import { DemoDialog, DemoEmptyState, useDemoToast } from "./demo-ui";
@@ -37,13 +39,7 @@ export function OrderDetailView({
 }
 
 // ---------------------------------------------------------------- GD
-function GdOrderDetail({
-  orderId,
-  role,
-}: {
-  orderId: string;
-  role: string;
-}) {
+function GdOrderDetail({ orderId, role }: { orderId: string; role: string }) {
   const queryClient = useQueryClient();
   const { toast, showToast } = useDemoToast();
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -266,9 +262,7 @@ function GdOrderDetail({
                               type="checkbox"
                               id={`pick-${app.id}`}
                               disabled={!canOperate || !canPick}
-                              checked={
-                                app.status === "SELECTED" || chosen
-                              }
+                              checked={app.status === "SELECTED" || chosen}
                               onChange={() =>
                                 setChecked((prev) => {
                                   const next = new Set(prev);
@@ -279,7 +273,10 @@ function GdOrderDetail({
                               }
                             />
                             <label htmlFor={`pick-${app.id}`}>
-                              <span className="mc-avatar mc-avatar-sm" aria-hidden="true">
+                              <span
+                                className="mc-avatar mc-avatar-sm"
+                                aria-hidden="true"
+                              >
                                 {app.playerName.slice(0, 1)}
                               </span>
                               <span>
@@ -295,7 +292,9 @@ function GdOrderDetail({
                                 </small>
                               </span>
                             </label>
-                            {canOperate && canPick && app.status === "APPLIED" ? (
+                            {canOperate &&
+                            canPick &&
+                            app.status === "APPLIED" ? (
                               <button
                                 type="button"
                                 className="mc-remove"
@@ -336,9 +335,8 @@ function GdOrderDetail({
                 {data.lines.reduce(
                   (sum, line) =>
                     sum +
-                    line.applications.filter(
-                      (a) => a.status === "SELECTED",
-                    ).length,
+                    line.applications.filter((a) => a.status === "SELECTED")
+                      .length,
                   0,
                 )}
               </b>
@@ -420,8 +418,7 @@ function ClassicOrderDetail({
 
   const detailQuery = useQuery({
     queryKey: ["merchant", "dispatch", "classic", orderId],
-    queryFn: () =>
-      apiFetch<OrderView>(`/api/v1/tenant/orders/${orderId}`),
+    queryFn: () => apiFetch<OrderView>(`/api/v1/tenant/orders/${orderId}`),
     retry: false,
   });
   const detail = detailQuery.data;
@@ -433,9 +430,13 @@ function ClassicOrderDetail({
       ),
     enabled:
       detail !== undefined &&
-      ["DISPATCHING", "ASSIGNED", "READY", "IN_PROGRESS", "PENDING_CONFIRMATION"].includes(
-        detail.status,
-      ),
+      [
+        "DISPATCHING",
+        "ASSIGNED",
+        "READY",
+        "IN_PROGRESS",
+        "PENDING_CONFIRMATION",
+      ].includes(detail.status),
     retry: false,
   });
   const sessionQuery = useQuery({
@@ -465,10 +466,7 @@ function ClassicOrderDetail({
   };
 
   const mutate = useMutation({
-    mutationFn: (payload: {
-      action: string;
-      body?: unknown;
-    }) =>
+    mutationFn: (payload: { action: string; body?: unknown }) =>
       apiFetch<unknown>(`/api/v1/tenant/orders/${orderId}/${payload.action}`, {
         method: "POST",
         ...(payload.body !== undefined
@@ -636,7 +634,9 @@ function ClassicOrderDetail({
                       <tr key={app.id}>
                         <td>{app.playerName}</td>
                         <td>
-                          <span className={`mc-status st-${toneFor(app.status)}`}>
+                          <span
+                            className={`mc-status st-${toneFor(app.status)}`}
+                          >
                             {app.status}
                           </span>
                         </td>
@@ -772,9 +772,7 @@ function ClassicOrderDetail({
               <button
                 type="button"
                 className="mc-btn mc-btn-primary"
-                onClick={() =>
-                  mutate.mutate({ action: "session/start" })
-                }
+                onClick={() => mutate.mutate({ action: "session/start" })}
               >
                 开始场次
               </button>

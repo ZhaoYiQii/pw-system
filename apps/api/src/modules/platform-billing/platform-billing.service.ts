@@ -1,10 +1,7 @@
 import { randomBytes, scrypt as scryptCb } from "node:crypto";
 import type { DbTransaction, PrismaClient } from "@pw/database";
 import { PACKAGES, packageByCode } from "./packages.js";
-import {
-  HostTakenError,
-  TenantCodeTakenError,
-} from "./domain/errors.js";
+import { HostTakenError, TenantCodeTakenError } from "./domain/errors.js";
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);

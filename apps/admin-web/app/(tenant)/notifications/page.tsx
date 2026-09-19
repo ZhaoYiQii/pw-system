@@ -94,7 +94,9 @@ function Inner() {
             <div>
               <CardTitle>
                 站内通知
-                {unreadQuery.data?.count ? `（未读 ${unreadQuery.data.count}）` : ""}
+                {unreadQuery.data?.count
+                  ? `（未读 ${unreadQuery.data.count}）`
+                  : ""}
               </CardTitle>
               <CardDescription>
                 订单状态事件推送；支持单项/全部标记已读。

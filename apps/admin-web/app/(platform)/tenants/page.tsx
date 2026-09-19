@@ -92,19 +92,25 @@ function Inner() {
   const tenants = tenantsQuery.data ?? [];
   const busy = deactivate.isPending || activate.isPending;
   const is401 =
-    tenantsQuery.error instanceof ApiError &&
-    tenantsQuery.error.status === 401;
+    tenantsQuery.error instanceof ApiError && tenantsQuery.error.status === 401;
 
   return (
     <PlatformShell>
       {is401 ? (
-        <div className="pw-panel" style={{ maxWidth: 520, margin: "60px auto" }}>
+        <div
+          className="pw-panel"
+          style={{ maxWidth: 520, margin: "60px auto" }}
+        >
           <div className="pw-panel-body">
             <h2 style={{ margin: "0 0 8px" }}>尚未登录平台账号</h2>
             <p style={{ color: "var(--pw-muted)", fontSize: 12 }}>
               请先以平台管理员身份登录后再查看门店。
             </p>
-            <Link className="pw-btn pw-primary" href="/login" style={{ marginTop: 14 }}>
+            <Link
+              className="pw-btn pw-primary"
+              href="/login"
+              style={{ marginTop: 14 }}
+            >
               去登录
             </Link>
           </div>
@@ -125,7 +131,10 @@ function Inner() {
           {notice ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-green-soft)", color: "var(--pw-green)" }}
+              style={{
+                background: "var(--pw-green-soft)",
+                color: "var(--pw-green)",
+              }}
             >
               {notice}
             </div>
@@ -133,7 +142,10 @@ function Inner() {
           {formError ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-red-soft)", color: "var(--pw-red)" }}
+              style={{
+                background: "var(--pw-red-soft)",
+                color: "var(--pw-red)",
+              }}
             >
               {formError}
             </div>
@@ -149,9 +161,7 @@ function Inner() {
                 <div className="pw-empty">加载中…</div>
               ) : null}
               {!tenantsQuery.isPending && tenants.length === 0 ? (
-                <div className="pw-empty">
-                  暂无门店，请先一键开店。
-                </div>
+                <div className="pw-empty">暂无门店，请先一键开店。</div>
               ) : null}
               {tenants.length > 0 ? (
                 <table>
@@ -200,7 +210,9 @@ function Inner() {
                           )}
                         </td>
                         <td>{tenant.timezone}</td>
-                        <td className="pw-mono">{formatDate(tenant.createdAt)}</td>
+                        <td className="pw-mono">
+                          {formatDate(tenant.createdAt)}
+                        </td>
                         <td style={{ whiteSpace: "nowrap" }}>
                           <Link
                             className="pw-btn pw-small"
@@ -282,4 +294,3 @@ export default function PlatformTenantsPage() {
     </QueryClientProvider>
   );
 }
-

@@ -75,9 +75,9 @@ describe("经营工作台展示数据", () => {
   });
 
   it("待办深链按类型生成，客服动作文案可读", () => {
-    expect(
-      attentionHref(attention("ORDER_TODO", "o1", "GAME_DISPATCH")),
-    ).toBe("/merchant-console/dispatch/o1?kind=GD");
+    expect(attentionHref(attention("ORDER_TODO", "o1", "GAME_DISPATCH"))).toBe(
+      "/merchant-console/dispatch/o1?kind=GD",
+    );
     expect(attentionHref(attention("SESSION_TODO", "s1"))).toBe(
       "/merchant-console/sessions/s1",
     );

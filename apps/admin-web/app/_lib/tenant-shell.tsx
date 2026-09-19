@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiFetch, clearAccessToken, getAccessToken } from "./api";
-import {
-  TENANT_ADDON_LINKS,
-  tenantNavGroupsWithAddons,
-} from "./tenant-links";
+import { TENANT_ADDON_LINKS, tenantNavGroupsWithAddons } from "./tenant-links";
 
 export function TenantShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();

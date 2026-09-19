@@ -45,11 +45,7 @@ describe("reporting dashboard summary (角色/口径/隔离)", () => {
     tenantA = ta;
     tenantB = tb;
 
-    async function account(
-      tenantId: string,
-      username: string,
-      role: string,
-    ) {
+    async function account(tenantId: string, username: string, role: string) {
       const acct = await client.tenantAccount.create({
         data: { tenantId, username, passwordHash: hash },
       });
@@ -211,14 +207,18 @@ describe("reporting dashboard summary (角色/口径/隔离)", () => {
       for (const t of [tenantA, tenantB]) {
         if (!t) continue;
         await client.auditLog.deleteMany({ where: { tenantId: t.id } });
-        await client.sessionAdjustment.deleteMany({ where: { tenantId: t.id } });
+        await client.sessionAdjustment.deleteMany({
+          where: { tenantId: t.id },
+        });
         await client.serviceSession.deleteMany({ where: { tenantId: t.id } });
         await client.dispute.deleteMany({ where: { tenantId: t.id } });
         await client.settlementBatch.deleteMany({ where: { tenantId: t.id } });
         await client.order.deleteMany({ where: { tenantId: t.id } });
         await client.playerProfile.deleteMany({ where: { tenantId: t.id } });
         await client.customerProfile.deleteMany({ where: { tenantId: t.id } });
-        await client.tenantAccountRole.deleteMany({ where: { tenantId: t.id } });
+        await client.tenantAccountRole.deleteMany({
+          where: { tenantId: t.id },
+        });
         await client.tenantAccount.deleteMany({ where: { tenantId: t.id } });
         await client.tenant.deleteMany({ where: { id: t.id } });
       }

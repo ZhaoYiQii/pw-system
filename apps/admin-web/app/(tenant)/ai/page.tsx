@@ -144,7 +144,8 @@ function Inner() {
         <CardHeader>
           <CardTitle>AI 能力</CardTitle>
           <CardDescription>
-            未配置外部 AI 服务商时，仅做本地结构化校验并明确标注，不伪造智能生成。
+            未配置外部 AI
+            服务商时，仅做本地结构化校验并明确标注，不伪造智能生成。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3">

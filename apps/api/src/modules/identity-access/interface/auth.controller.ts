@@ -63,10 +63,7 @@ function requiredString(value: unknown, field: string): string {
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
   if (!id)
-    throw new HttpException(
-      "tenant context missing",
-      HttpStatus.UNAUTHORIZED,
-    );
+    throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
   return id;
 }
 
@@ -228,10 +225,7 @@ export class AuthController {
         LOGIN_WINDOW_MS,
       )
     ) {
-      throw new HttpException(
-        "尝试次数过多",
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new HttpException("尝试次数过多", HttpStatus.TOO_MANY_REQUESTS);
     }
     const tenantId = await this.auth.resolveTenantId(tenantCode);
     if (!tenantId) {

@@ -34,8 +34,7 @@ function moduleIdFromPath(pathname: string): MerchantModuleId | "work" {
 export function MerchantShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { role, principal, ready, unauthorized, forbidden } =
-    useMerchantRole();
+  const { role, principal, ready, unauthorized, forbidden } = useMerchantRole();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const storeQuery = useQuery({
@@ -125,9 +124,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
             <i aria-hidden="true" />
             <div>
               <b>{principal?.username ?? "商家员工"}</b>
-              <span>
-                {roleMeta.label} · 真实角色授权
-              </span>
+              <span>{roleMeta.label} · 真实角色授权</span>
             </div>
           </div>
 

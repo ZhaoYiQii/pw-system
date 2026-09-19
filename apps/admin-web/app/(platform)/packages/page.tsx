@@ -10,10 +10,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
-import {
-  featureDescription,
-  featureLabel,
-} from "../../_lib/feature-catalog";
+import { featureDescription, featureLabel } from "../../_lib/feature-catalog";
 import { PlatformShell } from "../../_lib/platform-shell";
 
 interface Tenant {
@@ -92,13 +89,7 @@ function Inner() {
   });
 
   const toggle = useMutation({
-    mutationFn: ({
-      featureKey,
-      next,
-    }: {
-      featureKey: string;
-      next: boolean;
-    }) =>
+    mutationFn: ({ featureKey, next }: { featureKey: string; next: boolean }) =>
       apiFetch<FeatureState[]>(
         `/api/v1/platform/tenants/${tenantId}/entitlements`,
         {
@@ -123,16 +114,22 @@ function Inner() {
   const features = entitlementsQuery.data ?? [];
   const addons = features.filter((f) => !f.core);
   const is401 =
-    tenantsQuery.error instanceof ApiError &&
-    tenantsQuery.error.status === 401;
+    tenantsQuery.error instanceof ApiError && tenantsQuery.error.status === 401;
 
   return (
     <PlatformShell>
       {is401 ? (
-        <div className="pw-panel" style={{ maxWidth: 520, margin: "60px auto" }}>
+        <div
+          className="pw-panel"
+          style={{ maxWidth: 520, margin: "60px auto" }}
+        >
           <div className="pw-panel-body">
             <h2 style={{ margin: "0 0 8px" }}>尚未登录平台账号</h2>
-            <Link className="pw-btn pw-primary" href="/login" style={{ marginTop: 12 }}>
+            <Link
+              className="pw-btn pw-primary"
+              href="/login"
+              style={{ marginTop: 12 }}
+            >
               去登录
             </Link>
           </div>
@@ -150,7 +147,10 @@ function Inner() {
           {notice ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-green-soft)", color: "var(--pw-green)" }}
+              style={{
+                background: "var(--pw-green-soft)",
+                color: "var(--pw-green)",
+              }}
             >
               {notice}
             </div>
@@ -158,7 +158,10 @@ function Inner() {
           {message ? (
             <div
               className="pw-notice"
-              style={{ background: "var(--pw-red-soft)", color: "var(--pw-red)" }}
+              style={{
+                background: "var(--pw-red-soft)",
+                color: "var(--pw-red)",
+              }}
             >
               {message}
             </div>
@@ -181,7 +184,9 @@ function Inner() {
                     </option>
                   ))}
                 </select>
-                <span className="pw-pending">接口已就绪：packages / entitlements</span>
+                <span className="pw-pending">
+                  接口已就绪：packages / entitlements
+                </span>
               </div>
             </div>
           </div>
@@ -189,9 +194,7 @@ function Inner() {
           <div className="pw-panel">
             <div className="pw-panel-head">
               <h2>套餐定义</h2>
-              <p>
-                {(packagesQuery.data ?? []).map((p) => p.code).join(" / ")}
-              </p>
+              <p>{(packagesQuery.data ?? []).map((p) => p.code).join(" / ")}</p>
             </div>
             <div className="pw-panel-body" style={{ padding: 0 }}>
               {(packagesQuery.data ?? []).length > 0 ? (
@@ -210,14 +213,19 @@ function Inner() {
                       <tr key={pkg.code}>
                         <td>
                           <b>{pkg.name}</b>
-                          <span className="pw-mono" style={{ marginLeft: 8, color: "var(--pw-muted)" }}>
+                          <span
+                            className="pw-mono"
+                            style={{ marginLeft: 8, color: "var(--pw-muted)" }}
+                          >
                             {pkg.code}
                           </span>
                         </td>
                         <td className="pw-mono">{pkg.durationDays} 天</td>
                         <td style={{ color: "var(--pw-muted)" }}>
                           {pkg.addons.length > 0
-                            ? pkg.addons.map((key) => featureLabel(key)).join(" · ")
+                            ? pkg.addons
+                                .map((key) => featureLabel(key))
+                                .join(" · ")
                             : "仅核心功能"}
                         </td>
                         <td>
@@ -228,7 +236,9 @@ function Inner() {
                             type="button"
                             className="pw-btn pw-small pw-primary"
                             disabled={!tenantId || assign.isPending}
-                            onClick={() => assign.mutate({ packageCode: pkg.code })}
+                            onClick={() =>
+                              assign.mutate({ packageCode: pkg.code })
+                            }
                           >
                             {assign.isPending ? "指派中…" : "指派此套餐"}
                           </button>
@@ -316,4 +326,3 @@ export default function PlatformPackagesPage() {
     </QueryClientProvider>
   );
 }
-

@@ -216,119 +216,127 @@ export class DisputesService {
   }
 
   async detail(tenantId: string, disputeId: string) {
-    return withTenantContext(this.client, tenantId, async (tx: DbTransaction) => {
-      const d = await tx.dispute.findFirst({
-        where: { tenantId, id: disputeId },
-      });
-      if (!d) return null;
-      const [events, order, player, customer] = await Promise.all([
-        tx.disputeEvent.findMany({
-          where: { tenantId, disputeId: d.id },
-          orderBy: { occurredAt: "asc" },
-        }),
-        tx.order.findFirst({
-          where: { tenantId, id: d.orderId },
-          select: { id: true, orderNo: true },
-        }),
-        tx.playerProfile.findFirst({
-          where: { tenantId, id: d.playerId },
-          select: { id: true, name: true },
-        }),
-        tx.customerProfile.findFirst({
-          where: { tenantId, id: d.customerProfileId },
-          select: { id: true, name: true },
-        }),
-      ]);
-      let earning: {
-        id: string;
-        amountFen: string;
-        status: string;
-        settlementBatchStatus: string | null;
-        settlementBatchNo: string | null;
-      } | null = null;
-      if (d.earningId) {
-        const earningRow = await tx.earning.findFirst({
-          where: { tenantId, id: d.earningId },
+    return withTenantContext(
+      this.client,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const d = await tx.dispute.findFirst({
+          where: { tenantId, id: disputeId },
         });
-        if (earningRow) {
-          const item = await tx.settlementItem.findFirst({
-            where: { tenantId, earningId: d.earningId },
-            select: { batchId: true },
+        if (!d) return null;
+        const [events, order, player, customer] = await Promise.all([
+          tx.disputeEvent.findMany({
+            where: { tenantId, disputeId: d.id },
+            orderBy: { occurredAt: "asc" },
+          }),
+          tx.order.findFirst({
+            where: { tenantId, id: d.orderId },
+            select: { id: true, orderNo: true },
+          }),
+          tx.playerProfile.findFirst({
+            where: { tenantId, id: d.playerId },
+            select: { id: true, name: true },
+          }),
+          tx.customerProfile.findFirst({
+            where: { tenantId, id: d.customerProfileId },
+            select: { id: true, name: true },
+          }),
+        ]);
+        let earning: {
+          id: string;
+          amountFen: string;
+          status: string;
+          settlementBatchStatus: string | null;
+          settlementBatchNo: string | null;
+        } | null = null;
+        if (d.earningId) {
+          const earningRow = await tx.earning.findFirst({
+            where: { tenantId, id: d.earningId },
           });
-          const batch = item
-            ? await tx.settlementBatch.findFirst({
-                where: { tenantId, id: item.batchId },
-                select: { status: true, batchNo: true },
-              })
-            : null;
-          earning = {
-            id: earningRow.id,
-            amountFen: earningRow.amountFen.toString(),
-            status: earningRow.status,
-            settlementBatchStatus: batch?.status ?? null,
-            settlementBatchNo: batch?.batchNo ?? null,
-          };
+          if (earningRow) {
+            const item = await tx.settlementItem.findFirst({
+              where: { tenantId, earningId: d.earningId },
+              select: { batchId: true },
+            });
+            const batch = item
+              ? await tx.settlementBatch.findFirst({
+                  where: { tenantId, id: item.batchId },
+                  select: { status: true, batchNo: true },
+                })
+              : null;
+            earning = {
+              id: earningRow.id,
+              amountFen: earningRow.amountFen.toString(),
+              status: earningRow.status,
+              settlementBatchStatus: batch?.status ?? null,
+              settlementBatchNo: batch?.batchNo ?? null,
+            };
+          }
         }
-      }
-      return {
-        id: d.id,
-        orderId: d.orderId,
-        orderNo: order?.orderNo ?? "未知订单",
-        playerId: d.playerId,
-        playerName: player?.name ?? "未知陪玩",
-        customerProfileId: d.customerProfileId,
-        customerName: customer?.name ?? "未知客户",
-        earningId: d.earningId,
-        earning,
-        reason: d.reason,
-        status: d.status,
-        openedBy: d.openedBy,
-        resolvedBy: d.resolvedBy,
-        resolution: d.resolution,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-        events: events.map((e) => ({
-          id: e.id,
-          eventType: e.eventType,
-          fromStatus: e.fromStatus,
-          toStatus: e.toStatus,
-          actorType: e.actorType,
-          actorId: e.actorId,
-          payload: e.payload,
-          occurredAt: e.occurredAt,
-        })),
-      };
-    });
+        return {
+          id: d.id,
+          orderId: d.orderId,
+          orderNo: order?.orderNo ?? "未知订单",
+          playerId: d.playerId,
+          playerName: player?.name ?? "未知陪玩",
+          customerProfileId: d.customerProfileId,
+          customerName: customer?.name ?? "未知客户",
+          earningId: d.earningId,
+          earning,
+          reason: d.reason,
+          status: d.status,
+          openedBy: d.openedBy,
+          resolvedBy: d.resolvedBy,
+          resolution: d.resolution,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+          events: events.map((e) => ({
+            id: e.id,
+            eventType: e.eventType,
+            fromStatus: e.fromStatus,
+            toStatus: e.toStatus,
+            actorType: e.actorType,
+            actorId: e.actorId,
+            payload: e.payload,
+            occurredAt: e.occurredAt,
+          })),
+        };
+      },
+    );
   }
 
   async listMine(
     tenantId: string,
     filter: { playerId?: string; customerProfileId?: string },
   ) {
-    return withTenantContext(this.client, tenantId, async (tx: DbTransaction) => {
-      const rows = await tx.dispute.findMany({
-        where: { tenantId, ...filter },
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      });
-      if (rows.length === 0) return [];
-      const orderIds = Array.from(new Set(rows.map((r) => r.orderId)));
-      const orders = await tx.order.findMany({
-        where: { tenantId, id: { in: orderIds } },
-        select: { id: true, orderNo: true },
-      });
-      const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
-      return rows.map((d) => ({
-        id: d.id,
-        orderId: d.orderId,
-        orderNo: orderNoById.get(d.orderId) ?? "未知订单",
-        status: d.status,
-        reason: d.reason,
-        resolution: d.resolution,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-      }));
-    });
+    return withTenantContext(
+      this.client,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const rows = await tx.dispute.findMany({
+          where: { tenantId, ...filter },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        });
+        if (rows.length === 0) return [];
+        const orderIds = Array.from(new Set(rows.map((r) => r.orderId)));
+        const orders = await tx.order.findMany({
+          where: { tenantId, id: { in: orderIds } },
+          select: { id: true, orderNo: true },
+        });
+        const orderNoById = new Map(orders.map((o) => [o.id, o.orderNo]));
+        return rows.map((d) => ({
+          id: d.id,
+          orderId: d.orderId,
+          orderNo: orderNoById.get(d.orderId) ?? "未知订单",
+          status: d.status,
+          reason: d.reason,
+          resolution: d.resolution,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+        }));
+      },
+    );
   }
 
   async hasOpenOnEarnings(

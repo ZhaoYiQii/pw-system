@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Save, Search } from "lucide-react";
 import { apiFetch } from "../api";
 import { formatFenYuan, sumFen, yuanToFenString } from "../money";
@@ -46,8 +42,12 @@ export function SettlementsConsoleView() {
   });
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ["mc-settlements-batches"] });
-    void queryClient.invalidateQueries({ queryKey: ["mc-settlements-earnings"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["mc-settlements-batches"],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["mc-settlements-earnings"],
+    });
     if (activeBatchId)
       void queryClient.invalidateQueries({
         queryKey: ["mc-settlements-batch", activeBatchId],
@@ -68,10 +68,19 @@ export function SettlementsConsoleView() {
       const draft = batchesQuery.data?.find(
         (batch) => batch.status === "DRAFT",
       );
-      const batchId = draft?.id ?? (await apiFetch<{ id: string }>("/api/v1/tenant/settlements", { method: "POST" })).id;
+      const batchId =
+        draft?.id ??
+        (
+          await apiFetch<{ id: string }>("/api/v1/tenant/settlements", {
+            method: "POST",
+          })
+        ).id;
       await apiFetch<unknown>(`/api/v1/tenant/settlements/${batchId}/items`, {
         method: "POST",
-        body: JSON.stringify({ earningIds: legacyIds, slotEarningIds: slotIds }),
+        body: JSON.stringify({
+          earningIds: legacyIds,
+          slotEarningIds: slotIds,
+        }),
       });
       return batchId;
     },
@@ -171,9 +180,7 @@ export function SettlementsConsoleView() {
                         onChange={() => toggleEarning(earning.id)}
                       />
                     </td>
-                    <td>
-                      {earning.source === "SLOT" ? "档位收入" : "旧流程"}
-                    </td>
+                    <td>{earning.source === "SLOT" ? "档位收入" : "旧流程"}</td>
                     <td>{earning.playerName}</td>
                     <td className="mc-mono">{earning.orderNo}</td>
                     <td className="mc-mono">
@@ -325,8 +332,7 @@ export function FinanceConsoleView() {
   });
   const ledgerQuery = useQuery({
     queryKey: ["mc-finance-ledger"],
-    queryFn: () =>
-      apiFetch<FinanceLedger>("/api/v1/tenant/settlements/ledger"),
+    queryFn: () => apiFetch<FinanceLedger>("/api/v1/tenant/settlements/ledger"),
   });
   const saveStoreCut = useMutation({
     mutationFn: () =>
@@ -382,13 +388,15 @@ export function FinanceConsoleView() {
                 <tr>
                   <td>平台服务费</td>
                   <td className="mc-mono">
-                    {rules.platformFeeBp} bp（{(rules.platformFeeBp / 100).toFixed(2)}%）
+                    {rules.platformFeeBp} bp（
+                    {(rules.platformFeeBp / 100).toFixed(2)}%）
                   </td>
                 </tr>
                 <tr>
                   <td>门店抽成</td>
                   <td className="mc-mono">
-                    {rules.storeCutBp} bp（{(rules.storeCutBp / 100).toFixed(2)}%）
+                    {rules.storeCutBp} bp（{(rules.storeCutBp / 100).toFixed(2)}
+                    %）
                   </td>
                 </tr>
                 <tr>
@@ -497,15 +505,21 @@ export function FinanceConsoleView() {
               <tbody>
                 <tr>
                   <td>平台服务费</td>
-                  <td className="mc-mono">{formatFenYuan(split.platformFeeFen)}</td>
+                  <td className="mc-mono">
+                    {formatFenYuan(split.platformFeeFen)}
+                  </td>
                 </tr>
                 <tr>
                   <td>门店抽成</td>
-                  <td className="mc-mono">{formatFenYuan(split.storeCutFen)}</td>
+                  <td className="mc-mono">
+                    {formatFenYuan(split.storeCutFen)}
+                  </td>
                 </tr>
                 <tr>
                   <td>陪玩到手</td>
-                  <td className="mc-mono">{formatFenYuan(split.playerShareFen)}</td>
+                  <td className="mc-mono">
+                    {formatFenYuan(split.playerShareFen)}
+                  </td>
                 </tr>
                 <tr>
                   <td>合计</td>
@@ -811,9 +825,7 @@ export function CatalogConsoleView() {
                       <tr key={region.id}>
                         <td>{region.name}</td>
                         <td>
-                          <StatusText
-                            text={region.enabled ? "启用" : "停用"}
-                          />
+                          <StatusText text={region.enabled ? "启用" : "停用"} />
                         </td>
                       </tr>
                     ))}
@@ -927,9 +939,7 @@ export function CatalogConsoleView() {
               type="button"
               className="mc-btn"
               disabled={
-                mutateCreateRule.isPending ||
-                !ruleDuration ||
-                !rulePrice.trim()
+                mutateCreateRule.isPending || !ruleDuration || !rulePrice.trim()
               }
               onClick={() => mutateCreateRule.mutate()}
             >
@@ -946,9 +956,7 @@ export function CatalogConsoleView() {
               <>
                 <td>{durationLabel(rule.durationSeconds)}</td>
                 <td className="mc-mono">{formatFenYuan(rule.priceFen)}</td>
-                <td className="mc-mono">
-                  {formatFenYuan(rule.playerCostFen)}
-                </td>
+                <td className="mc-mono">{formatFenYuan(rule.playerCostFen)}</td>
                 <td>
                   <StatusText text={rule.enabled ? "启用" : "停用"} />
                 </td>
@@ -982,11 +990,7 @@ export function CatalogConsoleView() {
   );
 }
 
-function BatchStatusChip({
-  status,
-}: {
-  status: BatchRow["status"];
-}) {
+function BatchStatusChip({ status }: { status: BatchRow["status"] }) {
   const map: Record<BatchRow["status"], string> = {
     DRAFT: "草稿",
     REVIEWED: "已复核",
@@ -1002,9 +1006,7 @@ function BatchStatusChip({
     VOID: "cancelled",
   };
   return (
-    <span className={`mc-status st-${toneMap[status]}`}>
-      {map[status]}
-    </span>
+    <span className={`mc-status st-${toneMap[status]}`}>{map[status]}</span>
   );
 }
 
@@ -1044,11 +1046,7 @@ function BatchActions({
     );
   }
   if (batch.status === "APPROVED") {
-    return (
-      <div className="mc-button-row">
-        {button("登记线下支付", "pay")}
-      </div>
-    );
+    return <div className="mc-button-row">{button("登记线下支付", "pay")}</div>;
   }
   return <span className="mc-muted-text">已完成</span>;
 }

@@ -187,13 +187,7 @@ export interface TemplateRow {
 export interface TemplateField {
   fieldKey: string;
   label: string;
-  fieldType:
-    | "text"
-    | "select"
-    | "multiline"
-    | "datetime"
-    | "duration"
-    | "note";
+  fieldType: "text" | "select" | "multiline" | "datetime" | "duration" | "note";
   required: boolean;
   options: string[];
 }
@@ -556,5 +550,7 @@ export function formatDuration(seconds: number | null): string {
 export function dateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString("zh-CN", { hour12: false });
+  return Number.isNaN(d.getTime())
+    ? "-"
+    : d.toLocaleString("zh-CN", { hour12: false });
 }

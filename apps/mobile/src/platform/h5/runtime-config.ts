@@ -18,8 +18,7 @@ function apiBase(): string {
 export const runtimeConfig: RuntimeConfigAdapter = {
   async loadStorefrontConfig(): Promise<StorefrontInfo> {
     try {
-      const search =
-        typeof location !== "undefined" ? location.search : "";
+      const search = typeof location !== "undefined" ? location.search : "";
       const host = typeof location !== "undefined" ? location.host : "";
       const base = apiBase();
       const target = resolveLocatorParam(search, host);

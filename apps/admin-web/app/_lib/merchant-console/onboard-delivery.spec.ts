@@ -36,7 +36,9 @@ describe("平台开通交付链接", () => {
   });
 
   it("交付文案包含密码与关键入口，便于复制", () => {
-    const urls = resolveDeliveryUrls(INFO, { h5Origin: "http://localhost:3101" });
+    const urls = resolveDeliveryUrls(INFO, {
+      h5Origin: "http://localhost:3101",
+    });
     const text = buildDeliveryText(INFO, urls);
     expect(text).toContain("星尘电竞（xingchen）");
     expect(text).toContain("临时密码：Temp-123456");

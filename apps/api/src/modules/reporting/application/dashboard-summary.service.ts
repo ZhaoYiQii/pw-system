@@ -67,9 +67,7 @@ interface AdjustmentRow {
 }
 
 function inClause(values: readonly string[], firstParamIndex: number): string {
-  return values
-    .map((_, index) => `$${firstParamIndex + index}`)
-    .join(", ");
+  return values.map((_, index) => `$${firstParamIndex + index}`).join(", ");
 }
 
 function orderAction(status: string): string {
@@ -113,24 +111,31 @@ export class DashboardSummaryService {
     const todoStatus = inClause(TODO_ORDER_STATUSES, 2);
     const pendingBatchStatus = inClause(PENDING_BATCH_STATUSES, 2);
 
-    const [todoCount, classicLive, slotLive, todayService, settlement, disputes, adjustmentTotal] =
-      await Promise.all([
-        c.$queryRawUnsafe<CountRow[]>(
-          `SELECT COUNT(*)::bigint AS n FROM orders
+    const [
+      todoCount,
+      classicLive,
+      slotLive,
+      todayService,
+      settlement,
+      disputes,
+      adjustmentTotal,
+    ] = await Promise.all([
+      c.$queryRawUnsafe<CountRow[]>(
+        `SELECT COUNT(*)::bigint AS n FROM orders
            WHERE tenant_id = $1::uuid
              AND status IN (${todoStatus})`,
-          tenantId,
-          ...TODO_ORDER_STATUSES,
-        ),
-        c.$queryRaw<CountRow[]>`
+        tenantId,
+        ...TODO_ORDER_STATUSES,
+      ),
+      c.$queryRaw<CountRow[]>`
           SELECT COUNT(*)::bigint AS n FROM service_sessions
           WHERE tenant_id = ${tenantId}::uuid
             AND status = 'STARTED'`,
-        c.$queryRaw<CountRow[]>`
+      c.$queryRaw<CountRow[]>`
           SELECT COUNT(*)::bigint AS n FROM slot_sessions
           WHERE tenant_id = ${tenantId}::uuid
             AND status IN ('STARTED', 'IN_PROGRESS')`,
-        c.$queryRaw<CountRow[]>`
+      c.$queryRaw<CountRow[]>`
           SELECT COUNT(DISTINCT order_id)::bigint AS n FROM (
             SELECT order_id FROM service_sessions
             WHERE tenant_id = ${tenantId}::uuid
@@ -144,22 +149,22 @@ export class DashboardSummaryService {
               AND ended_at < ${day.end}
               AND status = 'ENDED'
           ) s`,
-        c.$queryRawUnsafe<SettlementSumRow[]>(
-          `SELECT COUNT(*)::bigint AS n,
+      c.$queryRawUnsafe<SettlementSumRow[]>(
+        `SELECT COUNT(*)::bigint AS n,
                   COALESCE(SUM(total_amount_fen), 0)::bigint AS total
            FROM settlement_batches
            WHERE tenant_id = $1::uuid
              AND status IN (${pendingBatchStatus})`,
-          tenantId,
-          ...PENDING_BATCH_STATUSES,
-        ),
-        c.$queryRaw<CountRow[]>`
+        tenantId,
+        ...PENDING_BATCH_STATUSES,
+      ),
+      c.$queryRaw<CountRow[]>`
           SELECT COUNT(*)::bigint AS n FROM disputes
           WHERE tenant_id = ${tenantId}::uuid AND status = 'OPEN'`,
-        c.$queryRaw<CountRow[]>`
+      c.$queryRaw<CountRow[]>`
           SELECT COUNT(*)::bigint AS n FROM session_adjustments
           WHERE tenant_id = ${tenantId}::uuid AND status = 'PENDING'`,
-      ]);
+    ]);
 
     const todoOrders = Number(todoCount[0]?.n ?? 0n);
     const liveSessions =
