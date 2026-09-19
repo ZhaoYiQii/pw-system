@@ -1258,7 +1258,8 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
       gameIds.length === 0
         ? []
         : await this.client.game.findMany({
-            where: { tenantId, id: { in: gameIds } },
+            // 只回启用游戏：停用游戏不进客户侧列表（与客服端新建派单的选择器同口径）。
+            where: { tenantId, id: { in: gameIds }, enabled: true },
             select: { id: true, name: true },
           });
     const nameById = new Map(

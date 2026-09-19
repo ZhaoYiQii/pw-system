@@ -136,8 +136,8 @@ export const PUBLISHED_GAME_LIMIT = 50;
  * 该店可下单的游戏：至少有一个「未归档且有生效版本」的模板。
  *
  * - 未归类模板（game_id 为空）不属于任何游戏，天然排除；
- * - 游戏被停用（games.enabled = false）不在这里过滤：与按游戏读已发布模板的
- *   既有口径保持一致（两个入口同源，避免客户侧看到的内容比客服侧更"新"）；
+ * - 游戏被停用（games.enabled = false）由 repository 过滤掉：客服端「新建派单」的
+ *   游戏选择器本来就只列启用游戏，两个入口口径保持一致，客户不能给已停用的游戏下单；
  * - 按游戏名排序，同名时按 id 升序，保证返回顺序稳定。
  */
 export function selectPublishedGames(
