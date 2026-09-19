@@ -6,6 +6,7 @@ import type { PublishedConfigV2 } from "../../apps/api/src/modules/game-dispatch
 import { buildTemplateOrderDraftForAudience } from "../../apps/api/src/modules/game-dispatch/domain/game-template-order-draft.js";
 import { DispatchInputError } from "../../apps/api/src/modules/game-dispatch/domain/dispatch-errors.js";
 import { PrismaGameDispatchTemplateOrderRepository } from "../../apps/api/src/modules/game-dispatch/infrastructure/prisma-game-dispatch-template-order.repository.js";
+import { TEMPLATE_ORDER_OPERATION_BY_AUDIENCE } from "../../apps/api/src/modules/game-dispatch/application/game-dispatch-template-order.service.js";
 
 function envOrThrow(name: string): string {
   const v = process.env[name];
@@ -205,6 +206,8 @@ describe("tenant isolation for S4 template order creation", () => {
       tenantId: overrides.tenantId ?? tenantAId,
       actorId: actorAId,
       idempotencyKey: overrides.idempotencyKey,
+      // 幂等 operation 按入口区分（C-8）：这条用例走的是客服侧入口。
+      operation: TEMPLATE_ORDER_OPERATION_BY_AUDIENCE.CS,
       input: {
         gameId: gameAId,
         templateId: overrides.templateId ?? templateAId,
