@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Plus, Search } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "../api";
 import { DemoEmptyState } from "./demo-ui";
@@ -13,6 +13,7 @@ import {
   toneFor,
 } from "./merchant-api";
 import { useMerchantRole } from "./role-context";
+import { NewOrderButton } from "./new-order-dialog";
 
 interface UnifiedOrder {
   key: string;
@@ -119,13 +120,7 @@ export function DispatchListView() {
           <p>真实订单台账：CLASSIC 订单与 GAME_DISPATCH 派单按状态汇总。</p>
         </div>
         {canOperate ? (
-          <Link
-            href="/merchant-console/dispatch/new"
-            className="mc-btn mc-btn-primary"
-          >
-            <Plus size={15} />
-            新建派单
-          </Link>
+          <NewOrderButton className="mc-btn mc-btn-primary" />
         ) : null}
       </div>
 

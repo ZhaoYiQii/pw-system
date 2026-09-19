@@ -251,7 +251,14 @@ describe("B1 order state machine (完整迁移链，无跳状态)", () => {
 
     let view = (
       await req(ownerToken).get(`/api/v1/tenant/orders/${order.id}`).expect(200)
-    ).body.data as { status: string };
+    ).body.data as {
+      status: string;
+      timeline: Array<{
+        eventType: string;
+        fromStatus?: string | null;
+        toStatus?: string | null;
+      }>;
+    };
     expect(view.status).toBe("ASSIGNED");
 
     const started = (

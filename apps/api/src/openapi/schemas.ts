@@ -347,6 +347,17 @@ export const priceDeltaFenSchema: SchemaProperty = {
   description: "选项加价（十进制字符串分，禁止 number/浮点）",
 };
 
+/**
+ * 端口可见性（设计规格 v0.1，V-1 / V-2）：
+ * 可选；缺省表示继承（组件 → 分组 → 两个端口全选，V-3 / V-8）；显式声明时至少一个端口。
+ */
+const templateAudiences = (description: string): SchemaProperty => ({
+  type: "array",
+  items: { type: "string", enum: ["CS", "CUSTOMER"] },
+  minItems: 1,
+  description,
+});
+
 const templateLayout = (description: string): OpenApiSchema =>
   object(
     ["colSpan", "rowBreakBefore"],
@@ -367,6 +378,9 @@ export const genericTemplateSectionSchema: OpenApiSchema = object(
     stableKey: templateStableKey("区块稳定键（发布后不可改）"),
     label: templateLabel("区块名称"),
     description: templateHelpText("区块说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）",
+    ),
     enabled: bool("区块是否启用"),
     sortOrder: integer("区块顺序"),
     layout: object(
@@ -423,6 +437,9 @@ export const genericTemplateFieldComponentSchema: OpenApiSchema = object(
     sectionKey: templateStableKey("所属区块稳定键"),
     label: templateLabel("组件名称"),
     description: templateHelpText("组件说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）",
+    ),
     enabled: bool("组件是否启用"),
     sortOrder: integer("组件顺序"),
     layout: templateLayout("组件布局"),
@@ -531,6 +548,9 @@ export const genericTemplateTableComponentSchema: OpenApiSchema = object(
     sectionKey: templateStableKey("所属区块稳定键"),
     label: templateLabel("组件名称"),
     description: templateHelpText("组件说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）",
+    ),
     enabled: bool("组件是否启用"),
     sortOrder: integer("组件顺序"),
     layout: templateLayout("组件布局"),
@@ -567,6 +587,9 @@ export const genericTemplateNoteComponentSchema: OpenApiSchema = object(
     sectionKey: templateStableKey("所属区块稳定键"),
     label: templateLabel("组件名称"),
     description: templateHelpText("组件说明"),
+    audiences: templateAudiences(
+      "端口可见性（CS=客服，CUSTOMER=客户；缺省=继承所属区块）",
+    ),
     enabled: bool("组件是否启用"),
     sortOrder: integer("组件顺序"),
     layout: templateLayout("组件布局"),
@@ -1166,6 +1189,21 @@ export const genericTemplatePublishedListSchema: OpenApiSchema = {
   description: "该游戏可派单的模板（默认优先，其次最近使用）",
 };
 
+/** 客户入口第一步：该店可下单的游戏（至少有一个已发布 v2 模板）。 */
+export const genericTemplatePublishedGameSummarySchema: OpenApiSchema = object(
+  ["gameId", "name"],
+  {
+    gameId: { type: "string", format: "uuid", description: "游戏 id" },
+    name: stringField("游戏名称"),
+  },
+  "可下单游戏摘要",
+);
+
+export const genericTemplatePublishedGameListSchema: OpenApiSchema = {
+  ...dataArraySchema(genericTemplatePublishedGameSummarySchema),
+  description: "客户可下单的游戏（按名称排序，未归档且有生效版本）",
+};
+
 /** S4 派单表单：锁定发布版本的完整发布配置。 */
 export const genericTemplateVersionFormSchema: OpenApiSchema = {
   ...dataSchema(
@@ -1215,6 +1253,29 @@ export const genericTemplateOrderCreateBodySchema: OpenApiSchema = object(
   },
   "创建派单请求（幂等键在 Idempotency-Key 请求头）",
 );
+
+/** 客户自助下单入参：与客服端同形状，但**不含** customerProfileId（由登录身份推导）。 */
+export const genericTemplateCustomerOrderCreateBodySchema: OpenApiSchema =
+  object(
+    ["gameId", "templateId", "templateVersionId", "values"],
+    {
+      gameId: { type: "string", format: "uuid", description: "游戏 id" },
+      templateId: { type: "string", format: "uuid", description: "模板 id" },
+      templateVersionId: {
+        type: "string",
+        format: "uuid",
+        description: "锁定的发布版本 id",
+      },
+      values: {
+        type: "object",
+        additionalProperties: true,
+        description: "通用组件值（按 stableKey 提交，不含最终人数或价格）",
+      },
+      desiredStartAt: dateTime("期望开始时间", true),
+      durationMinutes: integer("服务时长（分钟）", 15),
+    },
+    "客户自助下单请求（不含 customerProfileId；幂等键在 Idempotency-Key 请求头）",
+  );
 
 export const genericTemplateOrderResultSchema: OpenApiSchema = {
   ...dataSchema(

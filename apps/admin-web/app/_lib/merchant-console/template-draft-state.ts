@@ -10,6 +10,140 @@
  */
 import type { TemplateDraftConfig } from "./template-api";
 
+/* ── 端口可见性（设计规格 v0.1，V-1 至 V-8）──────────────────────────
+   声明住在模型层：区块与组件都可以带 audiences；不写就是「继承」。 */
+
+/** 端口：本版只有客服与客户，陪玩 / 老板端各自立项（V-1）。 */
+export type TemplateAudience = "CS" | "CUSTOMER";
+
+export const ALL_AUDIENCES: readonly TemplateAudience[] = ["CS", "CUSTOMER"];
+
+/** 未声明时的默认值：两个端口全选（V-4 / V-8）。 */
+export const DEFAULT_AUDIENCES: readonly TemplateAudience[] = ALL_AUDIENCES;
+
+/**
+ * 能"填写下单"的端口：本版只有客服（客户侧 v2 下单面尚未立项）。
+ * 值类内容（字段 / 表格）必须留给其中至少一个端口，否则没有任何界面能填它；
+ * 说明类只影响预览，允许只给客户看。客户侧下单面立项后把 CUSTOMER 加进来即可放宽。
+ */
+export const WRITABLE_AUDIENCES: readonly TemplateAudience[] = [
+  "CS",
+  "CUSTOMER",
+];
+
+const AUDIENCE_SET = new Set<string>(ALL_AUDIENCES);
+
+/** 读一份声明；非法元素与去重后为空都视为「没有声明」（返回 null）。 */
+export function sanitizeAudiences(value: unknown): TemplateAudience[] | null {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set<TemplateAudience>();
+  for (const item of value) {
+    if (typeof item === "string" && AUDIENCE_SET.has(item)) {
+      seen.add(item as TemplateAudience);
+    }
+  }
+  return seen.size === 0 ? null : [...seen];
+}
+
+/**
+ * 组件真正生效的端口（V-3 / V-8）：组件显式声明即覆盖分组，否则继承分组，
+ * 分组也没有则两个端口全选。校验层与视图层共用这一处判定。
+ */
+export function effectiveAudiencesOf(
+  component: unknown,
+  section?: unknown,
+): TemplateAudience[] {
+  const declared = (value: unknown): TemplateAudience[] | null => {
+    if (typeof value !== "object" || value === null) return null;
+    return sanitizeAudiences((value as { audiences?: unknown }).audiences);
+  };
+  return declared(component) ?? declared(section) ?? [...ALL_AUDIENCES];
+}
+
+/** 值类内容：字段与可重复表格需要有人填；说明类只影响预览。 */
+export function carriesValue(component: { kind: string }): boolean {
+  return component.kind === "FIELD" || component.kind === "REPEATABLE_TABLE";
+}
+
+/** 值类内容里，对给定端口全都看不见的那些（发布前的阻断依据）。 */
+export function valueComponentsOutsideAudiences(
+  config: DraftConfigV2,
+  writable: readonly TemplateAudience[],
+): DraftComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return config.components.filter((component) => {
+    if (!carriesValue(component)) return false;
+    const audiences = effectiveAudiencesOf(
+      component,
+      sectionByKey.get(component.sectionKey),
+    );
+    return !writable.some((audience) => audiences.includes(audience));
+  });
+}
+
+/**
+ * 参与算价或人数的组件：带加价的选项字段、以及人数来源指向的组件。
+ * 与后端 billingComponentsV2 同口径（C-4 的前端镜像）。
+ */
+export function billingComponents(config: DraftConfigV2): DraftComponentV2[] {
+  const source = config.staffingSource;
+  return config.components.filter((component) => {
+    if (
+      component.kind === "FIELD" &&
+      (component.options ?? []).some(
+        (option) => option.priceDeltaFen !== undefined,
+      )
+    ) {
+      return true;
+    }
+    return (
+      (source.kind === "NUMBER_FIELD" ||
+        source.kind === "REPEATABLE_TABLE_SUM") &&
+      component.stableKey === source.componentKey
+    );
+  });
+}
+
+/** 参与算价/人数、却没有对每个可写端口都可见的组件（C-4 前端镜像）。 */
+export function billingComponentsOutsideEveryAudience(
+  config: DraftConfigV2,
+  writable: readonly TemplateAudience[],
+): DraftComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return billingComponents(config).filter((component) => {
+    const audiences = effectiveAudiencesOf(
+      component,
+      sectionByKey.get(component.sectionKey),
+    );
+    return writable.some((audience) => !audiences.includes(audience));
+  });
+}
+
+/**
+ * 应用端口补丁（V-2 / V-3）：
+ * - 不传 → 不动；
+ * - 传 null → 删掉声明，回到「继承」（区块则是回到默认两个全选）；
+ * - 传数组 → 去重后写入；空数组或含非法元素时**保持原状**，模型不接受空标记。
+ */
+function applyAudiences<T extends { audiences?: TemplateAudience[] }>(
+  target: T,
+  patch: TemplateAudience[] | null | undefined,
+): T {
+  if (patch === undefined) return target;
+  if (patch === null) {
+    const next = { ...target };
+    delete next.audiences;
+    return next;
+  }
+  const cleaned = sanitizeAudiences(patch);
+  if (cleaned === null) return target;
+  return { ...target, audiences: cleaned };
+}
+
 /**
  * 编辑器内部的精确模型。
  *
@@ -56,6 +190,7 @@ export interface DraftSectionV2 {
   stableKey: string;
   label: string;
   description?: string;
+  audiences?: TemplateAudience[];
   enabled: boolean;
   sortOrder: number;
   layout: {
@@ -71,6 +206,7 @@ export interface DraftFieldComponentV2 {
   sectionKey: string;
   label: string;
   description?: string;
+  audiences?: TemplateAudience[];
   enabled: boolean;
   sortOrder: number;
   layout: DraftLayoutV2;
@@ -97,6 +233,7 @@ export interface DraftTableComponentV2 {
   sectionKey: string;
   label: string;
   description?: string;
+  audiences?: TemplateAudience[];
   enabled: boolean;
   sortOrder: number;
   layout: DraftLayoutV2;
@@ -110,6 +247,7 @@ export interface DraftNoteComponentV2 {
   sectionKey: string;
   label: string;
   description?: string;
+  audiences?: TemplateAudience[];
   enabled: boolean;
   sortOrder: number;
   layout: DraftLayoutV2;
@@ -328,27 +466,37 @@ export function addSection(
 export function updateSection(
   config: DraftConfigV2,
   sectionKey: string,
-  patch: { label?: string; enabled?: boolean; columns?: number },
+  patch: {
+    label?: string;
+    enabled?: boolean;
+    columns?: number;
+    audiences?: TemplateAudience[] | null;
+  },
 ): DraftConfigV2 {
   return reindex({
     ...config,
     sections: config.sections.map((section) =>
       section.stableKey === sectionKey
-        ? {
-            ...section,
-            ...(patch.label === undefined
-              ? {}
-              : { label: labelOf(patch.label, section.label) }),
-            ...(patch.enabled === undefined ? {} : { enabled: patch.enabled }),
-            ...(patch.columns === undefined
-              ? {}
-              : {
-                  layout: {
-                    ...section.layout,
-                    columns: clampColumns(patch.columns),
-                  },
-                }),
-          }
+        ? applyAudiences(
+            {
+              ...section,
+              ...(patch.label === undefined
+                ? {}
+                : { label: labelOf(patch.label, section.label) }),
+              ...(patch.enabled === undefined
+                ? {}
+                : { enabled: patch.enabled }),
+              ...(patch.columns === undefined
+                ? {}
+                : {
+                    layout: {
+                      ...section.layout,
+                      columns: clampColumns(patch.columns),
+                    },
+                  }),
+            },
+            patch.audiences,
+          )
         : section,
     ),
   });
@@ -514,6 +662,7 @@ export function updateComponent(
     fieldType?: FieldComponent["fieldType"];
     semanticRole?: FieldComponent["semanticRole"];
     placeholder?: string;
+    audiences?: TemplateAudience[] | null;
   },
 ): DraftConfigV2 {
   const target = componentOf(config, stableKey);
@@ -573,10 +722,18 @@ export function updateComponent(
     if (nextFieldType !== "MULTI_SELECT") {
       delete (cleaned as { aggregationPolicy?: unknown }).aggregationPolicy;
     }
-    return replaceComponent(config, stableKey, cleaned as FieldComponent);
+    return replaceComponent(
+      config,
+      stableKey,
+      applyAudiences(cleaned as FieldComponent, patch.audiences),
+    );
   }
 
-  return replaceComponent(config, stableKey, patched);
+  return replaceComponent(
+    config,
+    stableKey,
+    applyAudiences(patched, patch.audiences),
+  );
 }
 
 export function moveComponent(

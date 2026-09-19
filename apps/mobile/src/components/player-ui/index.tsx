@@ -8,31 +8,31 @@ type PlayerNavKey = "orders" | "service" | "income" | "profile";
 const NAV_ITEMS: Array<{
   key: PlayerNavKey;
   label: string;
-  symbol: string;
+  icon: PlayerNavKey;
   url: string;
 }> = [
   {
     key: "orders",
     label: "接单",
-    symbol: "接",
+    icon: "orders",
     url: "/pages/player/order-hall/index?view=hall",
   },
   {
     key: "service",
     label: "服务",
-    symbol: "服",
+    icon: "service",
     url: "/pages/player/order-hall/index?view=service",
   },
   {
     key: "income",
     label: "收入",
-    symbol: "收",
+    icon: "income",
     url: "/pages/player/income/index",
   },
   {
     key: "profile",
     label: "我的",
-    symbol: "我",
+    icon: "profile",
     url: "/pages/player/profile/index",
   },
 ];
@@ -67,7 +67,12 @@ export function PlayerPage({
             className={`pw-nav-item ${activeNav === item.key ? "is-active" : ""}`}
             onClick={() => void Taro.reLaunch({ url: item.url })}
           >
-            <Text className="pw-nav-symbol">{item.symbol}</Text>
+            <View
+              className={`pw-nav-icon pw-nav-icon-${item.icon}`}
+              aria-hidden="true"
+            >
+              <View className="pw-nav-icon-detail" />
+            </View>
             <Text>{item.label}</Text>
           </Button>
         ))}

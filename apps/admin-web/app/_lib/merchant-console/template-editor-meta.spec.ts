@@ -6,14 +6,20 @@ import type {
   DraftTableComponentV2,
 } from "./template-draft-state";
 import {
+  ALL_AUDIENCES,
+  DEFAULT_AUDIENCES,
   BINDING_OPTIONS,
   COMPONENT_KIND_LABELS,
   FIELD_TYPE_LABELS,
   TABLE_COLUMN_TYPE_LABELS,
+  audiencesOf,
+  canSee,
   bindingOwner,
   componentSummary,
+  describeAudiences,
   fenToYuanInput,
   issueCountByComponent,
+  visibleForAudience,
   yuanToFenString,
 } from "./template-editor-meta";
 function field(
@@ -254,5 +260,88 @@ describe("template-editor-meta：元分转换（不经过浮点）", () => {
     expect(fenToYuanInput("2050")).toBe("20.50");
     expect(fenToYuanInput("5")).toBe("0.05");
     expect(fenToYuanInput(undefined)).toBe("");
+  });
+});
+
+describe("template-editor-meta：端口可见性", () => {
+  const section = (audiences?: readonly string[]) => ({
+    stableKey: "s1",
+    label: "基本信息",
+    enabled: true,
+    sortOrder: 0,
+    layout: { columns: 2 },
+    ...(audiences === undefined ? {} : { audiences }),
+  });
+  const config = (components: unknown[], sections?: unknown[]) =>
+    ({
+      schemaVersion: 2,
+      sections: (sections ?? [section()]) as never,
+      components: components as never,
+      staffingSource: { kind: "FIXED", count: 1 },
+    }) as DraftConfigV2;
+
+  it("没有任何标记时两个端口全选", () => {
+    expect(audiencesOf(field("f1"), undefined)).toEqual(ALL_AUDIENCES);
+    expect(audiencesOf(field("f1"), section())).toEqual(ALL_AUDIENCES);
+  });
+  it("组件未声明就继承分组，声明了就覆盖分组", () => {
+    expect(audiencesOf(field("f1"), section(["CS"]))).toEqual(["CS"]);
+    expect(
+      audiencesOf({ ...field("f1"), audiences: ["CUSTOMER"] }, section(["CS"])),
+    ).toEqual(["CUSTOMER"]);
+  });
+  it("只给客服的字段，客户侧看不到", () => {
+    const cfg = config([
+      { ...field("f1", { label: "客户手机号" }), audiences: ["CS"] },
+      { ...field("f2", { label: "区服" }) },
+    ]);
+    expect(
+      visibleForAudience(cfg, "CUSTOMER").components.map((c) => c.label),
+    ).toEqual(["区服"]);
+    expect(
+      visibleForAudience(cfg, "CS").components.map((c) => c.label),
+    ).toEqual(["客户手机号", "区服"]);
+  });
+  it("过滤后为空的分组不再返回", () => {
+    const cfg = config(
+      [{ ...field("f1"), audiences: ["CS"] }],
+      [section(["CS"]), { ...section(), stableKey: "s2", label: "只给客户" }],
+    );
+    expect(visibleForAudience(cfg, "CS").sections.map((s) => s.label)).toEqual([
+      "基本信息",
+    ]);
+    expect(
+      visibleForAudience(cfg, "CUSTOMER").sections.map((s) => s.label),
+    ).toEqual([]);
+  });
+  it("过滤不影响必填（可见性与必填无关）", () => {
+    const cfg = config([
+      {
+        ...field("f1", { required: true }),
+        audiences: ["CS"],
+      },
+    ]);
+    expect(visibleForAudience(cfg, "CS").components[0]?.kind).toBe("FIELD");
+    const kept = visibleForAudience(cfg, "CS").components[0];
+    expect(kept?.kind === "FIELD" ? kept.required : null).toBe(true);
+  });
+  it("标签文案是白话", () => {
+    expect(describeAudiences(["CS"])).toBe("客服");
+    expect(describeAudiences(["CUSTOMER"])).toBe("客户");
+    expect(describeAudiences(ALL_AUDIENCES)).toBe("客服·客户");
+    expect(describeAudiences([])).toBe("");
+  });
+});
+
+describe("template-editor-meta：默认值与 canSee", () => {
+  it("默认值就是两个端口全选", () => {
+    expect(DEFAULT_AUDIENCES).toEqual(ALL_AUDIENCES);
+    expect(DEFAULT_AUDIENCES).toEqual(["CS", "CUSTOMER"]);
+  });
+  it("canSee 按端口判定，且看不见的端口拿不到", () => {
+    const onlyCs = { ...field("f1"), audiences: ["CS"] };
+    expect(canSee(onlyCs, undefined, "CS")).toBe(true);
+    expect(canSee(onlyCs, undefined, "CUSTOMER")).toBe(false);
+    expect(canSee(field("f2"), undefined, "CUSTOMER")).toBe(true);
   });
 });

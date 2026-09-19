@@ -13,6 +13,8 @@ import {
   Delete,
 } from "@nestjs/common";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
+import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
+import { GAME_DISPATCH_TEMPLATE_V2_FEATURE } from "../domain/features.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import {
   ApiBadRequestResponse,
@@ -141,6 +143,7 @@ function parseExpectedRevision(value: unknown): number {
 
 @ApiTags("通用派单模板（S2）")
 @ApiTags("通用派单模板（S2）")
+@RequireAddon(GAME_DISPATCH_TEMPLATE_V2_FEATURE)
 @Controller("api/v1/tenant/game-dispatch-templates")
 export class GenericGameTemplateController {
   constructor(
@@ -273,7 +276,10 @@ export class GenericGameTemplateController {
   ) {
     const { tenantId } = principalOf(req);
     try {
-      return { data: await this.templates.getVersionForm(tenantId, versionId) };
+      // 商家端入口 → CS 端口（客户侧走 customer/versions/:id/form，C-9）。
+      return {
+        data: await this.templates.getVersionForm(tenantId, versionId, "CS"),
+      };
     } catch (error) {
       this.fail(error);
     }

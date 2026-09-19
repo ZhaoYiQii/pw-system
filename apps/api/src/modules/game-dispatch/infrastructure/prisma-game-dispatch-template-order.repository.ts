@@ -21,10 +21,8 @@ import {
 import { DispatchInputError } from "../domain/dispatch-errors.js";
 import { GenericTemplateError } from "../domain/errors.js";
 import type { PublishedConfigV2 } from "../domain/game-template-config-v2.js";
-import type { TemplateOrderDraft } from "../domain/game-template-order-draft.js";
+import type { TemplateOrderDraftOutcome } from "../domain/game-template-order-draft.js";
 import { readPublishedConfig } from "../domain/game-template-published-read.js";
-
-const IDEMPOTENCY_OPERATION = "game_dispatch.template_order.create";
 
 function isP2002(error: unknown): boolean {
   return (
@@ -88,7 +86,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
       tenantId_idempotencyKey_operation: {
         tenantId: command.tenantId,
         idempotencyKey: command.idempotencyKey,
-        operation: IDEMPOTENCY_OPERATION,
+        operation: command.operation,
       },
     };
   }
@@ -98,7 +96,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
     buildDraft: (
       config: PublishedConfigV2,
       values: Record<string, unknown>,
-    ) => TemplateOrderDraft,
+    ) => TemplateOrderDraftOutcome,
   ): Promise<CreateTemplateOrderOutput> {
     try {
       return await this.client.$transaction(async (tx) => {
@@ -147,16 +145,32 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
         const config = readPublishedConfig(version.configJson);
         if (config === null) throw versionUnavailable(version.id);
 
-        const customer = await tx.customerProfile.findFirst({
-          where: {
-            tenantId: command.tenantId,
-            id: command.input.customerProfileId,
-          },
-        });
-        if (!customer) throw new DispatchInputError("客户不存在");
+        // 客服入口显式指定客户档案；客户自助入口按登录账号推导（C-9：身份服务端绑定）。
+        const customer = command.input.customerProfileId
+          ? await tx.customerProfile.findFirst({
+              where: {
+                tenantId: command.tenantId,
+                id: command.input.customerProfileId,
+              },
+            })
+          : await tx.customerProfile.findFirst({
+              where: {
+                tenantId: command.tenantId,
+                tenantAccountId: command.actorId,
+              },
+            });
+        if (!customer) {
+          throw command.input.customerProfileId
+            ? new DispatchInputError("客户不存在")
+            : new DispatchInputError("老板档案未绑定");
+        }
 
         // 人数、价格与文案只由发布快照计算；客户端多传的键会在领域层被拒。
-        const draft = buildDraft(config, command.input.values);
+        // 端口过滤在领域层完成：看不见的字段既不参与计算，值也不落库（V-5）。
+        const { draft, storedValues } = buildDraft(
+          config,
+          command.input.values,
+        );
         const durationMinutes =
           command.input.durationMinutes ??
           DEFAULT_TEMPLATE_ORDER_DURATION_MINUTES;
@@ -181,7 +195,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
             gameId: command.input.gameId,
             templateVersionId: version.id,
             dispatchNo: `GD${code()}`,
-            formValuesJson: command.input.values as never,
+            formValuesJson: storedValues as never,
             durationMinutes,
             desiredStartAt,
           },
@@ -217,7 +231,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
             tenantId: command.tenantId,
             actorType: "tenant_account",
             actorId: command.actorId,
-            action: IDEMPOTENCY_OPERATION,
+            action: command.operation,
             resourceType: "game_dispatch_order",
             resourceId: dispatchOrder.id,
             summary: `按模板「${template.name}」v${version.versionNo} 创建派单`,
@@ -236,7 +250,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
           data: {
             tenantId: command.tenantId,
             idempotencyKey: command.idempotencyKey,
-            operation: IDEMPOTENCY_OPERATION,
+            operation: command.operation,
             entityType: "game_dispatch_order",
             entityId: dispatchOrder.id,
             responseJson: {

@@ -1,0 +1,31 @@
+{
+  "extends": "../packages/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "target": "ES2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    // 测试夹具不沿用产品代码最严的两个开关：它们对"少传必需字段"这类结构性错误没有增量价值，
+    // 却会要求所有历史夹具补齐 string | undefined 的边界（42 条里 29 条来自这两个开关）。
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    // 测试直接 import 了 API 的运行时依赖（@nestjs/common 等）：只补这几个具体包，
+    // 不用通配符——通配会把 @types/* 的查找顶掉（supertest 就因此丢了声明）。
+    "paths": {
+      "@nestjs/common": ["./../apps/api/node_modules/@nestjs/common"],
+      "@nestjs/core": ["./../apps/api/node_modules/@nestjs/core"]
+    },
+    "rootDir": ".."
+  },
+  "include": [
+    "contract/**/*.ts",
+    "tenant-isolation/**/*.ts",
+    "e2e/**/*.ts",
+    "integration/**/*.ts"
+  ]
+}

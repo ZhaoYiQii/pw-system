@@ -543,6 +543,42 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
         fullPage: true,
       });
     }
+
+    // 端口可见性（V-2 / V-3 / V-5）：分组开关默认两个都开
+    const sectionToggles = page.locator(
+      '[data-audience-scope="section"] [data-audience-toggle]',
+    );
+    await expect(sectionToggles).toHaveCount(2);
+    await expect(
+      page.locator('[data-audience-scope="section"] [data-audience="CS"]'),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.locator(
+        '[data-audience-scope="section"] [data-audience="CUSTOMER"]',
+      ),
+    ).toHaveAttribute("aria-pressed", "true");
+    // 行内标签：未单独声明时跟随分组，两个端口都在
+    await expect(editorRows.nth(0).locator("[data-audience-chip]")).toHaveText(
+      "客服·客户",
+    );
+
+    // 把表格单独设为「只给客户」：组件覆盖分组（V-3），行内标签立刻变成覆盖态
+    const tableKey = await editorRows.nth(1).getAttribute("data-component-key");
+    const tablePanel = page.locator(`[data-audience-panel="${tableKey}"]`);
+    if ((await tablePanel.count()) === 0) {
+      await editorRows.nth(1).locator("button").first().click();
+    }
+    await expect(tablePanel).toBeVisible();
+    const panelCsToggle = tablePanel.locator('[data-audience="CS"]');
+    await panelCsToggle.click();
+    await expect(panelCsToggle).toHaveAttribute("aria-pressed", "false");
+    await expect(editorRows.nth(1).locator("[data-audience-chip]")).toHaveText(
+      "客户",
+    );
+    await expect(tablePanel).toContainText("已单独设置，不跟随分组");
+    await editorRows.nth(1).locator("button").first().click();
+    await expect(tablePanel).toBeHidden();
+
     // 像素级视觉回归基线（首次用 --update-snapshots 生成）。
     // 只截编辑器本体：模板名含时间戳，全页快照每次都不同。
     await expect(page.locator("[data-template-editor]")).toHaveScreenshot(
@@ -550,28 +586,72 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
       { animations: "disabled", maxDiffPixels: 150 },
     );
 
-    // 「渲染」按钮弹出客户视角
+    // 「渲染」按钮弹出两页预览，默认停在客服页（V-11）
     await page.getByRole("button", { name: "渲染" }).click();
-    const renderDialog = page.getByRole("dialog", { name: "客户看到的样子" });
+    // 弹层的无障碍名字随页切换，所以这里按角色取、不按名字取
+    const renderDialog = page.getByRole("dialog");
     await expect(renderDialog).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "客服看到的样子" }),
+    ).toBeVisible();
     const previewItems = renderDialog.locator("[data-preview-item]");
-    await expect(previewItems).toHaveCount(2);
+    // 客服页看不到「只给客户」的表格（V-5），但看得到未标记的区服字段
+    await expect(previewItems).toHaveCount(1);
+    await expect(renderDialog).toContainText("区服");
+    await expect(renderDialog).toContainText("1 项内容这个端口看不到");
     await expect(
       previewItems.nth(0).locator("[data-preview-number]"),
     ).toHaveText("1");
-    await expect(renderDialog).toContainText("区服");
     if (process.env.S3_E2E_SHOTS) {
       await page.screenshot({
         path: "work/screenshots/template-editor-render.png",
         fullPage: false,
       });
     }
-    await expect(renderDialog).toHaveScreenshot("template-render-dialog.png", {
-      animations: "disabled",
-      maxDiffPixels: 150,
-    });
+    await expect(renderDialog).toHaveScreenshot(
+      "template-render-dialog-cs.png",
+      {
+        animations: "disabled",
+        maxDiffPixels: 150,
+      },
+    );
+    // 切到客户页：两页内容不同，客人看得到表格、看不到被标为客服专属的内容
+    await renderDialog.locator('[data-audience-page="CUSTOMER"]').click();
+    await expect(
+      renderDialog.locator('[data-audience-page="CUSTOMER"]'),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(previewItems).toHaveCount(2);
+    await expect(renderDialog).not.toContainText("项内容这个端口看不到");
+    await expect(
+      renderDialog.locator("[data-audience-body='CUSTOMER']"),
+    ).toBeVisible();
+    await expect(renderDialog).toHaveScreenshot(
+      "template-render-dialog-customer.png",
+      { animations: "disabled", maxDiffPixels: 150 },
+    );
+    // 方向键回到客服页
+    await page.keyboard.press("ArrowLeft");
+    await expect(
+      renderDialog.locator('[data-audience-page="CS"]'),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(previewItems).toHaveCount(1);
     await page.getByRole("button", { name: "关闭" }).click();
     await expect(renderDialog).toBeHidden();
+
+    // 端口规则要求值类内容留给能填写下单的端口（客服），所以发布前把表格改回客服可见；
+    // 两页差异已在上面的弹层断言里验证过。
+    await editorRows.nth(1).locator("button").first().click();
+    await expect(tablePanel).toBeVisible();
+    await tablePanel.locator('[data-audience="CS"]').click();
+    await expect(tablePanel.locator('[data-audience="CS"]')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await editorRows.nth(1).locator("button").first().click();
+    await expect(tablePanel).toBeHidden();
+    await expect(editorRows.nth(1).locator("[data-audience-chip]")).toHaveText(
+      "客服·客户",
+    );
 
     // 模板列表可隐藏，编辑区随之变宽
     const composerWidth = () =>

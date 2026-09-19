@@ -83,12 +83,12 @@ describe("P-B2a 平台账号管理（列表/创建/启停/改角色/权限/审�
         request(app.getHttpServer())
           .get(u)
           .set("authorization", `Bearer ${token}`),
-      post: (u: string, b: unknown) =>
+      post: (u: string, b: object | string) =>
         request(app.getHttpServer())
           .post(u)
           .set("authorization", `Bearer ${token}`)
           .send(b),
-      patch: (u: string, b: unknown) =>
+      patch: (u: string, b: object | string) =>
         request(app.getHttpServer())
           .patch(u)
           .set("authorization", `Bearer ${token}`)

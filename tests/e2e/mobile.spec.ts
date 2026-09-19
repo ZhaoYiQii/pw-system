@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const PASSWORD = "Dev-Password-123";
+const PASSWORD = "zcloud1024";
 
 test("陪玩可在 H5 登录并看到收入入口", async ({ page }) => {
   await page.goto("/#/pages/player/profile/index");

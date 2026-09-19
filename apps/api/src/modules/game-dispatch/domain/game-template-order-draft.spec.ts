@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { PublishedConfigV2 } from "./game-template-config-v2.js";
 import { GenericTemplateError } from "./errors.js";
-import { buildTemplateOrderDraft } from "./game-template-order-draft.js";
+import {
+  buildTemplateOrderDraft,
+  buildTemplateOrderDraftForAudience,
+} from "./game-template-order-draft.js";
 
 /** 一个含人数来源（表格列汇总）、选项加价与说明组件的发布配置。 */
 function orderConfig(): PublishedConfigV2 {
@@ -83,6 +86,46 @@ function orderConfig(): PublishedConfigV2 {
       componentKey: "roster_table",
       columnKey: "count",
     },
+  };
+}
+
+/**
+ * orderConfig 加两个端口专属字段（都挂在 basic 分组，分组本身未声明 → 默认两个全选）：
+ * 内部备注只给客服；客户备注只给客户且是必填。
+ */
+function audienceConfig(): PublishedConfigV2 {
+  const config = orderConfig();
+  return {
+    ...config,
+    components: [
+      ...config.components,
+      {
+        kind: "FIELD",
+        stableKey: "internal_note",
+        sectionKey: "basic",
+        label: "内部备注",
+        enabled: true,
+        sortOrder: 2,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "TEXT",
+        semanticRole: "CUSTOM",
+        required: false,
+        audiences: ["CS"],
+      },
+      {
+        kind: "FIELD",
+        stableKey: "customer_note",
+        sectionKey: "basic",
+        label: "客户备注",
+        enabled: true,
+        sortOrder: 3,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "TEXTAREA",
+        semanticRole: "ORDER_NOTE",
+        required: true,
+        audiences: ["CUSTOMER"],
+      },
+    ],
   };
 }
 
@@ -187,5 +230,112 @@ describe("buildTemplateOrderDraft：按发布快照生成订单草稿", () => {
         }),
       "TEMPLATE_COMPONENT_INVALID",
     );
+  });
+
+  it("写入按端口丢值：不可见字段的值不落库，其必填也不参与校验（V-5 / V-10）", () => {
+    const outcome = buildTemplateOrderDraftForAudience(
+      audienceConfig(),
+      {
+        mode: "ranked",
+        roster_table: [{ position: "陪玩", count: 2 }],
+        internal_note: "老板是老朋友",
+        // 客户端看不见却硬塞：必须丢弃而不是报错，也不能进文案。
+        customer_note: "给我留个辅助位",
+      },
+      "CS",
+    );
+
+    expect(outcome.droppedKeys).toEqual(["customer_note"]);
+    expect(outcome.storedValues).toEqual({
+      mode: "ranked",
+      roster_table: [{ position: "陪玩", count: 2 }],
+      internal_note: "老板是老朋友",
+    });
+    expect(outcome.draft.staffing.total).toBe(2);
+    expect(outcome.draft.document.plainText).toContain(
+      "内部备注：老板是老朋友",
+    );
+    expect(outcome.draft.document.plainText).not.toContain("客户备注");
+
+    // 未知键不属于"不可见字段"，仍然走既有拒绝路径并指出具体键。
+    const unknownKey = expectTemplateError(
+      () =>
+        buildTemplateOrderDraftForAudience(
+          audienceConfig(),
+          {
+            mode: "ranked",
+            roster_table: [{ position: "陪玩", count: 2 }],
+            forged_total: "9",
+          },
+          "CS",
+        ),
+      "TEMPLATE_COMPONENT_INVALID",
+    );
+    expect(unknownKey.details).toMatchObject({ path: "$.values.forged_total" });
+  });
+
+  it("同一次写入换到客户端口时，客户专属必填该管用就管用（V-10 对称）", () => {
+    // 客户端口：客户备注必填，缺它必须报错。
+    expectTemplateError(
+      () =>
+        buildTemplateOrderDraftForAudience(
+          audienceConfig(),
+          { mode: "ranked", roster_table: [{ position: "陪玩", count: 1 }] },
+          "CUSTOMER",
+        ),
+      "TEMPLATE_COMPONENT_INVALID",
+    );
+
+    const outcome = buildTemplateOrderDraftForAudience(
+      audienceConfig(),
+      {
+        mode: "ranked",
+        roster_table: [{ position: "陪玩", count: 1 }],
+        customer_note: "给我留个辅助位",
+        internal_note: "客服的备注",
+      },
+      "CUSTOMER",
+    );
+    expect(outcome.droppedKeys).toEqual(["internal_note"]);
+    expect(outcome.draft.document.plainText).toContain(
+      "客户备注：给我留个辅助位",
+    );
+    expect(outcome.draft.document.plainText).not.toContain("内部备注");
+  });
+
+  it("参与算价的内容被标成对写入端口不可见时，宁可报错也不静默少算", () => {
+    const config = audienceConfig();
+    const mode = config.components.find(
+      (component) => component.stableKey === "mode",
+    );
+    if (!mode) throw new Error("fixture missing mode field");
+    mode.audiences = ["CUSTOMER"];
+
+    const error = expectTemplateError(
+      () =>
+        buildTemplateOrderDraftForAudience(
+          config,
+          { roster_table: [{ position: "陪玩", count: 2 }] },
+          "CS",
+        ),
+      "TEMPLATE_COMPONENT_INVALID",
+    );
+    expect(error.message).toContain("游戏模式");
+  });
+
+  it("人数来源被标成不可见时，报的是标记问题而不是「人数来源不存在」", () => {
+    const config = audienceConfig();
+    const table = config.components.find(
+      (component) => component.stableKey === "roster_table",
+    );
+    if (!table) throw new Error("fixture missing roster_table");
+    table.audiences = ["CUSTOMER"];
+
+    const error = expectTemplateError(
+      () =>
+        buildTemplateOrderDraftForAudience(config, { mode: "ranked" }, "CS"),
+      "TEMPLATE_COMPONENT_INVALID",
+    );
+    expect(error.message).toContain("岗位与人数");
   });
 });

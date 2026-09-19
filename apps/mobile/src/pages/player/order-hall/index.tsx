@@ -333,26 +333,43 @@ export default function OrderHallPage() {
 
       {token && view === "hall" ? (
         <>
-          <View className="pw-stat-card">
-            <Text className="pw-stat-label">今日大厅</Text>
-            <Text className="pw-stat-value">{hall.length} 单可接</Text>
+          <View className="pw-stat-card hall-command-card">
+            <View className="hall-command-label">
+              <View className="hall-live-dot" />
+              <Text className="pw-stat-label">MATCH STRIP · 今日大厅</Text>
+            </View>
+            <View className="hall-command-main">
+              <Text className="pw-stat-value">{hall.length}</Text>
+              <Text className="hall-command-unit">单可接</Text>
+            </View>
             <Text className="pw-stat-note">
-              订单可见性与报名权限由门店配置决定
+              大厅自动同步门店订单，报名权限由门店配置决定
             </Text>
           </View>
           {hall.length === 0 ? (
-            <Text className="pw-empty">暂无可接订单，请稍后再来查看。</Text>
+            <View className="hall-empty-state">
+              <View className="hall-empty-mark">
+                <View />
+              </View>
+              <Text className="hall-empty-title">当前没有新订单</Text>
+              <Text className="hall-empty-copy">
+                大厅会自动同步，保持可接单状态即可
+              </Text>
+            </View>
           ) : null}
           {hall.map((order) => (
             <View key={order.id} className="pw-card hall-order-card">
-              <Text className="pw-card-title">{order.productName}</Text>
+              <View className="hall-match-strip">
+                <Text>NEW MATCH</Text>
+                <Text>{formatDateTime(order.desiredStartAt)}</Text>
+              </View>
+              <View className="hall-order-heading">
+                <Text className="pw-card-title">{order.productName}</Text>
+                <Text className="hall-order-no">#{order.orderNo}</Text>
+              </View>
               <View className="hall-order-meta">
                 <Text className="pw-muted">
-                  单号 {order.orderNo} ·{" "}
-                  {Math.floor(order.durationSeconds / 60)} 分钟
-                </Text>
-                <Text className="pw-muted">
-                  期望开始：{formatDateTime(order.desiredStartAt)}
+                  服务时长 · {Math.floor(order.durationSeconds / 60)} 分钟
                 </Text>
               </View>
               <View className="pw-row-between">

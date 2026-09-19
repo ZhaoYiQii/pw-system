@@ -91,12 +91,12 @@ describe("Game Dispatch templates (模板 CRUD/复制/权限)", () => {
     const h = { authorization: `Bearer ${token}` };
     return {
       get: (u: string) => request(app.getHttpServer()).get(u).set(h),
-      post: (u: string, b?: unknown) =>
+      post: (u: string, b?: object | string) =>
         request(app.getHttpServer())
           .post(u)
           .set(h)
           .send(b ?? {}),
-      patch: (u: string, b: unknown) =>
+      patch: (u: string, b: object | string) =>
         request(app.getHttpServer()).patch(u).set(h).send(b),
       delete: (u: string) => request(app.getHttpServer()).delete(u).set(h),
     };

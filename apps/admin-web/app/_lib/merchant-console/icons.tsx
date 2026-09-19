@@ -4,21 +4,28 @@ import {
   Banknote,
   Bell,
   BookOpen,
+  Boxes,
+  BriefcaseBusiness,
+  ChartNoAxesCombined,
   ClipboardList,
   Gauge,
   Home,
+  Megaphone,
   Radio,
+  ReceiptText,
   ScrollText,
   Settings,
+  SlidersHorizontal,
   Shield,
   ShieldAlert,
   Sparkles,
   Timer,
   User,
   Users,
+  UsersRound,
   Wallet,
 } from "lucide-react";
-import type { MerchantModuleId } from "./modules";
+import type { MerchantModuleId, MerchantNavDomainId } from "./modules";
 
 export type ModuleIcon = ComponentType<{ className?: string; size?: number }>;
 
@@ -41,4 +48,15 @@ export const MODULE_ICONS: Record<MerchantModuleId, ModuleIcon> = {
   finrisk: Shield,
   health: Bell,
   settings: Settings,
+};
+
+export const DOMAIN_ICONS: Record<MerchantNavDomainId, ModuleIcon> = {
+  business: BriefcaseBusiness,
+  orders: ReceiptText,
+  people: UsersRound,
+  catalog: Boxes,
+  marketing: Megaphone,
+  finance: Banknote,
+  insights: ChartNoAxesCombined,
+  settings: SlidersHorizontal,
 };

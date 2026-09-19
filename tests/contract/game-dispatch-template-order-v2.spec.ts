@@ -108,10 +108,12 @@ describe("S4 contract：创建派单与模板读取", () => {
       document.paths["/api/v1/tenant/game-dispatch/orders/{orderId}"]?.get;
     expect(view?.operationId).toBe("gameDispatch_view");
     const data = jsonSchema(view as Operation, "200").properties?.data;
+    const documentSchema = data?.properties?.document as
+      { type?: string; nullable?: boolean; required?: string[] } | undefined;
     expect(data?.required).toContain("document");
-    expect(data?.properties?.document?.type).toBe("object");
-    expect(data?.properties?.document?.nullable).toBe(true);
-    expect(data?.properties?.document?.required).toEqual([
+    expect(documentSchema?.type).toBe("object");
+    expect(documentSchema?.nullable).toBe(true);
+    expect(documentSchema?.required).toEqual([
       "schemaVersion",
       "rendererVersion",
       "rows",

@@ -137,7 +137,9 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
     const res = await login("platform", adminUsername, PW);
     expect(res.body.data.accessToken).toBeTruthy();
     expect(res.body.data.refreshToken).toBeUndefined();
-    const setCookie = (res.headers["set-cookie"] ?? []).join(";");
+    const setCookie = (
+      (res.headers["set-cookie"] ?? []) as unknown as string[]
+    ).join(";");
     expect(setCookie).toContain("pw_refresh=");
     expect(setCookie).toContain("pw_csrf=");
     expect(setCookie).toContain("HttpOnly");
@@ -195,7 +197,8 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
       .post("/api/v1/auth/login")
       .send({ kind: "platform", username: adminUsername, password: PW })
       .expect(201);
-    const cookieHeader = (first.headers["set-cookie"] ?? []) as string[];
+    const cookieHeader = (first.headers["set-cookie"] ??
+      []) as unknown as string[];
     const oldRefresh = cookieHeader
       .find((c: string) => c.startsWith("pw_refresh="))
       ?.split(";")[0]
@@ -208,11 +211,15 @@ describe("HTTP auth E2E (cookie / permission matrix / audience / origin / rate l
       .send({ scope: "platform" })
       .expect(201);
     expect(second.body.data.refreshToken).toBeUndefined();
-    const newCookie = ((second.headers["set-cookie"] ?? []) as string[])
+    const newCookie = (
+      (second.headers["set-cookie"] ?? []) as unknown as string[]
+    )
       .find((c: string) => c.startsWith("pw_refresh="))
       ?.split(";")[0]
       ?.replace("pw_refresh=", "");
-    const csrf2 = csrfFrom((second.headers["set-cookie"] ?? []) as string[]);
+    const csrf2 = csrfFrom(
+      (second.headers["set-cookie"] ?? []) as unknown as string[],
+    );
     expect(newCookie).toBeTruthy();
     expect(newCookie).not.toBe(oldRefresh);
 

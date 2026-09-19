@@ -5,6 +5,7 @@ import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
+import type { RoleKey } from "../../apps/api/src/modules/identity-access/domain/roles.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -45,7 +46,7 @@ describe("reporting dashboard summary (角色/口径/隔离)", () => {
     tenantA = ta;
     tenantB = tb;
 
-    async function account(tenantId: string, username: string, role: string) {
+    async function account(tenantId: string, username: string, role: RoleKey) {
       const acct = await client.tenantAccount.create({
         data: { tenantId, username, passwordHash: hash },
       });

@@ -22,6 +22,8 @@ import {
 } from "@nestjs/swagger";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
+import { RequireAddon } from "../../../common/auth/entitlement.guard.js";
+import { GAME_DISPATCH_TEMPLATE_V2_FEATURE } from "../domain/features.js";
 import {
   genericTemplateErrorSchema,
   genericTemplateOrderCreateBodySchema,
@@ -73,6 +75,7 @@ function parseInput(body: Record<string, unknown>): CreateTemplateOrderInput {
 }
 
 @ApiTags("通用派单模板（S2）")
+@RequireAddon(GAME_DISPATCH_TEMPLATE_V2_FEATURE)
 @Controller("api/v1/tenant/game-dispatch")
 export class GameDispatchTemplateOrderController {
   constructor(
@@ -128,6 +131,7 @@ export class GameDispatchTemplateOrderController {
         actorId,
         key,
         parseInput(body),
+        "CS",
       );
       return { data: created.result };
     } catch (error) {

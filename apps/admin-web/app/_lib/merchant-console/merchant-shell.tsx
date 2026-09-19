@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { LogOut, Menu } from "lucide-react";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, logoutSession } from "../api";
-import { MODULE_ICONS } from "./icons";
+import { DOMAIN_ICONS, MODULE_ICONS } from "./icons";
 import {
+  getModuleDomain,
   getMerchantModule,
-  getVisibleNavGroups,
+  getVisibleNavDomains,
   MERCHANT_ROLE_META,
+  type MerchantNavDomainId,
+  type MerchantNavItem,
   type MerchantModuleId,
 } from "./modules";
 import { useMerchantRole } from "./role-context";
@@ -34,8 +37,17 @@ function moduleIdFromPath(pathname: string): MerchantModuleId | "work" {
 export function MerchantShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const moduleId = moduleIdFromPath(pathname);
+  const currentDomainId = getModuleDomain(moduleId)?.id ?? "business";
   const { role, principal, ready, unauthorized, forbidden } = useMerchantRole();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedDomain, setExpandedDomain] =
+    useState<MerchantNavDomainId>(currentDomainId);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<MerchantNavItem | null>(null);
+
+  const isChildActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   const storeQuery = useQuery({
     queryKey: ["merchant", "store-config"],
@@ -44,10 +56,12 @@ export function MerchantShell({ children }: { children: ReactNode }) {
     retry: false,
   });
 
-  const moduleId = moduleIdFromPath(pathname);
   const currentModule = getMerchantModule(moduleId);
-  const navGroups = useMemo(() => getVisibleNavGroups(role), [role]);
+  const navDomains = useMemo(() => getVisibleNavDomains(role), [role]);
   const roleMeta = MERCHANT_ROLE_META[role];
+  const previewDomain = previewItem
+    ? navDomains.find((domain) => domain.id === previewItem.domain)
+    : undefined;
   const storeLabel =
     storeQuery.data?.config?.brand?.logoText?.trim() ||
     principal?.username ||
@@ -55,7 +69,17 @@ export function MerchantShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMenuOpen(false);
-  }, [pathname]);
+    setExpandedDomain(currentDomainId);
+    const activeGroup = getVisibleNavDomains(role)
+      .flatMap((domain) => domain.activeItems)
+      .find((item) =>
+        (item.children ?? []).some(
+          (child) =>
+            pathname === child.href || pathname.startsWith(`${child.href}/`),
+        ),
+      );
+    setExpandedGroup(activeGroup?.id ?? null);
+  }, [currentDomainId, pathname, role]);
 
   if (!ready) {
     return (
@@ -102,6 +126,9 @@ export function MerchantShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="pw-merchant">
+      <a className="mc-skip-link" href="#merchant-main-content">
+        跳到主要内容
+      </a>
       <div className={`mc-app${menuOpen ? " mc-menu-open" : ""}`}>
         <aside
           id="merchant-console-sidebar"
@@ -129,28 +156,163 @@ export function MerchantShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="mc-nav" aria-label="商家端模块">
-            {navGroups.map((group) => (
-              <div key={group.id}>
-                <div className="mc-nav-label">{group.label}</div>
-                {group.items.map((item) => {
-                  const Icon = MODULE_ICONS[item.id];
-                  const href = `${CONSOLE_BASE}/${item.id}`;
-                  const active = item.id === moduleId;
-                  return (
-                    <Link
-                      key={item.id}
-                      href={href}
-                      className={active ? "mc-active" : undefined}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <Icon className="mc-icon" size={16} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
+            {navDomains.map((domain) => {
+              const DomainIcon = DOMAIN_ICONS[domain.id];
+              const expanded = expandedDomain === domain.id;
+              const panelId = `merchant-nav-${domain.id}`;
+              const futureCount =
+                domain.previewItems.length + domain.plannedItems.length;
+              return (
+                <div className="mc-nav-domain" key={domain.id}>
+                  <button
+                    type="button"
+                    className={
+                      expanded
+                        ? "mc-domain-trigger is-open"
+                        : "mc-domain-trigger"
+                    }
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    onClick={() =>
+                      setExpandedDomain((current) =>
+                        current === domain.id ? "business" : domain.id,
+                      )
+                    }
+                  >
+                    <DomainIcon className="mc-icon" size={17} />
+                    <span className="mc-domain-copy">
+                      <b>{domain.label}</b>
+                      <small>{domain.description}</small>
+                    </span>
+                    {futureCount > 0 ? (
+                      <span
+                        className="mc-domain-count"
+                        title={`${futureCount} 项建设能力`}
+                      >
+                        {futureCount}
+                      </span>
+                    ) : null}
+                    <ChevronDown className="mc-domain-chevron" size={14} />
+                  </button>
+
+                  {expanded ? (
+                    <div id={panelId} className="mc-nav-children">
+                      {domain.activeItems.map((item) => {
+                        const itemId = item.moduleId;
+                        if (!itemId) return null;
+                        const Icon = MODULE_ICONS[itemId];
+                        const children = item.children ?? [];
+                        if (children.length > 0) {
+                          const groupOpen = expandedGroup === item.id;
+                          const groupId = `merchant-nav-group-${item.id}`;
+                          const childActive = children.some((child) =>
+                            isChildActive(child.href),
+                          );
+                          return (
+                            <div className="mc-nav-group" key={item.id}>
+                              <button
+                                type="button"
+                                className={
+                                  groupOpen
+                                    ? "mc-nav-group-trigger is-open"
+                                    : "mc-nav-group-trigger"
+                                }
+                                aria-expanded={groupOpen}
+                                aria-controls={groupId}
+                                onClick={() =>
+                                  setExpandedGroup((current) =>
+                                    current === item.id ? null : item.id,
+                                  )
+                                }
+                              >
+                                <Icon className="mc-icon" size={15} />
+                                <span>{item.label}</span>
+                                {childActive ? (
+                                  <i
+                                    className="mc-state-dot mc-state-active"
+                                    title="当前所在"
+                                  />
+                                ) : null}
+                                <ChevronDown
+                                  className="mc-nav-group-chevron"
+                                  size={13}
+                                />
+                              </button>
+                              {groupOpen ? (
+                                <div id={groupId} className="mc-nav-sub">
+                                  {children.map((child) => {
+                                    const childIsActive = isChildActive(
+                                      child.href,
+                                    );
+                                    return (
+                                      <Link
+                                        key={child.id}
+                                        href={child.href}
+                                        className={
+                                          childIsActive
+                                            ? "mc-active"
+                                            : undefined
+                                        }
+                                        aria-current={
+                                          childIsActive ? "page" : undefined
+                                        }
+                                        onClick={() => setMenuOpen(false)}
+                                      >
+                                        <span>{child.label}</span>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        }
+                        const active = itemId === moduleId;
+                        return (
+                          <Link
+                            key={item.id}
+                            href={`${CONSOLE_BASE}/${itemId}`}
+                            className={active ? "mc-active" : undefined}
+                            aria-current={active ? "page" : undefined}
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            <Icon className="mc-icon" size={15} />
+                            <span>{item.label}</span>
+                            <i
+                              className="mc-state-dot mc-state-active"
+                              title="已启用"
+                            />
+                          </Link>
+                        );
+                      })}
+                      {domain.previewItems.map((item) => (
+                        <button
+                          type="button"
+                          className="mc-preview-trigger"
+                          key={item.id}
+                          onClick={() => setPreviewItem(item)}
+                        >
+                          <span>{item.label}</span>
+                          <span className="mc-state-tag">预览</span>
+                        </button>
+                      ))}
+                      {domain.plannedItems.length > 0 ? (
+                        <button
+                          type="button"
+                          className="mc-planned-trigger"
+                          onClick={() =>
+                            setPreviewItem(domain.plannedItems[0] ?? null)
+                          }
+                        >
+                          <span>规划中的功能</span>
+                          <span>{domain.plannedItems.length}</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </nav>
 
           <div className="mc-side-foot">
@@ -196,7 +358,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
               </button>
             </div>
           </header>
-          <main className="mc-main">
+          <main id="merchant-main-content" className="mc-main" tabIndex={-1}>
             <div className="mc-inner">{children}</div>
           </main>
         </section>
@@ -209,6 +371,68 @@ export function MerchantShell({ children }: { children: ReactNode }) {
           aria-label="关闭菜单"
           onClick={() => setMenuOpen(false)}
         />
+      ) : null}
+
+      {previewItem ? (
+        <div
+          className="mc-preview-backdrop"
+          role="presentation"
+          onClick={() => setPreviewItem(null)}
+        >
+          <section
+            className="mc-preview-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="merchant-preview-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <span className={`mc-preview-status is-${previewItem.status}`}>
+                  {previewItem.status === "preview" ? "功能预览" : "规划中"}
+                </span>
+                <h2 id="merchant-preview-title">{previewItem.label}</h2>
+                <p>{previewItem.description}</p>
+              </div>
+              <button
+                type="button"
+                aria-label="关闭功能预览"
+                className="mc-preview-close"
+                onClick={() => setPreviewItem(null)}
+              >
+                <X size={17} />
+              </button>
+            </header>
+
+            <div className="mc-preview-notice">
+              {previewItem.status === "preview"
+                ? "UI 方向已经纳入当前产品，但业务尚未接入。这里不会生成订单、金额或成功结果。"
+                : "该能力已进入产品路线图，完成数据、权限和接口后才会开放。"}
+            </div>
+
+            {previewDomain ? (
+              <div className="mc-preview-roadmap">
+                <b>{previewDomain.label} · 建设清单</b>
+                {[
+                  ...previewDomain.previewItems,
+                  ...previewDomain.plannedItems,
+                ].map((item) => (
+                  <button
+                    type="button"
+                    className={
+                      item.id === previewItem.id ? "is-current" : undefined
+                    }
+                    key={item.id}
+                    onClick={() => setPreviewItem(item)}
+                  >
+                    <span>{item.label}</span>
+                    <small>{item.status === "preview" ? "预览" : "规划"}</small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </div>
       ) : null}
     </div>
   );

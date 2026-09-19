@@ -583,6 +583,7 @@ function PlayerDetailView({ id }: { id: string }) {
           <div className="mc-button-row">
             <select
               className="mc-select"
+              aria-label="选择技能游戏"
               value={skillGameId}
               onChange={(e) => setSkillGameId(e.target.value)}
             >
@@ -664,6 +665,7 @@ function PlayerDetailView({ id }: { id: string }) {
               className="mc-input"
               style={{ maxWidth: 130 }}
               placeholder="原因"
+              aria-label="不可接单原因"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
@@ -1235,6 +1237,7 @@ function DisputeDetailView({ id }: { id: string }) {
               className="mc-input"
               style={{ minHeight: 64 }}
               placeholder="填写处理结论"
+              aria-label="处理结论"
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
             />

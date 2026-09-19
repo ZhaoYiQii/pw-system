@@ -560,6 +560,12 @@ const genericTemplateLayout = z.strictObject({
   colSpan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   rowBreakBefore: z.boolean(),
 });
+/** 端口可见性（设计规格 v0.1，V-1 / V-2）：去重后至少一个端口，空数组即 400。 */
+const genericTemplateAudiences = z
+  .array(z.enum(["CS", "CUSTOMER"]))
+  .refine((list) => new Set(list).size >= 1, {
+    message: "端口可见性标记至少选择一个端口",
+  });
 const genericTemplateOption = z.strictObject({
   value: stableKey,
   label: z.string().min(1).max(GAME_TEMPLATE_V2_LIMITS.labelCharacters),
@@ -574,6 +580,7 @@ const genericTemplateFieldComponent = z.strictObject({
     .string()
     .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
     .optional(),
+  audiences: genericTemplateAudiences.optional(),
   enabled: z.boolean(),
   sortOrder: z.number().int().min(0),
   layout: genericTemplateLayout,
@@ -618,6 +625,7 @@ const genericTemplateTableComponent = z.strictObject({
     .string()
     .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
     .optional(),
+  audiences: genericTemplateAudiences.optional(),
   enabled: z.boolean(),
   sortOrder: z.number().int().min(0),
   layout: genericTemplateLayout,
@@ -637,6 +645,7 @@ const genericTemplateNoteComponent = z.strictObject({
     .string()
     .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
     .optional(),
+  audiences: genericTemplateAudiences.optional(),
   enabled: z.boolean(),
   sortOrder: z.number().int().min(0),
   layout: genericTemplateLayout,
@@ -663,6 +672,7 @@ const genericTemplateDraftConfig = z
             .string()
             .max(GAME_TEMPLATE_V2_LIMITS.helpTextCharacters)
             .optional(),
+          audiences: genericTemplateAudiences.optional(),
           enabled: z.boolean(),
           sortOrder: z.number().int().min(0),
           layout: z.strictObject({
@@ -744,6 +754,35 @@ routeValidations.set("GET /api/v1/tenant/game-dispatch-templates/published", {
 routeValidations.set(
   "GET /api/v1/tenant/game-dispatch-templates/versions/:versionId/form",
   {},
+);
+
+// 客户侧只读入口（独立入口，C-1 / C-9）：查询参数与商家端同口径，缺 gameId 即 400。
+routeValidations.set("GET /api/v1/tenant/game-dispatch/customer/games", {});
+routeValidations.set("GET /api/v1/tenant/game-dispatch/customer/published", {
+  query: z.strictObject({ gameId: z.string().uuid() }),
+});
+routeValidations.set(
+  "GET /api/v1/tenant/game-dispatch/customer/versions/:versionId/form",
+  {},
+);
+
+// 客户自助下单（C-9）：请求体**不含** customerProfileId——客户档案由登录身份推导。
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch/customer/template-orders",
+  {
+    body: z.strictObject({
+      gameId: z.string().uuid(),
+      templateId: z.string().uuid(),
+      templateVersionId: z.string().uuid(),
+      values: z.record(z.string(), z.unknown()),
+      desiredStartAt: z
+        .string()
+        .datetime({ offset: true })
+        .nullable()
+        .optional(),
+      durationMinutes: z.number().int().min(15).max(1440).optional(),
+    }),
+  },
 );
 
 // S4 创建派单：幂等键在 Idempotency-Key 头（头校验由控制器执行，边界只校验 body）。 routeValidations.set("POST /api/v1/tenant/game-dispatch/template-orders", {   body: z.strictObject({     gameId: z.string().uuid(),     templateId: z.string().uuid(),     templateVersionId: z.string().uuid(),     customerProfileId: z.string().uuid(),     values: z.record(z.string(), z.unknown()),     desiredStartAt: z.string().datetime({ offset: true }).nullable().optional(),     durationMinutes: z.number().int().min(15).max(1440).optional(),   }), });

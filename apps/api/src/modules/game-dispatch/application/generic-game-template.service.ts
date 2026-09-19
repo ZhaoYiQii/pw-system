@@ -4,10 +4,18 @@ import type {
   TemplateConfigIssue,
 } from "../domain/game-template-config-v2.js";
 import {
+  collectPublishBlockingIssuesV2,
   validateDraftConfigV2,
   validatePublishedConfigV2,
+  visibleConfigV2,
+  type TemplateAudienceV2,
 } from "../domain/game-template-config-v2.js";
 import { GenericTemplateError } from "../domain/errors.js";
+import {
+  TEMPLATE_EVENTS,
+  emitTemplateEvent,
+  withTemplateTiming,
+} from "./game-template-observability.js";
 import {
   type CursorPage,
   decodeTemplateCursor,
@@ -25,6 +33,7 @@ import {
 } from "../domain/game-template-management.js";
 import {
   type PublishedTemplateForm,
+  type PublishedGameSummary,
   type PublishedTemplateSummary,
 } from "../domain/game-template-published-read.js";
 
@@ -113,6 +122,7 @@ export interface GenericGameTemplateRepository {
     tenantId: string,
     gameId: string,
   ): Promise<PublishedTemplateSummary[]>;
+  listPublishedGames(tenantId: string): Promise<PublishedGameSummary[]>;
   findPublishedVersionForm(
     tenantId: string,
     versionId: string,
@@ -149,6 +159,12 @@ function validationFailed(issues: TemplateConfigIssue[]): GenericTemplateError {
   });
 }
 
+/** 观测用：安全取受控错误码（非受控错误不写入日志）。 */
+function errorCodeOf(error: unknown): string | undefined {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
 function clampLimit(limit: number): number {
   if (!Number.isFinite(limit)) return DEFAULT_LIMIT;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);
@@ -181,6 +197,9 @@ function buildPublishedConfig(draft: unknown): PublishedConfigV2 {
   };
   const issues = validatePublishedConfigV2(candidate);
   if (issues.length > 0) throw validationFailed(issues);
+  // 发布专属阻断项：值类内容必须留给能填写下单的端口（读取与历史版本不受影响）。
+  const publishBlocking = collectPublishBlockingIssuesV2(candidate);
+  if (publishBlocking.length > 0) throw validationFailed(publishBlocking);
 
   const published: Record<string, unknown> = { ...candidate };
   delete published.legacyCompatibility;
@@ -244,10 +263,12 @@ export class GenericGameTemplateService {
     if (query.cursor !== undefined) {
       decodeTemplateCursor(query.cursor, query.sort);
     }
-    return this.repository.list(tenantId, {
-      ...query,
-      limit: clampLimit(query.limit),
-    });
+    return withTemplateTiming(TEMPLATE_EVENTS.LIST, { tenantId }, () =>
+      this.repository.list(tenantId, {
+        ...query,
+        limit: clampLimit(query.limit),
+      }),
+    );
   }
 
   async createDraft(
@@ -273,13 +294,43 @@ export class GenericGameTemplateService {
   ): Promise<SaveGenericTemplateDraftResult> {
     // 先做纯领域校验，再锁行核对 revision；失败时数据库零写入。
     const issues = validateDraftConfigV2(input.config);
-    if (issues.length > 0) throw validationFailed(issues);
-    return this.repository.saveDraft(
-      tenantId,
-      actorId,
-      requireTemplateId(id),
-      input,
-    );
+    if (issues.length > 0) {
+      emitTemplateEvent(TEMPLATE_EVENTS.VALIDATION_ISSUE, {
+        tenantId,
+        actorId,
+        templateId: id,
+        issueCode: issues[0]?.code,
+        outcome: "failed",
+      });
+      throw validationFailed(issues);
+    }
+    try {
+      return await this.repository.saveDraft(
+        tenantId,
+        actorId,
+        requireTemplateId(id),
+        input,
+      );
+    } catch (error) {
+      const code = errorCodeOf(error);
+      emitTemplateEvent(TEMPLATE_EVENTS.DRAFT_SAVE_FAILED, {
+        tenantId,
+        actorId,
+        templateId: id,
+        code,
+        outcome: "failed",
+      });
+      if (code === "TEMPLATE_REVISION_CONFLICT") {
+        emitTemplateEvent(TEMPLATE_EVENTS.REVISION_CONFLICT, {
+          tenantId,
+          actorId,
+          templateId: id,
+          code,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 
   async publish(
@@ -289,13 +340,33 @@ export class GenericGameTemplateService {
     input: PublishGenericTemplateInput,
   ): Promise<GenericTemplateDraftView> {
     // 行锁在 repository 内获取；发布配置只由服务端当前草稿生成。
-    return this.repository.publish(
-      tenantId,
-      actorId,
-      requireTemplateId(id),
-      input,
-      buildPublishedConfig,
-    );
+    try {
+      return await this.repository.publish(
+        tenantId,
+        actorId,
+        requireTemplateId(id),
+        input,
+        buildPublishedConfig,
+      );
+    } catch (error) {
+      const code = errorCodeOf(error);
+      emitTemplateEvent(TEMPLATE_EVENTS.PUBLISH_FAILED, {
+        tenantId,
+        actorId,
+        templateId: id,
+        code,
+        outcome: "failed",
+      });
+      if (code === "TEMPLATE_VERSION_UNAVAILABLE") {
+        emitTemplateEvent(TEMPLATE_EVENTS.VERSION_MISMATCH, {
+          tenantId,
+          templateId: id,
+          code,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 
   async listVersions(
@@ -315,13 +386,28 @@ export class GenericGameTemplateService {
     id: string,
     input: RestoreGenericTemplateInput,
   ): Promise<GenericTemplateDraftView & { sourceVersionId: string }> {
-    return this.repository.restoreVersion(
-      tenantId,
-      actorId,
-      requireTemplateId(id),
-      input,
-      buildDraftFromVersion,
-    );
+    try {
+      return await this.repository.restoreVersion(
+        tenantId,
+        actorId,
+        requireTemplateId(id),
+        input,
+        buildDraftFromVersion,
+      );
+    } catch (error) {
+      const code = errorCodeOf(error);
+      if (code === "TEMPLATE_VERSION_UNAVAILABLE") {
+        emitTemplateEvent(TEMPLATE_EVENTS.VERSION_MISMATCH, {
+          tenantId,
+          actorId,
+          templateId: id,
+          versionId: input.versionId,
+          code,
+          outcome: "failed",
+        });
+      }
+      throw error;
+    }
   }
 
   async copyTemplate(
@@ -402,10 +488,16 @@ export class GenericGameTemplateService {
     return this.repository.listPublishedTemplates(tenantId, gameId);
   }
 
+  /** 该店可下单的游戏（至少有一个未归档且有生效版本的模板），不含模板内容。 */
+  async listPublishedGames(tenantId: string): Promise<PublishedGameSummary[]> {
+    return this.repository.listPublishedGames(tenantId);
+  }
+
   /** 读取锁定版本的发布表单；不存在或配置不可用时 422 TEMPLATE_VERSION_UNAVAILABLE。 */
   async getVersionForm(
     tenantId: string,
     versionId: string,
+    audience: TemplateAudienceV2,
   ): Promise<PublishedTemplateForm> {
     const form = await this.repository.findPublishedVersionForm(
       tenantId,
@@ -418,6 +510,7 @@ export class GenericGameTemplateService {
         { versionId },
       );
     }
-    return form;
+    // 按**入口**的端口过滤（V-5 / V-6 / C-9：过滤权威在服务端，端口不由客户端声明）。
+    return { ...form, config: visibleConfigV2(form.config, audience) };
   }
 }

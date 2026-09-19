@@ -39,10 +39,32 @@ export const TEMPLATE_TABLE_COLUMN_TYPES_V2 = [
 export type TemplateTableColumnTypeV2 =
   (typeof TEMPLATE_TABLE_COLUMN_TYPES_V2)[number];
 
+/**
+ * 端口可见性（设计规格 v0.1，V-1）：本版只区分客服与客户，陪玩 / 老板端各自立项。
+ * 缺省不写就是「继承」：组件 → 分组 → 两个端口全选（V-3 / V-4 / V-8）。
+ */
+export const TEMPLATE_AUDIENCES_V2 = ["CS", "CUSTOMER"] as const;
+
+export type TemplateAudienceV2 = (typeof TEMPLATE_AUDIENCES_V2)[number];
+
+/**
+ * 能"填写下单"的端口：本版只有客服（客户侧 v2 下单面尚未立项）。
+ *
+ * 产品规则：值类内容（字段 / 可重复表格）必须对至少一个可写入端口可见，
+ * 否则没有任何界面能填它；参与算价或人数的内容更是不能对写入端口不可见——
+ * 那会让订单静默少算。说明类（NOTE）只影响预览，允许只给客户看。
+ * 客户侧下单面立项后，把 CUSTOMER 加进这个集合，规则即自动放宽。
+ */
+export const TEMPLATE_WRITABLE_AUDIENCES_V2: readonly TemplateAudienceV2[] = [
+  "CS",
+  "CUSTOMER",
+];
+
 export interface TemplateSectionV2 {
   stableKey: string;
   label: string;
   description?: string;
+  audiences?: TemplateAudienceV2[];
   enabled: boolean;
   sortOrder: number;
   layout: {
@@ -68,6 +90,7 @@ interface TemplateComponentBaseV2 {
   sectionKey: string;
   label: string;
   description?: string;
+  audiences?: TemplateAudienceV2[];
   enabled: boolean;
   sortOrder: number;
   layout: TemplateComponentLayoutV2;
@@ -159,6 +182,181 @@ const FIELD_TYPE_SET = new Set<string>(TEMPLATE_FIELD_TYPES_V2);
 const TABLE_COLUMN_TYPE_SET = new Set<string>(TEMPLATE_TABLE_COLUMN_TYPES_V2);
 const SEMANTIC_ROLE_SET = new Set<string>(GAME_TEMPLATE_SEMANTIC_ROLES);
 const CHOICE_FIELD_TYPES = new Set<string>(["SINGLE_SELECT", "MULTI_SELECT"]);
+const AUDIENCE_SET = new Set<string>(TEMPLATE_AUDIENCES_V2);
+
+/**
+ * 端口标记的合法性（V-2）：缺省合法（继承）；否则必须是数组、元素属于枚举、
+ * 去重后至少一个。重复项按去重处理，空数组即非法。
+ */
+function validAudiences(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string" || !AUDIENCE_SET.has(item)) return false;
+    seen.add(item);
+  }
+  return seen.size >= 1;
+}
+
+/** 读一份声明：非法或不是数组时按「没有声明」处理（错误由校验层报告）。 */
+function declaredAudiences(value: unknown): TemplateAudienceV2[] | null {
+  if (!validAudiences(value) || value === undefined) return null;
+  return [...new Set(value as TemplateAudienceV2[])];
+}
+
+/**
+ * 解析某个组件真正生效的端口（V-3 / V-8）：组件显式声明即覆盖分组，
+ * 否则继承分组，分组也没有则两个端口全选。
+ */
+export function resolveAudiencesV2(
+  component: { audiences?: TemplateAudienceV2[] } | undefined,
+  section: { audiences?: TemplateAudienceV2[] } | undefined,
+): TemplateAudienceV2[] {
+  return (
+    declaredAudiences(component?.audiences) ??
+    declaredAudiences(section?.audiences) ?? [...TEMPLATE_AUDIENCES_V2]
+  );
+}
+
+/**
+ * 该端口能看到的组件（V-5）：组件显式声明覆盖分组，未声明继承分组，
+ * 都没有则两个端口全选（V-8）。停用与否不改变可见性判定，停用仍由渲染层处理。
+ */
+export function visibleComponentsV2(
+  config: Pick<PublishedConfigV2, "sections" | "components">,
+  audience: TemplateAudienceV2,
+): TemplateComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return config.components.filter((component) =>
+    resolveAudiencesV2(
+      component,
+      sectionByKey.get(component.sectionKey),
+    ).includes(audience),
+  );
+}
+
+/**
+ * 按端口过滤整份配置（V-6：服务端是过滤权威）。
+ * 只保留该端口可见的组件，以及「还有可见组件」的分组；其余属性原样带回。
+ */
+export function visibleConfigV2(
+  config: PublishedConfigV2,
+  audience: TemplateAudienceV2,
+): PublishedConfigV2 {
+  const components = visibleComponentsV2(config, audience);
+  const visibleSectionKeys = new Set(
+    components.map((component) => component.sectionKey),
+  );
+  return {
+    ...config,
+    sections: config.sections.filter((section) =>
+      visibleSectionKeys.has(section.stableKey),
+    ),
+    components,
+  };
+}
+
+/**
+ * 按端口拆分提交值（V-5）：键对应「配置里存在、但对这个端口不可见」的组件时丢弃，
+ * 并回报被丢弃的键供上层记录受控事件。
+ *
+ * 配置里根本不存在的键**不在这里处理**——它继续走既有的未知字段拒绝（422）路径。
+ */
+export function partitionValuesV2(
+  config: Pick<PublishedConfigV2, "sections" | "components">,
+  values: Readonly<Record<string, unknown>>,
+  audience: TemplateAudienceV2,
+): { visible: Record<string, unknown>; droppedKeys: string[] } {
+  const visibleKeys = new Set(
+    visibleComponentsV2(config, audience).map(
+      (component) => component.stableKey,
+    ),
+  );
+  const knownKeys = new Set(
+    config.components.map((component) => component.stableKey),
+  );
+  const visible: Record<string, unknown> = {};
+  const droppedKeys: string[] = [];
+  for (const [key, value] of Object.entries(values)) {
+    if (!knownKeys.has(key) || visibleKeys.has(key)) {
+      visible[key] = value;
+    } else {
+      droppedKeys.push(key);
+    }
+  }
+  return { visible, droppedKeys };
+}
+
+/** 这条内容承载"值"，必须有人能填；说明类只影响预览。 */
+function carriesValueV2(component: TemplateComponentV2): boolean {
+  return component.kind === "FIELD" || component.kind === "REPEATABLE_TABLE";
+}
+
+/** 值类内容里，对给定端口全都看不见的那些（发布校验用）。 */
+export function unwritableValueComponentsV2(
+  config: Pick<PublishedConfigV2, "sections" | "components">,
+  writable: readonly TemplateAudienceV2[],
+): TemplateComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return config.components.filter((component) => {
+    if (!carriesValueV2(component)) return false;
+    const audiences = resolveAudiencesV2(
+      component,
+      sectionByKey.get(component.sectionKey),
+    );
+    return !writable.some((audience) => audiences.includes(audience));
+  });
+}
+
+/**
+ * 参与算价或人数的组件（运行期兜底用）：带整数分加价的选项字段，
+ * 以及人数来源指向的组件（表格来源还要求它确实带 STAFFING_COUNT 列）。
+ */
+export function billingComponentsV2(
+  config: Pick<PublishedConfigV2, "components" | "staffingSource">,
+): TemplateComponentV2[] {
+  const source = config.staffingSource;
+  return config.components.filter((component) => {
+    if (
+      component.kind === "FIELD" &&
+      (component.options ?? []).some(
+        (option) => option.priceDeltaFen !== undefined,
+      )
+    ) {
+      return true;
+    }
+    if (
+      (source.kind === "NUMBER_FIELD" ||
+        source.kind === "REPEATABLE_TABLE_SUM") &&
+      component.stableKey === source.componentKey
+    ) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/** 参与算价/人数、却对该端口不可见的组件：下单时必须报错而不是静默丢值。 */
+export function billingComponentsHiddenFromV2(
+  config: Pick<PublishedConfigV2, "sections" | "components" | "staffingSource">,
+  audience: TemplateAudienceV2,
+): TemplateComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return billingComponentsV2(config).filter(
+    (component) =>
+      !resolveAudiencesV2(
+        component,
+        sectionByKey.get(component.sectionKey),
+      ).includes(audience),
+  );
+}
 
 function validateChoiceOptions(
   options: unknown,
@@ -347,6 +545,13 @@ export function validateDraftConfigV2(config: unknown): TemplateConfigIssue[] {
         "区块名称、说明、状态、顺序或布局无效",
       );
     }
+    if (!validAudiences(section.audiences)) {
+      addIssue(
+        "TEMPLATE_COMPONENT_INVALID",
+        `$.sections[${index}].audiences`,
+        "端口可见性标记必须是非空数组，且元素只能是 CS 或 CUSTOMER",
+      );
+    }
     if (
       typeof section.stableKey === "string" &&
       STABLE_KEY_PATTERN.test(section.stableKey)
@@ -385,6 +590,14 @@ export function validateDraftConfigV2(config: unknown): TemplateConfigIssue[] {
         "TEMPLATE_COMPONENT_INVALID",
         `$.components[${index}]`,
         "组件名称、说明、状态、顺序或布局无效",
+        componentKey,
+      );
+    }
+    if (!validAudiences(component.audiences)) {
+      addIssue(
+        "TEMPLATE_COMPONENT_INVALID",
+        `$.components[${index}].audiences`,
+        "端口可见性标记必须是非空数组，且元素只能是 CS 或 CUSTOMER",
         componentKey,
       );
     }
@@ -723,6 +936,83 @@ export function validateDraftConfigV2(config: unknown): TemplateConfigIssue[] {
     );
   }
 
+  return issues;
+}
+
+/**
+ * 参与算价/人数、却没有对**每一个**可写入端口可见的组件（C-4）。
+ *
+ * 只有一个可写端口时，这条被"值类内容必须留给可写端口"覆盖；
+ * 一旦客户端也成为可写端口（Task 3），它才成为独立防线：某个入口用不了
+ * 算价/人数所需的值，下单会失败或算错，宁可在发布期拦住。
+ */
+export function billingComponentsNotVisibleToEveryV2(
+  config: Pick<PublishedConfigV2, "sections" | "components" | "staffingSource">,
+  writable: readonly TemplateAudienceV2[],
+): TemplateComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return billingComponentsV2(config).filter((component) => {
+    const audiences = resolveAudiencesV2(
+      component,
+      sectionByKey.get(component.sectionKey),
+    );
+    return writable.some((audience) => !audiences.includes(audience));
+  });
+}
+
+/**
+ * 发布前的额外阻断项（只在发布时生效，不影响已发布版本的读取与历史订单）。
+ *
+ * 产品规则：值类内容（字段 / 表格）必须留给"能填写下单"的端口——目前只有客服。
+ * 标成只给客户就没人能填；参与算价或人数的内容更会因此静默少算。
+ * 说明类只影响预览，允许只给客户看。客户侧下单面立项后规则自动放宽
+ * （见 TEMPLATE_WRITABLE_AUDIENCES_V2）。
+ */
+export function collectPublishBlockingIssuesV2(
+  config: unknown,
+): TemplateConfigIssue[] {
+  if (
+    !isRecord(config) ||
+    !Array.isArray(config.sections) ||
+    !Array.isArray(config.components) ||
+    !isRecord(config.staffingSource)
+  ) {
+    return [];
+  }
+  const published = config as unknown as Pick<
+    PublishedConfigV2,
+    "sections" | "components" | "staffingSource"
+  >;
+  const writableLabel = TEMPLATE_WRITABLE_AUDIENCES_V2.map((audience) =>
+    audience === "CS" ? "客服" : "客户",
+  ).join("、");
+  const issues: TemplateConfigIssue[] = unwritableValueComponentsV2(
+    published,
+    TEMPLATE_WRITABLE_AUDIENCES_V2,
+  ).map((component) => ({
+    code: "TEMPLATE_COMPONENT_INVALID" as const,
+    path: `$.components[${published.components.indexOf(component)}].audiences`,
+    componentKey: component.stableKey,
+    message: `「${component.label}」对${writableLabel}不可见，而${writableLabel}是能填写下单的端口：请让它对${writableLabel}可见，或改成说明类内容`,
+  }));
+  // 已被上一条拦下的不再重复报；这条只在"能填但算不了/算错"时补刀（C-4）。
+  const alreadyFlagged = new Set(
+    issues.map((issue) => issue.componentKey ?? ""),
+  );
+  for (const component of billingComponentsNotVisibleToEveryV2(
+    published,
+    TEMPLATE_WRITABLE_AUDIENCES_V2,
+  )) {
+    if (alreadyFlagged.has(component.stableKey)) continue;
+    issues.push({
+      code: "TEMPLATE_COMPONENT_INVALID",
+      path: `$.components[${published.components.indexOf(component)}].audiences`,
+      componentKey: component.stableKey,
+      message: `「${component.label}」参与算价或人数，就必须对每个能填写下单的端口都可见（现在是${writableLabel}），否则对应入口下单会失败或算错`,
+    });
+  }
   return issues;
 }
 

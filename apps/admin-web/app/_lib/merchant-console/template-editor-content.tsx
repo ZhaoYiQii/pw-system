@@ -13,7 +13,7 @@
  * - 删除被「人数来源」引用的组件会被拦截，原因交给调用方播报；
  * - 不暴露 stableKey 等工程概念；算价只以「不用 / 人数 / 时长」三个中性取值出现（D-19）。
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,10 +24,16 @@ import {
   COMPONENT_KIND_LABELS,
   FIELD_TYPE_LABELS,
   TABLE_COLUMN_TYPE_LABELS,
+  audienceLabel,
+  audiencesOf,
   componentSummary,
+  describeAudiences,
   issueCountByComponent,
+  visibleForAudience,
 } from "./template-editor-meta";
 import {
+  ALL_AUDIENCES,
+  WRITABLE_AUDIENCES,
   addComponent,
   addDefaultRow,
   addSection,
@@ -52,6 +58,7 @@ import {
   type DraftNoteComponentV2,
   type DraftSectionV2,
   type DraftTableComponentV2,
+  type TemplateAudience,
 } from "./template-draft-state";
 
 export interface TemplateEditorContentProps {
@@ -87,6 +94,65 @@ function fenToYuanInput(fen: string | undefined): string {
   const whole = padded.slice(0, -2).replace(/^0+(?=\d)/, "");
   const fraction = padded.slice(-2);
   return fraction === "00" ? whole : `${whole}.${fraction}`;
+}
+
+/**
+ * 端口开关：客服 / 客户（设计规格 v0.1 的 V-2 / V-4）。
+ *
+ * 用按钮而不是复选框：与行内工具的视觉语法一致，也不会出现半选态。
+ * 「至少留一个端口」在这里被挡住（最后一个开着的按钮不可点），所以界面永远
+ * 造不出空标记；模型与校验层各有一道防线（见 template-draft-state / template-binding）。
+ */
+function AudienceToggles({
+  value,
+  label,
+  scope,
+  onChange,
+}: {
+  value: TemplateAudience[];
+  label: string;
+  scope: "section" | "component";
+  onChange: (next: TemplateAudience[]) => void;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 rounded-lg border border-input bg-background p-0.5"
+      role="group"
+      aria-label={label}
+      data-audience-scope={scope}
+    >
+      {ALL_AUDIENCES.map((audience) => {
+        const on = value.includes(audience);
+        const locked = on && value.length === 1;
+        return (
+          <button
+            key={audience}
+            type="button"
+            className="group inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] leading-4 text-muted-foreground hover:bg-muted aria-pressed:bg-primary/10 aria-pressed:font-semibold aria-pressed:text-primary aria-disabled:cursor-not-allowed"
+            data-audience-toggle={scope}
+            data-audience={audience}
+            aria-pressed={on}
+            aria-disabled={locked}
+            title={locked ? "至少要对一个端口可见" : undefined}
+            onClick={() => {
+              if (locked) return;
+              onChange(
+                on
+                  ? value.filter((item) => item !== audience)
+                  : [...value, audience],
+              );
+            }}
+          >
+            <span
+              className="size-1.5 rounded-full border border-input group-aria-pressed:border-primary group-aria-pressed:bg-primary"
+              aria-hidden="true"
+            />
+            {audienceLabel(audience)}
+          </button>
+        );
+      })}
+    </span>
+  );
 }
 
 function OptionRows({
@@ -465,6 +531,10 @@ export function TemplateEditorContent({
   const [collapsedKeys, setCollapsedKeys] = useState<string[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [renderOpen, setRenderOpen] = useState(false);
+  /** 渲染弹层的两页：客服 / 客户，默认停在客服（V-11）。 */
+  const [previewAudience, setPreviewAudience] =
+    useState<TemplateAudience>("CS");
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   /** 与右侧预览共用的一套编号：按分组顺序、组内按 sortOrder。 */
   const numbers = useMemo(() => {
@@ -500,17 +570,38 @@ export function TemplateEditorContent({
 
   useEffect(() => setMounted(true), []);
 
-  /** Esc 关闭「渲染」弹层。 */
+  /** Esc 关闭「渲染」弹层；打开时用左右方向键在两页之间切换。 */
   useEffect(() => {
     if (!renderOpen) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setRenderOpen(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setRenderOpen(false);
+        return;
+      }
+      if (event.key === "ArrowLeft") setPreviewAudience("CS");
+      if (event.key === "ArrowRight") setPreviewAudience("CUSTOMER");
     };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [renderOpen]);
 
   const issues = issueCountByComponent(draft);
+
+  /** 两页共用同一个过滤纯函数：预览与真身不会漂移（V-7）。 */
+  const previewConfig = visibleForAudience(draft, previewAudience);
+  const hiddenByAudience =
+    draft.components.length - previewConfig.components.length;
+
+  /** 左右滑动切页：横向位移足够大且明显大于纵向位移时生效。 */
+  const endSwipe = (event: { clientX: number; clientY: number }) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    setPreviewAudience(dx < 0 ? "CUSTOMER" : "CS");
+  };
 
   const add = (kind: DraftComponentV2["kind"]) => {
     let base = draft;
@@ -728,6 +819,18 @@ export function TemplateEditorContent({
                 </select>
                 个
               </label>
+              <AudienceToggles
+                scope="section"
+                label={`分组「${section.label || "未命名"}」对哪些端口可见`}
+                value={audiencesOf(section)}
+                onChange={(next) =>
+                  onChange(
+                    updateSection(draft, section.stableKey, {
+                      audiences: next,
+                    }),
+                  )
+                }
+              />
               <div className="ml-auto flex items-center gap-1">
                 <Button
                   type="button"
@@ -887,6 +990,21 @@ export function TemplateEditorContent({
                     >
                       {component.label || "未命名字段"}
                     </Button>
+                    <span
+                      className={
+                        component.audiences === undefined
+                          ? "rounded border border-input px-1.5 py-0.5 text-xs text-muted-foreground"
+                          : "rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs text-primary"
+                      }
+                      data-audience-chip={component.stableKey}
+                      title={
+                        component.audiences === undefined
+                          ? `跟随分组：${describeAudiences(audiencesOf(component, section))}可见`
+                          : `已单独设置（不跟随分组）：${describeAudiences(audiencesOf(component, section))}可见`
+                      }
+                    >
+                      {describeAudiences(audiencesOf(component, section))}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {componentSummary(draft, component.stableKey)}
                     </span>
@@ -1051,6 +1169,60 @@ export function TemplateEditorContent({
                           </Button>
                         ))}
                       </div>
+                      <div
+                        className="space-y-2 border-t pt-3"
+                        data-audience-panel={component.stableKey}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            谁能看到
+                          </span>
+                          <AudienceToggles
+                            scope="component"
+                            label={`「${component.label || "未命名字段"}」对哪些端口可见`}
+                            value={audiencesOf(component, section)}
+                            onChange={(next) =>
+                              onChange(
+                                updateComponent(draft, component.stableKey, {
+                                  audiences: next,
+                                }),
+                              )
+                            }
+                          />
+                          {component.audiences === undefined ? null : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              data-audience-inherit={component.stableKey}
+                              onClick={() =>
+                                onChange(
+                                  updateComponent(draft, component.stableKey, {
+                                    audiences: null,
+                                  }),
+                                )
+                              }
+                            >
+                              跟随分组
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {component.audiences === undefined
+                            ? `跟随分组「${section.label || "未命名"}」：${describeAudiences(audiencesOf(component, section))}能看到并填写。`
+                            : `已单独设置，不跟随分组「${section.label || "未命名"}」：只有${describeAudiences(audiencesOf(component, section))}能看到并填写。`}
+                          必填只在勾选的端口上生效。
+                        </p>
+                        {component.kind !== "NOTE" &&
+                        !WRITABLE_AUDIENCES.some((audience) =>
+                          audiencesOf(component, section).includes(audience),
+                        ) ? (
+                          <p className="text-xs text-destructive">
+                            客服是目前唯一能填写下单的端口：这条内容没留给客服就没人能填，
+                            参与算价或人数的内容还会导致无法下单，请在发布前改回对客服可见。
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -1070,15 +1242,43 @@ export function TemplateEditorContent({
                 className="mc-modal"
                 role="dialog"
                 aria-modal="true"
-                aria-label="客户看到的样子"
+                aria-label={`${audienceLabel(previewAudience)}看到的样子`}
                 onClick={(event) => event.stopPropagation()}
               >
                 <header className="mc-modal-head">
                   <div>
-                    <b>客户看到的样子</b>
-                    <small>已停用的内容不会出现</small>
+                    <b>{audienceLabel(previewAudience)}看到的样子</b>
+                    <small>
+                      已停用的内容不会出现
+                      {hiddenByAudience > 0
+                        ? `；${hiddenByAudience} 项内容这个端口看不到`
+                        : ""}
+                    </small>
                   </div>
                   <div className="mc-modal-actions">
+                    <div
+                      className="mc-modal-pages"
+                      role="tablist"
+                      aria-label="按端口预览"
+                    >
+                      {ALL_AUDIENCES.map((audience) => (
+                        <button
+                          key={audience}
+                          type="button"
+                          role="tab"
+                          className={
+                            previewAudience === audience
+                              ? "mc-te-chip is-on"
+                              : "mc-te-chip"
+                          }
+                          aria-selected={previewAudience === audience}
+                          data-audience-page={audience}
+                          onClick={() => setPreviewAudience(audience)}
+                        >
+                          {audienceLabel(audience)}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       type="button"
                       className={
@@ -1124,15 +1324,26 @@ export function TemplateEditorContent({
                   className={
                     narrowPreview ? "mc-modal-body is-narrow" : "mc-modal-body"
                   }
+                  data-audience-body={previewAudience}
+                  onPointerDown={(event) => {
+                    swipeStart.current = {
+                      x: event.clientX,
+                      y: event.clientY,
+                    };
+                  }}
+                  onPointerUp={(event) => endSwipe(event)}
+                  onPointerCancel={() => {
+                    swipeStart.current = null;
+                  }}
                 >
                   {previewMode === "doc" ? (
                     <pre className="mc-te-doc">
-                      {previewTemplateDocument(draft).plainText}
+                      {previewTemplateDocument(previewConfig).plainText}
                     </pre>
                   ) : (
                     <TemplateDraftRenderer
-                      sections={draft.sections}
-                      components={draft.components}
+                      sections={previewConfig.sections}
+                      components={previewConfig.components}
                       numberOf={numberOf}
                     />
                   )}

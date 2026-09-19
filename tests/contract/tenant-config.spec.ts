@@ -20,9 +20,11 @@ describe("contract: tenant-config v1 + feature catalog", () => {
     expect(safeParseTenantConfig(bad).success).toBe(false);
   });
 
-  it("功能目录：10 core + 12 addon，无重复，core 判定正确", () => {
+  // S5 新增 addon.game_dispatch_template_v2（通用派单模板 v2 的租户级开关），addon 12 → 13。
+  it("功能目录：10 core + 13 addon，无重复，core 判定正确", () => {
     expect(CORE_FEATURES).toHaveLength(10);
-    expect(ADDON_FEATURES).toHaveLength(12);
+    expect(ADDON_FEATURES).toHaveLength(13);
+    expect(ADDON_FEATURES).toContain("addon.game_dispatch_template_v2");
     expect(new Set(FEATURE_KEYS).size).toBe(FEATURE_KEYS.length);
     expect(isCoreFeature("core.tenancy")).toBe(true);
     expect(isCoreFeature("addon.online_payment")).toBe(false);

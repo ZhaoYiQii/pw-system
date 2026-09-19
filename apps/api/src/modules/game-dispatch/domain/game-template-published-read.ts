@@ -105,3 +105,63 @@ export interface PublishedTemplateForm {
   versionNo: number;
   config: PublishedConfigV2;
 }
+
+/**
+ * 客户侧「可下单游戏」的候选行（repository 投影：一条模板一行，按游戏去重后传入）。
+ * 与模板摘要一样，这里只带判定所需的最小列，不含任何配置内容。
+ */
+export interface PublishedGameCandidate {
+  gameId: string | null;
+  gameName: string | null;
+  archivedAt: Date | null;
+  activeVersionId: string | null;
+}
+
+/**
+ * 客户选择阶段需要的游戏摘要：只够渲染"先选哪个游戏"，
+ * 不透露模板数量、报价或任何字段内容。
+ */
+export interface PublishedGameSummary {
+  gameId: string;
+  name: string;
+}
+
+/**
+ * 客户可下单的游戏列表的硬上限：这是「一个门店的游戏」这种有界集合，
+ * 用固定上限约束响应体，避免无界列表（api-and-interface-design 的列表边界要求）。
+ */
+export const PUBLISHED_GAME_LIMIT = 50;
+
+/**
+ * 该店可下单的游戏：至少有一个「未归档且有生效版本」的模板。
+ *
+ * - 未归类模板（game_id 为空）不属于任何游戏，天然排除；
+ * - 游戏被停用（games.enabled = false）由 repository 过滤掉：客服端「新建派单」的
+ *   游戏选择器本来就只列启用游戏，两个入口口径保持一致，客户不能给已停用的游戏下单；
+ * - 按游戏名排序，同名时按 id 升序，保证返回顺序稳定。
+ */
+export function selectPublishedGames(
+  candidates: readonly PublishedGameCandidate[],
+): PublishedGameSummary[] {
+  const byGameId = new Map<string, PublishedGameSummary>();
+  for (const row of candidates) {
+    if (row.archivedAt !== null) continue;
+    if (row.activeVersionId === null) continue;
+    if (row.gameId === null || row.gameName === null) continue;
+    if (!byGameId.has(row.gameId)) {
+      byGameId.set(row.gameId, { gameId: row.gameId, name: row.gameName });
+    }
+  }
+  return [...byGameId.values()]
+    .sort(comparePublishedGames)
+    .slice(0, PUBLISHED_GAME_LIMIT);
+}
+
+function comparePublishedGames(
+  a: PublishedGameSummary,
+  b: PublishedGameSummary,
+): number {
+  if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+  if (a.gameId === b.gameId) return 0;
+  return a.gameId < b.gameId ? -1 : 1;
+}
