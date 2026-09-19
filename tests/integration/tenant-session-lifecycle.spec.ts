@@ -112,7 +112,9 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
     if (app) await app.close();
   });
 
-  function tenantLogin(): Promise<request.Response> {
+  // supertest 的返回是 thenable 的 Test：await 与 .expect(...) 都要能用，
+  // 标成 Promise<Response> 会把 .expect 抹掉。
+  function tenantLogin(): request.Test {
     return request(app.getHttpServer())
       .post("/api/v1/auth/login")
       .send({ kind: "tenant", tenantCode, username: "boss", password: PW });
@@ -136,13 +138,17 @@ describe("A2 tenant session lifecycle (停用租户→登录/刷新拒绝 + refr
     expect(
       (first.body as { data: { refreshToken?: string } }).data.refreshToken,
     ).toBeUndefined();
-    let csrf = csrfFrom((first.headers["set-cookie"] ?? []) as string[]);
+    let csrf = csrfFrom(
+      (first.headers["set-cookie"] ?? []) as unknown as string[],
+    );
     const refreshed = await agent
       .post("/api/v1/auth/refresh")
       .set("x-csrf-token", csrf)
       .send({ scope: "tenant" })
       .expect(201);
-    csrf = csrfFrom((refreshed.headers["set-cookie"] ?? []) as string[]);
+    csrf = csrfFrom(
+      (refreshed.headers["set-cookie"] ?? []) as unknown as string[],
+    );
 
     await request(app.getHttpServer())
       .post(`/api/v1/platform/tenants/${tenantId}/deactivate`)

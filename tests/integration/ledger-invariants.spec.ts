@@ -142,19 +142,15 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
     });
     expect(earning?.amountFen).toBe(BigInt(7700));
 
-    const entries = await client.ledgerEntry
-      .findMany({
-        where: { tenantId, transaction: { order: { id: orderId } } },
-      })
-      .catch(async () => {
-        const txRows = await client.ledgerTransaction.findMany({
-          where: { tenantId },
-        });
-        const ids = txRows.map((t) => t.id);
-        return client.ledgerEntry.findMany({
-          where: { tenantId, transactionId: { in: ids } },
-        });
-      });
+    // TODO(账目↔订单关联)：LedgerEntry 只有 transactionId、LedgerTransaction 也没有 orderId，
+    // 目前无法把这批账目收窄到"这一单"。这里显式按门店取账目（与原先的兜底路径等价），
+    // 待补上订单关联后再改成按订单过滤；不要再用「无效查询 + catch 兜底」掩盖这个口径。
+    const txRows = await client.ledgerTransaction.findMany({
+      where: { tenantId },
+    });
+    const entries = await client.ledgerEntry.findMany({
+      where: { tenantId, transactionId: { in: txRows.map((t) => t.id) } },
+    });
     const debit = entries
       .filter((e) => e.direction === "DEBIT")
       .reduce((a, e) => a + Number(e.amountFen), 0);

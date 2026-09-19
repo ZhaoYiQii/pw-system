@@ -115,7 +115,7 @@ E2E 的环境前提：`ADMIN_ORIGIN=http://localhost:3005`、`S3_E2E_TENANT_CODE
 - 修复：用例的 `command()` 补 `operation: TEMPLATE_ORDER_OPERATION_BY_AUDIENCE.CS`（走客服侧入口，与用例语义一致），
   常量从 service 导入以保持与产品边界同步；不动产品代码（把 `operation` 设为可选会削弱 C-8 的双入口区分，正是要防的）。
 - 修复后实跑：`tests/vitest.tenant-isolation.config.ts` → **11 文件 / 36 用例全绿**（原 4 红）；`vitest run` 45 文件 / 291 通过；契约 4 文件 / 20 通过；eslint 该文件退出码 0。
-- 遗留建议：`apps/api/tsconfig.json` 只 include `src`，测试文件不被 typecheck 覆盖——所以"缺少必需字段"没在编译期暴露。建议后续把测试纳入一个独立的 typecheck 配置。
+- 已完成（2026-09-19 追加）：测试纳入 typecheck —— 新增 `tests/tsconfig.json`（contract / tenant-isolation / e2e / integration 四块，0 错误）并接入根 `typecheck` 脚本；顺带修掉集成用例 24 条类型宽松，以及 `ledger-invariants` 里"无效查询 + catch 兜底"掩盖口径的写法（改为显式按门店取账目 + TODO 账目↔订单关联）。
 
 - 本回合实跑：`tests/vitest.tenant-isolation.config.ts` → 11 文件、32 通过 / 4 失败（仅在上述文件）。eslint（本次改动 5 个文件）退出码 0；admin typecheck 因沙箱无法写 tsbuildinfo 未取到结果。
 
