@@ -316,9 +316,9 @@ function convertCellValue(
     return { ok: false, message: `${path} 不能为空` };
   }
   if (column.columnType === "NUMBER") {
-    if (isStaffingColumn || column.required) {
-      return convertStaffingCount(path, text);
-    }
+    // 只有「人数来源列」才受 1-500 整数约束（服务端 assertStaffingCount 也是只对它生效）；
+    // 普通数字列只要求有限数字，别把人数口径硬套到「局数 / 时长」这类字段上。
+    if (isStaffingColumn) return convertStaffingCount(path, text);
     const value = Number(text);
     return Number.isFinite(value)
       ? { ok: true, value }
