@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
-      PLATFORM_DATABASE_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
+      # 平台域访问需要 owner 角色：运行时角色受租户 RLS 限制，平台域审计写入会被 42501 拒绝
+      PLATFORM_DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
       PW_TEST_MIGRATION_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
       PW_TEST_RUNTIME_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
       SESSION_SECRET: ci-secret-0123456789-0123456789-0123456789
