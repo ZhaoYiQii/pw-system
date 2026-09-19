@@ -7,8 +7,8 @@ import {
 } from "./modules";
 
 describe("merchant navigation and UI permission mock", () => {
-  it("keeps 17 registered modules across four roles", () => {
-    expect(MERCHANT_MODULES).toHaveLength(17);
+  it("keeps 18 registered modules across four roles", () => {
+    expect(MERCHANT_MODULES).toHaveLength(18);
     expect(MERCHANT_ROLES).toEqual(["OWNER", "ADMIN", "CS", "FINANCE"]);
   });
 
@@ -20,10 +20,10 @@ describe("merchant navigation and UI permission mock", () => {
       ]),
     );
     expect(counts).toEqual({
-      OWNER: 17,
-      ADMIN: 15,
+      OWNER: 18,
+      ADMIN: 16,
       CS: 9,
-      FINANCE: 10,
+      FINANCE: 11,
     });
   });
 
