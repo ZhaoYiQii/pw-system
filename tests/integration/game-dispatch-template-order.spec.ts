@@ -1067,6 +1067,31 @@ describe("S4 新建派单：模板读取与创建", () => {
       await req(playerToken).get(`${CUSTOMER_BASE}/games`).expect(403);
     });
 
+    it("客户按店读可下单游戏：停用的游戏（games.enabled=false）不出现", async () => {
+      // 与客服端「新建派单」的游戏选择器同口径：停用游戏不给客户下单。
+      const disabledGame = await client.game.create({
+        data: { tenantId, name: `停用游戏-${suffix}`, enabled: false },
+      });
+      await createPublishedTemplate(
+        ownerToken,
+        `停用游戏模板-${suffix}`,
+        disabledGame.id,
+      );
+
+      const res = await req(customerToken)
+        .get(`${CUSTOMER_BASE}/games`)
+        .expect(200);
+      const ids = (res.body as { data: Array<{ gameId: string }> }).data.map(
+        (row) => row.gameId,
+      );
+      expect(ids).not.toContain(disabledGame.id);
+
+      // 对照：同一游戏的模板接口仍按"未归档 + 有生效版本"返回（读取口径不变）
+      await req(customerToken)
+        .get(`${CUSTOMER_BASE}/published?gameId=${disabledGame.id}`)
+        .expect(200);
+    });
+
     it("客户读发布表单：有客户内容、没有只给客服的内容；CS 入口作对照", async () => {
       const template = await createPublishedTemplate(
         ownerToken,
