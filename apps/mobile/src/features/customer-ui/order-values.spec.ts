@@ -335,6 +335,48 @@ describe("人数表格：可重复表格的提交口径", () => {
     ]);
   });
 
+  it("必填的普通数字列不套用人数口径（0 / 750 / 小数都放行）", () => {
+    const plainNumberTable: OrderConfigLike = {
+      sections: [
+        { stableKey: "basic", label: "基本信息", enabled: true, sortOrder: 0 },
+      ],
+      components: [
+        {
+          kind: "REPEATABLE_TABLE",
+          stableKey: "rounds",
+          sectionKey: "basic",
+          label: "局数",
+          enabled: true,
+          sortOrder: 0,
+          columns: [
+            {
+              stableKey: "rounds_count",
+              label: "局数",
+              columnType: "NUMBER",
+              required: true,
+            },
+          ],
+        },
+      ],
+      staffingSource: { kind: "FIXED", count: 1 },
+    };
+
+    const result = collectOrderValues(plainNumberTable, {
+      rounds: [
+        { rounds_count: "0" },
+        { rounds_count: "750" },
+        { rounds_count: "1.5" },
+      ],
+    });
+
+    expect(result.errors).toEqual([]);
+    expect(result.values.rounds).toEqual([
+      { rounds_count: 0 },
+      { rounds_count: 750 },
+      { rounds_count: 1.5 },
+    ]);
+  });
+
   it("人数来源是数字字段时，值必须是 1-500 的整数", () => {
     const fieldConfig: OrderConfigLike = {
       sections: [
