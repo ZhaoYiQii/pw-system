@@ -9,8 +9,11 @@ import type {
   PublishedConfigV2,
 } from "../domain/game-template-config-v2.js";
 import {
+  PUBLISHED_GAME_LIMIT,
   readPublishedConfig,
+  selectPublishedGames,
   selectPublishedTemplates,
+  type PublishedGameSummary,
   type PublishedTemplateForm,
   type PublishedTemplateSummary,
 } from "../domain/game-template-published-read.js";
@@ -1230,6 +1233,47 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
       versionNo: version.versionNo,
       config,
     };
+  }
+
+  /** 客户可下单的游戏：按游戏去重后回查游戏名，筛选与排序交给领域规则。 */
+  async listPublishedGames(tenantId: string): Promise<PublishedGameSummary[]> {
+    // distinct 让上限约束的是「游戏数」而不是「模板行数」；
+    // 停用（enabled=false）的游戏不在这里过滤，与按游戏读已发布模板的口径一致。
+    const templates = await this.client.gameDispatchTemplate.findMany({
+      where: {
+        tenantId,
+        gameId: { not: null },
+        archivedAt: null,
+        activeVersionId: { not: null },
+      },
+      select: { gameId: true, archivedAt: true, activeVersionId: true },
+      distinct: ["gameId"],
+      orderBy: { gameId: "asc" },
+      take: PUBLISHED_GAME_LIMIT,
+    });
+    const gameIds = templates
+      .map((row) => row.gameId)
+      .filter((id): id is string => id !== null);
+    const games =
+      gameIds.length === 0
+        ? []
+        : await this.client.game.findMany({
+            where: { tenantId, id: { in: gameIds } },
+            select: { id: true, name: true },
+          });
+    const nameById = new Map(
+      games.map((game) => [game.id, game.name] as const),
+    );
+
+    return selectPublishedGames(
+      templates.map((row) => ({
+        gameId: row.gameId,
+        gameName:
+          row.gameId === null ? null : (nameById.get(row.gameId) ?? null),
+        archivedAt: row.archivedAt,
+        activeVersionId: row.activeVersionId,
+      })),
+    );
   }
 }
 

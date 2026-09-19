@@ -1009,6 +1009,63 @@ describe("S4 新建派单：模板读取与创建", () => {
         .expect(403);
     });
 
+    it("客户按店读可下单游戏：只有草稿或已归档模板的游戏不出现，且入口只对客户开门", async () => {
+      async function listedGameIds(): Promise<string[]> {
+        const res = await req(customerToken)
+          .get(`${CUSTOMER_BASE}/games`)
+          .expect(200);
+        return (
+          (res.body as { data: Array<{ gameId: string }> }).data ?? []
+        ).map((row) => row.gameId);
+      }
+
+      const before = await listedGameIds();
+      expect(before).toContain(gameId);
+      expect(before).not.toContain(foreignGameId);
+
+      // 只有草稿（未发布）模板的游戏不可下单
+      const draftOnlyGame = await client.game.create({
+        data: { tenantId, name: `草稿游戏-${suffix}` },
+      });
+      await req(ownerToken)
+        .post(BASE, {
+          gameId: draftOnlyGame.id,
+          name: "只有草稿",
+          description: null,
+        })
+        .expect(201);
+
+      // 发布后被归档的游戏同样不可下单
+      const archivedGame = await client.game.create({
+        data: { tenantId, name: `归档游戏-${suffix}` },
+      });
+      const archived = await createPublishedTemplate(
+        ownerToken,
+        `归档游戏模板-${suffix}`,
+        archivedGame.id,
+      );
+      const archivedDetail = await req(ownerToken)
+        .get(`${BASE}/${archived.templateId}/draft`)
+        .expect(200);
+      await req(ownerToken)
+        .post(`${BASE}/${archived.templateId}/archive`, {
+          expectedRevision: (
+            archivedDetail.body as { data: { revision: number } }
+          ).data.revision,
+        })
+        .expect(201);
+
+      const after = await listedGameIds();
+      expect(after).toContain(gameId);
+      expect(after).not.toContain(draftOnlyGame.id);
+      expect(after).not.toContain(archivedGame.id);
+
+      // 客户入口不对外开门：店长 / 客服 / 陪玩身份一律 403
+      await req(ownerToken).get(`${CUSTOMER_BASE}/games`).expect(403);
+      await req(csToken).get(`${CUSTOMER_BASE}/games`).expect(403);
+      await req(playerToken).get(`${CUSTOMER_BASE}/games`).expect(403);
+    });
+
     it("客户读发布表单：有客户内容、没有只给客服的内容；CS 入口作对照", async () => {
       const template = await createPublishedTemplate(
         ownerToken,

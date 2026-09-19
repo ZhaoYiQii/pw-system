@@ -1189,6 +1189,21 @@ export const genericTemplatePublishedListSchema: OpenApiSchema = {
   description: "该游戏可派单的模板（默认优先，其次最近使用）",
 };
 
+/** 客户入口第一步：该店可下单的游戏（至少有一个已发布 v2 模板）。 */
+export const genericTemplatePublishedGameSummarySchema: OpenApiSchema = object(
+  ["gameId", "name"],
+  {
+    gameId: { type: "string", format: "uuid", description: "游戏 id" },
+    name: stringField("游戏名称"),
+  },
+  "可下单游戏摘要",
+);
+
+export const genericTemplatePublishedGameListSchema: OpenApiSchema = {
+  ...dataArraySchema(genericTemplatePublishedGameSummarySchema),
+  description: "客户可下单的游戏（按名称排序，未归档且有生效版本）",
+};
+
 /** S4 派单表单：锁定发布版本的完整发布配置。 */
 export const genericTemplateVersionFormSchema: OpenApiSchema = {
   ...dataSchema(
