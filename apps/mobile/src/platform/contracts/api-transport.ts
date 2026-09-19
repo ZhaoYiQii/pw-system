@@ -3,6 +3,11 @@ export interface ApiInit {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   token?: string;
+  /**
+   * 附加请求头（例如下单的 Idempotency-Key）。
+   * 传输级头部（content-type / authorization）由平台实现决定，调用方不能覆盖。
+   */
+  headers?: Record<string, string>;
 }
 
 export interface ApiAdapter {

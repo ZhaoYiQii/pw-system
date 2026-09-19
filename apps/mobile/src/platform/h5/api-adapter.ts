@@ -16,6 +16,7 @@ export const apiAdapter: ApiAdapter = {
     const res = await fetch(`${base}${path}`, {
       method: init.method ?? "GET",
       headers: {
+        ...(init.headers ?? {}),
         "content-type": "application/json",
         ...(init.token ? { authorization: `Bearer ${init.token}` } : {}),
       },
