@@ -1284,13 +1284,17 @@ export class PrismaGenericGameTemplateRepository implements GenericGameTemplateR
  * 单机唯一索引/写冲突（P2002 唯一约束、P2034 序列化或死锁回滚）在不做映射时
  * 会变成 500；这类冲突对调用方就是"重试或重新加载"的语义，与服务端既有
  * TEMPLATE_REVISION_CONFLICT 一致（同文件其他写路径已有 P2002 → 409 的先例）。
+ * `$queryRaw` 失败在 Prisma 里统一包成 P2010，真实错误码藏在 driver adapter 的
+ * meta 里，所以死锁必须单独识别，否则行锁顺序冲突会绕过这里、以 500 漏给调用方。
  */
 function mapConcurrentConflict(
   error: unknown,
   templateId: string,
 ): GenericTemplateError | null {
   const code = (error as { code?: unknown } | null)?.code;
-  if (code !== "P2002" && code !== "P2034") return null;
+  if (code !== "P2002" && code !== "P2034" && !isTransientRawConflict(error)) {
+    return null;
+  }
   return new GenericTemplateError(
     "TEMPLATE_REVISION_CONFLICT",
     "并发写入冲突，请重新加载后重试",
@@ -1299,6 +1303,40 @@ function mapConcurrentConflict(
       reason: code === "P2002" ? "UNIQUE_CONFLICT" : "WRITE_CONFLICT",
     },
   );
+}
+
+/**
+ * `$queryRaw` 的瞬时并发冲突：40P01 死锁、40001 序列化失败。
+ *
+ * Prisma 7 走 driver adapter（PrismaPg）时，同一个 Postgres 错误被包成
+ * `code = P2010` + `meta.driverAdapterError.cause = { originalCode, kind }`，
+ * 其中 kind 为 `TransactionWriteConflict`。实测形状（本地 Postgres 18）：
+ * `{"code":"P2010","meta":{"driverAdapterError":{"cause":{"originalCode":"40P01","kind":"TransactionWriteConflict"}}}}`
+ *
+ * 原生 pool 路径下同类错误是 P2034，已在上面单独覆盖，两条都保留。
+ */
+function isTransientRawConflict(error: unknown): boolean {
+  const cause = driverAdapterCause(error);
+  if (cause === null) return false;
+  return (
+    cause.originalCode === "40P01" ||
+    cause.originalCode === "40001" ||
+    cause.kind === "TransactionWriteConflict"
+  );
+}
+
+/** 取出 driver adapter 包装的真实数据库错误，取不到则返回 null。 */
+function driverAdapterCause(
+  error: unknown,
+): { originalCode?: unknown; kind?: unknown } | null {
+  const meta = (error as { meta?: unknown } | null)?.meta;
+  if (meta === null || typeof meta !== "object") return null;
+  const adapterError = (meta as { driverAdapterError?: unknown })
+    .driverAdapterError;
+  if (adapterError === null || typeof adapterError !== "object") return null;
+  const cause = (adapterError as { cause?: unknown }).cause;
+  if (cause === null || typeof cause !== "object") return null;
+  return cause as { originalCode?: unknown; kind?: unknown };
 }
 function notFound(id: string): GenericTemplateError {
   return new GenericTemplateError("TEMPLATE_NOT_FOUND", "模板不存在", {
