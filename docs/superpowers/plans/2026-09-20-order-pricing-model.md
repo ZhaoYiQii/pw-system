@@ -36,15 +36,15 @@ Files：
 
 - 修改 `packages/database/prisma/schema.prisma`：新增 `PlayerGamePrice`、`GamePricingRule`、`GamePricingRuleItem`（`kind` 本版只写入 `SURCHARGE`）。
 - 新增 `packages/database/prisma/migrations/20260920120000_order_pricing_rules/migration.sql`。
-- 新增 `apps/api/src/modules/game-dispatch/domain/game-pricing.ts` + `game-pricing.spec.ts`：纯函数 `resolveUnitPriceFen({ gameBaseFen, fallbackBaseFen, rankLabel, ruleItems })`。
+- 新增 `apps/api/src/modules/game-dispatch/domain/game-pricing.ts` + `game-pricing.spec.ts`：纯函数 `resolveUnitPriceFen({ gameBaseFen, fallbackBaseFen, dimensionKeys, ruleItems })`，按通用维度键命中加价。
 - 新增 `apps/api/src/modules/game-dispatch/infrastructure/prisma-game-pricing.repository.ts`：租户内读写底价与规则。
 - 新增 `apps/api/src/modules/game-dispatch/interface/pricing-rules.controller.ts`：`GET/PUT /api/v1/tenant/game-pricing/games/:gameId`、`GET/PUT /api/v1/tenant/game-pricing/players/:playerId/games/:gameId/base`。
 - 修改 `apps/api/src/modules/game-dispatch/application/game-dispatch.service.ts`：把 `snapshot.rankRulesJson` 定价（当前 ~1013–1023、1043–1068 行）替换为调用 `resolveUnitPriceFen`。
 - 修改 `apps/api/src/modules/game-dispatch/domain/game-template-order-draft.ts`：模板下单不再用字段选项 `addPriceFen` 影响单价（改为规则库结果）。
 - 修改 `apps/api/src/common/validation/api-validation-rules.ts`、`apps/api/src/openapi/schemas.ts`。
-- 新增 `scripts/migrate-pricing-rules.mjs`：幂等迁移脚本，把各模板快照 `rank_rules_json` 与字段选项 `add_price_fen` 归并成该游戏的 `SURCHARGE` 规则项，输出冲突报告。
+- `scripts/migrate-pricing-rules.mjs`（已落地，只读干跑完成）：把 v1 `game_dispatch_rank_rules` 与 v2 模板选项 `priceDeltaFen` 归并为该游戏的 `SURCHARGE` 规则项；未归类模板跳过并报告；`--apply` 未实现、写入需单独授权。
 
-Pre-change evidence（先红）：先写 `game-pricing.spec.ts`，断言"规则库命中决定单价""字段选项 `addPriceFen` 不再改变单价""同游戏规则隔离、跨游戏不串"，此时应失败。
+Pre-change evidence（先红）：先写 `game-pricing.spec.ts`，断言"规则库按 `dimensionKey` 命中决定单价""模板配置里的 `priceDeltaFen` 不再直接改变单价""同游戏规则隔离、跨游戏不串""未归类模板不参与计价"，此时应失败。
 
 Steps：
 
