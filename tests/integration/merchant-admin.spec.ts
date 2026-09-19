@@ -89,12 +89,12 @@ describe("商家端管理/概览支撑 API（账号/通知未读/订阅/审计�
     const headers = { authorization: `Bearer ${token}` };
     return {
       get: (url: string) => request(app.getHttpServer()).get(url).set(headers),
-      post: (url: string, body?: unknown) =>
+      post: (url: string, body?: object | string) =>
         request(app.getHttpServer())
           .post(url)
           .set(headers)
           .send(body ?? {}),
-      patch: (url: string, body: unknown) =>
+      patch: (url: string, body: object | string) =>
         request(app.getHttpServer()).patch(url).set(headers).send(body),
     };
   }

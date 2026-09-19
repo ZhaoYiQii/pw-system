@@ -89,7 +89,7 @@ describe("Slice 8 finance rules (默认 3%/20%，可后台调整，split preview
     const h = { authorization: `Bearer ${token}` };
     return {
       get: (u: string) => request(app.getHttpServer()).get(u).set(h),
-      post: (u: string, b: unknown) =>
+      post: (u: string, b: object | string) =>
         request(app.getHttpServer()).post(u).set(h).send(b),
     };
   }

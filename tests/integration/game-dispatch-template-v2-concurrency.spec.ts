@@ -134,12 +134,12 @@ describe("Game Dispatch generic templates v2 并发发布与版本不可变", ()
     const header = { authorization: `Bearer ${token}` };
     return {
       get: (url: string) => request(app.getHttpServer()).get(url).set(header),
-      post: (url: string, body?: unknown) =>
+      post: (url: string, body?: object | string) =>
         request(app.getHttpServer())
           .post(url)
           .set(header)
           .send(body ?? {}),
-      patch: (url: string, body: unknown) =>
+      patch: (url: string, body: object | string) =>
         request(app.getHttpServer()).patch(url).set(header).send(body),
     };
   }

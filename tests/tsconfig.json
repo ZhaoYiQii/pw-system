@@ -22,7 +22,10 @@
     },
     "rootDir": ".."
   },
-  // tests/integration 尚未纳入：去掉最严两个开关后仍有 27 条既有类型宽松待 triage
-  // （RoleKey 夹具参数 3、send(unknown) 9、http-auth 头取值 3 等），单独一批处理。
-  "include": ["contract/**/*.ts", "tenant-isolation/**/*.ts", "e2e/**/*.ts"]
+  "include": [
+    "contract/**/*.ts",
+    "tenant-isolation/**/*.ts",
+    "e2e/**/*.ts",
+    "integration/**/*.ts"
+  ]
 }
