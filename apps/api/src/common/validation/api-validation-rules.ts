@@ -757,6 +757,7 @@ routeValidations.set(
 );
 
 // 客户侧只读入口（独立入口，C-1 / C-9）：查询参数与商家端同口径，缺 gameId 即 400。
+routeValidations.set("GET /api/v1/tenant/game-dispatch/customer/games", {});
 routeValidations.set("GET /api/v1/tenant/game-dispatch/customer/published", {
   query: z.strictObject({ gameId: z.string().uuid() }),
 });

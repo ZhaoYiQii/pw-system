@@ -500,8 +500,18 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
     }
   });
 
-  it("客户侧 v2 入口：3 条路由稳定、请求体不含 customerProfileId、保留 Idempotency-Key 头", () => {
+  it("客户侧 v2 入口：4 条路由稳定、请求体不含 customerProfileId、保留 Idempotency-Key 头", () => {
     const customerBase = "/api/v1/tenant/game-dispatch/customer";
+    expect(operation(`${customerBase}/games`, "get").operationId).toBe(
+      "customerGameTemplate_listGames",
+    );
+    // 第一步只暴露「游戏 id + 名称」，不能带出模板内容或配置
+    const gamesData = operation(`${customerBase}/games`, "get").responses?.[
+      "200"
+    ]?.content?.["application/json"]?.schema?.properties?.data as
+      { items?: { required?: string[] } } | undefined;
+    expect(gamesData?.items?.required).toEqual(["gameId", "name"]);
+
     expect(operation(`${customerBase}/published`, "get").operationId).toBe(
       "customerGameTemplate_listPublished",
     );

@@ -35,6 +35,7 @@ import {
   genericTemplateGameIdQuerySchema,
   genericTemplateCustomerOrderCreateBodySchema,
   genericTemplateOrderResultSchema,
+  genericTemplatePublishedGameListSchema,
   genericTemplatePublishedListSchema,
   genericTemplateVersionFormSchema,
 } from "../../../openapi/schemas.js";
@@ -119,6 +120,19 @@ export class CustomerGameTemplateController {
       );
     }
     throw error;
+  }
+
+  @TenantScope()
+  @Permissions("order.manage")
+  @Get("customer/games")
+  @ApiOperation({
+    summary: "客户入口：该店可下单的游戏（至少一个已发布模板）",
+  })
+  @ApiOkResponse({ schema: genericTemplatePublishedGameListSchema as never })
+  @ApiForbiddenResponse({ schema: genericTemplateErrorSchema as never })
+  async listGames(@Req() req: AuthenticatedRequest) {
+    const tenantId = requireCustomer(req);
+    return { data: await this.templates.listPublishedGames(tenantId) };
   }
 
   @TenantScope()

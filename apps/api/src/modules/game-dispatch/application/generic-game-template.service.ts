@@ -33,6 +33,7 @@ import {
 } from "../domain/game-template-management.js";
 import {
   type PublishedTemplateForm,
+  type PublishedGameSummary,
   type PublishedTemplateSummary,
 } from "../domain/game-template-published-read.js";
 
@@ -121,6 +122,7 @@ export interface GenericGameTemplateRepository {
     tenantId: string,
     gameId: string,
   ): Promise<PublishedTemplateSummary[]>;
+  listPublishedGames(tenantId: string): Promise<PublishedGameSummary[]>;
   findPublishedVersionForm(
     tenantId: string,
     versionId: string,
@@ -484,6 +486,11 @@ export class GenericGameTemplateService {
     gameId: string,
   ): Promise<PublishedTemplateSummary[]> {
     return this.repository.listPublishedTemplates(tenantId, gameId);
+  }
+
+  /** 该店可下单的游戏（至少有一个未归档且有生效版本的模板），不含模板内容。 */
+  async listPublishedGames(tenantId: string): Promise<PublishedGameSummary[]> {
+    return this.repository.listPublishedGames(tenantId);
   }
 
   /** 读取锁定版本的发布表单；不存在或配置不可用时 422 TEMPLATE_VERSION_UNAVAILABLE。 */

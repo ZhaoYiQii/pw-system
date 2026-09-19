@@ -12133,6 +12133,103 @@
         ]
       }
     },
+    "/api/v1/tenant/game-dispatch/customer/games": {
+      "get": {
+        "operationId": "customerGameTemplate_listGames",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "gameId",
+                          "name"
+                        ],
+                        "properties": {
+                          "gameId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "游戏 id"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "游戏名称"
+                          }
+                        },
+                        "description": "可下单游戏摘要"
+                      }
+                    }
+                  },
+                  "description": "客户可下单的游戏（按名称排序，未归档且有生效版本）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "客户入口：该店可下单的游戏（至少一个已发布模板）",
+        "tags": [
+          "CustomerGameTemplate"
+        ]
+      }
+    },
     "/api/v1/tenant/game-dispatch/customer/published": {
       "get": {
         "operationId": "customerGameTemplate_listPublished",

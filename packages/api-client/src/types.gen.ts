@@ -6916,6 +6916,57 @@ export type GenericGameTemplateRemoveResponses = {
 
 export type GenericGameTemplateRemoveResponse = GenericGameTemplateRemoveResponses[keyof GenericGameTemplateRemoveResponses];
 
+export type CustomerGameTemplateListGamesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/games';
+};
+
+export type CustomerGameTemplateListGamesErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type CustomerGameTemplateListGamesError = CustomerGameTemplateListGamesErrors[keyof CustomerGameTemplateListGamesErrors];
+
+export type CustomerGameTemplateListGamesResponses = {
+    /**
+     * 客户可下单的游戏（按名称排序，未归档且有生效版本）
+     */
+    200: {
+        data: Array<{
+            /**
+             * 游戏 id
+             */
+            gameId: string;
+            /**
+             * 游戏名称
+             */
+            name: string;
+        }>;
+    };
+};
+
+export type CustomerGameTemplateListGamesResponse = CustomerGameTemplateListGamesResponses[keyof CustomerGameTemplateListGamesResponses];
+
 export type CustomerGameTemplateListPublishedData = {
     body?: never;
     path?: never;
