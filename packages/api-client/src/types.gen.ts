@@ -6916,6 +6916,446 @@ export type GenericGameTemplateRemoveResponses = {
 
 export type GenericGameTemplateRemoveResponse = GenericGameTemplateRemoveResponses[keyof GenericGameTemplateRemoveResponses];
 
+export type CustomerGameTemplateListPublishedData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * 按游戏过滤
+         */
+        gameId: string;
+    };
+    url: '/api/v1/tenant/game-dispatch/customer/published';
+};
+
+export type CustomerGameTemplateListPublishedErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type CustomerGameTemplateListPublishedError = CustomerGameTemplateListPublishedErrors[keyof CustomerGameTemplateListPublishedErrors];
+
+export type CustomerGameTemplateListPublishedResponses = {
+    /**
+     * 该游戏可派单的模板（默认优先，其次最近使用）
+     */
+    200: {
+        data: Array<{
+            /**
+             * 模板 id
+             */
+            templateId: string;
+            /**
+             * 模板名称
+             */
+            name: string;
+            /**
+             * 模板说明
+             */
+            description?: string | null;
+            /**
+             * 锁定的发布版本 id
+             */
+            versionId: string;
+            /**
+             * 版本号
+             */
+            versionNo: number;
+            /**
+             * 是否为该游戏默认模板
+             */
+            isDefault: boolean;
+            /**
+             * 最近使用时间
+             */
+            lastUsedAt: string | null;
+        }>;
+    };
+};
+
+export type CustomerGameTemplateListPublishedResponse = CustomerGameTemplateListPublishedResponses[keyof CustomerGameTemplateListPublishedResponses];
+
+export type CustomerGameTemplateGetVersionFormData = {
+    body?: never;
+    path: {
+        versionId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/versions/{versionId}/form';
+};
+
+export type CustomerGameTemplateGetVersionFormErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type CustomerGameTemplateGetVersionFormError = CustomerGameTemplateGetVersionFormErrors[keyof CustomerGameTemplateGetVersionFormErrors];
+
+export type CustomerGameTemplateGetVersionFormResponses = {
+    /**
+     * 锁定发布版本的派单表单配置
+     */
+    200: {
+        /**
+         * 发布版本派单表单
+         */
+        data: {
+            /**
+             * 模板 id
+             */
+            templateId: string;
+            /**
+             * 所属游戏 id（未归类模板为 null）
+             */
+            gameId: string | null;
+            /**
+             * 发布版本 id
+             */
+            versionId: string;
+            /**
+             * 版本号
+             */
+            versionNo: number;
+            /**
+             * 通用模板发布配置（不可变版本内容，服务端字段）
+             */
+            config: {
+                /**
+                 * 配置版本（固定 2）
+                 */
+                schemaVersion: 2;
+                /**
+                 * 内容区块
+                 */
+                sections: Array<{
+                    /**
+                     * 区块稳定键（发布后不可改）
+                     */
+                    stableKey: string;
+                    /**
+                     * 区块名称
+                     */
+                    label: string;
+                    /**
+                     * 区块说明
+                     */
+                    description?: string;
+                    /**
+                     * 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                     */
+                    audiences?: Array<'CS' | 'CUSTOMER'>;
+                    /**
+                     * 区块是否启用
+                     */
+                    enabled: boolean;
+                    /**
+                     * 区块顺序
+                     */
+                    sortOrder: number;
+                    /**
+                     * 区块布局
+                     */
+                    layout: {
+                        /**
+                         * 列数（1-4）
+                         */
+                        columns: 1 | 2 | 3 | 4;
+                        /**
+                         * 密度
+                         */
+                        density?: 'comfortable' | 'compact';
+                        /**
+                         * 对齐
+                         */
+                        align?: 'left' | 'center';
+                    };
+                }>;
+                /**
+                 * 模板组件（判别联合，按 kind 区分）
+                 */
+                components: Array<TemplateFieldComponentV2 | TemplateTableComponentV2 | TemplateNoteComponentV2>;
+                /**
+                 * 人数来源（判别联合，按 kind 区分）
+                 */
+                staffingSource: ({
+                    kind: 'FIXED';
+                } & TemplateStaffingFixedV2) | ({
+                    kind: 'NUMBER_FIELD';
+                } & TemplateStaffingNumberFieldV2) | ({
+                    kind: 'REPEATABLE_TABLE_SUM';
+                } & TemplateStaffingTableSumV2);
+                /**
+                 * 文案渲染器版本（仅由服务端写入）
+                 */
+                documentRendererVersion: 1;
+            };
+        };
+    };
+};
+
+export type CustomerGameTemplateGetVersionFormResponse = CustomerGameTemplateGetVersionFormResponses[keyof CustomerGameTemplateGetVersionFormResponses];
+
+export type CustomerGameTemplateCreateOrderData = {
+    /**
+     * 客户自助下单请求（不含 customerProfileId；幂等键在 Idempotency-Key 请求头）
+     */
+    body: {
+        /**
+         * 游戏 id
+         */
+        gameId: string;
+        /**
+         * 模板 id
+         */
+        templateId: string;
+        /**
+         * 锁定的发布版本 id
+         */
+        templateVersionId: string;
+        /**
+         * 通用组件值（按 stableKey 提交，不含最终人数或价格）
+         */
+        values: {
+            [key: string]: unknown;
+        };
+        /**
+         * 期望开始时间
+         */
+        desiredStartAt?: string | null;
+        /**
+         * 服务时长（分钟）
+         */
+        durationMinutes?: number;
+    };
+    headers: {
+        'idempotency-key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/customer/template-orders';
+};
+
+export type CustomerGameTemplateCreateOrderErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    422: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type CustomerGameTemplateCreateOrderError = CustomerGameTemplateCreateOrderErrors[keyof CustomerGameTemplateCreateOrderErrors];
+
+export type CustomerGameTemplateCreateOrderResponses = {
+    /**
+     * 创建派单结果（含服务端计算与自动文案）
+     */
+    201: {
+        /**
+         * 创建派单结果
+         */
+        data: {
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 派单 id
+             */
+            dispatchOrderId: string;
+            /**
+             * 本单锁定的发布版本 id
+             */
+            templateVersionId: string;
+            /**
+             * 服务端计算的人数摘要
+             */
+            staffingSummary: {
+                /**
+                 * 服务端计算的总人数
+                 */
+                total: number;
+                /**
+                 * 按发布快照分组的人数
+                 */
+                rows: Array<{
+                    /**
+                     * 分组名称
+                     */
+                    label: string;
+                    /**
+                     * 人数
+                     */
+                    count: number;
+                }>;
+            };
+            /**
+             * 服务端计算的加价合计（十进制字符串分）
+             */
+            priceAdjustmentFen: string;
+            /**
+             * 订单自动文案
+             */
+            document: {
+                /**
+                 * 文案结构版本
+                 */
+                schemaVersion: number;
+                /**
+                 * 文案渲染器版本
+                 */
+                rendererVersion: number;
+                /**
+                 * 文案行（区块 / 字段 / 值）
+                 */
+                rows: Array<{
+                    /**
+                     * 区块名称
+                     */
+                    sectionLabel: string;
+                    /**
+                     * 字段名称
+                     */
+                    fieldLabel: string;
+                    /**
+                     * 字段值
+                     */
+                    value: string;
+                }>;
+                /**
+                 * 可直接复制的纯文本文案
+                 */
+                plainText: string;
+            };
+        };
+    };
+};
+
+export type CustomerGameTemplateCreateOrderResponse = CustomerGameTemplateCreateOrderResponses[keyof CustomerGameTemplateCreateOrderResponses];
+
 export type GameDispatchListData = {
     body?: never;
     path?: never;

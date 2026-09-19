@@ -57,6 +57,7 @@ export type TemplateAudienceV2 = (typeof TEMPLATE_AUDIENCES_V2)[number];
  */
 export const TEMPLATE_WRITABLE_AUDIENCES_V2: readonly TemplateAudienceV2[] = [
   "CS",
+  "CUSTOMER",
 ];
 
 export interface TemplateSectionV2 {
@@ -939,6 +940,29 @@ export function validateDraftConfigV2(config: unknown): TemplateConfigIssue[] {
 }
 
 /**
+ * 参与算价/人数、却没有对**每一个**可写入端口可见的组件（C-4）。
+ *
+ * 只有一个可写端口时，这条被"值类内容必须留给可写端口"覆盖；
+ * 一旦客户端也成为可写端口（Task 3），它才成为独立防线：某个入口用不了
+ * 算价/人数所需的值，下单会失败或算错，宁可在发布期拦住。
+ */
+export function billingComponentsNotVisibleToEveryV2(
+  config: Pick<PublishedConfigV2, "sections" | "components" | "staffingSource">,
+  writable: readonly TemplateAudienceV2[],
+): TemplateComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return billingComponentsV2(config).filter((component) => {
+    const audiences = resolveAudiencesV2(
+      component,
+      sectionByKey.get(component.sectionKey),
+    );
+    return writable.some((audience) => !audiences.includes(audience));
+  });
+}
+
+/**
  * 发布前的额外阻断项（只在发布时生效，不影响已发布版本的读取与历史订单）。
  *
  * 产品规则：值类内容（字段 / 表格）必须留给"能填写下单"的端口——目前只有客服。
@@ -952,26 +976,44 @@ export function collectPublishBlockingIssuesV2(
   if (
     !isRecord(config) ||
     !Array.isArray(config.sections) ||
-    !Array.isArray(config.components)
+    !Array.isArray(config.components) ||
+    !isRecord(config.staffingSource)
   ) {
     return [];
   }
   const published = config as unknown as Pick<
     PublishedConfigV2,
-    "sections" | "components"
+    "sections" | "components" | "staffingSource"
   >;
   const writableLabel = TEMPLATE_WRITABLE_AUDIENCES_V2.map((audience) =>
     audience === "CS" ? "客服" : "客户",
   ).join("、");
-  return unwritableValueComponentsV2(
+  const issues: TemplateConfigIssue[] = unwritableValueComponentsV2(
     published,
     TEMPLATE_WRITABLE_AUDIENCES_V2,
   ).map((component) => ({
     code: "TEMPLATE_COMPONENT_INVALID" as const,
     path: `$.components[${published.components.indexOf(component)}].audiences`,
     componentKey: component.stableKey,
-    message: `「${component.label}」对${writableLabel}不可见，而${writableLabel}是目前唯一能填写下单的端口：请让它对${writableLabel}可见，或改成说明类内容`,
+    message: `「${component.label}」对${writableLabel}不可见，而${writableLabel}是能填写下单的端口：请让它对${writableLabel}可见，或改成说明类内容`,
   }));
+  // 已被上一条拦下的不再重复报；这条只在"能填但算不了/算错"时补刀（C-4）。
+  const alreadyFlagged = new Set(
+    issues.map((issue) => issue.componentKey ?? ""),
+  );
+  for (const component of billingComponentsNotVisibleToEveryV2(
+    published,
+    TEMPLATE_WRITABLE_AUDIENCES_V2,
+  )) {
+    if (alreadyFlagged.has(component.stableKey)) continue;
+    issues.push({
+      code: "TEMPLATE_COMPONENT_INVALID",
+      path: `$.components[${published.components.indexOf(component)}].audiences`,
+      componentKey: component.stableKey,
+      message: `「${component.label}」参与算价或人数，就必须对每个能填写下单的端口都可见（现在是${writableLabel}），否则对应入口下单会失败或算错`,
+    });
+  }
+  return issues;
 }
 
 export function validatePublishedConfigV2(

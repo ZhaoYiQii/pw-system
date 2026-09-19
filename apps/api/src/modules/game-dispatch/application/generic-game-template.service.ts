@@ -8,6 +8,7 @@ import {
   validateDraftConfigV2,
   validatePublishedConfigV2,
   visibleConfigV2,
+  type TemplateAudienceV2,
 } from "../domain/game-template-config-v2.js";
 import { GenericTemplateError } from "../domain/errors.js";
 import {
@@ -489,6 +490,7 @@ export class GenericGameTemplateService {
   async getVersionForm(
     tenantId: string,
     versionId: string,
+    audience: TemplateAudienceV2,
   ): Promise<PublishedTemplateForm> {
     const form = await this.repository.findPublishedVersionForm(
       tenantId,
@@ -501,7 +503,7 @@ export class GenericGameTemplateService {
         { versionId },
       );
     }
-    // 客服端按 CS 端口过滤（V-5 / V-6：过滤权威在服务端，前端过滤只是呈现）。
-    return { ...form, config: visibleConfigV2(form.config, "CS") };
+    // 按**入口**的端口过滤（V-5 / V-6 / C-9：过滤权威在服务端，端口不由客户端声明）。
+    return { ...form, config: visibleConfigV2(form.config, audience) };
   }
 }

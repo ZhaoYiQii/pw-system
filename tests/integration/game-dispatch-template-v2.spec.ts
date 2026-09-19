@@ -109,8 +109,10 @@ function audienceDraft(
   const sections = draft.sections as Array<Record<string, unknown>>;
   if (sections[0]) sections[0].audiences = ["CUSTOMER"];
   const components = draft.components as Array<Record<string, unknown>>;
-  if (components[0] && componentAudiences !== undefined) {
-    components[0].audiences = componentAudiences;
+  // 人数来源（billing）必须覆盖每个可写端口（C-4）；端口标记的落点用说明类组件（不受 C-4 约束）
+  if (components[0]) components[0].audiences = ["CS", "CUSTOMER"];
+  if (components[1] && componentAudiences !== undefined) {
+    components[1].audiences = componentAudiences;
   }
   return draft;
 }
@@ -966,8 +968,11 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
       .expect(200);
     const saved = (view.body as { data: DraftView }).data;
     expect(audiencesAt(saved.config, "sections", 0)).toEqual(["CUSTOMER"]);
-    expect(audiencesAt(saved.config, "components", 0)).toEqual(["CS"]);
-    expect(audiencesAt(saved.config, "components", 1)).toBeUndefined();
+    expect(audiencesAt(saved.config, "components", 0)).toEqual([
+      "CS",
+      "CUSTOMER",
+    ]);
+    expect(audiencesAt(saved.config, "components", 1)).toEqual(["CS"]);
 
     // 发布：版本快照与草稿逐字节一致，不凭空补未声明的键，因此发布后没有未发布改动。
     const published = await publishDraft(created.id, 2);
@@ -976,8 +981,8 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
     const version = await versionRow(created.id, 1);
     const config = version.configJson as Record<string, unknown>;
     expect(audiencesAt(config, "sections", 0)).toEqual(["CUSTOMER"]);
-    expect(audiencesAt(config, "components", 0)).toEqual(["CS"]);
-    expect(audiencesAt(config, "components", 1)).toBeUndefined();
+    expect(audiencesAt(config, "components", 0)).toEqual(["CS", "CUSTOMER"]);
+    expect(audiencesAt(config, "components", 1)).toEqual(["CS"]);
     expect(config.components).toEqual(draft.components);
     expect(config.sections).toEqual(draft.sections);
   });
@@ -1005,14 +1010,15 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
     expect(config.components).toEqual(draft.components);
   });
 
-  it("值类内容只给客户时：草稿可存，发布被拒（客服是唯一能填写下单的端口）", async () => {
+  it("参与人数/算价的内容只给一端可见时：草稿可存，发布被拒（C-4）", async () => {
     const created = await createTemplate({
       gameId: gameAId,
       name: `端口阻断-${suffix}`,
     });
     const draft = draftWithDisabledNote(true);
     const components = draft.components as Array<Record<string, unknown>>;
-    if (components[0]) components[0].audiences = ["CUSTOMER"];
+    // player_count 是人数来源（staffingSource=NUMBER_FIELD）：客户看不到它就没法下单算人数。
+    if (components[0]) components[0].audiences = ["CS"];
 
     // 草稿保存不设这条规则（只有发布才阻断），否则店主没法在半成品上继续改
     await req(ownerToken)

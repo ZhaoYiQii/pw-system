@@ -26,7 +26,10 @@ export const DEFAULT_AUDIENCES: readonly TemplateAudience[] = ALL_AUDIENCES;
  * 值类内容（字段 / 表格）必须留给其中至少一个端口，否则没有任何界面能填它；
  * 说明类只影响预览，允许只给客户看。客户侧下单面立项后把 CUSTOMER 加进来即可放宽。
  */
-export const WRITABLE_AUDIENCES: readonly TemplateAudience[] = ["CS"];
+export const WRITABLE_AUDIENCES: readonly TemplateAudience[] = [
+  "CS",
+  "CUSTOMER",
+];
 
 const AUDIENCE_SET = new Set<string>(ALL_AUDIENCES);
 
@@ -77,6 +80,46 @@ export function valueComponentsOutsideAudiences(
       sectionByKey.get(component.sectionKey),
     );
     return !writable.some((audience) => audiences.includes(audience));
+  });
+}
+
+/**
+ * 参与算价或人数的组件：带加价的选项字段、以及人数来源指向的组件。
+ * 与后端 billingComponentsV2 同口径（C-4 的前端镜像）。
+ */
+export function billingComponents(config: DraftConfigV2): DraftComponentV2[] {
+  const source = config.staffingSource;
+  return config.components.filter((component) => {
+    if (
+      component.kind === "FIELD" &&
+      (component.options ?? []).some(
+        (option) => option.priceDeltaFen !== undefined,
+      )
+    ) {
+      return true;
+    }
+    return (
+      (source.kind === "NUMBER_FIELD" ||
+        source.kind === "REPEATABLE_TABLE_SUM") &&
+      component.stableKey === source.componentKey
+    );
+  });
+}
+
+/** 参与算价/人数、却没有对每个可写端口都可见的组件（C-4 前端镜像）。 */
+export function billingComponentsOutsideEveryAudience(
+  config: DraftConfigV2,
+  writable: readonly TemplateAudience[],
+): DraftComponentV2[] {
+  const sectionByKey = new Map(
+    config.sections.map((section) => [section.stableKey, section]),
+  );
+  return billingComponents(config).filter((component) => {
+    const audiences = effectiveAudiencesOf(
+      component,
+      sectionByKey.get(component.sectionKey),
+    );
+    return writable.some((audience) => !audiences.includes(audience));
   });
 }
 
