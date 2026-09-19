@@ -5,6 +5,7 @@ import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
+import type { RoleKey } from "../../apps/api/src/modules/identity-access/domain/roles.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -34,7 +35,7 @@ describe("P-3 player application（申请/审核/追加 PLAYER）", () => {
     });
     tenantId = tenant.id;
 
-    async function account(username: string, role: string) {
+    async function account(username: string, role: RoleKey) {
       const a = await client.tenantAccount.create({
         data: { tenantId, username, passwordHash: hash },
       });

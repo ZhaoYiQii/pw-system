@@ -5,6 +5,7 @@ import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
+import type { RoleKey } from "../../apps/api/src/modules/identity-access/domain/roles.js";
 import { PrismaGenericGameTemplateRepository } from "../../apps/api/src/modules/game-dispatch/infrastructure/prisma-generic-game-template.repository.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
@@ -204,7 +205,7 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
     async function addAccount(
       tid: string,
       username: string,
-      role: string,
+      role: RoleKey,
     ): Promise<string> {
       const account = await client.tenantAccount.create({
         data: { tenantId: tid, username, passwordHash: hash },
@@ -288,12 +289,12 @@ describe("Game Dispatch generic templates v2（摘要列表/草稿竖切）", ()
     const h = { authorization: `Bearer ${token}` };
     return {
       get: (u: string) => request(app.getHttpServer()).get(u).set(h),
-      post: (u: string, b?: unknown) =>
+      post: (u: string, b?: object | string) =>
         request(app.getHttpServer())
           .post(u)
           .set(h)
           .send(b ?? {}),
-      patch: (u: string, b: unknown) =>
+      patch: (u: string, b: object | string) =>
         request(app.getHttpServer()).patch(u).set(h).send(b),
       delete: (u: string) => request(app.getHttpServer()).delete(u).set(h),
     };

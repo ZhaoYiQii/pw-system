@@ -5,6 +5,7 @@ import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
+import type { RoleKey } from "../../apps/api/src/modules/identity-access/domain/roles.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -158,7 +159,7 @@ describe("S4 新建派单：模板读取与创建", () => {
       },
     });
 
-    async function addAccount(tid: string, username: string, role: string) {
+    async function addAccount(tid: string, username: string, role: RoleKey) {
       const account = await client.tenantAccount.create({
         data: { tenantId: tid, username, passwordHash: hash },
       });
@@ -277,7 +278,7 @@ describe("S4 新建派单：模板读取与创建", () => {
           .post(u)
           .set(h)
           .send(b ?? {}),
-      patch: (u: string, b: unknown) =>
+      patch: (u: string, b: object | string) =>
         request(app.getHttpServer()).patch(u).set(h).send(b),
     };
   }
@@ -614,7 +615,7 @@ describe("S4 新建派单：模板读取与创建", () => {
       templateId: template.templateId,
       templateVersionId: template.versionId,
     });
-    const send = (payload: unknown) =>
+    const send = (payload: object | string) =>
       request(app.getHttpServer())
         .post("/api/v1/tenant/game-dispatch/template-orders")
         .set({ authorization: `Bearer ${ownerToken}`, "idempotency-key": key })

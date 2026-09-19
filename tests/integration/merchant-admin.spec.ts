@@ -49,11 +49,15 @@ describe("商家端管理/概览支撑 API（账号/通知未读/订阅/审计�
     await app.init();
     const login = await request(app.getHttpServer())
       .post("/api/v1/auth/login")
-      .send({ kind: "tenant", tenantCode: code, username: "owner", password: PW })
+      .send({
+        kind: "tenant",
+        tenantCode: code,
+        username: "owner",
+        password: PW,
+      })
       .expect(201);
-    ownerToken = (
-      login.body as { data: { accessToken?: string } }
-    ).data.accessToken as string;
+    ownerToken = (login.body as { data: { accessToken?: string } }).data
+      .accessToken as string;
   });
 
   afterAll(async () => {
@@ -85,12 +89,12 @@ describe("商家端管理/概览支撑 API（账号/通知未读/订阅/审计�
     const headers = { authorization: `Bearer ${token}` };
     return {
       get: (url: string) => request(app.getHttpServer()).get(url).set(headers),
-      post: (url: string, body?: unknown) =>
+      post: (url: string, body?: object | string) =>
         request(app.getHttpServer())
           .post(url)
           .set(headers)
           .send(body ?? {}),
-      patch: (url: string, body: unknown) =>
+      patch: (url: string, body: object | string) =>
         request(app.getHttpServer()).patch(url).set(headers).send(body),
     };
   }
@@ -104,13 +108,17 @@ describe("商家端管理/概览支撑 API（账号/通知未读/订阅/审计�
       })
       .expect(201);
     const account = (
-      created.body as { data: { id: string; username: string; roles: string[] } }
+      created.body as {
+        data: { id: string; username: string; roles: string[] };
+      }
     ).data;
     createdAccountIds.push(account.id);
     expect(account.username).toBe("service01");
     expect(account.roles).toEqual(["CUSTOMER_SERVICE"]);
 
-    const list = await req(ownerToken).get("/api/v1/tenant/accounts").expect(200);
+    const list = await req(ownerToken)
+      .get("/api/v1/tenant/accounts")
+      .expect(200);
     const rows = (
       list.body as {
         data: Array<{ id: string; username: string; roles: string[] }>;
@@ -132,9 +140,9 @@ describe("商家端管理/概览支撑 API（账号/通知未读/订阅/审计�
         status: "DISABLED",
       })
       .expect(200);
-    expect(
-      (disabled.body as { data: { status: string } }).data.status,
-    ).toBe("DISABLED");
+    expect((disabled.body as { data: { status: string } }).data.status).toBe(
+      "DISABLED",
+    );
 
     await req(ownerToken)
       .patch(`/api/v1/tenant/accounts/${ownerId}/status`, {
@@ -234,9 +242,8 @@ describe("商家端管理/概览支撑 API（账号/通知未读/订阅/审计�
         `/api/v1/tenant/audit/export?q=${encodeURIComponent("MA-TEST-ORDER")}`,
       )
       .expect(200);
-    const csv = (
-      exported.body as { data: { csv: string; filename: string } }
-    ).data.csv;
+    const csv = (exported.body as { data: { csv: string; filename: string } })
+      .data.csv;
     expect(csv).toContain("MA-TEST-ORDER");
     expect(csv).toContain("order.create");
   });

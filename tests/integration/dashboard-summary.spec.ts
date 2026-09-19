@@ -5,6 +5,7 @@ import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
+import type { RoleKey } from "../../apps/api/src/modules/identity-access/domain/roles.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -45,11 +46,7 @@ describe("reporting dashboard summary (角色/口径/隔离)", () => {
     tenantA = ta;
     tenantB = tb;
 
-    async function account(
-      tenantId: string,
-      username: string,
-      role: string,
-    ) {
+    async function account(tenantId: string, username: string, role: RoleKey) {
       const acct = await client.tenantAccount.create({
         data: { tenantId, username, passwordHash: hash },
       });
@@ -211,14 +208,18 @@ describe("reporting dashboard summary (角色/口径/隔离)", () => {
       for (const t of [tenantA, tenantB]) {
         if (!t) continue;
         await client.auditLog.deleteMany({ where: { tenantId: t.id } });
-        await client.sessionAdjustment.deleteMany({ where: { tenantId: t.id } });
+        await client.sessionAdjustment.deleteMany({
+          where: { tenantId: t.id },
+        });
         await client.serviceSession.deleteMany({ where: { tenantId: t.id } });
         await client.dispute.deleteMany({ where: { tenantId: t.id } });
         await client.settlementBatch.deleteMany({ where: { tenantId: t.id } });
         await client.order.deleteMany({ where: { tenantId: t.id } });
         await client.playerProfile.deleteMany({ where: { tenantId: t.id } });
         await client.customerProfile.deleteMany({ where: { tenantId: t.id } });
-        await client.tenantAccountRole.deleteMany({ where: { tenantId: t.id } });
+        await client.tenantAccountRole.deleteMany({
+          where: { tenantId: t.id },
+        });
         await client.tenantAccount.deleteMany({ where: { tenantId: t.id } });
         await client.tenant.deleteMany({ where: { id: t.id } });
       }
