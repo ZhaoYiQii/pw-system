@@ -223,6 +223,17 @@ export type AuthPhoneLoginResponses = {
     201: unknown;
 };
 
+export type AuthSwitchContextData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/switch-context';
+};
+
+export type AuthSwitchContextResponses = {
+    201: unknown;
+};
+
 export type AuthRefreshData = {
     body?: never;
     path?: never;

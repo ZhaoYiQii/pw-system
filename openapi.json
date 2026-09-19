@@ -306,6 +306,20 @@
         ]
       }
     },
+    "/api/v1/auth/switch-context": {
+      "post": {
+        "operationId": "auth_switchContext",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "auth_refresh",
