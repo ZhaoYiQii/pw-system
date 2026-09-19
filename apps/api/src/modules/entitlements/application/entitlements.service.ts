@@ -21,9 +21,7 @@ export interface TenantSubscriptionView {
 export interface EntitlementRepository {
   list(tenantId: string): Promise<FeatureRow[]>;
   set(tenantId: string, featureKey: string, enabled: boolean): Promise<void>;
-  getSubscription(
-    tenantId: string,
-  ): Promise<TenantSubscriptionView | null>;
+  getSubscription(tenantId: string): Promise<TenantSubscriptionView | null>;
 }
 
 export interface FeatureState extends FeatureRow {

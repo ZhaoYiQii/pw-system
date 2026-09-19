@@ -44,9 +44,7 @@ function normalizeRoles(roles: unknown[]): TenantAccountRoleKey[] {
 function assertUsername(username: string): string {
   const name = username.trim();
   if (!/^[a-zA-Z0-9_-]{2,64}$/.test(name)) {
-    throw new TenantAccountValidationError(
-      "用户名需为 2-64 位字母/数字/_/-",
-    );
+    throw new TenantAccountValidationError("用户名需为 2-64 位字母/数字/_/-");
   }
   return name;
 }
@@ -185,11 +183,7 @@ export class TenantAccountsService {
     );
   }
 
-  private async findTx(
-    tx: DbTransaction,
-    tenantId: string,
-    accountId: string,
-  ) {
+  private async findTx(tx: DbTransaction, tenantId: string, accountId: string) {
     const row = await tx.tenantAccount.findFirst({
       where: { tenantId, id: accountId },
       include: { roles: { select: { role: true } } },
@@ -236,9 +230,7 @@ function mapRow(row: {
     tenantId: row.tenantId,
     username: row.username,
     status: row.status as TenantAccountView["status"],
-    roles: row.roles.map(
-      (r) => r.role as TenantAccountRoleKey,
-    ),
+    roles: row.roles.map((r) => r.role as TenantAccountRoleKey),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

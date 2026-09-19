@@ -111,9 +111,7 @@ export class TenancyController {
     @Query("code") codeQuery?: unknown,
   ) {
     const code =
-      typeof codeQuery === "string" && codeQuery.length > 0
-        ? codeQuery
-        : "";
+      typeof codeQuery === "string" && codeQuery.length > 0 ? codeQuery : "";
     const host =
       typeof hostQuery === "string" && hostQuery.length > 0
         ? hostQuery

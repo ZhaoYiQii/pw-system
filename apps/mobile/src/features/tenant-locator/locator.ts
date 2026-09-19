@@ -1,6 +1,5 @@
 export type LocatorParam =
-  | { name: "host"; value: string }
-  | { name: "code"; value: string };
+  { name: "host"; value: string } | { name: "code"; value: string };
 
 export function readShortCode(search: string): string | null {
   try {

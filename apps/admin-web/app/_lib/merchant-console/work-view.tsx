@@ -30,11 +30,7 @@ function RoleNotice({ role }: { role: MerchantRole }) {
         : role === "FINANCE"
           ? "财务"
           : "客服";
-  return (
-    <p>
-      当前角色：{label} · 只呈现能采取行动的真实状态。
-    </p>
-  );
+  return <p>当前角色：{label} · 只呈现能采取行动的真实状态。</p>;
 }
 
 function AttentionRow({
@@ -58,10 +54,7 @@ function AttentionRow({
         </p>
       </div>
       <div className="mc-task-time">
-        <Link
-          href={attentionHref(item)}
-          className="mc-btn mc-btn-small"
-        >
+        <Link href={attentionHref(item)} className="mc-btn mc-btn-small">
           {actionLabel(item.action)}
           <ArrowRight size={13} />
         </Link>
@@ -161,11 +154,7 @@ export function WorkView() {
         <div className="mc-monitor-metrics">
           {cards.map((card) =>
             card.href ? (
-              <Link
-                key={card.id}
-                href={card.href}
-                className="mc-metric-tile"
-              >
+              <Link key={card.id} href={card.href} className="mc-metric-tile">
                 <span>{card.label}</span>
                 <b>{card.value}</b>
                 <em>
@@ -215,9 +204,11 @@ export function WorkView() {
             <span>{summary.attention.length} 项</span>
           </div>
           {summary.attention.length > 0 ? (
-            summary.attention.slice(0, 8).map((item, index) => (
-              <AttentionRow key={item.id} item={item} index={index} />
-            ))
+            summary.attention
+              .slice(0, 8)
+              .map((item, index) => (
+                <AttentionRow key={item.id} item={item} index={index} />
+              ))
           ) : (
             <DemoEmptyState
               title="当前没有待办"

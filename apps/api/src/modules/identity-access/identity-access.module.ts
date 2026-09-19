@@ -95,9 +95,8 @@ function resolveSmsProvider(): SmsProvider {
     },
     {
       provide: TenantAccountsService,
-      useFactory: (
-        runtimeClient: ReturnType<typeof createDatabaseClient>,
-      ) => new TenantAccountsService(runtimeClient),
+      useFactory: (runtimeClient: ReturnType<typeof createDatabaseClient>) =>
+        new TenantAccountsService(runtimeClient),
       inject: [AUTH_RUNTIME_CLIENT],
     },
     {

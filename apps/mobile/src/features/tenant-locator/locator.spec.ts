@@ -7,9 +7,7 @@ describe("H5 tenant locator 短码直达", () => {
       name: "code",
       value: "xingchen",
     });
-    expect(
-      readShortCode("?t=%E6%98%9F%E5%B0%98&x=1"),
-    ).toBe("星尘");
+    expect(readShortCode("?t=%E6%98%9F%E5%B0%98&x=1")).toBe("星尘");
   });
 
   it("无 t 参数或 t 为空时回退 host", () => {

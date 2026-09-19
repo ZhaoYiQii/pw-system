@@ -167,7 +167,11 @@ function Inner() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={s.flow === "GAME_DISPATCH" ? "outline" : "default"}>
+                      <Badge
+                        variant={
+                          s.flow === "GAME_DISPATCH" ? "outline" : "default"
+                        }
+                      >
                         {s.flow === "GAME_DISPATCH" ? "GD" : "CLASSIC"}
                       </Badge>
                     </TableCell>

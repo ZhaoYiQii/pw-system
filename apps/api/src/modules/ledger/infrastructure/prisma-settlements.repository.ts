@@ -196,12 +196,8 @@ export class PrismaSettlementsRepository {
         }),
       ]);
       const allSources = [...earnings, ...slotEarnings];
-      const playerIds = Array.from(
-        new Set(allSources.map((e) => e.playerId)),
-      );
-      const orderIds = Array.from(
-        new Set(allSources.map((e) => e.orderId)),
-      );
+      const playerIds = Array.from(new Set(allSources.map((e) => e.playerId)));
+      const orderIds = Array.from(new Set(allSources.map((e) => e.orderId)));
       const players = await this.client.playerProfile.findMany({
         where: { tenantId, id: { in: playerIds } },
         select: { id: true, name: true },
@@ -220,7 +216,7 @@ export class PrismaSettlementsRepository {
         const source = earning ?? slotEarning;
         outItems.push({
           itemId: item.id,
-          source: (item.sourceType === "SLOT" ? "SLOT" : "LEGACY"),
+          source: item.sourceType === "SLOT" ? "SLOT" : "LEGACY",
           earningId: item.earningId,
           slotEarningId: item.slotEarningId,
           amountFen: item.amountFen.toString(),
@@ -252,9 +248,7 @@ export class PrismaSettlementsRepository {
       approvedByName: batch.approvedBy
         ? (actorName.get(batch.approvedBy) ?? null)
         : null,
-      paidByName: batch.paidBy
-        ? (actorName.get(batch.paidBy) ?? null)
-        : null,
+      paidByName: batch.paidBy ? (actorName.get(batch.paidBy) ?? null) : null,
       paidAt: payments[0]?.paidAt ?? null,
     };
   }

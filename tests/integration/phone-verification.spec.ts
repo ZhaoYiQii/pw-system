@@ -68,9 +68,9 @@ describe("P-1 phone verification (验证码发送/限流/校验/审计)", () => 
 
   it("错误码校验失败，正确码可消费且不可重放", async () => {
     expect(issuedCode).toMatch(/^\d{6}$/);
-    await expect(service.consumeCode(tenantId, phone, "000000")).rejects.toThrow(
-      "验证码不正确",
-    );
+    await expect(
+      service.consumeCode(tenantId, phone, "000000"),
+    ).rejects.toThrow("验证码不正确");
     await expect(
       service.consumeCode(tenantId, phone, issuedCode),
     ).resolves.toBeUndefined();

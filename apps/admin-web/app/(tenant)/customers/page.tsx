@@ -84,7 +84,9 @@ function CustomerListInner() {
       <Card>
         <CardHeader>
           <CardTitle>新建客户</CardTitle>
-          <CardDescription>为门店档案新增客户，可后续绑定老板账号。</CardDescription>
+          <CardDescription>
+            为门店档案新增客户，可后续绑定老板账号。
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form

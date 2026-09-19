@@ -287,9 +287,7 @@ describe("商家记录台闭环：客户/陪玩账户、场次证据、争议详
 
   it("收入账本列出 CLASSIC 应收", async () => {
     const ledger = (
-      await req(ownerToken)
-        .get("/api/v1/tenant/settlements/ledger")
-        .expect(200)
+      await req(ownerToken).get("/api/v1/tenant/settlements/ledger").expect(200)
     ).body.data as {
       unpaidFen: string;
       rows: Array<{ id: string; source: string }>;

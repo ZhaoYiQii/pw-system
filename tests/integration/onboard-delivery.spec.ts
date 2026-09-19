@@ -56,7 +56,9 @@ describe("OA-1 onboarding delivery（primaryHost/code 解析/409 冲突）", () 
       const t = await client.tenant.findUnique({ where: { code: tenantCode } });
       if (t) {
         const tid = t.id;
-        await client.tenantSubscription.deleteMany({ where: { tenantId: tid } });
+        await client.tenantSubscription.deleteMany({
+          where: { tenantId: tid },
+        });
         await client.tenantEntitlement.deleteMany({ where: { tenantId: tid } });
         await client.tenantConfigVersion.deleteMany({
           where: { tenantId: tid },
@@ -104,11 +106,13 @@ describe("OA-1 onboarding delivery（primaryHost/code 解析/409 冲突）", () 
     expect(data.primaryHost).toBe(tenantHost);
 
     const resolved = await request(app.getHttpServer())
-      .get(`/api/v1/public/tenant-resolve?code=${encodeURIComponent(tenantCode)}`)
+      .get(
+        `/api/v1/public/tenant-resolve?code=${encodeURIComponent(tenantCode)}`,
+      )
       .expect(200);
-    expect(
-      (resolved.body as { data: { code?: string } }).data.code,
-    ).toBe(tenantCode);
+    expect((resolved.body as { data: { code?: string } }).data.code).toBe(
+      tenantCode,
+    );
 
     const storefront = await request(app.getHttpServer())
       .get(
@@ -140,9 +144,7 @@ describe("OA-1 onboarding delivery（primaryHost/code 解析/409 冲突）", () 
         packageCode: "BASIC",
       })
       .expect(409);
-    expect(
-      (dupCode.body as { code?: string }).code,
-    ).toBe("TENANT_CODE_TAKEN");
+    expect((dupCode.body as { code?: string }).code).toBe("TENANT_CODE_TAKEN");
 
     const dupHost = await platformReq()
       .send({

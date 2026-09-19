@@ -93,7 +93,12 @@ function Inner({ sessionId }: { sessionId: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { data, isPending, isError, error: queryError } = useQuery({
+  const {
+    data,
+    isPending,
+    isError,
+    error: queryError,
+  } = useQuery({
     queryKey: ["session-detail", sessionId],
     queryFn: () =>
       apiFetch<SessionDetail>(`/api/v1/tenant/sessions/${sessionId}`),
@@ -152,18 +157,13 @@ function Inner({ sessionId }: { sessionId: string }) {
         data?.flow === "GAME_DISPATCH"
           ? `/api/v1/tenant/slot-evidence/${evidence.id}`
           : `/api/v1/tenant/evidence/${evidence.id}`;
-      const res = await fetch(
-        `${API_ORIGIN}${evidencePath}`,
-        { headers },
-      );
+      const res = await fetch(`${API_ORIGIN}${evidencePath}`, { headers });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      setError(
-        `证据打开失败：${e instanceof Error ? e.message : String(e)}`,
-      );
+      setError(`证据打开失败：${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -185,17 +185,13 @@ function Inner({ sessionId }: { sessionId: string }) {
     return (
       <p className="text-sm text-destructive">
         加载失败：
-        {queryError instanceof Error
-          ? queryError.message
-          : String(queryError)}
+        {queryError instanceof Error ? queryError.message : String(queryError)}
       </p>
     );
   }
   if (isPending || !data) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        加载中…
-      </p>
+      <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
     );
   }
 
@@ -211,7 +207,9 @@ function Inner({ sessionId }: { sessionId: string }) {
             <Badge variant={data.status === "STARTED" ? "default" : "outline"}>
               {STATUS_TEXT[data.status] ?? data.status}
             </Badge>
-            <Badge variant={data.flow === "GAME_DISPATCH" ? "outline" : "default"}>
+            <Badge
+              variant={data.flow === "GAME_DISPATCH" ? "outline" : "default"}
+            >
               {data.flow === "GAME_DISPATCH" ? "GD 档位场次" : "CLASSIC"}
             </Badge>
           </CardTitle>
@@ -347,10 +345,7 @@ function Inner({ sessionId }: { sessionId: string }) {
           ) : (
             <div className="flex flex-col gap-3">
               {data.adjustments.map((a) => (
-                <div
-                  key={a.id}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
+                <div key={a.id} className="rounded-md border px-3 py-2 text-sm">
                   <p>
                     原 {formatDuration(a.originalDurationSeconds)} → 申请{" "}
                     {formatDuration(a.requestedDurationSeconds)}

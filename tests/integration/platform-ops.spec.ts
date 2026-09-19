@@ -121,7 +121,9 @@ describe("P-B1 platform ops（总览 / 订阅用量 / 门店详情）", () => {
       const tenant = await client.tenant.findUnique({ where: { code } });
       if (tenant) {
         await client.order.deleteMany({ where: { tenantId: tenant.id } });
-        await client.customerProfile.deleteMany({ where: { tenantId: tenant.id } });
+        await client.customerProfile.deleteMany({
+          where: { tenantId: tenant.id },
+        });
         await client.tenantSubscription.deleteMany({
           where: { tenantId: tenant.id },
         });
@@ -135,11 +137,15 @@ describe("P-B1 platform ops（总览 / 订阅用量 / 门店详情）", () => {
           where: { tenantId: tenant.id },
         });
         await client.auditLog.deleteMany({ where: { tenantId: tenant.id } });
-        await client.tenantDomain.deleteMany({ where: { tenantId: tenant.id } });
+        await client.tenantDomain.deleteMany({
+          where: { tenantId: tenant.id },
+        });
         await client.tenantAccountRole.deleteMany({
           where: { tenantId: tenant.id },
         });
-        await client.tenantAccount.deleteMany({ where: { tenantId: tenant.id } });
+        await client.tenantAccount.deleteMany({
+          where: { tenantId: tenant.id },
+        });
         await client.tenant.deleteMany({ where: { id: tenant.id } });
       }
       await client.platformAccount.deleteMany({
@@ -158,7 +164,15 @@ describe("P-B1 platform ops（总览 / 订阅用量 / 门店详情）", () => {
 
   it("GET /platform/overview 返回门店计数与 7 天内到期订阅", async () => {
     const res = await get("/api/v1/platform/overview").expect(200);
-    const data = (res.body as { data: { tenants: { total: number; active: number }; expiringSoon: number; health: { outboxPending: number; storageBytes: number | null } } }).data;
+    const data = (
+      res.body as {
+        data: {
+          tenants: { total: number; active: number };
+          expiringSoon: number;
+          health: { outboxPending: number; storageBytes: number | null };
+        };
+      }
+    ).data;
     expect(data.tenants.total).toBeGreaterThanOrEqual(1);
     expect(data.tenants.active).toBeGreaterThanOrEqual(1);
     expect(data.expiringSoon).toBeGreaterThanOrEqual(1);
@@ -168,7 +182,16 @@ describe("P-B1 platform ops（总览 / 订阅用量 / 门店详情）", () => {
 
   it("GET /platform/subscriptions 返回套餐/到期与订单量", async () => {
     const res = await get("/api/v1/platform/subscriptions").expect(200);
-    const rows = (res.body as { data: Array<{ tenantCode: string; packageCode: string | null; subscriptionStatus: string | null; orderCount: number }> }).data;
+    const rows = (
+      res.body as {
+        data: Array<{
+          tenantCode: string;
+          packageCode: string | null;
+          subscriptionStatus: string | null;
+          orderCount: number;
+        }>;
+      }
+    ).data;
     const row = rows.find((r) => r.tenantCode === code);
     expect(row).toBeDefined();
     expect(row?.packageCode).toBe("PRO");
@@ -180,7 +203,16 @@ describe("P-B1 platform ops（总览 / 订阅用量 / 门店详情）", () => {
     const res = await get(`/api/v1/platform/tenants/${tenantId}/detail`).expect(
       200,
     );
-    const data = (res.body as { data: { ownerUsername: string | null; packageName: string | null; storeCutBp: number | null; brandPrimary: string | null } }).data;
+    const data = (
+      res.body as {
+        data: {
+          ownerUsername: string | null;
+          packageName: string | null;
+          storeCutBp: number | null;
+          brandPrimary: string | null;
+        };
+      }
+    ).data;
     expect(data.ownerUsername).toBe("boss");
     expect(data.packageName).toBe("专业版");
     expect(data.storeCutBp).toBe(2000);
@@ -188,8 +220,8 @@ describe("P-B1 platform ops（总览 / 订阅用量 / 门店详情）", () => {
   });
 
   it("不存在门店返回 404", async () => {
-    await get("/api/v1/platform/tenants/00000000-0000-0000-0000-000000000000/detail").expect(
-      404,
-    );
+    await get(
+      "/api/v1/platform/tenants/00000000-0000-0000-0000-000000000000/detail",
+    ).expect(404);
   });
 });

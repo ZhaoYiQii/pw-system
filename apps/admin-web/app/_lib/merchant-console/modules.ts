@@ -86,7 +86,8 @@ export const MERCHANT_MODULES = [
     group: "records",
     label: "陪玩申请",
     kicker: "RECORDS / PLAYER APPLICATIONS",
-    description: "老板端申请成为陪玩的待审列表，审核通过后自动建档并开通陪玩端。",
+    description:
+      "老板端申请成为陪玩的待审列表，审核通过后自动建档并开通陪玩端。",
     features: ["待审申请", "批准 / 拒绝", "审核后自动追加 PLAYER"],
   },
   {

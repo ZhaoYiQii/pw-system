@@ -94,7 +94,9 @@ export class PrismaGameTemplateRepository implements GameTemplateRepository {
               sortOrder: 0,
             },
           });
-          return [{ id: created.id, name: created.name, columns: created.columns }];
+          return [
+            { id: created.id, name: created.name, columns: created.columns },
+          ];
         }
         const refs: SectionRef[] = [];
         for (const [index, section] of wanted.entries()) {
@@ -108,7 +110,11 @@ export class PrismaGameTemplateRepository implements GameTemplateRepository {
               enabled: section.enabled !== false,
             },
           });
-          refs.push({ id: created.id, name: created.name, columns: created.columns });
+          refs.push({
+            id: created.id,
+            name: created.name,
+            columns: created.columns,
+          });
         }
         if (refs.length === 0) {
           const created = await tx.gameDispatchTemplateSection.create({
@@ -120,7 +126,11 @@ export class PrismaGameTemplateRepository implements GameTemplateRepository {
               sortOrder: 0,
             },
           });
-          refs.push({ id: created.id, name: created.name, columns: created.columns });
+          refs.push({
+            id: created.id,
+            name: created.name,
+            columns: created.columns,
+          });
         }
         return refs;
       };
@@ -417,25 +427,26 @@ export class PrismaGameTemplateRepository implements GameTemplateRepository {
   }
 
   private async assemble(id: string): Promise<GameTemplateView> {
-    const [template, fields, sections, positions, rankRules] = await Promise.all([
-      this.client.gameDispatchTemplate.findUniqueOrThrow({ where: { id } }),
-      this.client.gameDispatchTemplateField.findMany({
-        where: { templateId: id },
-        orderBy: { sortOrder: "asc" },
-      }),
-      this.client.gameDispatchTemplateSection.findMany({
-        where: { templateId: id },
-        orderBy: { sortOrder: "asc" },
-      }),
-      this.client.gameDispatchPosition.findMany({
-        where: { templateId: id },
-        orderBy: { sortOrder: "asc" },
-      }),
-      this.client.gameDispatchRankRule.findMany({
-        where: { templateId: id },
-        orderBy: { sortOrder: "asc" },
-      }),
-    ]);
+    const [template, fields, sections, positions, rankRules] =
+      await Promise.all([
+        this.client.gameDispatchTemplate.findUniqueOrThrow({ where: { id } }),
+        this.client.gameDispatchTemplateField.findMany({
+          where: { templateId: id },
+          orderBy: { sortOrder: "asc" },
+        }),
+        this.client.gameDispatchTemplateSection.findMany({
+          where: { templateId: id },
+          orderBy: { sortOrder: "asc" },
+        }),
+        this.client.gameDispatchPosition.findMany({
+          where: { templateId: id },
+          orderBy: { sortOrder: "asc" },
+        }),
+        this.client.gameDispatchRankRule.findMany({
+          where: { templateId: id },
+          orderBy: { sortOrder: "asc" },
+        }),
+      ]);
     const copyLines = (template.copyLines ?? []) as unknown as
       TemplateCopyLineView[] | null;
     return {
@@ -443,7 +454,8 @@ export class PrismaGameTemplateRepository implements GameTemplateRepository {
       tenantId: template.tenantId,
       name: template.name,
       enabled: template.enabled,
-      blockLabels: (template.blockLabels ?? {}) as unknown as TemplateBlockLabels,
+      blockLabels: (template.blockLabels ??
+        {}) as unknown as TemplateBlockLabels,
       sections: sections.map<TemplateSectionView>((s) => ({
         id: s.id,
         name: s.name,

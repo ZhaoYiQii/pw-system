@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Download, Plus, Search } from "lucide-react";
 import { apiFetch } from "../api";
 import { formatFenYuan, yuanToFenString } from "../money";
@@ -118,9 +114,7 @@ export function CustomersConsoleView() {
         <SimpleTable
           loading={rowsQuery.isPending}
           errorMessage={
-            rowsQuery.error instanceof Error
-              ? rowsQuery.error.message
-              : null
+            rowsQuery.error instanceof Error ? rowsQuery.error.message : null
           }
           headers={["客户", "手机", "备注", "状态", ""]}
           rows={rows}
@@ -246,9 +240,7 @@ export function PlayersConsoleView() {
         <SimpleTable
           loading={rowsQuery.isPending}
           errorMessage={
-            rowsQuery.error instanceof Error
-              ? rowsQuery.error.message
-              : null
+            rowsQuery.error instanceof Error ? rowsQuery.error.message : null
           }
           headers={["姓名", "手机", "小时价", "接单", "操作"]}
           rows={rowsQuery.data ?? []}
@@ -326,9 +318,7 @@ export function SessionsConsoleView() {
         <SimpleTable
           loading={rowsQuery.isPending}
           errorMessage={
-            rowsQuery.error instanceof Error
-              ? rowsQuery.error.message
-              : null
+            rowsQuery.error instanceof Error ? rowsQuery.error.message : null
           }
           headers={["订单", "流程", "客户 / 陪玩", "状态", "证据", ""]}
           rows={rowsQuery.data ?? []}
@@ -340,9 +330,7 @@ export function SessionsConsoleView() {
               </td>
               <td>
                 <StatusChip
-                  text={
-                    session.flow === "GAME_DISPATCH" ? "GD" : "CLASSIC"
-                  }
+                  text={session.flow === "GAME_DISPATCH" ? "GD" : "CLASSIC"}
                   tone={
                     session.flow === "GAME_DISPATCH" ? "dispatch" : "assigned"
                   }
@@ -383,9 +371,7 @@ export function DisputesConsoleView() {
         <SimpleTable
           loading={rowsQuery.isPending}
           errorMessage={
-            rowsQuery.error instanceof Error
-              ? rowsQuery.error.message
-              : null
+            rowsQuery.error instanceof Error ? rowsQuery.error.message : null
           }
           headers={["订单", "客户 / 陪玩", "原因", "状态", "操作"]}
           rows={rowsQuery.data ?? []}
@@ -545,9 +531,7 @@ export function AuditConsoleView() {
         <SimpleTable
           loading={rowsQuery.isPending}
           errorMessage={
-            rowsQuery.error instanceof Error
-              ? rowsQuery.error.message
-              : null
+            rowsQuery.error instanceof Error ? rowsQuery.error.message : null
           }
           headers={["时间", "动作", "摘要", "操作者", "资源"]}
           rows={rows}
@@ -643,9 +627,11 @@ function SimpleTable<T>({
                 ))}
               </tr>
             </thead>
-            <tbody>{rows.map((row, index) => (
-              <tr key={index}>{renderRow(row)}</tr>
-            ))}</tbody>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index}>{renderRow(row)}</tr>
+              ))}
+            </tbody>
           </table>
         </div>
       ) : null}
@@ -658,13 +644,26 @@ function StatusChip({
   tone,
 }: {
   text: string;
-  tone: "pending" | "running" | "done" | "muted" | "dispatch" | "assigned" | "cancelled";
+  tone:
+    | "pending"
+    | "running"
+    | "done"
+    | "muted"
+    | "dispatch"
+    | "assigned"
+    | "cancelled";
 }) {
   return <span className={`mc-status st-${tone}`}>{text}</span>;
 }
 
 function SessionStatusChip({ status }: { status: string }) {
-  const map: Record<string, { text: string; tone: "pending" | "running" | "done" | "muted" | "assigned" }> = {
+  const map: Record<
+    string,
+    {
+      text: string;
+      tone: "pending" | "running" | "done" | "muted" | "assigned";
+    }
+  > = {
     SCHEDULED: { text: "待开始", tone: "assigned" },
     NOT_STARTED: { text: "待开始", tone: "assigned" },
     STARTED: { text: "进行中", tone: "running" },

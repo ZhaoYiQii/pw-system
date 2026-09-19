@@ -465,7 +465,9 @@ function Inner() {
                     </p>
                   </div>
                   {account.data.finance.records.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">暂无收入记录。</p>
+                    <p className="text-sm text-muted-foreground">
+                      暂无收入记录。
+                    </p>
                   ) : (
                     <Table>
                       <TableHeader>

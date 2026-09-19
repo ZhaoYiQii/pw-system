@@ -27,7 +27,5 @@ test("门店账号登录后进入新商家控制台并打开订单管理", async
   await expect(page.getByText("owner", { exact: true }).first()).toBeVisible();
 
   await page.goto("/merchant-console/dispatch");
-  await expect(
-    page.getByRole("heading", { name: "订单与派单" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "订单与派单" })).toBeVisible();
 });

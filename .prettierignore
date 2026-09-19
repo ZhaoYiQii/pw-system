@@ -14,3 +14,6 @@ docs/adr/
 docs/specs/
 docs/acceptance/
 docs/runbooks/
+# 设计原型与一次性草稿：按约定不属于产品代码，不参与格式门禁
+design-demos/
+work/

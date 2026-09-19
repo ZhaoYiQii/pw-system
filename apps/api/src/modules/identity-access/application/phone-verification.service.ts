@@ -135,7 +135,9 @@ export class PhoneVerificationService {
         throw new PhoneVerificationExpiredError("验证码不存在或已过期");
       }
       if (found.attempts >= MAX_ATTEMPTS) {
-        throw new PhoneVerificationCodeMismatchError("尝试次数过多，请重新获取");
+        throw new PhoneVerificationCodeMismatchError(
+          "尝试次数过多，请重新获取",
+        );
       }
       await tx.phoneVerificationCode.update({
         where: { id: found.id },

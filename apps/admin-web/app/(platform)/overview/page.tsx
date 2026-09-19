@@ -61,7 +61,8 @@ function Inner() {
   });
   const subscriptionsQuery = useQuery({
     queryKey: ["platform-overview-subscriptions"],
-    queryFn: () => apiFetch<SubscriptionRow[]>("/api/v1/platform/subscriptions"),
+    queryFn: () =>
+      apiFetch<SubscriptionRow[]>("/api/v1/platform/subscriptions"),
   });
 
   const overview = overviewQuery.data;
@@ -79,10 +80,17 @@ function Inner() {
   return (
     <PlatformShell>
       {is401 ? (
-        <div className="pw-panel" style={{ maxWidth: 520, margin: "60px auto" }}>
+        <div
+          className="pw-panel"
+          style={{ maxWidth: 520, margin: "60px auto" }}
+        >
           <div className="pw-panel-body">
             <h2 style={{ margin: "0 0 8px" }}>尚未登录平台账号</h2>
-            <Link className="pw-btn pw-primary" href="/login" style={{ marginTop: 12 }}>
+            <Link
+              className="pw-btn pw-primary"
+              href="/login"
+              style={{ marginTop: 12 }}
+            >
               去登录
             </Link>
           </div>
@@ -191,7 +199,9 @@ function Inner() {
                   <span>Outbox 积压</span>
                   <span
                     className={`pw-status ${
-                      (overview?.health.outboxPending ?? 0) > 0 ? "pw-warn" : "pw-ok"
+                      (overview?.health.outboxPending ?? 0) > 0
+                        ? "pw-warn"
+                        : "pw-ok"
                     }`}
                   >
                     {overview?.health.outboxPending ?? "…"}
@@ -201,7 +211,9 @@ function Inner() {
                   <span>通知失败</span>
                   <span
                     className={`pw-status ${
-                      (overview?.health.outboxFailed ?? 0) > 0 ? "pw-warn" : "pw-ok"
+                      (overview?.health.outboxFailed ?? 0) > 0
+                        ? "pw-warn"
+                        : "pw-ok"
                     }`}
                   >
                     {overview?.health.outboxFailed ?? "…"}
@@ -210,7 +222,9 @@ function Inner() {
                 <div className="pw-addon-row">
                   <span>存储用量</span>
                   <span className="pw-mono">
-                    {overview ? formatStorage(overview.health.storageBytes) : "…"}
+                    {overview
+                      ? formatStorage(overview.health.storageBytes)
+                      : "…"}
                   </span>
                 </div>
               </div>

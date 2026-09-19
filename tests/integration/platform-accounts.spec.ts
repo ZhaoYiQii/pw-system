@@ -80,7 +80,9 @@ describe("P-B2a 平台账号管理（列表/创建/启停/改角色/权限/审�
   function req(token: string) {
     return {
       get: (u: string) =>
-        request(app.getHttpServer()).get(u).set("authorization", `Bearer ${token}`),
+        request(app.getHttpServer())
+          .get(u)
+          .set("authorization", `Bearer ${token}`),
       post: (u: string, b: unknown) =>
         request(app.getHttpServer())
           .post(u)
@@ -95,8 +97,12 @@ describe("P-B2a 平台账号管理（列表/创建/启停/改角色/权限/审�
   }
 
   it("超级管理员可列出账号", async () => {
-    const res = await req(actorToken).get("/api/v1/platform/accounts").expect(200);
-    const rows = (res.body as { data: Array<{ username: string; role: string }> }).data;
+    const res = await req(actorToken)
+      .get("/api/v1/platform/accounts")
+      .expect(200);
+    const rows = (
+      res.body as { data: Array<{ username: string; role: string }> }
+    ).data;
     expect(rows.some((r) => r.username === actorUsername)).toBe(true);
   });
 
@@ -149,10 +155,12 @@ describe("P-B2a 平台账号管理（列表/创建/启停/改角色/权限/审�
         role: "PLATFORM_SUPER_ADMIN",
       })
       .expect(200);
-    const list = await req(actorToken).get("/api/v1/platform/accounts").expect(200);
-    const row = (list.body as { data: Array<{ id: string; role: string }> }).data.find(
-      (r) => r.id === supportId,
-    );
+    const list = await req(actorToken)
+      .get("/api/v1/platform/accounts")
+      .expect(200);
+    const row = (
+      list.body as { data: Array<{ id: string; role: string }> }
+    ).data.find((r) => r.id === supportId);
     expect(row?.role).toBe("PLATFORM_SUPER_ADMIN");
   });
 

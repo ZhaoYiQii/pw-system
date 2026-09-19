@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Image, RefreshCw } from "lucide-react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, getAccessToken } from "../api";
 import { formatFenYuan } from "../money";
 import { useDemoToast } from "./demo-ui";
@@ -37,9 +33,7 @@ export function CustomerDetailView({ id }: { id: string }) {
   const ordersQuery = useQuery({
     queryKey: ["mc-customer-orders", id],
     queryFn: () =>
-      apiFetch<CustomerOrderHistory[]>(
-        `/api/v1/tenant/customers/${id}/orders`,
-      ),
+      apiFetch<CustomerOrderHistory[]>(`/api/v1/tenant/customers/${id}/orders`),
   });
 
   const customer = customerQuery.data;
@@ -104,7 +98,9 @@ export function CustomerDetailView({ id }: { id: string }) {
                           <tbody>
                             {wallet.entries.map((entry) => (
                               <tr key={entry.id}>
-                                <td>{new Date(entry.createdAt).toLocaleString()}</td>
+                                <td>
+                                  {new Date(entry.createdAt).toLocaleString()}
+                                </td>
                                 <td>{walletTypeLabel(entry.type)}</td>
                                 <td>{entry.reason ?? "-"}</td>
                                 <td
@@ -159,7 +155,9 @@ export function CustomerDetailView({ id }: { id: string }) {
                                 : "CLASSIC"}
                             </td>
                             <td>{order.status}</td>
-                            <td>{new Date(order.createdAt).toLocaleString()}</td>
+                            <td>
+                              {new Date(order.createdAt).toLocaleString()}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -189,7 +187,8 @@ export function PlayerDetailView({ id }: { id: string }) {
   });
   const accountQuery = useQuery({
     queryKey: ["mc-player-account", id],
-    queryFn: () => apiFetch<PlayerAccount>(`/api/v1/tenant/players/${id}/account`),
+    queryFn: () =>
+      apiFetch<PlayerAccount>(`/api/v1/tenant/players/${id}/account`),
   });
   const gamesQuery = useQuery({
     queryKey: ["mc-catalog-games"],
@@ -221,26 +220,22 @@ export function PlayerDetailView({ id }: { id: string }) {
   });
   const removeSkill = useMutation({
     mutationFn: (skillId: string) =>
-      apiFetch<unknown>(
-        `/api/v1/tenant/players/${id}/skills/${skillId}`,
-        { method: "DELETE" },
-      ),
+      apiFetch<unknown>(`/api/v1/tenant/players/${id}/skills/${skillId}`, {
+        method: "DELETE",
+      }),
     onSuccess: refresh,
   });
   const addAvailability = useMutation({
     mutationFn: () => {
       if (!from || !to) throw new Error("请填写起止时间");
-      return apiFetch<unknown>(
-        `/api/v1/tenant/players/${id}/availability`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            startsAt: new Date(from).toISOString(),
-            endsAt: new Date(to).toISOString(),
-            ...(reason ? { reason } : {}),
-          }),
-        },
-      );
+      return apiFetch<unknown>(`/api/v1/tenant/players/${id}/availability`, {
+        method: "POST",
+        body: JSON.stringify({
+          startsAt: new Date(from).toISOString(),
+          endsAt: new Date(to).toISOString(),
+          ...(reason ? { reason } : {}),
+        }),
+      });
     },
     onSuccess: () => {
       setFrom("");
@@ -544,7 +539,8 @@ export function SessionDetailView({ id }: { id: string }) {
           <div className="mc-kicker">SESSION DETAIL</div>
           <h1>场次详情</h1>
           <p>
-            订单 {session.orderId} · {session.flow === "GAME_DISPATCH" ? "GD 档位" : "CLASSIC"} ·{" "}
+            订单 {session.orderId} ·{" "}
+            {session.flow === "GAME_DISPATCH" ? "GD 档位" : "CLASSIC"} ·{" "}
             <SessionStatusText status={session.status} />
           </p>
         </div>
@@ -745,7 +741,9 @@ export function DisputeDetailView({ id }: { id: string }) {
     onSuccess: () => {
       setResolution("");
       showToast("争议已处理完成。");
-      void queryClient.invalidateQueries({ queryKey: ["mc-dispute-detail", id] });
+      void queryClient.invalidateQueries({
+        queryKey: ["mc-dispute-detail", id],
+      });
     },
     onError: (mutationError) =>
       setError(
@@ -842,9 +840,7 @@ export function DisputeDetailView({ id }: { id: string }) {
               </button>
             </>
           ) : (
-            <p className="mc-sub">
-              处理结果：{dispute.resolution ?? "—"}
-            </p>
+            <p className="mc-sub">处理结果：{dispute.resolution ?? "—"}</p>
           )}
         </aside>
       </div>
