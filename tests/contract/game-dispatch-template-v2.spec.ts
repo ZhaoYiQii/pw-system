@@ -28,6 +28,11 @@ interface OpenApiDocument {
   paths: Record<string, Record<string, Operation>>;
 }
 
+/** 契约里的 JSON Schema 片段：递归索引签名，避免 any（断言只做取值与比较）。 */
+interface SchemaFragment {
+  [key: string]: SchemaFragment | undefined;
+}
+
 const document = JSON.parse(
   readFileSync(path.join(root, "openapi.json"), "utf8"),
 ) as OpenApiDocument;
@@ -253,7 +258,7 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
     // 判别字段是单值 enum（生成器据此产出字面量联合）……
     const componentSchemas = (
       document as unknown as {
-        components: { schemas: Record<string, Record<string, any>> };
+        components: { schemas: Record<string, SchemaFragment> };
       }
     ).components.schemas;
     expect(
