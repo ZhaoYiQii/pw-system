@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   TEMPLATE_WRITABLE_AUDIENCES_V2,
   billingComponentsHiddenFromV2,
+  billingComponentsNotVisibleToEveryV2,
   collectPublishBlockingIssuesV2,
+  unwritableValueComponentsV2,
   partitionValuesV2,
   resolveAudiencesV2,
   validateDraftConfigV2,
@@ -773,35 +775,35 @@ describe("值类内容必须对可写入端口可见（只有客服能填写时�
     return config;
   }
 
-  it("目前只有客服是可写入端口", () => {
-    expect(TEMPLATE_WRITABLE_AUDIENCES_V2).toEqual(["CS"]);
+  it("客户入口落地后，两个端口都是可写入端口（C-3）", () => {
+    expect(TEMPLATE_WRITABLE_AUDIENCES_V2).toEqual(["CS", "CUSTOMER"]);
   });
 
-  it("发布拒绝：值类内容被标成对客服不可见（没人能填它）", () => {
+  it("机制仍在：值类内容对给定可写端口全都不可见时会被点名（端口集合由调用方给）", () => {
     const config = valueFixture();
     componentAt(config, 0).audiences = ["CUSTOMER"];
-    expect(collectPublishBlockingIssuesV2(config)).toContainEqual(
-      expect.objectContaining({
-        code: "TEMPLATE_COMPONENT_INVALID",
-        componentKey: "field_0",
-        message: expect.stringContaining("客服"),
-      }),
-    );
-    // 只挡发布：已发布的历史版本仍然可读（V-8 / V-9）
-    expect(validatePublishedConfigV2(config)).toEqual([]);
+    // 单端口（历史场景 / 未来新增端口）：看不见就没人能填
+    expect(
+      unwritableValueComponentsV2(config, ["CS"]).map(
+        (component) => component.stableKey,
+      ),
+    ).toEqual(["field_0"]);
+    // 两端都可写时这条不再触发（被 C-4 接管，见下一组用例）
+    expect(unwritableValueComponentsV2(config, ["CS", "CUSTOMER"])).toEqual([]);
   });
 
-  it("发布拒绝：整组只给客户时，组内的值类内容同样没人能填", () => {
-    const config = valueFixture();
-    (config.sections[0] as unknown as Record<string, unknown>).audiences = [
-      "CUSTOMER",
-    ];
-    expect(collectPublishBlockingIssuesV2(config)).toContainEqual(
-      expect.objectContaining({
-        code: "TEMPLATE_COMPONENT_INVALID",
-        componentKey: "field_0",
-      }),
-    );
+  it("两端都可写时：值类内容只给一端可见是允许的（C-3 放宽），发布不再阻断", () => {
+    const onlyCustomer = valueFixture();
+    componentAt(onlyCustomer, 0).audiences = ["CUSTOMER"];
+    expect(collectPublishBlockingIssuesV2(onlyCustomer)).toEqual([]);
+    // 只挡发布：已发布的历史版本仍然可读（V-8 / V-9）
+    expect(validatePublishedConfigV2(onlyCustomer)).toEqual([]);
+
+    const groupOnlyCustomer = valueFixture();
+    (
+      groupOnlyCustomer.sections[0] as unknown as Record<string, unknown>
+    ).audiences = ["CUSTOMER"];
+    expect(collectPublishBlockingIssuesV2(groupOnlyCustomer)).toEqual([]);
   });
 
   it("发布放行：说明类只给客户看是允许的（它不需要被填写）", () => {
@@ -823,10 +825,21 @@ describe("值类内容必须对可写入端口可见（只有客服能填写时�
   });
 
   it("草稿保存不受这条规则约束（只有发布才阻断）", () => {
+    // 用 C-4 的场景（参与人数的内容只给一端可见）：草稿放行、发布阻断
     const config = valueFixture();
-    componentAt(config, 0).audiences = ["CUSTOMER"];
+    componentAt(config, 0).audiences = ["CS"];
+    componentAt(config, 0).fieldType = "NUMBER";
+    config.staffingSource = {
+      kind: "NUMBER_FIELD",
+      componentKey: "field_0",
+    };
     expect(validateDraftConfigV2(config)).toEqual([]);
     expect(collectPublishBlockingIssuesV2(config)).not.toEqual([]);
+    // 纯业务无关的端口标记（无算价/人数含义）在两端都可写时两处都放行
+    const plain = valueFixture();
+    componentAt(plain, 0).audiences = ["CUSTOMER"];
+    expect(validateDraftConfigV2(plain)).toEqual([]);
+    expect(collectPublishBlockingIssuesV2(plain)).toEqual([]);
   });
 
   it("参与算价或人数的内容，对该端口不可见时会被点名（运行期兜底依据）", () => {
@@ -854,5 +867,62 @@ describe("值类内容必须对可写入端口可见（只有客服能填写时�
 
     // 对该端口可见时不算问题
     expect(billingComponentsHiddenFromV2(valueFixture(), "CS")).toEqual([]);
+  });
+});
+
+describe("C-4：参与算价/人数的内容必须对每个可写端口可见（Task 1）", () => {
+  /** 把唯一那个字段变成「带加价的单选」，并按需声明端口。 */
+  function pricedFixture(
+    audiences: readonly ("CS" | "CUSTOMER")[] | undefined,
+  ): PublishedConfigV2 {
+    const config = {
+      ...baseDraft(),
+      documentRendererVersion: 1,
+    } as unknown as PublishedConfigV2;
+    const field = (
+      config.components as unknown as Record<string, unknown>[]
+    )[0]!;
+    field.fieldType = "SINGLE_SELECT";
+    field.semanticRole = "MODE";
+    field.options = [{ value: "ranked", label: "排位", priceDeltaFen: "1500" }];
+    if (audiences !== undefined) field.audiences = [...audiences];
+    return config;
+  }
+
+  it("单端口（今天）：带加价的字段只给客户，发布期就已经被拦下", () => {
+    expect(
+      collectPublishBlockingIssuesV2(pricedFixture(["CUSTOMER"])).map(
+        (issue) => issue.componentKey,
+      ),
+    ).toContain("field_0");
+  });
+
+  it("两端都可写时：只给一端可见的算价字段会被独立拦下（Task 3 翻转端口后生效）", () => {
+    for (const only of [["CUSTOMER"], ["CS"]] as const) {
+      expect(
+        billingComponentsNotVisibleToEveryV2(pricedFixture(only), [
+          "CS",
+          "CUSTOMER",
+        ]).map((component) => component.stableKey),
+      ).toEqual(["field_0"]);
+    }
+  });
+
+  it("两端都可见、或未声明（=两端全选）时不算问题", () => {
+    for (const both of [undefined, ["CS", "CUSTOMER"]] as const) {
+      expect(
+        billingComponentsNotVisibleToEveryV2(pricedFixture(both), [
+          "CS",
+          "CUSTOMER",
+        ]),
+      ).toEqual([]);
+    }
+  });
+
+  it("这条仍然只挡发布：草稿与读取不受影响", () => {
+    const config = pricedFixture(["CS"]);
+    expect(validateDraftConfigV2(config)).toEqual([]);
+    expect(validatePublishedConfigV2(config)).toEqual([]);
+    expect(billingComponentsNotVisibleToEveryV2(config, ["CS"])).toEqual([]);
   });
 });

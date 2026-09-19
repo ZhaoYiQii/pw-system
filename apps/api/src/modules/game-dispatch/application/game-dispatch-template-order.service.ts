@@ -10,7 +10,10 @@ import {
   TEMPLATE_EVENTS,
   emitTemplateEvent,
 } from "./game-template-observability.js";
-import type { PublishedConfigV2 } from "../domain/game-template-config-v2.js";
+import type {
+  PublishedConfigV2,
+  TemplateAudienceV2,
+} from "../domain/game-template-config-v2.js";
 import type { DispatchDocumentV1 } from "../domain/game-template-document.js";
 import {
   buildTemplateOrderDraftForAudience,
@@ -24,7 +27,8 @@ export interface CreateTemplateOrderInput {
   gameId: string;
   templateId: string;
   templateVersionId: string;
-  customerProfileId: string;
+  /** 客服入口显式指定客户；客户自助入口靠登录身份推导（服务端绑定，C-9）。 */
+  customerProfileId?: string;
   values: Record<string, unknown>;
   desiredStartAt?: string | null;
   durationMinutes?: number;
@@ -35,6 +39,8 @@ export interface CreateTemplateOrderCommand {
   tenantId: string;
   actorId: string;
   idempotencyKey: string;
+  /** 幂等 operation：按入口区分，避免两个入口互相回放（C-8）。 */
+  operation: string;
   input: CreateTemplateOrderInput;
   requestHash: string;
 }
@@ -71,7 +77,14 @@ export interface GameDispatchTemplateOrderRepository {
  * 端口可见性的写入方端口：当前唯一的下单入口是客服端 `POST template-orders`。
  * 客户自助的 v2 下单面尚不存在；一旦出现，它必须按 CUSTOMER 调用并各自校验必填（V-10）。
  */
-export const TEMPLATE_ORDER_WRITER_AUDIENCE = "CS";
+/**
+ * 幂等 operation 按**入口**区分（C-8）：商家端沿用历史值，客户入口用新值，
+ * 同一个 Idempotency-Key 在两个入口互不干扰。
+ */
+export const TEMPLATE_ORDER_OPERATION_BY_AUDIENCE: Record<string, string> = {
+  CS: "game_dispatch.template_order.create",
+  CUSTOMER: "game_dispatch.template_order.create_customer",
+};
 
 /** 键序无关的规范化 JSON：保证「同一意图」重试得到同一哈希。 */
 function stableStringify(value: unknown): string {
@@ -116,6 +129,7 @@ export class GameDispatchTemplateOrderService {
     actorId: string,
     idempotencyKey: string,
     input: CreateTemplateOrderInput,
+    audience: TemplateAudienceV2,
   ): Promise<CreateTemplateOrderOutput> {
     // 端口过滤发生在这条回调里（配置只在事务内可见），把被丢弃的键带出来记一条受控事件。
     let droppedKeys: string[] = [];
@@ -125,6 +139,9 @@ export class GameDispatchTemplateOrderService {
           tenantId,
           actorId,
           idempotencyKey,
+          operation:
+            TEMPLATE_ORDER_OPERATION_BY_AUDIENCE[audience] ??
+            "game_dispatch.template_order.create",
           input,
           requestHash: templateOrderRequestHash(input),
         },
@@ -132,7 +149,7 @@ export class GameDispatchTemplateOrderService {
           const outcome = buildTemplateOrderDraftForAudience(
             config,
             values,
-            TEMPLATE_ORDER_WRITER_AUDIENCE,
+            audience,
           );
           droppedKeys = outcome.droppedKeys;
           return outcome;

@@ -10,7 +10,10 @@
  */
 import { fenToYuanText, yuanToFenString } from "../money";
 import { WRITABLE_AUDIENCES } from "./template-draft-state";
-import { valueComponentsOutsideAudiences } from "./template-draft-state";
+import {
+  billingComponentsOutsideEveryAudience,
+  valueComponentsOutsideAudiences,
+} from "./template-draft-state";
 import type {
   DraftConfigV2,
   DraftFieldComponentV2,
@@ -233,8 +236,10 @@ export function collectDraftIssues(config: DraftConfigV2): DraftIssue[] {
     }
   });
 
-  // 值类内容必须留给能填写的端口：客服是目前唯一能下单填写的端口，
-  // 把字段/表格标成只给客户就没人能填（参与算价或人数的内容更会静默少算）。
+  // 值类内容必须留给能填写的端口之一；两端的顺序统一用「客服·客户」表述。
+  const writableLabel = WRITABLE_AUDIENCES.map((audience) =>
+    audience === "CS" ? "客服" : "客户",
+  ).join("、");
   for (const component of valueComponentsOutsideAudiences(
     config,
     WRITABLE_AUDIENCES,
@@ -244,7 +249,22 @@ export function collectDraftIssues(config: DraftConfigV2): DraftIssue[] {
       code: "TEMPLATE_COMPONENT_INVALID",
       path: `$.components[${index}].audiences`,
       componentKey: component.stableKey,
-      message: `「${component.label || "未命名"}」没留给能填写的端口：客服是目前唯一能下单填写的端口，请让它对客服可见，或改成说明类内容`,
+      message: `「${component.label || "未命名"}」没留给能填写的端口：请让它对${writableLabel}中的至少一个可见，或改成说明类内容`,
+    });
+  }
+
+  // C-4 同口径：参与算价/人数的内容必须对**每个**能填写的端口可见，
+  // 否则对应入口下单会失败或算错（与后端 collectPublishBlockingIssuesV2 一致）。
+  for (const component of billingComponentsOutsideEveryAudience(
+    config,
+    WRITABLE_AUDIENCES,
+  )) {
+    const index = config.components.indexOf(component);
+    issues.push({
+      code: "TEMPLATE_COMPONENT_INVALID",
+      path: `$.components[${index}].audiences`,
+      componentKey: component.stableKey,
+      message: `「${component.label || "未命名"}」参与算价或人数，必须对每个能填写的端口（${writableLabel}）都可见，否则对应入口下单会失败或算错`,
     });
   }
 

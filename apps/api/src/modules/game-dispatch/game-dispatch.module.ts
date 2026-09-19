@@ -13,6 +13,7 @@ import { GameDispatchTemplateOrderController } from "./interface/game-dispatch-t
 import { SlotSessionController } from "./interface/slot-session.controller.js";
 import { GameTemplateController } from "./interface/game-template.controller.js";
 import { GenericGameTemplateController } from "./interface/generic-game-template.controller.js";
+import { CustomerGameTemplateController } from "./interface/customer-game-template.controller.js";
 
 export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
 
@@ -20,6 +21,7 @@ export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
   controllers: [
     GameTemplateController,
     GenericGameTemplateController,
+    CustomerGameTemplateController,
     GameDispatchController,
     GameDispatchTemplateOrderController,
     SlotSessionController,

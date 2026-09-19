@@ -974,6 +974,83 @@ describe("S4 新建派单：模板读取与创建", () => {
     expect(csData.document?.plainText ?? "").toContain("内部备注：内部话术");
   });
 
+  /** Task 2：客户侧只读入口（独立入口、CUSTOMER 端口、不复用 CS 端点）。 */
+  describe("客户侧 v2 只读入口", () => {
+    const CUSTOMER_BASE = "/api/v1/tenant/game-dispatch/customer";
+
+    /** 可发布的配置 + 一个只给客服看的说明类内容（说明类不受"值类必须可写"约束）。 */
+    function configWithCsNotice(): Record<string, unknown> {
+      const config = orderConfig();
+      (config.components as Record<string, unknown>[]).push({
+        kind: "NOTE",
+        stableKey: "cs_notice",
+        sectionKey: "basic",
+        label: "内部须知",
+        enabled: true,
+        sortOrder: 9,
+        layout: { colSpan: 2, rowBreakBefore: true },
+        text: "内部流程：先确认账号再开打",
+        audiences: ["CS"],
+      });
+      return config;
+    }
+
+    it("客户按游戏读已发布模板；PLAYER 被拒 403", async () => {
+      const listed = await req(customerToken)
+        .get(`${CUSTOMER_BASE}/published?gameId=${gameId}`)
+        .expect(200);
+      const names = (listed.body as { data: Array<{ name: string }> }).data.map(
+        (row) => row.name,
+      );
+      expect(names.length).toBeGreaterThan(0);
+
+      await req(playerToken)
+        .get(`${CUSTOMER_BASE}/published?gameId=${gameId}`)
+        .expect(403);
+    });
+
+    it("客户读发布表单：有客户内容、没有只给客服的内容；CS 入口作对照", async () => {
+      const template = await createPublishedTemplate(
+        ownerToken,
+        `客户只读-${suffix}`,
+        gameId,
+        configWithCsNotice(),
+      );
+      const keysOf = (body: unknown): string[] =>
+        (
+          body as {
+            data: { config: { components: Array<{ stableKey: string }> } };
+          }
+        ).data.config.components.map((component) => component.stableKey);
+
+      const asCustomer = await req(customerToken)
+        .get(`${CUSTOMER_BASE}/versions/${template.versionId}/form`)
+        .expect(200);
+      expect(keysOf(asCustomer.body)).toContain("mode");
+      expect(keysOf(asCustomer.body)).not.toContain("cs_notice");
+
+      const asCs = await req(csToken)
+        .get(`${BASE}/versions/${template.versionId}/form`)
+        .expect(200);
+      expect(keysOf(asCs.body)).toContain("cs_notice");
+    });
+
+    it("客户入口不接受不存在 / 形状合法的陌生版本：422", async () => {
+      await req(customerToken)
+        .get(
+          `${CUSTOMER_BASE}/versions/00000000-0000-4000-8000-000000000000/form`,
+        )
+        .expect(422);
+      await req(customerToken)
+        .get(`${CUSTOMER_BASE}/versions/not-a-uuid/form`)
+        .expect(422);
+    });
+
+    it("客户入口的查询参数受边界校验（缺 gameId 400）", async () => {
+      await req(customerToken).get(`${CUSTOMER_BASE}/published`).expect(400);
+    });
+  });
+
   it("快照损坏时：客户侧宁可少给，客服侧保留原值以便排查", async () => {
     // 用"先发布再改写版本快照"的方式拿到一张可下单的订单，然后把订单快照改坏。
     const template = await createPublishedTemplate(
@@ -1036,5 +1113,108 @@ describe("S4 新建派单：模板读取与创建", () => {
     };
     expect(csData.formValues.internal_note).toBe("内部话术");
     expect(csData.document).toBeNull();
+  });
+
+  describe("客户自助下单（写入口）", () => {
+    const ORDER_PATH = "/api/v1/tenant/game-dispatch/customer/template-orders";
+
+    function customerOrderBody(
+      templateId: string,
+      templateVersionId: string,
+      values: Record<string, unknown>,
+    ) {
+      return { gameId, templateId, templateVersionId, values };
+    }
+
+    it("按 CUSTOMER 端口落值：只给客服的值被丢弃，客服侧必填不拦客户", async () => {
+      const template = await createPublishedTemplate(
+        ownerToken,
+        `客户下单-${suffix}`,
+        gameId,
+        audienceOrderConfig(),
+      );
+      const body = customerOrderBody(template.templateId, template.versionId, {
+        mode: "ranked",
+        roster_table: [{ position: "陪玩", count: 2 }],
+        internal_note: "客服的话术",
+        customer_note: "给我留个辅助位",
+      });
+
+      const created = await request(app.getHttpServer())
+        .post(ORDER_PATH)
+        .set({
+          authorization: `Bearer ${customerToken}`,
+          "idempotency-key": `k-${suffix}-cust`,
+        })
+        .send(body)
+        .expect(201);
+      const result = (created.body as { data: CreateOrderResult }).data;
+      expect(result.staffingSummary.total).toBe(2);
+      expect(result.priceAdjustmentFen).toBe("1500");
+
+      const stored = await client.gameDispatchOrder.findFirstOrThrow({
+        where: { tenantId, orderId: result.orderId },
+      });
+      expect(stored.formValuesJson).toEqual({
+        mode: "ranked",
+        roster_table: [{ position: "陪玩", count: 2 }],
+        customer_note: "给我留个辅助位",
+      });
+
+      // 同一幂等键重发 → 回放同一张单（客户入口自己的 operation）
+      const replay = await request(app.getHttpServer())
+        .post(ORDER_PATH)
+        .set({
+          authorization: `Bearer ${customerToken}`,
+          "idempotency-key": `k-${suffix}-cust`,
+        })
+        .send(body)
+        .expect(201);
+      expect((replay.body as { data: CreateOrderResult }).data.orderId).toBe(
+        result.orderId,
+      );
+    });
+
+    it("边界：缺幂等键 400；PLAYER 403；提交客户看不到的字段也不报错（丢弃）", async () => {
+      const template = await createPublishedTemplate(
+        ownerToken,
+        `客户下单边界-${suffix}`,
+        gameId,
+        audienceOrderConfig(),
+      );
+      const body = customerOrderBody(template.templateId, template.versionId, {
+        mode: "ranked",
+        roster_table: [{ position: "陪玩", count: 1 }],
+        customer_note: "留位",
+      });
+
+      await request(app.getHttpServer())
+        .post(ORDER_PATH)
+        .set({ authorization: `Bearer ${customerToken}` })
+        .send(body)
+        .expect(400);
+
+      await request(app.getHttpServer())
+        .post(ORDER_PATH)
+        .set({
+          authorization: `Bearer ${playerToken}`,
+          "idempotency-key": `k-${suffix}-cust-player`,
+        })
+        .send(body)
+        .expect(403);
+
+      // 客户端提交"配置里存在但该端口不可见"的键：丢弃而不是 422（V-5）
+      await request(app.getHttpServer())
+        .post(ORDER_PATH)
+        .set({
+          authorization: `Bearer ${customerToken}`,
+          "idempotency-key": `k-${suffix}-cust-drop`,
+        })
+        .send({
+          ...body,
+          values: { ...body.values, internal_note: "客户不该看到这行" },
+        })
+        .expect(201);
+    });
   });
 });

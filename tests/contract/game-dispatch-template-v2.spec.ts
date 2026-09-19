@@ -499,4 +499,46 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
       );
     }
   });
+
+  it("客户侧 v2 入口：3 条路由稳定、请求体不含 customerProfileId、保留 Idempotency-Key 头", () => {
+    const customerBase = "/api/v1/tenant/game-dispatch/customer";
+    expect(operation(`${customerBase}/published`, "get").operationId).toBe(
+      "customerGameTemplate_listPublished",
+    );
+    expect(
+      operation(`${customerBase}/versions/{versionId}/form`, "get").operationId,
+    ).toBe("customerGameTemplate_getVersionForm");
+
+    const create = operation(`${customerBase}/template-orders`, "post");
+    expect(create.operationId).toBe("customerGameTemplate_createOrder");
+    expect(
+      (create.parameters ?? []).map(
+        (parameter) => `${parameter.name}:${parameter.in}`,
+      ),
+    ).toContain("idempotency-key:header");
+
+    // C-9：客户档案由登录身份推导，请求体里不许出现 customerProfileId
+    const bodyNames = new Set<string>();
+    collectPropertyNames(
+      create.requestBody?.content?.["application/json"]?.schema,
+      bodyNames,
+    );
+    expect(bodyNames.has("customerProfileId")).toBe(false);
+    for (const required of [
+      "gameId",
+      "templateId",
+      "templateVersionId",
+      "values",
+    ]) {
+      expect(bodyNames.has(required), required).toBe(true);
+    }
+
+    // 只读入口的 gameId 是必填查询参数
+    expect(
+      (operation(`${customerBase}/published`, "get").parameters ?? []).map(
+        (parameter) =>
+          `${parameter.name}:${parameter.in}:${parameter.required}`,
+      ),
+    ).toContain("gameId:query:true");
+  });
 });

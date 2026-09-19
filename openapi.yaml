@@ -3981,7 +3981,7 @@ paths:
                                       minLength: 1
                                       maxLength: 50
                                       description: 旧价格规则名称
-                                    priceDeltaFen: &a36
+                                    priceDeltaFen: &a37
                                       type: string
                                       pattern: ^(?:0|[1-9][0-9]*)$
                                       example: "1000"
@@ -8646,6 +8646,647 @@ paths:
                 description: 删除受限（409，应改为归档）
       summary: 删除未发布且无引用的模板（否则应归档）
       tags: *a31
+  /api/v1/tenant/game-dispatch/customer/published:
+    get:
+      operationId: customerGameTemplate_listPublished
+      parameters:
+        - name: gameId
+          required: true
+          in: query
+          schema:
+            type: string
+            format: uuid
+            description: 按游戏过滤
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - templateId
+                        - name
+                        - versionId
+                        - versionNo
+                        - isDefault
+                        - lastUsedAt
+                      properties:
+                        templateId:
+                          type: string
+                          description: 模板 id
+                        name:
+                          type: string
+                          description: 模板名称
+                        description:
+                          type: string
+                          nullable: true
+                          description: 模板说明
+                        versionId:
+                          type: string
+                          description: 锁定的发布版本 id
+                        versionNo:
+                          type: integer
+                          minimum: 1
+                          description: 版本号
+                        isDefault:
+                          type: boolean
+                          description: 是否为该游戏默认模板
+                        lastUsedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: 最近使用时间
+                      description: 可派单模板摘要
+                description: 该游戏可派单的模板（默认优先，其次最近使用）
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+      summary: 客户入口：该游戏可下单的模板（未归档且有生效版本）
+      tags: &a32
+        - CustomerGameTemplate
+  /api/v1/tenant/game-dispatch/customer/versions/{versionId}/form:
+    get:
+      operationId: customerGameTemplate_getVersionForm
+      parameters:
+        - name: versionId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - templateId
+                      - gameId
+                      - versionId
+                      - versionNo
+                      - config
+                    properties:
+                      templateId:
+                        type: string
+                        description: 模板 id
+                      gameId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: 所属游戏 id（未归类模板为 null）
+                      versionId:
+                        type: string
+                        description: 发布版本 id
+                      versionNo:
+                        type: integer
+                        minimum: 1
+                        description: 版本号
+                      config:
+                        type: object
+                        required:
+                          - schemaVersion
+                          - sections
+                          - components
+                          - staffingSource
+                          - documentRendererVersion
+                        properties:
+                          schemaVersion:
+                            type: integer
+                            enum:
+                              - 2
+                            description: 配置版本（固定 2）
+                          sections:
+                            type: array
+                            maxItems: 20
+                            items:
+                              type: object
+                              required:
+                                - stableKey
+                                - label
+                                - enabled
+                                - sortOrder
+                                - layout
+                              properties:
+                                stableKey:
+                                  type: string
+                                  pattern: ^[a-z][a-z0-9_]{0,63}$
+                                  description: 区块稳定键（发布后不可改）
+                                label:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 50
+                                  description: 区块名称
+                                description:
+                                  type: string
+                                  maxLength: 500
+                                  description: 区块说明
+                                audiences:
+                                  type: array
+                                  items:
+                                    type: string
+                                    enum:
+                                      - CS
+                                      - CUSTOMER
+                                  minItems: 1
+                                  description: 端口可见性（CS=客服，CUSTOMER=客户；缺省=继承并回落两个端口全选）
+                                enabled:
+                                  type: boolean
+                                  description: 区块是否启用
+                                sortOrder:
+                                  type: integer
+                                  minimum: 0
+                                  description: 区块顺序
+                                layout:
+                                  type: object
+                                  required:
+                                    - columns
+                                  properties:
+                                    columns:
+                                      type: integer
+                                      enum:
+                                        - 1
+                                        - 2
+                                        - 3
+                                        - 4
+                                      description: 列数（1-4）
+                                    density:
+                                      type: string
+                                      enum:
+                                        - comfortable
+                                        - compact
+                                      description: 密度
+                                    align:
+                                      type: string
+                                      enum:
+                                        - left
+                                        - center
+                                      description: 对齐
+                                  description: 区块布局
+                              description: 模板区块
+                            description: 内容区块
+                          components:
+                            type: array
+                            maxItems: 100
+                            items:
+                              oneOf:
+                                - $ref: "#/components/schemas/TemplateFieldComponentV2"
+                                - $ref: "#/components/schemas/TemplateTableComponentV2"
+                                - $ref: "#/components/schemas/TemplateNoteComponentV2"
+                              discriminator:
+                                propertyName: kind
+                                mapping:
+                                  FIELD: "#/components/schemas/TemplateFieldComponentV2"
+                                  REPEATABLE_TABLE: "#/components/schemas/TemplateTableComponentV2"
+                                  NOTE: "#/components/schemas/TemplateNoteComponentV2"
+                              description: 模板组件（判别联合，按 kind 区分）
+                            description: 通用组件
+                          staffingSource:
+                            discriminator:
+                              propertyName: kind
+                              mapping:
+                                FIXED: "#/components/schemas/TemplateStaffingFixedV2"
+                                NUMBER_FIELD: "#/components/schemas/TemplateStaffingNumberFieldV2"
+                                REPEATABLE_TABLE_SUM: "#/components/schemas/TemplateStaffingTableSumV2"
+                            oneOf:
+                              - $ref: "#/components/schemas/TemplateStaffingFixedV2"
+                              - $ref: "#/components/schemas/TemplateStaffingNumberFieldV2"
+                              - $ref: "#/components/schemas/TemplateStaffingTableSumV2"
+                            description: 人数来源（判别联合，按 kind 区分）
+                          documentRendererVersion:
+                            type: integer
+                            enum:
+                              - 1
+                            description: 文案渲染器版本（仅由服务端写入）
+                        description: 通用模板发布配置（不可变版本内容，服务端字段）
+                    description: 发布版本派单表单
+                description: 锁定发布版本的派单表单配置
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+      summary: 客户入口：按 CUSTOMER 端口过滤后的发布表单
+      tags: *a32
+  /api/v1/tenant/game-dispatch/customer/template-orders:
+    post:
+      description: 请求体不含 customerProfileId——客户档案由登录身份推导；同一 Idempotency-Key 重试会回放首次结果。
+      operationId: customerGameTemplate_createOrder
+      parameters:
+        - name: idempotency-key
+          required: true
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - gameId
+                - templateId
+                - templateVersionId
+                - values
+              properties:
+                gameId:
+                  type: string
+                  format: uuid
+                  description: 游戏 id
+                templateId:
+                  type: string
+                  format: uuid
+                  description: 模板 id
+                templateVersionId:
+                  type: string
+                  format: uuid
+                  description: 锁定的发布版本 id
+                values:
+                  type: object
+                  additionalProperties: true
+                  description: 通用组件值（按 stableKey 提交，不含最终人数或价格）
+                desiredStartAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: 期望开始时间
+                durationMinutes:
+                  type: integer
+                  minimum: 15
+                  description: 服务时长（分钟）
+              description: 客户自助下单请求（不含 customerProfileId；幂等键在 Idempotency-Key 请求头）
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - orderId
+                      - dispatchOrderId
+                      - templateVersionId
+                      - staffingSummary
+                      - priceAdjustmentFen
+                      - document
+                    properties:
+                      orderId:
+                        type: string
+                        format: uuid
+                        description: 订单 id
+                      dispatchOrderId:
+                        type: string
+                        format: uuid
+                        description: 派单 id
+                      templateVersionId:
+                        type: string
+                        format: uuid
+                        description: 本单锁定的发布版本 id
+                      staffingSummary:
+                        type: object
+                        required:
+                          - total
+                          - rows
+                        properties:
+                          total:
+                            type: integer
+                            minimum: 0
+                            description: 服务端计算的总人数
+                          rows:
+                            type: array
+                            description: 按发布快照分组的人数
+                            items:
+                              type: object
+                              required:
+                                - label
+                                - count
+                              properties:
+                                label:
+                                  type: string
+                                  description: 分组名称
+                                count:
+                                  type: integer
+                                  minimum: 0
+                                  description: 人数
+                              description: 人数分组
+                        description: 服务端计算的人数摘要
+                      priceAdjustmentFen:
+                        type: string
+                        description: 服务端计算的加价合计（十进制字符串分）
+                      document:
+                        type: object
+                        required:
+                          - schemaVersion
+                          - rendererVersion
+                          - rows
+                          - plainText
+                        properties:
+                          schemaVersion:
+                            type: integer
+                            minimum: 1
+                            description: 文案结构版本
+                          rendererVersion:
+                            type: integer
+                            minimum: 1
+                            description: 文案渲染器版本
+                          rows:
+                            type: array
+                            description: 文案行（区块 / 字段 / 值）
+                            items:
+                              type: object
+                              required:
+                                - sectionLabel
+                                - fieldLabel
+                                - value
+                              properties:
+                                sectionLabel:
+                                  type: string
+                                  description: 区块名称
+                                fieldLabel:
+                                  type: string
+                                  description: 字段名称
+                                value:
+                                  type: string
+                                  description: 字段值
+                              description: 文案行
+                          plainText:
+                            type: string
+                            description: 可直接复制的纯文本文案
+                        description: 订单自动文案
+                    description: 创建派单结果
+                description: 创建派单结果（含服务端计算与自动文案）
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "422":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+      summary: 客户入口：客户自助下单（人数与价格由服务端按快照计算）
+      tags: *a32
   /api/v1/tenant/game-dispatch:
     get:
       operationId: gameDispatch_list
@@ -8653,7 +9294,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a32
+      tags: &a33
         - GameDispatch
   /api/v1/tenant/game-dispatch/orders:
     post:
@@ -8662,7 +9303,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/orders:
     post:
       operationId: gameDispatch_customerCreateDraft
@@ -8670,7 +9311,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/templates:
     get:
       operationId: gameDispatch_customerTemplates
@@ -8678,7 +9319,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/templates/{id}:
     get:
       operationId: gameDispatch_customerTemplate
@@ -8691,7 +9332,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}:
     get:
       operationId: gameDispatch_view
@@ -8945,7 +9586,7 @@ paths:
                     additionalProperties: true
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}/applications:
     get:
       operationId: gameDispatch_applications
@@ -8958,7 +9599,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/player/orders/{orderId}/signup:
     get:
       operationId: gameDispatch_playerSignup
@@ -8971,7 +9612,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/orders/{orderId}/select:
     get:
       operationId: gameDispatch_customerSelect
@@ -8984,7 +9625,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/orders/{orderId}/assignment:
     post:
       operationId: gameDispatch_customerAssign
@@ -8997,7 +9638,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}/copy-text:
     get:
       operationId: gameDispatch_copy
@@ -9010,7 +9651,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}/publish:
     post:
       operationId: gameDispatch_publish
@@ -9023,7 +9664,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}/confirm-settlement:
     post:
       operationId: gameDispatch_confirmSettlement
@@ -9036,7 +9677,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}/lines/{lineId}/applications:
     post:
       operationId: gameDispatch_apply
@@ -9054,7 +9695,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/applications/{id}/withdraw:
     post:
       operationId: gameDispatch_withdraw
@@ -9067,7 +9708,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/applications/{id}:
     delete:
       operationId: gameDispatch_staffRemove
@@ -9080,7 +9721,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders/{orderId}/assignment:
     post:
       operationId: gameDispatch_assign
@@ -9093,7 +9734,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/template-orders:
     post:
       description: 同一 Idempotency-Key 重试会回放首次结果；同键不同请求体返回 422；模板归档后返回 409 TEMPLATE_ARCHIVED。
@@ -9452,7 +10093,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a33
+      tags: &a34
         - SlotSession
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/start:
     post:
@@ -9466,7 +10107,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/end:
     post:
       operationId: slotSession_end
@@ -9479,7 +10120,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence:
     post:
       operationId: slotSession_evidence
@@ -9497,7 +10138,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/capture:
     post:
       operationId: slotSession_capture
@@ -9515,7 +10156,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/boss/wallet:
     get:
       operationId: wallet_get
@@ -9523,7 +10164,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a34
+      tags: &a35
         - Wallet
   /api/v1/boss/wallet/recharge:
     post:
@@ -9532,7 +10173,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a35
   /api/v1/tenant/dashboard/summary:
     get:
       operationId: dashboardSummary_summary
@@ -9549,7 +10190,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a35
+      tags: &a36
         - PlayerApplications
     get:
       operationId: playerApplications_list
@@ -9557,7 +10198,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a35
+      tags: *a36
   /api/v1/tenant/player-applications/{id}/approve:
     post:
       operationId: playerApplications_approve
@@ -9570,7 +10211,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a35
+      tags: *a36
   /api/v1/tenant/player-applications/{id}/reject:
     post:
       operationId: playerApplications_reject
@@ -9583,7 +10224,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a35
+      tags: *a36
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。
@@ -9704,7 +10345,7 @@ components:
         options:
           type: array
           maxItems: 100
-          items: &a37
+          items: &a38
             type: object
             required:
               - value
@@ -9719,7 +10360,7 @@ components:
                 minLength: 1
                 maxLength: 50
                 description: 选项名称
-              priceDeltaFen: *a36
+              priceDeltaFen: *a37
             description: 选择项（含可选加价）
           description: 选择项（选择类字段必须至少一个）
         aggregationPolicy:
@@ -9846,7 +10487,7 @@ components:
               options:
                 type: array
                 maxItems: 100
-                items: *a37
+                items: *a38
                 description: 单选列的选项
             description: 可重复表格列
           description: 表格列（最多 10 列）

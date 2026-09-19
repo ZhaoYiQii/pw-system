@@ -339,18 +339,44 @@ describe("template-binding：端口可见性阻断（与后端空标记规则一
 });
 
 describe("template-binding：值类内容必须留给可写入端口（产品规则）", () => {
-  it("字段被标成只给客户时报问题：客服是目前唯一能填写的端口", () => {
+  it("客户入口落地后，字段只给客户可见是允许的（C-3 放宽）", () => {
     const { config, sectionKey } = base();
     const created = addComponent(config, "FIELD", sectionKey);
     if (!created.ok) throw new Error("field failed");
     const dirty = updateComponent(created.config, created.stableKey, {
       audiences: ["CUSTOMER"],
     });
-    expect(collectDraftIssues(dirty)).toContainEqual(
+    expect(
+      collectDraftIssues(dirty).filter(
+        (issue) => issue.componentKey === created.stableKey,
+      ),
+    ).toEqual([]);
+  });
+
+  it("C-4 同口径：参与算价/人数的内容只给一端可见时报问题", () => {
+    const { config, sectionKey } = base();
+    const created = addComponent(config, "FIELD", sectionKey);
+    if (!created.ok) throw new Error("field failed");
+    // 做成带加价的单选 → 参与算价
+    const priced = updateComponent(
+      updateComponent(created.config, created.stableKey, {
+        fieldType: "SINGLE_SELECT",
+      }),
+      created.stableKey,
+      { audiences: ["CUSTOMER"] },
+    );
+    // 让选项带上加价 → 这条内容参与算价（默认选项没有加价，不会被 C-4 捕获）
+    const pricedField = priced.components.find(
+      (component) => component.stableKey === created.stableKey,
+    );
+    if (pricedField?.kind === "FIELD" && pricedField.options?.[0]) {
+      pricedField.options[0].priceDeltaFen = "1500";
+    }
+    expect(collectDraftIssues(priced)).toContainEqual(
       expect.objectContaining({
         code: "TEMPLATE_COMPONENT_INVALID",
         componentKey: created.stableKey,
-        message: expect.stringContaining("客服"),
+        message: expect.stringContaining("算价或人数"),
       }),
     );
   });
@@ -369,18 +395,17 @@ describe("template-binding：值类内容必须留给可写入端口（产品规
     ).toEqual([]);
   });
 
-  it("整组只给客户时，组内的字段同样报问题（继承）", () => {
+  it("整组只给客户时，组内的普通字段同样放行（继承 + C-3 放宽）", () => {
     const { config, sectionKey } = base();
     const created = addComponent(config, "FIELD", sectionKey);
     if (!created.ok) throw new Error("field failed");
     const dirty = updateSection(created.config, sectionKey, {
       audiences: ["CUSTOMER"],
     });
-    expect(collectDraftIssues(dirty)).toContainEqual(
-      expect.objectContaining({
-        code: "TEMPLATE_COMPONENT_INVALID",
-        componentKey: created.stableKey,
-      }),
-    );
+    expect(
+      collectDraftIssues(dirty).filter(
+        (issue) => issue.componentKey === created.stableKey,
+      ),
+    ).toEqual([]);
   });
 });

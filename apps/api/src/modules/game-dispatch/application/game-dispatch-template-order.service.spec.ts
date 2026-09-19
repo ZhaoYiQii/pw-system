@@ -131,6 +131,7 @@ describe("GameDispatchTemplateOrderService：写入侧端口过滤的受控事�
       "actor-1",
       "idem-key-1",
       input(INPUT_VALUES),
+      "CS",
     );
 
     expect(output.duplicate).toBe(false);
@@ -160,6 +161,7 @@ describe("GameDispatchTemplateOrderService：写入侧端口过滤的受控事�
       "actor-1",
       "idem-key-2",
       input({ region: "艾欧尼亚", internal_note: "客服备注" }),
+      "CS",
     );
 
     expect(

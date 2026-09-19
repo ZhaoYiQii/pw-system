@@ -131,6 +131,7 @@ export class GameDispatchTemplateOrderController {
         actorId,
         key,
         parseInput(body),
+        "CS",
       );
       return { data: created.result };
     } catch (error) {

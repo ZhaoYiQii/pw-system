@@ -1239,6 +1239,29 @@ export const genericTemplateOrderCreateBodySchema: OpenApiSchema = object(
   "创建派单请求（幂等键在 Idempotency-Key 请求头）",
 );
 
+/** 客户自助下单入参：与客服端同形状，但**不含** customerProfileId（由登录身份推导）。 */
+export const genericTemplateCustomerOrderCreateBodySchema: OpenApiSchema =
+  object(
+    ["gameId", "templateId", "templateVersionId", "values"],
+    {
+      gameId: { type: "string", format: "uuid", description: "游戏 id" },
+      templateId: { type: "string", format: "uuid", description: "模板 id" },
+      templateVersionId: {
+        type: "string",
+        format: "uuid",
+        description: "锁定的发布版本 id",
+      },
+      values: {
+        type: "object",
+        additionalProperties: true,
+        description: "通用组件值（按 stableKey 提交，不含最终人数或价格）",
+      },
+      desiredStartAt: dateTime("期望开始时间", true),
+      durationMinutes: integer("服务时长（分钟）", 15),
+    },
+    "客户自助下单请求（不含 customerProfileId；幂等键在 Idempotency-Key 请求头）",
+  );
+
 export const genericTemplateOrderResultSchema: OpenApiSchema = {
   ...dataSchema(
     object(
