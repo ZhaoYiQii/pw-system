@@ -81,7 +81,10 @@ export interface GameDispatchTemplateOrderRepository {
  * 幂等 operation 按**入口**区分（C-8）：商家端沿用历史值，客户入口用新值，
  * 同一个 Idempotency-Key 在两个入口互不干扰。
  */
-export const TEMPLATE_ORDER_OPERATION_BY_AUDIENCE: Record<string, string> = {
+export const TEMPLATE_ORDER_OPERATION_BY_AUDIENCE: Record<
+  TemplateAudienceV2,
+  string
+> = {
   CS: "game_dispatch.template_order.create",
   CUSTOMER: "game_dispatch.template_order.create_customer",
 };
@@ -139,9 +142,7 @@ export class GameDispatchTemplateOrderService {
           tenantId,
           actorId,
           idempotencyKey,
-          operation:
-            TEMPLATE_ORDER_OPERATION_BY_AUDIENCE[audience] ??
-            "game_dispatch.template_order.create",
+          operation: TEMPLATE_ORDER_OPERATION_BY_AUDIENCE[audience],
           input,
           requestHash: templateOrderRequestHash(input),
         },

@@ -9,7 +9,8 @@
   "scripts": {
     "lint": "eslint .",
     "format:check": "prettier --check .",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run typecheck && pnpm typecheck:tests",
+    "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json",
     "test": "vitest run --config vitest.config.ts",
     "test:critical": "vitest run --config tests/vitest.critical.config.ts",
     "test:integration": "vitest run --config tests/vitest.integration.config.ts",
