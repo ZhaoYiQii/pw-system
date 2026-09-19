@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DraftConfigV2 } from "./template-draft-state";
 import {
   buildCreateOrderRequest,
+  coerceFieldValue,
   describeCreateError,
   hasEnteredValues,
   initialNewOrderState,
@@ -216,5 +217,24 @@ describe("new-order-template-flow：三阶段与意图", () => {
       keepValues: true,
       action: "NONE",
     });
+  });
+});
+
+describe("coerceFieldValue：字段文本 → 提交值", () => {
+  it("NUMBER 转数字：服务端对数字字段与人数来源都要求 number", () => {
+    expect(coerceFieldValue("NUMBER", "3")).toBe(3);
+    expect(coerceFieldValue("NUMBER", " 12 ")).toBe(12);
+    expect(coerceFieldValue("NUMBER", "1.5")).toBe(1.5);
+  });
+
+  it("NUMBER 空值原样返回，非法输入保留原文交给服务端拒绝", () => {
+    expect(coerceFieldValue("NUMBER", "")).toBe("");
+    expect(coerceFieldValue("NUMBER", "三局")).toBe("三局");
+  });
+
+  it("MONEY_FEN 保持整数分字符串，文本类字段不改写", () => {
+    expect(coerceFieldValue("MONEY_FEN", "1500")).toBe("1500");
+    expect(coerceFieldValue("TEXT", " 艾欧尼亚 ")).toBe(" 艾欧尼亚 ");
+    expect(coerceFieldValue("TEXTAREA", "备注")).toBe("备注");
   });
 });
