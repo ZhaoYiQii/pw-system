@@ -29,6 +29,14 @@ export default defineConfig({
     },
     environment: "node",
     include: ["tests/integration/**/*.spec.ts"],
+    /**
+     * 连接预算：`@prisma/adapter-pg` 为每个 client 建一个 pg Pool（默认 max=10），
+     * 而每个用例文件会持有 2 个 client（测试直连 + Nest 应用）。
+     * 本地 16 核机器默认可并行 ~15 个文件，峰值会撞上 Postgres 的 100 连接上限，
+     * 表现为偶发 500（remaining connection slots are reserved...）。
+     * 固定 4 个 worker 与 CI 运行器规模一致，峰值连接数留出余量。
+     */
+    maxWorkers: 4,
     env: {
       PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER ?? "mock",
       DATABASE_URL:
