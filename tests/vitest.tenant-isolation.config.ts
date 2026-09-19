@@ -14,6 +14,7 @@ export default defineConfig({
     environment: "node",
     include: ["tests/tenant-isolation/**/*.spec.ts"],
     env: {
+      PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER ?? "mock",
       SESSION_SECRET:
         process.env.SESSION_SECRET ??
         "test-secret-0123456789-0123456789-0123456789",

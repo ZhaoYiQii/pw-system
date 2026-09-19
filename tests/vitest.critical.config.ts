@@ -23,6 +23,7 @@ export default defineConfig({
       "tests/integration/audit-coverage.spec.ts",
     ],
     env: {
+      PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER ?? "mock",
       DATABASE_URL:
         process.env.DATABASE_URL ??
         "postgresql://pw_runtime:pw_runtime_dev_only@127.0.0.1:5433/pw_saas_test?schema=public",
