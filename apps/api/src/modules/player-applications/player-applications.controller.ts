@@ -24,8 +24,7 @@ import { PlayerApplicationsService } from "./player-applications.service.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
-  if (!id)
-    throw new HttpException("tenant missing", HttpStatus.UNAUTHORIZED);
+  if (!id) throw new HttpException("tenant missing", HttpStatus.UNAUTHORIZED);
   return id;
 }
 
@@ -39,7 +38,10 @@ export class PlayerApplicationsController {
   @TenantScope()
   @Permissions("tenant.view")
   @Post()
-  async apply(@Req() req: AuthenticatedRequest, @Body() body: { intro?: unknown }) {
+  async apply(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { intro?: unknown },
+  ) {
     if (req.principal?.role !== "CUSTOMER") {
       throw new ForbiddenException("仅老板端账号可申请成为陪玩");
     }
@@ -67,10 +69,7 @@ export class PlayerApplicationsController {
   @TenantScope()
   @Permissions("player.manage")
   @Post(":id/approve")
-  async approve(
-    @Req() req: AuthenticatedRequest,
-    @Param("id") id: string,
-  ) {
+  async approve(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
       return {
         data: await this.service.approve(

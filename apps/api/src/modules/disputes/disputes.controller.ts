@@ -77,8 +77,7 @@ export class DisputesController {
     if (role !== "TENANT_OWNER" && role !== "CUSTOMER_SERVICE")
       throw new ForbiddenException("仅客服/店主可查看争议详情");
     const view = await this.disputes.detail(tenantIdOf(req), disputeId);
-    if (!view)
-      throw new HttpException("争议不存在", HttpStatus.NOT_FOUND);
+    if (!view) throw new HttpException("争议不存在", HttpStatus.NOT_FOUND);
     return { data: view };
   }
 
@@ -109,8 +108,7 @@ export class DisputesController {
   @Get("player/disputes")
   async playerMine(@Req() req: AuthenticatedRequest) {
     const role = req.principal?.role;
-    if (role !== "PLAYER")
-      throw new ForbiddenException("需要陪玩身份");
+    if (role !== "PLAYER") throw new ForbiddenException("需要陪玩身份");
     const profile = await this.players
       .getByAccount(tenantIdOf(req), req.principal?.sub ?? "")
       .catch(() => null);
@@ -127,8 +125,7 @@ export class DisputesController {
   @Get("customer/disputes")
   async customerMine(@Req() req: AuthenticatedRequest) {
     const role = req.principal?.role;
-    if (role !== "CUSTOMER")
-      throw new ForbiddenException("需要老板身份");
+    if (role !== "CUSTOMER") throw new ForbiddenException("需要老板身份");
     const profile = await this.customers
       .getByAccount(tenantIdOf(req), req.principal?.sub ?? "")
       .catch(() => null);

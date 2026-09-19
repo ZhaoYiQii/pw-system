@@ -219,7 +219,9 @@ function Inner() {
               variant="outline"
               size="sm"
               disabled={offset === 0}
-              onClick={() => setOffset((value) => Math.max(0, value - PAGE_SIZE))}
+              onClick={() =>
+                setOffset((value) => Math.max(0, value - PAGE_SIZE))
+              }
             >
               上一页
             </Button>

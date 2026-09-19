@@ -8,10 +8,7 @@ export const DASHBOARD_STAFF_ROLES = [
 export type DashboardStaffRole = (typeof DASHBOARD_STAFF_ROLES)[number];
 
 export type AttentionKind =
-  | "ORDER_TODO"
-  | "SESSION_TODO"
-  | "SETTLEMENT_TODO"
-  | "DISPUTE_TODO";
+  "ORDER_TODO" | "SESSION_TODO" | "SETTLEMENT_TODO" | "DISPUTE_TODO";
 
 export type RiskKind = "ADJUSTMENT_TODO" | "SETTLEMENT_TODO" | "DISPUTE_TODO";
 
@@ -93,8 +90,7 @@ export function applyRoleMask(
     day: summary.day,
     metrics: {
       ...rest,
-      riskAlerts:
-        summary.metrics.riskAlerts - (financeTodos ?? 0),
+      riskAlerts: summary.metrics.riskAlerts - (financeTodos ?? 0),
     },
     attention,
     riskFeed,

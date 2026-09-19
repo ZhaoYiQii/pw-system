@@ -47,10 +47,7 @@ export class PhoneVerificationController {
         ? body.phone.trim()
         : "";
     if (!tenantCode || !phone) {
-      throw new HttpException(
-        "tenantCode/phone 必填",
-        HttpStatus.BAD_REQUEST,
-      );
+      throw new HttpException("tenantCode/phone 必填", HttpStatus.BAD_REQUEST);
     }
     const rateKey = `${req.ip ?? "unknown"}:phone-code:${phone}`;
     if (
@@ -60,10 +57,7 @@ export class PhoneVerificationController {
         CODE_RATE_WINDOW_MS,
       )
     ) {
-      throw new HttpException(
-        "发送过于频繁",
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new HttpException("发送过于频繁", HttpStatus.TOO_MANY_REQUESTS);
     }
     const tenantId = await this.auth.resolveTenantId(tenantCode);
     if (!tenantId) {
@@ -88,10 +82,7 @@ export class PhoneVerificationController {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
       }
       if (error instanceof PhoneVerificationThrottledError) {
-        throw new HttpException(
-          error.message,
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
+        throw new HttpException(error.message, HttpStatus.TOO_MANY_REQUESTS);
       }
       if (
         error instanceof PhoneVerificationExpiredError ||

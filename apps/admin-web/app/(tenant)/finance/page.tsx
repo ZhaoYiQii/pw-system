@@ -72,8 +72,7 @@ function Inner() {
   });
   const ledgerQuery = useQuery({
     queryKey: ["finance", "ledger"],
-    queryFn: () =>
-      apiFetch<FinanceLedger>("/api/v1/tenant/settlements/ledger"),
+    queryFn: () => apiFetch<FinanceLedger>("/api/v1/tenant/settlements/ledger"),
   });
 
   const saveStoreCut = useMutation({
@@ -235,10 +234,16 @@ function Inner() {
             <>
               <div className="flex flex-wrap gap-6 text-sm">
                 <p>
-                  已支付 <b className="font-mono">{formatFenYuan(ledgerQuery.data.paidFen)}</b>
+                  已支付{" "}
+                  <b className="font-mono">
+                    {formatFenYuan(ledgerQuery.data.paidFen)}
+                  </b>
                 </p>
                 <p>
-                  未支付 <b className="font-mono">{formatFenYuan(ledgerQuery.data.unpaidFen)}</b>
+                  未支付{" "}
+                  <b className="font-mono">
+                    {formatFenYuan(ledgerQuery.data.unpaidFen)}
+                  </b>
                 </p>
                 <p>
                   记录数{" "}

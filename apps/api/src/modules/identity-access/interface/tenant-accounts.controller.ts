@@ -53,10 +53,7 @@ export class TenantAccountsController {
   @TenantScope()
   @Permissions("tenant.manage")
   @Get()
-  async list(
-    @Req() req: AuthenticatedRequest,
-    @Query("q") q?: unknown,
-  ) {
+  async list(@Req() req: AuthenticatedRequest, @Query("q") q?: unknown) {
     const tenantId = tenantIdOf(req);
     const keyword = typeof q === "string" && q.trim() ? q.trim() : undefined;
     return { data: await this.accounts.list(tenantId, keyword) };

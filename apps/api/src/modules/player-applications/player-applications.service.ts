@@ -57,9 +57,7 @@ export class PlayerApplicationsService {
   ): Promise<PlayerApplicationView> {
     const normalizedIntro = intro.trim().slice(0, 500);
     if (normalizedIntro.length < 1) {
-      throw new PlayerApplicationReviewReasonRequiredError(
-        "请填写申请说明",
-      );
+      throw new PlayerApplicationReviewReasonRequiredError("请填写申请说明");
     }
     return withTenantContext(this.client, tenantId, async (tx) => {
       const customer = await tx.customerProfile.findFirst({
@@ -104,11 +102,10 @@ export class PlayerApplicationsService {
 
   async list(tenantId: string): Promise<PlayerApplicationView[]> {
     return withTenantContext(this.client, tenantId, async (tx) => {
-      const rows = await tx.playerApplication
-        .findMany({
-          where: { tenantId },
-          orderBy: { createdAt: "desc" },
-        });
+      const rows = await tx.playerApplication.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: "desc" },
+      });
       const customerIds = rows.map((r) => r.customerProfileId);
       const accountIds = rows.map((r) => r.accountId);
       const customers = customerIds.length
@@ -159,13 +156,8 @@ export class PlayerApplicationsService {
       const existingProfile = await tx.playerProfile.findFirst({
         where: { tenantId, tenantAccountId: app.accountId },
       });
-      if (
-        existingProfile &&
-        roles.some((r) => r.role === "PLAYER")
-      ) {
-        throw new PlayerApplicationAlreadyPlayerError(
-          "该账号已具备陪玩身份",
-        );
+      if (existingProfile && roles.some((r) => r.role === "PLAYER")) {
+        throw new PlayerApplicationAlreadyPlayerError("该账号已具备陪玩身份");
       }
       if (!existingProfile) {
         await tx.playerProfile.create({
@@ -190,7 +182,11 @@ export class PlayerApplicationsService {
       }
       const updated = await tx.playerApplication.update({
         where: { id: app.id },
-        data: { status: "APPROVED", reviewedBy: actorId, reviewedAt: new Date() },
+        data: {
+          status: "APPROVED",
+          reviewedBy: actorId,
+          reviewedAt: new Date(),
+        },
       });
       await tx.auditLog.create({
         data: {
@@ -215,9 +211,7 @@ export class PlayerApplicationsService {
   ): Promise<PlayerApplicationView> {
     const note = reason.trim().slice(0, 300);
     if (note.length < 1) {
-      throw new PlayerApplicationReviewReasonRequiredError(
-        "请填写拒绝原因",
-      );
+      throw new PlayerApplicationReviewReasonRequiredError("请填写拒绝原因");
     }
     return withTenantContext(this.client, tenantId, async (tx) => {
       const app = await tx.playerApplication.findFirst({

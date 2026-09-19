@@ -104,9 +104,7 @@ export function AiAssistantView() {
           requirement: {
             description: text,
             serviceProductId: productId,
-            durationSeconds: durationSeconds
-              ? Number(durationSeconds)
-              : null,
+            durationSeconds: durationSeconds ? Number(durationSeconds) : null,
             ...(desiredStart
               ? { desiredStartAt: new Date(desiredStart).toISOString() }
               : {}),
@@ -116,9 +114,7 @@ export function AiAssistantView() {
     },
     onSuccess: (order) => {
       showToast(`订单草稿已创建：${order.orderNo}`);
-      router.push(
-        `/merchant-console/dispatch/${order.id}?kind=CLASSIC`,
-      );
+      router.push(`/merchant-console/dispatch/${order.id}?kind=CLASSIC`);
     },
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
@@ -143,7 +139,9 @@ export function AiAssistantView() {
           <h1>AI 需求助手</h1>
           <p>真实解析接口：粘贴需求 → 结构化校验 → 人工确认后创建订单。</p>
         </div>
-        <span className={`mc-status ${capabilities?.supported ? "st-done" : "st-pending"}`}>
+        <span
+          className={`mc-status ${capabilities?.supported ? "st-done" : "st-pending"}`}
+        >
           {capabilities?.supported
             ? `外部 AI：${capabilities.provider ?? "-"}`
             : "本地确定性预检"}
@@ -254,7 +252,9 @@ export function AiAssistantView() {
                 <p>客服核对后才创建订单</p>
               </div>
               {parseResult ? (
-                <span className={`mc-status ${ready ? "st-done" : "st-pending"}`}>
+                <span
+                  className={`mc-status ${ready ? "st-done" : "st-pending"}`}
+                >
                   {ready ? "字段完整" : "缺少必要需求"}
                 </span>
               ) : null}
@@ -299,7 +299,9 @@ export function AiAssistantView() {
                       <button
                         type="button"
                         className="mc-btn"
-                        onClick={() => router.push("/merchant-console/dispatch/new")}
+                        onClick={() =>
+                          router.push("/merchant-console/dispatch/new")
+                        }
                       >
                         去新建 GD 派单
                       </button>

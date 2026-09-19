@@ -126,9 +126,7 @@ function Inner() {
       const legacyIds = rows
         .filter((r) => r.source === "LEGACY")
         .map((r) => r.id);
-      const slotIds = rows
-        .filter((r) => r.source === "SLOT")
-        .map((r) => r.id);
+      const slotIds = rows.filter((r) => r.source === "SLOT").map((r) => r.id);
       const draft = batchesQuery.data?.find((b) => b.status === "DRAFT");
       if (draft) {
         await apiFetch<unknown>(
@@ -166,16 +164,14 @@ function Inner() {
       setError(null);
       refreshAll();
     },
-    onError: (e) =>
-      setError(e instanceof Error ? e.message : String(e)),
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
 
   const transition = useMutation({
     mutationFn: ({ id, action }: { id: string; action: string }) =>
-      apiFetch<unknown>(
-        `/api/v1/tenant/settlements/${id}/${action}`,
-        { method: "POST" },
-      ),
+      apiFetch<unknown>(`/api/v1/tenant/settlements/${id}/${action}`, {
+        method: "POST",
+      }),
     onSuccess: (_data, vars) => {
       const label: Record<string, string> = {
         review: "完成复核",
@@ -186,13 +182,11 @@ function Inner() {
       setNotice(`批次已${label[vars.action] ?? "更新"}。`);
       refreshAll();
     },
-    onError: (e) =>
-      setError(e instanceof Error ? e.message : String(e)),
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
 
   const queryUnauthorized =
-    batchesQuery.error instanceof ApiError &&
-    batchesQuery.error.status === 401;
+    batchesQuery.error instanceof ApiError && batchesQuery.error.status === 401;
   if (queryUnauthorized) {
     return (
       <main className="min-h-screen bg-[#f4f5f7]">
@@ -217,9 +211,7 @@ function Inner() {
   const draftBatch = batchesQuery.data?.find((b) => b.status === "DRAFT");
   const toggleEarning = (id: string) => {
     setSelectedEarningIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id],
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
   const actionFor = (batch: BatchRow) => {
@@ -288,9 +280,7 @@ function Inner() {
                 </p>
                 <Button
                   disabled={selectedEarningIds.length === 0}
-                  onClick={() =>
-                    addToBatch.mutate(selectedEarningIds)
-                  }
+                  onClick={() => addToBatch.mutate(selectedEarningIds)}
                 >
                   {addToBatch.isPending
                     ? "加入中…"
@@ -304,15 +294,14 @@ function Inner() {
                   加载中…
                 </p>
               ) : null}
-              {!earningsQuery.isPending &&
-              earningsQuery.data?.length === 0 ? (
+              {!earningsQuery.isPending && earningsQuery.data?.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   暂无待结算应收。
                 </p>
               ) : null}
               {earningsQuery.data && earningsQuery.data.length > 0 ? (
                 <Table>
-                <TableHeader>
+                  <TableHeader>
                     <TableRow>
                       <TableHead className="w-10">
                         <input
@@ -385,8 +374,7 @@ function Inner() {
                   加载中…
                 </p>
               ) : null}
-              {!batchesQuery.isPending &&
-              batchesQuery.data?.length === 0 ? (
+              {!batchesQuery.isPending && batchesQuery.data?.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   暂无批次，请先在“待结算应收”创建。
                 </p>
@@ -450,8 +438,8 @@ function Inner() {
                   {detailQuery.data?.batchNo ?? "…"}
                 </CardTitle>
                 <CardDescription>
-                  合计 {formatFenYuan(detailQuery.data?.totalAmountFen ?? "0")}，
-                  {detailQuery.data?.itemCount ?? 0} 笔。
+                  合计 {formatFenYuan(detailQuery.data?.totalAmountFen ?? "0")}
+                  ，{detailQuery.data?.itemCount ?? 0} 笔。
                 </CardDescription>
                 {detailQuery.data ? (
                   <p className="mt-2 text-xs text-muted-foreground">
@@ -485,7 +473,7 @@ function Inner() {
                 ) : null}
                 {detailQuery.data && detailQuery.data.items.length > 0 ? (
                   <Table>
-                <TableHeader>
+                    <TableHeader>
                       <TableRow>
                         <TableHead>类型</TableHead>
                         <TableHead>陪玩</TableHead>

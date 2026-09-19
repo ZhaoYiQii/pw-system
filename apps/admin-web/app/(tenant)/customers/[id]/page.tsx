@@ -124,9 +124,7 @@ function Inner({ customerId }: { customerId: string }) {
   }
   if (customerQuery.isPending || !customerQuery.data) {
     return (
-      <p className="py-6 text-center text-sm text-muted-foreground">
-        加载中…
-      </p>
+      <p className="py-6 text-center text-sm text-muted-foreground">加载中…</p>
     );
   }
 
@@ -135,9 +133,7 @@ function Inner({ customerId }: { customerId: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {customerQuery.isError ||
-      accountQuery.isError ||
-      ordersQuery.isError ? (
+      {customerQuery.isError || accountQuery.isError || ordersQuery.isError ? (
         <p className="text-sm text-destructive">
           部分数据加载失败，请刷新重试。
         </p>
@@ -147,7 +143,9 @@ function Inner({ customerId }: { customerId: string }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {customer.name}
-            <Badge variant={customer.status === "ACTIVE" ? "default" : "outline"}>
+            <Badge
+              variant={customer.status === "ACTIVE" ? "default" : "outline"}
+            >
               {customer.status === "ACTIVE" ? "正常" : "已停用"}
             </Badge>
           </CardTitle>
@@ -177,7 +175,9 @@ function Inner({ customerId }: { customerId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>账户与余额</CardTitle>
-          <CardDescription>老板钱包（Boss Wallet）余额与账变流水。</CardDescription>
+          <CardDescription>
+            老板钱包（Boss Wallet）余额与账变流水。
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {account === null ? (
@@ -249,14 +249,15 @@ function Inner({ customerId }: { customerId: string }) {
       <Card>
         <CardHeader>
           <CardTitle>历史订单（{ordersQuery.data?.length ?? 0}）</CardTitle>
-          <CardDescription>包含旧 CLASSIC 流程与 GAME_DISPATCH 新流程。</CardDescription>
+          <CardDescription>
+            包含旧 CLASSIC 流程与 GAME_DISPATCH 新流程。
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {ordersQuery.isPending ? (
             <p className="py-3 text-sm text-muted-foreground">加载中…</p>
           ) : null}
-          {!ordersQuery.isPending &&
-          (ordersQuery.data?.length ?? 0) === 0 ? (
+          {!ordersQuery.isPending && (ordersQuery.data?.length ?? 0) === 0 ? (
             <p className="py-3 text-sm text-muted-foreground">暂无订单。</p>
           ) : null}
           {ordersQuery.data && ordersQuery.data.length > 0 ? (
