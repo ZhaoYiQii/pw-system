@@ -420,12 +420,12 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     // A 方案：SETTLED 档位收入进入结算批次，登记线下打款后置 PAID。
     const slotIds = earnings.map((e) => e.id);
     const pendingList = (
-      await req(ownerToken).get("/api/v1/tenant/settlements/earnings").expect(200)
+      await req(ownerToken)
+        .get("/api/v1/tenant/settlements/earnings")
+        .expect(200)
     ).body.data as Array<{ id: string; source: string }>;
     expect(
-      pendingList.some(
-        (e) => e.source === "SLOT" && slotIds.includes(e.id),
-      ),
+      pendingList.some((e) => e.source === "SLOT" && slotIds.includes(e.id)),
     ).toBe(true);
 
     const batch = (
@@ -473,10 +473,12 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       where: { tenantId, tenantAccountId: p1Account?.id },
     });
     const income = (
-      await req(playerTokens.p1)
-        .get("/api/v1/tenant/player/income")
-        .expect(200)
-    ).body.data as { pendingFen: string; settledFen: string; records: unknown[] };
+      await req(playerTokens.p1).get("/api/v1/tenant/player/income").expect(200)
+    ).body.data as {
+      pendingFen: string;
+      settledFen: string;
+      records: unknown[];
+    };
     const p1PaidCount = await client.slotEarning.count({
       where: { tenantId, playerId: p1Profile?.id, status: "PAID" },
     });
