@@ -9,7 +9,10 @@
  *
  * 本模块不依赖 React、DOM 与网络，便于直接单测。
  */
-import type { DraftConfigV2 } from "./template-draft-state";
+import type {
+  DraftConfigV2,
+  DraftFieldComponentV2,
+} from "./template-draft-state";
 
 /** 弹窗里可选的一个「已发布模板」选项（来自 published 列表接口）。 */
 export interface NewOrderTemplateOption {
@@ -170,6 +173,23 @@ export function updateValue(
     values: { ...state.values, [stableKey]: value },
     intent: null,
   };
+}
+
+/**
+ * 输入框文本 → 提交值：只有 NUMBER 需要转成数字——
+ * 服务端对数字字段（文案渲染）与人数来源（NUMBER_FIELD）都要求 JS number，
+ * 传字符串会 422；MONEY_FEN 必须是规范整数分字符串，其余字段保持文本原样。
+ * 非法数字保留原文，让服务端给出受控错误，用户也能看到自己填了什么。
+ */
+export function coerceFieldValue(
+  fieldType: DraftFieldComponentV2["fieldType"],
+  text: string,
+): unknown {
+  if (fieldType !== "NUMBER") return text;
+  const trimmed = text.trim();
+  if (trimmed === "") return "";
+  const value = Number(trimmed);
+  return Number.isFinite(value) ? value : text;
 }
 
 export function setDurationMinutes(

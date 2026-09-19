@@ -13,6 +13,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { layoutV2Rows } from "./form-layout";
+import { coerceFieldValue } from "./new-order-template-flow";
 import type {
   DraftConfigV2,
   DraftFieldComponentV2,
@@ -336,9 +337,7 @@ function OrderComponentInput({
             }
             onValueChange(
               field.stableKey,
-              field.fieldType === "NUMBER" || field.fieldType === "MONEY_FEN"
-                ? next
-                : next,
+              coerceFieldValue(field.fieldType, next),
             );
           }}
         />
