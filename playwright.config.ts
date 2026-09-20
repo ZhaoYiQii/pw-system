@@ -31,6 +31,16 @@ export default defineConfig({
       },
     },
     {
+      // 算价模型 Task 2：商家端「算价模型」维护页（加价规则 + 陪玩×游戏底价）的走查用例。
+      // 与 pricing-slot-report 共用同一套夹具与启动约定。
+      name: "pricing-rules-console",
+      testMatch: /pricing-rules-console\.spec\.ts/,
+      use: {
+        baseURL: process.env.ADMIN_ORIGIN ?? "http://localhost:3005",
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+    {
       name: "mobile-h5",
       testMatch: /mobile\.spec\.ts/,
       use: { baseURL: process.env.H5_ORIGIN ?? "http://localhost:3101" },

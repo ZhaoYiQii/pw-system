@@ -132,7 +132,7 @@ export function PricingRulesModuleView() {
         </p>
       ) : null}
 
-      <Card>
+      <Card data-testid="pricing-rules-card">
         <CardContent className="space-y-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm">
@@ -308,7 +308,7 @@ export function PricingRulesModuleView() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-testid="player-base-card">
         <CardContent className="space-y-3 p-4">
           <h2 className="text-lg font-medium">陪玩×游戏底价</h2>
           <p className="text-sm text-muted-foreground">
