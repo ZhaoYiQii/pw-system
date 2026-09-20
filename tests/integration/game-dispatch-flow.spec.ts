@@ -134,6 +134,25 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       })
       .expect(201);
     templateId = (templateRes.body as { data: { id: string } }).data.id;
+    // 算价模型（ADR-0003）：加价唯一来源是「按游戏的加价规则库」，
+    // 订单快照里的段位加价（rankRules）降级为 legacy 只读，不再是定价来源。
+    const game = await client.game.create({
+      data: { tenantId, name: `英雄联盟-${suffix}` },
+    });
+    await client.gameDispatchTemplate.update({
+      where: { id: templateId },
+      data: { gameId: game.id },
+    });
+    await request(app.getHttpServer())
+      .put(`/api/v1/tenant/game-pricing/games/${game.id}`)
+      .set("authorization", `Bearer ${ownerToken}`)
+      .send({
+        items: [
+          { dimensionKey: "rank=翡翠", amountFen: "1000" },
+          { dimensionKey: "rank=钻石", amountFen: "2000" },
+        ],
+      })
+      .expect(200);
     void p1;
     void p2;
     void p3;
@@ -182,6 +201,11 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       });
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
+      // 算价模型：规则库与陪玩×游戏底价都由外键指向 games，必须先删。
+      await client.gamePricingRuleItem.deleteMany({ where: { tenantId } });
+      await client.gamePricingRule.deleteMany({ where: { tenantId } });
+      await client.playerGamePrice.deleteMany({ where: { tenantId } });
+      await client.game.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
       await client.$disconnect();
     }
@@ -328,6 +352,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
 
     const slots = await client.orderSlot.findMany({ where: { tenantId } });
     expect(slots).toHaveLength(3);
+    // 单价 = 陪玩级兜底 5000 + 规则库 rank=钻石 2000（快照里的段位加价 2000 已不再参与计价）。
     expect(slots.every((s) => s.unitPriceFen === BigInt(7000))).toBe(true);
   });
 

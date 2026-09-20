@@ -15,6 +15,7 @@ import type {
   TemplateAudienceV2,
 } from "../domain/game-template-config-v2.js";
 import type { DispatchDocumentV1 } from "../domain/game-template-document.js";
+import type { PricingRuleItem } from "../domain/game-pricing.js";
 import {
   buildTemplateOrderDraftForAudience,
   type TemplateOrderDraftOutcome,
@@ -69,6 +70,8 @@ export interface GameDispatchTemplateOrderRepository {
     buildDraft: (
       config: PublishedConfigV2,
       values: Record<string, unknown>,
+      /** 该游戏当前生效的加价规则（仓储在事务内读取，保证与落库同一视图）。 */
+      pricingRuleItems: readonly PricingRuleItem[],
     ) => TemplateOrderDraftOutcome,
   ): Promise<CreateTemplateOrderOutput>;
 }
@@ -146,11 +149,12 @@ export class GameDispatchTemplateOrderService {
           input,
           requestHash: templateOrderRequestHash(input),
         },
-        (config, values) => {
+        (config, values, pricingRuleItems) => {
           const outcome = buildTemplateOrderDraftForAudience(
             config,
             values,
             audience,
+            pricingRuleItems,
           );
           droppedKeys = outcome.droppedKeys;
           return outcome;

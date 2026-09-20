@@ -32,13 +32,19 @@ import {
   activeTemplateValues,
   templateFormValueError,
 } from "../domain/game-template-values.js";
+import {
+  pricingDimensionKeys,
+  resolveUnitPriceFen,
+  type PricingDimensionField,
+  type PricingRuleItem,
+} from "../domain/game-pricing.js";
+import type { MoneyFen } from "../../../common/money.js";
+import {
+  loadGameRuleItems,
+  loadPlayerGameBases,
+} from "../infrastructure/prisma-game-pricing.repository.js";
 
 type Tx = DbTransaction;
-
-interface RankRuleJson {
-  rankLabel: string;
-  addPriceFen: string;
-}
 
 function code(): string {
   return `${Date.now().toString(36).toUpperCase()}${randomBytes(4)
@@ -52,8 +58,31 @@ function bossNo(): string {
     .toUpperCase()}`;
 }
 
-function fen(fenString: string): bigint {
-  return BigInt(fenString);
+/** v1 快照字段（fieldsJson）→ 参与维度命中的字段；选项在 v1 里是字符串数组。 */
+function snapshotPricingFields(fieldsJson: unknown): PricingDimensionField[] {
+  if (!Array.isArray(fieldsJson)) return [];
+  const fields: PricingDimensionField[] = [];
+  for (const raw of fieldsJson) {
+    if (raw === null || typeof raw !== "object") continue;
+    const field = raw as { fieldKey?: unknown; options?: unknown };
+    if (typeof field.fieldKey !== "string") continue;
+    fields.push({
+      key: field.fieldKey,
+      optionValues: Array.isArray(field.options)
+        ? field.options.filter(
+            (value): value is string => typeof value === "string",
+          )
+        : [],
+    });
+  }
+  return fields;
+}
+
+/** 订单提交值：非对象一律当空（v1 的 formValuesJson 由服务端写入，结构受控）。 */
+function orderFormValues(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 export class GameDispatchService {
@@ -79,6 +108,7 @@ export class GameDispatchService {
     gd: {
       id: string;
       orderId: string;
+      gameId: string | null;
       dispatchNo: string;
       formValuesJson: unknown;
       durationMinutes: number;
@@ -99,20 +129,38 @@ export class GameDispatchService {
     return { gd, order };
   }
 
-  private async rankAdd(
+  /**
+   * 本单的加价上下文（ADR-0003）：规则唯一来源是该游戏的加价规则库，
+   * 命中键由订单取值算出（模板字段 stableKey=选项值）；段位只是其中一种维度。
+   *
+   * - 游戏归属取 `gd.gameId`（v2 模板下单会写入），v1 派单回退到模板快照的 gameId；
+   * - 未归类到游戏的模板（gameId 为空）不参与加价：迁移只报告、不落地兜底规则；
+   * - 规则在调用方事务内读取，与随后的落价保持同一视图。
+   */
+  private async pricingContext(
     tx: Tx,
     tenantId: string,
-    snapshotId: string,
-    rankLabel: string | undefined | null,
-  ): Promise<bigint> {
-    if (!snapshotId) return 0n;
-    const snapshot = await tx.gameDispatchTemplateSnapshot.findFirst({
-      where: { tenantId, id: snapshotId },
-    });
-    if (!snapshot) return 0n;
-    const rules = (snapshot.rankRulesJson ?? []) as unknown as RankRuleJson[];
-    const hit = rules.find((r) => r.rankLabel === rankLabel);
-    return hit ? fen(hit.addPriceFen) : 0n;
+    gd: {
+      gameId: string | null;
+      formValuesJson: unknown;
+      targetRankLabel: string | null;
+    },
+    snapshot: { gameId: string | null; fieldsJson: unknown } | null,
+  ): Promise<{
+    gameId: string | null;
+    dimensionKeys: string[];
+    ruleItems: PricingRuleItem[];
+  }> {
+    const gameId = gd.gameId ?? snapshot?.gameId ?? null;
+    return {
+      gameId,
+      ruleItems: gameId ? await loadGameRuleItems(tx, tenantId, gameId) : [],
+      dimensionKeys: pricingDimensionKeys({
+        fields: snapshotPricingFields(snapshot?.fieldsJson),
+        values: orderFormValues(gd.formValuesJson),
+        rankLabel: gd.targetRankLabel,
+      }),
+    };
   }
 
   async createDraft(
@@ -193,6 +241,8 @@ export class GameDispatchService {
         data: {
           tenantId,
           orderId: order.id,
+          // 规则库按游戏隔离：快照带上游戏归属，选人时据此取该游戏的加价规则。
+          gameId: template.gameId,
           templateId: template.id,
           templateName: template.name,
           fieldsJson: JSON.parse(
@@ -1002,25 +1052,57 @@ export class GameDispatchService {
       const lines = await tx.gameDispatchLine.findMany({
         where: { tenantId, orderId },
       });
+      const snapshot = found.gd.snapshotId
+        ? await tx.gameDispatchTemplateSnapshot.findFirst({
+            where: { tenantId, id: found.gd.snapshotId },
+          })
+        : null;
+      const pricing = await this.pricingContext(
+        tx,
+        tenantId,
+        found.gd,
+        snapshot,
+      );
+      const gameBases = pricing.gameId
+        ? await loadPlayerGameBases(
+            tx,
+            tenantId,
+            pricing.gameId,
+            apps.map((app) => app.playerId),
+          )
+        : new Map<string, MoneyFen>();
+      /** 单价先算后落：既无陪玩×游戏底价也无陪玩级兜底时拒绝选人，不静默按 0 计（规格 §6）。 */
+      const unitPriceOf = async (playerId: string): Promise<bigint> => {
+        const player = await tx.playerProfile.findFirst({
+          where: { tenantId, id: playerId },
+        });
+        if (!player) throw new DispatchInputError("陪玩不存在");
+        const unitPrice = resolveUnitPriceFen({
+          gameBaseFen: gameBases.get(playerId) ?? null,
+          // PlayerProfile.basePricePerHourFen 默认 0：0 视为「没有兜底价」，
+          // 否则未定价的陪玩会被静默按 0 计价。
+          fallbackBaseFen:
+            player.basePricePerHourFen > 0n
+              ? player.basePricePerHourFen.toString()
+              : null,
+          dimensionKeys: pricing.dimensionKeys,
+          ruleItems: pricing.ruleItems,
+        });
+        if (unitPrice === null) {
+          throw new DispatchStateError(
+            `陪玩「${player.name}」在该游戏没有底价，无法确认：请先维护算价模型底价`,
+          );
+        }
+        return BigInt(unitPrice);
+      };
+      const unitPrices = new Map<string, bigint>();
       const slotPrices = slotRows.map((s) => s.unitPriceFen);
       for (const app of apps) {
         const line = lines.find((l) => l.id === app.lineId);
         if (!line) continue;
-        const player = await tx.playerProfile.findFirst({
-          where: { tenantId, id: app.playerId },
-        });
-        if (!player) throw new DispatchInputError("陪玩不存在");
-        const snapshot = found.gd.snapshotId
-          ? await tx.gameDispatchTemplateSnapshot.findFirst({
-              where: { tenantId, id: found.gd.snapshotId },
-            })
-          : null;
-        const rules = (snapshot?.rankRulesJson ??
-          []) as unknown as RankRuleJson[];
-        const hit = rules.find((r) => r.rankLabel === found.gd.targetRankLabel);
-        slotPrices.push(
-          player.basePricePerHourFen + (hit ? fen(hit.addPriceFen) : 0n),
-        );
+        const unitPrice = await unitPriceOf(app.playerId);
+        unitPrices.set(app.id, unitPrice);
+        slotPrices.push(unitPrice);
       }
       const expectedFen = slotPrices.reduce(
         (acc, price) =>
@@ -1040,21 +1122,13 @@ export class GameDispatchService {
           );
         slotsByLine.set(line.id, used + 1);
       }
-      const snapshot = found.gd.snapshotId
-        ? await tx.gameDispatchTemplateSnapshot.findFirst({
-            where: { tenantId, id: found.gd.snapshotId },
-          })
-        : null;
-      const rules = (snapshot?.rankRulesJson ??
-        []) as unknown as RankRuleJson[];
-      const hit = rules.find((r) => r.rankLabel === found.gd.targetRankLabel);
       for (const app of apps) {
-        const player = await tx.playerProfile.findFirst({
-          where: { tenantId, id: app.playerId },
-        });
-        if (!player) throw new DispatchInputError("陪玩不存在");
         const line = lines.find((l) => l.id === app.lineId);
-        if (!line) continue;
+        if (!line) throw new DispatchInputError("位置行不存在");
+        const unitPriceFen = unitPrices.get(app.id);
+        if (unitPriceFen === undefined) {
+          throw new DispatchInputError("位置行不存在");
+        }
         await tx.orderSlot.create({
           data: {
             tenantId,
@@ -1064,8 +1138,7 @@ export class GameDispatchService {
             applicationId: app.id,
             playerId: app.playerId,
             positionLabel: app.positionLabel,
-            unitPriceFen:
-              player.basePricePerHourFen + (hit ? fen(hit.addPriceFen) : 0n),
+            unitPriceFen,
             createdBy: actorId,
           },
         });

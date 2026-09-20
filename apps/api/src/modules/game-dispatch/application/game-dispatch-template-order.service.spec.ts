@@ -74,7 +74,8 @@ function fakeRepository(
       command: CreateTemplateOrderCommand,
       buildDraft,
     ) => {
-      const outcome = buildDraft(config, command.input.values);
+      // 真实仓储会在事务内读该游戏的加价规则；这里只跑领域回调，观察旁路事件。
+      const outcome = buildDraft(config, command.input.values, []);
       return {
         duplicate: false,
         result: {

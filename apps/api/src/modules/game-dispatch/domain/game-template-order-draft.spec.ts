@@ -40,7 +40,8 @@ function orderConfig(): PublishedConfigV2 {
         semanticRole: "MODE",
         required: true,
         options: [
-          { value: "ranked", label: "排位", priceDeltaFen: "1500" },
+          // legacy 选项加价：ADR-0003 起不再是定价来源（规则库才是），故意写成 9900 便于区分。
+          { value: "ranked", label: "排位", priceDeltaFen: "9900" },
           { value: "normal", label: "匹配" },
         ],
       },
@@ -159,18 +160,28 @@ describe("buildTemplateOrderDraft：按发布快照生成订单草稿", () => {
     expect(draft.staffing.rows[0]?.label).toBe("陪玩");
   });
 
-  it("按已选选项的整数分加价求和，不读客户端提交的最终价格", () => {
-    const ranked = buildTemplateOrderDraft(orderConfig(), {
+  it("加价来自规则库：按维度键命中求和，模板选项与客户端提交的价格都不参与", () => {
+    const rules = [{ dimensionKey: "mode=ranked", amountFen: "1500" }];
+    const values = { roster_table: [{ position: "陪玩", count: 2 }] };
+    const ranked = buildTemplateOrderDraft(
+      orderConfig(),
+      { mode: "ranked", ...values },
+      rules,
+    );
+    const normal = buildTemplateOrderDraft(
+      orderConfig(),
+      { mode: "normal", ...values },
+      rules,
+    );
+    // 没有规则库（或没有命中）时加价为 0：模板选项里的 priceDeltaFen=9900 不再参与。
+    const noRules = buildTemplateOrderDraft(orderConfig(), {
       mode: "ranked",
-      roster_table: [{ position: "陪玩", count: 2 }],
-    });
-    const normal = buildTemplateOrderDraft(orderConfig(), {
-      mode: "normal",
-      roster_table: [{ position: "陪玩", count: 2 }],
+      ...values,
     });
 
     expect(ranked.priceAdjustmentFen).toBe("1500");
     expect(normal.priceAdjustmentFen).toBe("0");
+    expect(noRules.priceAdjustmentFen).toBe("0");
   });
 
   it("用发布快照生成自动文案，包含区块标题与值且不含内部键", () => {

@@ -10,10 +10,16 @@
  */
 import { GenericTemplateError } from "./errors.js";
 import {
-  calculateTemplatePriceAdjustmentFen,
   calculateTemplateStaffing,
+  templatePricingDimensionFields,
   TemplateRuntimeValueError,
+  validateTemplateChoiceValues,
 } from "./game-template-calculations.js";
+import {
+  pricingDimensionKeys,
+  resolveSurchargeFen,
+  type PricingRuleItem,
+} from "./game-pricing.js";
 import type {
   PublishedConfigV2,
   TemplateAudienceV2,
@@ -65,16 +71,27 @@ function mapRuntimeError(
   return new GenericTemplateError(code, error.message, { path: error.path });
 }
 
-/** 按发布快照生成订单草稿所需的人数、价格调整与自动文案。 */
+/**
+ * 按发布快照生成订单草稿所需的人数、加价合计与自动文案。
+ *
+ * 加价自 ADR-0003 起唯一来源是该游戏的规则库（`game_pricing_rules`）：
+ * 命中键 = 模板字段 stableKey + 选项值，模板选项里的 priceDeltaFen 不再参与定价
+ * （旧字段保留只读一个版本）。取值合法性仍在这里校验。
+ */
 export function buildTemplateOrderDraft(
   config: PublishedConfigV2,
   values: TemplateOrderValues,
+  pricingRuleItems: readonly PricingRuleItem[] = [],
 ): TemplateOrderDraft {
   try {
     const staffing = calculateTemplateStaffing(config, values);
-    const priceAdjustmentFen = calculateTemplatePriceAdjustmentFen(
-      config,
-      values,
+    validateTemplateChoiceValues(config, values);
+    const priceAdjustmentFen = resolveSurchargeFen(
+      pricingDimensionKeys({
+        fields: templatePricingDimensionFields(config),
+        values,
+      }),
+      pricingRuleItems,
     );
     const document = renderDispatchDocument(config, values);
     return {
@@ -115,6 +132,7 @@ export function buildTemplateOrderDraftForAudience(
   config: PublishedConfigV2,
   values: TemplateOrderValues,
   audience: TemplateAudienceV2,
+  pricingRuleItems: readonly PricingRuleItem[] = [],
 ): TemplateOrderDraftOutcome {
   // 参与算价或人数的内容若对这个端口不可见，宁可不写这单，也不静默少算
   // （发布校验已阻断这类配置；这里是给"规则上线前发布的历史版本"兜底）。
@@ -131,7 +149,11 @@ export function buildTemplateOrderDraftForAudience(
   }
   const { visible, droppedKeys } = partitionValuesV2(config, values, audience);
   return {
-    draft: buildTemplateOrderDraft(visibleConfigV2(config, audience), visible),
+    draft: buildTemplateOrderDraft(
+      visibleConfigV2(config, audience),
+      visible,
+      pricingRuleItems,
+    ),
     storedValues: visible,
     droppedKeys,
   };

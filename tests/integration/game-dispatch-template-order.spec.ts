@@ -221,6 +221,15 @@ describe("S4 新建派单：模板读取与创建", () => {
     playerToken = await login(tenantCode, `p_${suffix}`);
     foreignToken = await login(otherTenantCode, "boss");
     customerToken = await login(tenantCode, `cb_${suffix}`);
+
+    // 算价模型（ADR-0003）：加价唯一来源是该游戏的规则库，模板选项的 priceDeltaFen 不再是定价来源。
+    // 规则库给 mode=ranked → 1500，而 orderConfig() 里的选项价故意写成 9900，
+    // 于是后续断言 1500 就是在证明"金额来自规则库"。
+    await request(app.getHttpServer())
+      .put(`/api/v1/tenant/game-pricing/games/${gameId}`)
+      .set("authorization", `Bearer ${ownerToken}`)
+      .send({ items: [{ dimensionKey: "mode=ranked", amountFen: "1500" }] })
+      .expect(200);
   });
 
   afterAll(async () => {
@@ -256,6 +265,16 @@ describe("S4 新建派单：模板读取与创建", () => {
         where: { tenantId: { in: tids } },
       });
       await client.tenantAccount.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
+      // 算价模型：规则库与陪玩×游戏底价都由外键指向 games，必须先删。
+      await client.gamePricingRuleItem.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
+      await client.gamePricingRule.deleteMany({
+        where: { tenantId: { in: tids } },
+      });
+      await client.playerGamePrice.deleteMany({
         where: { tenantId: { in: tids } },
       });
       await client.game.deleteMany({ where: { tenantId: { in: tids } } });
@@ -478,7 +497,8 @@ describe("S4 新建派单：模板读取与创建", () => {
           semanticRole: "MODE",
           required: true,
           options: [
-            { value: "ranked", label: "排位", priceDeltaFen: "1500" },
+            // legacy 选项加价：本版起不再是定价来源（规则库才是），故意写成 9900 便于区分。
+            { value: "ranked", label: "排位", priceDeltaFen: "9900" },
             { value: "normal", label: "匹配" },
           ],
         },
@@ -572,6 +592,7 @@ describe("S4 新建派单：模板读取与创建", () => {
         { label: "陪练", count: 1 },
       ],
     });
+    // 加价来自规则库（mode=ranked → 1500）；模板选项里的 priceDeltaFen=9900 不参与。
     expect(created.priceAdjustmentFen).toBe("1500");
     expect(created.document.plainText).toContain("游戏模式：排位");
 
@@ -1233,6 +1254,7 @@ describe("S4 新建派单：模板读取与创建", () => {
         .expect(201);
       const result = (created.body as { data: CreateOrderResult }).data;
       expect(result.staffingSummary.total).toBe(2);
+      // 客户自助入口与客服入口共用同一份规则库结果。
       expect(result.priceAdjustmentFen).toBe("1500");
 
       const stored = await client.gameDispatchOrder.findFirstOrThrow({

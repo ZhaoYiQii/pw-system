@@ -22,7 +22,9 @@ import { DispatchInputError } from "../domain/dispatch-errors.js";
 import { GenericTemplateError } from "../domain/errors.js";
 import type { PublishedConfigV2 } from "../domain/game-template-config-v2.js";
 import type { TemplateOrderDraftOutcome } from "../domain/game-template-order-draft.js";
+import type { PricingRuleItem } from "../domain/game-pricing.js";
 import { readPublishedConfig } from "../domain/game-template-published-read.js";
+import { loadGameRuleItems } from "./prisma-game-pricing.repository.js";
 
 function isP2002(error: unknown): boolean {
   return (
@@ -96,6 +98,7 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
     buildDraft: (
       config: PublishedConfigV2,
       values: Record<string, unknown>,
+      pricingRuleItems: readonly PricingRuleItem[],
     ) => TemplateOrderDraftOutcome,
   ): Promise<CreateTemplateOrderOutput> {
     try {
@@ -165,11 +168,18 @@ export class PrismaGameDispatchTemplateOrderRepository implements GameDispatchTe
             : new DispatchInputError("老板档案未绑定");
         }
 
-        // 人数、价格与文案只由发布快照计算；客户端多传的键会在领域层被拒。
+        // 人数与文案只由发布快照计算；加价来自该游戏的规则库（同一事务内读取，ADR-0003）。
+        // 客户端多传的键会在领域层被拒。
         // 端口过滤在领域层完成：看不见的字段既不参与计算，值也不落库（V-5）。
+        const pricingRuleItems = await loadGameRuleItems(
+          tx,
+          command.tenantId,
+          command.input.gameId,
+        );
         const { draft, storedValues } = buildDraft(
           config,
           command.input.values,
+          pricingRuleItems,
         );
         const durationMinutes =
           command.input.durationMinutes ??
