@@ -540,6 +540,14 @@ function Inner({ orderId }: { orderId: string }) {
             </span>
           </div>
           <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">平台费</span>
+            <span className="font-medium text-muted-foreground">
+              {data.settlement.platformFeeFen === null
+                ? "未分账"
+                : formatFenYuan(data.settlement.platformFeeFen)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-muted-foreground">门店毛利</span>
             <span className="font-medium">
               {formatFenYuan(data.settlement.storeProfitFen)}

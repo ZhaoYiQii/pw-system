@@ -103,7 +103,8 @@ export class PlatformBillingService {
         },
       });
       await tx.financeRateRule.create({
-        data: { tenantId: tenant.id, platformFeeBp: 300, storeCutBp },
+        // ADR-0004：开户写入的平台费为 0（平台费置 0，公式不变）。
+        data: { tenantId: tenant.id, platformFeeBp: 0, storeCutBp },
       });
       await tx.tenantSubscription.create({
         data: {

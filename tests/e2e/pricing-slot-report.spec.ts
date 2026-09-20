@@ -128,7 +128,8 @@ test.describe("算价模型：报单审批 / 释放名额 / 费用口径", () =>
     // 费用口径（Task 5b-2/A）：未核定前支出为 0，抽成标注「未分账」。
     const fees = page.getByTestId("fees-summary");
     await expect(fees.getByText("¥0.00").first()).toBeVisible();
-    await expect(fees.getByText("未分账")).toBeVisible();
+    // 未核定前门店抽成与平台费都按「未分账」显示（ADR-0004 后分账是常态，历史/未核定才标未分账）。
+    await expect(fees.getByText("未分账").first()).toBeVisible();
     await expect(fees).toHaveScreenshot("fees-summary-before-review.png", {
       mask: [page.getByText(VOLATILE_TEXT)],
     });

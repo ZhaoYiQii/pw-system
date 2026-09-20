@@ -856,7 +856,8 @@ model ManualPaymentRecord {
 model FinanceRateRule {
   id             String   @id @default(uuid()) @db.Uuid
   tenantId       String   @unique @map("tenant_id") @db.Uuid
-  platformFeeBp  Int      @default(300) @map("platform_fee_bp")
+  /// ADR-0004（2026-09-21 批准）：本版平台费置 0，公式不变。
+  platformFeeBp  Int      @default(0) @map("platform_fee_bp")
   storeCutBp     Int      @default(2000) @map("store_cut_bp")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")

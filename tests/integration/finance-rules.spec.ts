@@ -94,11 +94,12 @@ describe("Slice 8 finance rules (默认 3%/20%，可后台调整，split preview
     };
   }
 
-  it("默认 3%/20%；门店可改门店抽成；preview 分配守恒", async () => {
+  it("默认 0%/20%（ADR-0004）；门店可改门店抽成；preview 分配守恒", async () => {
     const def = (
       await req(ownerToken).get("/api/v1/tenant/finance-rules").expect(200)
     ).body.data as { platformFeeBp: number; storeCutBp: number };
-    expect(def).toEqual({ platformFeeBp: 300, storeCutBp: 2000 });
+    // ADR-0004（2026-09-21 批准）：平台费置 0，门店抽成保持 2000bp。
+    expect(def).toEqual({ platformFeeBp: 0, storeCutBp: 2000 });
 
     const preview = (
       await req(ownerToken)
@@ -117,9 +118,10 @@ describe("Slice 8 finance rules (默认 3%/20%，可后台调整，split preview
         BigInt(preview.playerShareFen),
     ).toBe(10000n);
     expect(preview).toEqual({
-      platformFeeFen: "300",
+      // ADR-0004：平台费置 0 → 10000 分的分配是 0 / 2000 / 8000。
+      platformFeeFen: "0",
       storeCutFen: "2000",
-      playerShareFen: "7700",
+      playerShareFen: "8000",
     });
 
     const set = await request(app.getHttpServer())

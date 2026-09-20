@@ -127,7 +127,7 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
     if (app) await app.close();
   });
 
-  it("核算生成 earning（77%）+ 平衡账本（借=贷），重复核算幂等", async () => {
+  it("核算生成 earning（80%，ADR-0004 平台费置 0）+ 平衡账本（借=贷），重复核算幂等", async () => {
     const res = await request(app.getHttpServer())
       .post(`/api/v1/tenant/orders/${orderId}/accounting`)
       .set("authorization", `Bearer ${ownerToken}`)
@@ -136,11 +136,12 @@ describe("Slice 8 ledger accounting (平衡/分成/幂等)", () => {
       earningId: string;
       playerShareFen: number;
     };
-    expect(first.playerShareFen).toBe("7700");
+    // ADR-0004：平台费 0 + 门店抽成 20% → 陪玩实收 10000 − 2000 = 8000。
+    expect(first.playerShareFen).toBe("8000");
     const earning = await client.earning.findFirst({
       where: { tenantId, orderId },
     });
-    expect(earning?.amountFen).toBe(BigInt(7700));
+    expect(earning?.amountFen).toBe(BigInt(8000));
 
     // TODO(账目↔订单关联)：LedgerEntry 只有 transactionId、LedgerTransaction 也没有 orderId，
     // 目前无法把这批账目收窄到"这一单"。这里显式按门店取账目（与原先的兜底路径等价），

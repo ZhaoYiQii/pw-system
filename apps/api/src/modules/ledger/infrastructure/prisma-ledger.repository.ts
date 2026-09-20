@@ -33,7 +33,8 @@ export class PrismaLedgerRepository {
     });
     return row
       ? { platformFeeBp: row.platformFeeBp, storeCutBp: row.storeCutBp }
-      : { platformFeeBp: 300, storeCutBp: 2000 };
+      : // ADR-0004：平台费置 0（公式不变），门店抽成保持 2000bp。
+        { platformFeeBp: 0, storeCutBp: 2000 };
   }
 
   private async ensureAccount(
@@ -133,7 +134,9 @@ export class PrismaLedgerRepository {
       });
       const idOf = (code: string) =>
         accs.find((a) => a.code === code)?.id as string;
-      const entries: Array<{
+      // ADR-0004 起平台费为 0：`ledger_entries.amount_fen > 0` 的 CHECK 不允许 0 元分录，
+      // 因此金额为 0 的科目直接跳过（借贷仍然平衡，因为 0 不影响合计）。
+      const allEntries: Array<{
         accountId: string;
         direction: "DEBIT" | "CREDIT";
         amountFen: bigint;
@@ -159,6 +162,7 @@ export class PrismaLedgerRepository {
           amountFen: split.playerShareFen,
         },
       ];
+      const entries = allEntries.filter((entry) => entry.amountFen > 0n);
       const debit = entries
         .filter((e) => e.direction === "DEBIT")
         .reduce((a, e) => a + e.amountFen, 0n);

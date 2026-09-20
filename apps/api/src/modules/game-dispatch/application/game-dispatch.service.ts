@@ -43,6 +43,7 @@ import {
   type PricingRuleItem,
 } from "../domain/game-pricing.js";
 import type { MoneyFen } from "../../../common/money.js";
+import { splitSettlement } from "../../ledger/domain/split.js";
 import {
   loadGameRuleItems,
   loadPlayerGameBases,
@@ -175,6 +176,20 @@ async function lockOrderRow(
     SELECT id FROM orders
     WHERE id = ${orderId}::uuid AND tenant_id = ${tenantId}::uuid
     FOR UPDATE`;
+}
+
+/**
+ * 档位收入的「老板支出（整额）」：ADR-0004 之后 `SlotEarning.amountFen` 存的是**陪玩实收**，
+ * 整额落在 `detailJson.grossFen`；切换前的历史行没有该字段，此时 amountFen 本身就是整额。
+ */
+function grossFenOf(earning: {
+  amountFen: bigint;
+  detailJson?: unknown;
+}): bigint {
+  const detail = (earning.detailJson ?? {}) as Record<string, unknown>;
+  const raw = detail.grossFen;
+  if (typeof raw === "string" && /^\d+$/.test(raw)) return BigInt(raw);
+  return earning.amountFen;
 }
 
 function code(): string {
@@ -1063,18 +1078,30 @@ export class GameDispatchService {
         });
         return slotReportViewOf(slot, reviewed, null);
       }
-      const amountFen = slotEarningFen(slot.unitPriceFen, effective);
+      // ADR-0004：审批通过即按费率分账——金额按整额算，落库的 amountFen 是**陪玩实收**，
+      // 整额/平台费/门店抽成写进 detailJson（老板支出仍按整额 = grossFen 扣钱包）。
+      const grossFen = slotEarningFen(slot.unitPriceFen, effective);
+      const rates = await this.settlementRates(tx, tenantId);
+      const split =
+        grossFen > 0n
+          ? splitSettlement(grossFen, rates)
+          : { platformFeeFen: 0n, storeCutFen: 0n, playerShareFen: 0n };
+      const amountFen = split.playerShareFen;
+      const detailJson = {
+        unitPriceFen: slot.unitPriceFen.toString(),
+        declaredDurationMinutes: declared,
+        reviewedDurationMinutes: effective,
+        durationSeconds: session.durationSeconds ?? null,
+        grossFen: grossFen.toString(),
+        platformFeeFen: split.platformFeeFen.toString(),
+        storeCutFen: split.storeCutFen.toString(),
+      };
       await tx.slotEarning.upsert({
         where: { tenantId_orderSlotId: { tenantId, orderSlotId: slot.id } },
         update: {
           amountFen,
           status: "PENDING",
-          detailJson: {
-            unitPriceFen: slot.unitPriceFen.toString(),
-            declaredDurationMinutes: declared,
-            reviewedDurationMinutes: effective,
-            durationSeconds: session.durationSeconds ?? null,
-          },
+          detailJson,
         },
         create: {
           tenantId,
@@ -1083,12 +1110,7 @@ export class GameDispatchService {
           playerId: slot.playerId,
           amountFen,
           status: "PENDING",
-          detailJson: {
-            unitPriceFen: slot.unitPriceFen.toString(),
-            declaredDurationMinutes: declared,
-            reviewedDurationMinutes: effective,
-            durationSeconds: session.durationSeconds ?? null,
-          },
+          detailJson,
         },
       });
       await tx.auditLog.create({
@@ -1101,7 +1123,7 @@ export class GameDispatchService {
           resourceId: slot.id,
           summary: `报单审批通过：申报 ${declared} 分钟 → 核定 ${effective} 分钟，金额 ${amountFen.toString()} 分（单价 ${slot.unitPriceFen.toString()} 分/小时，证据计时 ${
             session.durationSeconds ?? "无"
-          } 秒仅作对照）`,
+          } 秒仅作对照；整额 ${grossFen.toString()} 分 = 陪玩实收 ${amountFen.toString()} 分 + 平台费 ${split.platformFeeFen.toString()} 分 + 门店抽成 ${split.storeCutFen.toString()} 分）`,
         },
       });
       // Task 5a：全部生效档位都拿到已审批报单 → 通知门店「可结算」（老板按订单同样可见），
@@ -1162,7 +1184,9 @@ export class GameDispatchService {
       if (earnings.length !== slots.length)
         // 结束只留证据计时长；金额在报单审批后才落库（设计规格 §3.3）。
         throw new DispatchStateError("仍有档位未完成报单审批");
-      const total = earnings.reduce((acc, e) => acc + e.amountFen, 0n);
+      // ADR-0004：老板支出按整额（grossFen）扣钱包；amountFen 已是陪玩实收。
+      const total = earnings.reduce((acc, e) => acc + grossFenOf(e), 0n);
+      const playerShare = earnings.reduce((acc, e) => acc + e.amountFen, 0n);
       const wallet = await tx.bossWallet.findFirst({
         where: { tenantId, customerProfileId: order.customerProfileId },
       });
@@ -1211,7 +1235,10 @@ export class GameDispatchService {
           action: "game_dispatch.settlement",
           resourceType: "order",
           resourceId: orderId,
-          summary: `结算扣费 ${total.toString()} 分`,
+          summary:
+            playerShare === total
+              ? `结算扣费 ${total.toString()} 分`
+              : `结算扣费 ${total.toString()} 分（陪玩实收 ${playerShare.toString()} 分，门店抽成/平台费 ${(total - playerShare).toString()} 分）`,
         },
       });
       return { totalFen: total.toString(), balanceAfterFen: after.toString() };
@@ -1931,20 +1958,49 @@ export class GameDispatchService {
         orderId,
         orderSlotId: { in: activeSlots.map((s) => s.id) },
       },
-      select: { amountFen: true },
+      select: { amountFen: true, detailJson: true },
     });
-    const orderAmountFen = earnings.reduce((acc, e) => acc + e.amountFen, 0n);
+    // ADR-0004 之后：amountFen 是陪玩实收，整额与分账明细在 detailJson；
+    // 切换前的历史行没有 grossFen，此时整额 == amountFen（历史口径，用 splitApplied=false 标出）。
+    let orderAmountFen = 0n;
+    let playerShareFen = 0n;
+    let platformFeeFen = 0n;
+    let storeCutFen = 0n;
+    let allSplit = earnings.length > 0;
+    for (const earning of earnings) {
+      const detail = (earning.detailJson ?? {}) as Record<string, unknown>;
+      const gross = grossFenOf(earning);
+      const split = typeof detail.grossFen === "string";
+      if (!split) allSplit = false;
+      orderAmountFen += gross;
+      playerShareFen += earning.amountFen;
+      platformFeeFen += split
+        ? BigInt(String(detail.platformFeeFen ?? "0"))
+        : 0n;
+      storeCutFen += split ? BigInt(String(detail.storeCutFen ?? "0")) : 0n;
+    }
     return {
       orderAmountFen: orderAmountFen.toString(),
-      // 当前链路：陪玩实收 = 档位金额（整额发放）。
-      playerShareFen: orderAmountFen.toString(),
-      storeProfitFen: "0",
-      storeCutFen: null,
-      platformFeeFen: null,
-      splitApplied: false,
+      playerShareFen: playerShareFen.toString(),
+      // 门店毛利 = 老板支出 − 陪玩实收 = 平台费 + 门店抽成
+      storeProfitFen: (orderAmountFen - playerShareFen).toString(),
+      storeCutFen: allSplit ? storeCutFen.toString() : null,
+      platformFeeFen: allSplit ? platformFeeFen.toString() : null,
+      splitApplied: allSplit,
       approvedSlotCount: earnings.length,
       activeSlotCount: activeSlots.length,
     };
+  }
+
+  /** 分账费率：租户费率行优先，缺失时按 ADR-0004 的兜底（平台费 0 / 门店抽成 2000bp）。 */
+  private async settlementRates(
+    tx: Tx,
+    tenantId: string,
+  ): Promise<{ platformFeeBp: number; storeCutBp: number }> {
+    const row = await tx.financeRateRule.findUnique({ where: { tenantId } });
+    return row
+      ? { platformFeeBp: row.platformFeeBp, storeCutBp: row.storeCutBp }
+      : { platformFeeBp: 0, storeCutBp: 2000 };
   }
 
   /**

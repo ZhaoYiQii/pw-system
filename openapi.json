@@ -13474,33 +13474,33 @@
                               "type": "string",
                               "pattern": "^(?:0|[1-9][0-9]*)$",
                               "example": "800",
-                              "description": "老板支出（分）= 已核定档位金额合计，与确认结算的实际扣款额一致"
+                              "description": "老板支出（分）= 已核定档位的整额合计（ADR-0004 后取分账明细 grossFen），与确认结算的实际扣款额一致"
                             },
                             "playerShareFen": {
                               "type": "string",
                               "pattern": "^(?:0|[1-9][0-9]*)$",
                               "example": "800",
-                              "description": "陪玩实收（分）；当前链路整额发放（与支出相同），分账落地后为扣除抽成后的金额"
+                              "description": "陪玩实收（分）= 整额 − 平台费 − 门店抽成（ADR-0004 分账口径；历史行仍是整额）"
                             },
                             "storeProfitFen": {
                               "type": "string",
                               "pattern": "^(?:0|[1-9][0-9]*)$",
                               "example": "800",
-                              "description": "门店毛利（分）= 支出 − 实收；分账未落地时为 0"
+                              "description": "门店毛利（分）= 支出 − 实收 = 平台费 + 门店抽成"
                             },
                             "storeCutFen": {
                               "type": "string",
                               "nullable": true,
-                              "description": "门店抽成（分）；尚未分账时恒为 null"
+                              "description": "门店抽成（分）；历史口径（切换前产生、无分账明细）时为 null，此时 splitApplied=false"
                             },
                             "platformFeeFen": {
                               "type": "string",
                               "nullable": true,
-                              "description": "平台费（分）；尚未分账时恒为 null"
+                              "description": "平台费（分，ADR-0004 后为 0）；历史口径时为 null，此时 splitApplied=false"
                             },
                             "splitApplied": {
                               "type": "boolean",
-                              "description": "是否已按费率分账（本版恒 false）"
+                              "description": "是否已按费率分账（ADR-0004 起为 true；历史掉队行为 false）"
                             },
                             "approvedSlotCount": {
                               "type": "integer",

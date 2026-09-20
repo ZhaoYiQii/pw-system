@@ -98,6 +98,10 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
 
     await addAccount(tenantId, "boss", "TENANT_OWNER");
     await addAccount(otherTenantId, "boss", "TENANT_OWNER");
+    // 分账费率（ADR-0004）：平台费置 0、门店抽成 20%。用例显式落库，断言才确定。
+    await client.financeRateRule.create({
+      data: { tenantId, platformFeeBp: 0, storeCutBp: 2000 },
+    });
     const p1 = await addAccount(tenantId, `a1_${suffix}`, "PLAYER");
     const p2 = await addAccount(tenantId, `a2_${suffix}`, "PLAYER");
     const profile1 = await client.playerProfile.create({
@@ -239,6 +243,8 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
           where: { tenantId: tid },
         });
         await client.game.deleteMany({ where: { tenantId: tid } });
+        // 分账费率（ADR-0004 用例显式落库）：先删费率行，否则外键挡住租户删除。
+        await client.financeRateRule.deleteMany({ where: { tenantId: tid } });
         const accounts = await client.tenantAccount.findMany({
           where: { tenantId: tid },
           select: { id: true },
@@ -442,8 +448,9 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       201,
     );
     const view = (reviewed.body as { data: SlotReportView }).data;
-    // 7000 × 95 / 60 = 11083.33… → 向上取整 11084（整数分，无浮点）。
-    expect(view.earningFen).toBe("11084");
+    // 7000 × 95 / 60 = 11083.33… → 整额向上取整 11084；分账（ADR-0004，平台 0 / 门店 20%）后
+    // 陪玩实收 = 11084 − 2216（门店抽成整数分）= 8868。
+    expect(view.earningFen).toBe("8868");
     expect(view.reportStatus).toBe("APPROVED");
     expect(view.declaredDurationMinutes).toBe(95);
     expect(view.reportReviewedAt).not.toBeNull();
@@ -451,7 +458,12 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
     const earning = await client.slotEarning.findFirstOrThrow({
       where: { tenantId, orderSlotId: slotId },
     });
-    expect(earning.amountFen).toBe(11084n);
+    expect(earning.amountFen).toBe(8868n);
+    // detailJson 保留分账明细（整额 / 平台费 / 门店抽成），历史行没有这些字段。
+    const splitDetail = earning.detailJson as Record<string, string>;
+    expect(splitDetail.grossFen).toBe("11084");
+    expect(splitDetail.platformFeeFen).toBe("0");
+    expect(splitDetail.storeCutFen).toBe("2216");
     expect(earning.status).toBe("PENDING");
 
     const audits = await client.auditLog.findMany({
@@ -465,6 +477,7 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       (a) => a.action === "game_dispatch.slot_report.reviewed",
     );
     expect(approvalAudit?.summary).toContain("11084");
+    expect(approvalAudit?.summary).toContain("8868");
     expect(approvalAudit?.resourceType).toBe("slot");
 
     // 陪玩端读路径同步可见报单状态（mobile 报单表单用它）。
@@ -500,11 +513,12 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
         activeSlotCount: number;
       };
     };
+    // 分账后（ADR-0004）：老板支出仍是整额，陪玩实收/门店抽成/毛利来自分账明细。
     expect(detail.settlement.orderAmountFen).toBe("11084");
-    expect(detail.settlement.playerShareFen).toBe("11084");
-    expect(detail.settlement.storeProfitFen).toBe("0");
-    expect(detail.settlement.storeCutFen).toBeNull();
-    expect(detail.settlement.splitApplied).toBe(false);
+    expect(detail.settlement.playerShareFen).toBe("8868");
+    expect(detail.settlement.storeProfitFen).toBe("2216");
+    expect(detail.settlement.storeCutFen).toBe("2216");
+    expect(detail.settlement.splitApplied).toBe(true);
     expect(detail.settlement.approvedSlotCount).toBe(1);
     expect(detail.settlement.activeSlotCount).toBe(1);
   });
@@ -524,8 +538,8 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       reason: "截图核对为 2 小时",
     }).expect(201);
     const view = (reviewed.body as { data: SlotReportView }).data;
-    // 7000 × 120 / 60 = 14000（修正值，而不是申报的 95 分钟）。
-    expect(view.earningFen).toBe("14000");
+    // 7000 × 120 / 60 = 14000 整额（修正值，而非申报的 95 分钟）；分账后实收 = 14000 − 2800 = 11200。
+    expect(view.earningFen).toBe("11200");
     expect(view.declaredDurationMinutes).toBe(120);
     expect(view.reportReviewNote).toBe("截图核对为 2 小时");
 
@@ -651,7 +665,7 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       201,
     );
     expect((reviewed.body as { data: SlotReportView }).data.earningFen).toBe(
-      "14000",
+      "11200",
     );
     expect((reviewed.body as { data: SlotReportView }).data.reportStatus).toBe(
       "APPROVED",
@@ -724,5 +738,77 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
     expect(notifications.some((n) => (n.title ?? "").includes("结算"))).toBe(
       true,
     );
+  });
+
+  it("费率变更只影响之后的分账，历史档位收入不回写（ADR-0004）", async () => {
+    // 当前费率 0 / 2000：整额 7000 → 门店抽成 1400 → 陪玩实收 5600。
+    const first = await assignedSlot("p1");
+    await endService("p1", first.slotId);
+    await uploadEvidence(
+      playerTokens["p1"],
+      first.slotId,
+      "REPORT_START",
+    ).expect(201);
+    await uploadEvidence(playerTokens["p1"], first.slotId, "REPORT_END").expect(
+      201,
+    );
+    await report(playerTokens["p1"], first.slotId, 60).expect(201);
+    const firstReview = await review(ownerToken, first.slotId, {
+      approve: true,
+    }).expect(201);
+    expect((firstReview.body as { data: SlotReportView }).data.earningFen).toBe(
+      "5600",
+    );
+    const historical = await client.slotEarning.findFirstOrThrow({
+      where: { tenantId, orderSlotId: first.slotId },
+    });
+
+    // 改费率（平台 5% + 门店 10%）：新单按新费率分账。
+    await client.financeRateRule.update({
+      where: { tenantId },
+      data: { platformFeeBp: 500, storeCutBp: 1000 },
+    });
+    const second = await assignedSlot("p1");
+    await endService("p1", second.slotId);
+    await uploadEvidence(
+      playerTokens["p1"],
+      second.slotId,
+      "REPORT_START",
+    ).expect(201);
+    await uploadEvidence(
+      playerTokens["p1"],
+      second.slotId,
+      "REPORT_END",
+    ).expect(201);
+    await report(playerTokens["p1"], second.slotId, 60).expect(201);
+    const secondReview = await review(ownerToken, second.slotId, {
+      approve: true,
+    }).expect(201);
+    // 整额 7000 → 平台费 350 + 门店抽成 700 → 实收 5950（尾差归陪玩）。
+    expect(
+      (secondReview.body as { data: SlotReportView }).data.earningFen,
+    ).toBe("5950");
+    const secondEarning = await client.slotEarning.findFirstOrThrow({
+      where: { tenantId, orderSlotId: second.slotId },
+    });
+    const secondDetail = secondEarning.detailJson as Record<string, string>;
+    expect(secondDetail.grossFen).toBe("7000");
+    expect(secondDetail.platformFeeFen).toBe("350");
+    expect(secondDetail.storeCutFen).toBe("700");
+
+    // 历史行保持切换时的口径（ADR-0004：历史金额不回写）。
+    const historicalAfter = await client.slotEarning.findFirstOrThrow({
+      where: { id: historical.id },
+    });
+    expect(historicalAfter.amountFen).toBe(5600n);
+    expect(
+      (historicalAfter.detailJson as Record<string, string>).storeCutFen,
+    ).toBe("1400");
+
+    // 还原费率，避免影响同文件后续用例（本用例当前在文件末尾）。
+    await client.financeRateRule.update({
+      where: { tenantId },
+      data: { platformFeeBp: 0, storeCutBp: 2000 },
+    });
   });
 });

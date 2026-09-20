@@ -5,7 +5,8 @@ export interface RuleRow {
   storeCutBp: number;
 }
 
-const DEFAULTS: RuleRow = { platformFeeBp: 300, storeCutBp: 2000 };
+// ADR-0004：平台费置 0（公式不变），门店抽成保持 2000bp。
+const DEFAULTS: RuleRow = { platformFeeBp: 0, storeCutBp: 2000 };
 
 export class LedgerRulesRepository {
   constructor(private readonly client: PrismaClient) {}
