@@ -1,6 +1,6 @@
 # ADR-0005：订单状态机收编（表对齐现实 + 接入强制 + 迁移事件统一）
 
-- 状态：**草稿（待批准）** —— 批准前只做只读核对，不改任何状态迁移行为。
+- 状态：**已批准（用户 2026-09-21，4 个待批准项按本 ADR 的建议执行）**
 - 日期：2026-09-21
 - 关联：设计规格主规格 10.1 / 11.3；ADR-0002（CLASSIC 冻结）；ADR-0003 / ADR-0004（算价模型）
 
@@ -27,6 +27,7 @@
 
 另有两处**迁移事件缺失**（表要求状态可追溯，但这两步只更新了订单状态、没写 `order_events`）：
 `game-dispatch.service.ts` 的 `startSlot`（→ `IN_PROGRESS`）与 `endSlot`（→ `PENDING_CONFIRMATION`）。
+> 批准后实施切片一时的补充（2026-09-21）：新增的核对用例发现 **`assign`（`DISPATCHING → ASSIGNED`）也没有写 `order_events`**（那里只写了 `audit_logs`），因此切片一实际补齐 **三处**（`assign` / `startSlot` / `endSlot`），与第 3 项「所有迁移都必须写 `order_events`」一致。
 
 ## 约束
 
@@ -84,4 +85,5 @@
 
 ## 批准记录
 
-- 待批准（2026-09-21 起草）。批准时请逐条确认上面 4 个待批准项，或指出要调整的选项。
+- 2026-09-21 用户批准：**「4 条按建议」**——① 表按现实对齐（补 `DRAFT→DISPATCHING`、`ASSIGNED→IN_PROGRESS`、`ASSIGNED→DISPATCHING`，`READY` 只作经典可选中间态）；② 两步走强制（先表对齐 + 补事件 + 只读核对用例，再接入 `assertOrderTransition`）；③ 迁移统一写 `order_events`；④ 三端文案集中在既有映射表。
+- 同日授权：由 Codex 按本 ADR 分两个切片实施（先红后绿、每切片单独提交、全套门禁 + E2E 复跑 + 走查复验）。

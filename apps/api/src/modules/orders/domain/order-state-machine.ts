@@ -6,10 +6,14 @@ export const ORDER_TRANSITIONS: Record<
   OrderStatusType,
   readonly OrderStatusType[]
 > = {
-  DRAFT: ["CONFIRMED", "CANCELLED"],
+  // ADR-0005（2026-09-21 批准）：表按代码实际行为对齐——补三条 game-dispatch 主线在用的迁移。
+  // DRAFT → DISPATCHING：派单发布允许草稿直接发布（经典流程仍可先 CONFIRMED）。
+  DRAFT: ["CONFIRMED", "DISPATCHING", "CANCELLED"],
   CONFIRMED: ["DISPATCHING", "CANCELLED"],
   DISPATCHING: ["ASSIGNED", "CANCELLED"],
-  ASSIGNED: ["READY", "CANCELLED"],
+  // ASSIGNED → IN_PROGRESS：game-dispatch 开始服务不经过 READY；
+  // ASSIGNED → DISPATCHING：商家「释放名额」后回到报名阶段（Task 4）。
+  ASSIGNED: ["READY", "IN_PROGRESS", "DISPATCHING", "CANCELLED"],
   READY: ["IN_PROGRESS", "CANCELLED"],
   IN_PROGRESS: ["PENDING_CONFIRMATION"],
   PENDING_CONFIRMATION: ["COMPLETED"],

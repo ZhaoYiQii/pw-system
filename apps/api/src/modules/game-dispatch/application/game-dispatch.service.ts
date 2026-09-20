@@ -852,6 +852,19 @@ export class GameDispatchService {
           where: { id: slot.orderId },
           data: { status: "IN_PROGRESS" },
         });
+        // ADR-0005 切片一：状态迁移必须留事件（此前这里只改状态、不写 order_events）。
+        await tx.orderEvent.create({
+          data: {
+            tenantId,
+            orderId: slot.orderId,
+            eventType: "GAME_DISPATCH_SESSION_STARTED",
+            fromStatus: "ASSIGNED",
+            toStatus: "IN_PROGRESS",
+            actorType: "tenant_account",
+            actorId,
+            payload: { orderSlotId: slot.id, startedAt: now.toISOString() },
+          },
+        });
       }
       return session;
     });
@@ -908,6 +921,19 @@ export class GameDispatchService {
         await tx.order.update({
           where: { id: slot.orderId },
           data: { status: "PENDING_CONFIRMATION" },
+        });
+        // ADR-0005 切片一：全部档位结束进入待核算时补写 order_events（此前只改状态）。
+        await tx.orderEvent.create({
+          data: {
+            tenantId,
+            orderId: slot.orderId,
+            eventType: "GAME_DISPATCH_SESSION_ENDED",
+            fromStatus: "IN_PROGRESS",
+            toStatus: "PENDING_CONFIRMATION",
+            actorType: "tenant_account",
+            actorId,
+            payload: { endedSessions, totalSlots },
+          },
         });
       }
       return updated;
@@ -1850,6 +1876,19 @@ export class GameDispatchService {
         await tx.order.update({
           where: { id: orderId },
           data: { status: "ASSIGNED" },
+        });
+        // ADR-0005 切片一：状态迁移必须留事件（此前这里只写了 auditLog）。
+        await tx.orderEvent.create({
+          data: {
+            tenantId,
+            orderId,
+            eventType: "GAME_DISPATCH_ASSIGNED",
+            fromStatus: "DISPATCHING",
+            toStatus: "ASSIGNED",
+            actorType: "tenant_account",
+            actorId,
+            payload: { selected, totalRequired },
+          },
         });
       }
       await tx.auditLog.create({
