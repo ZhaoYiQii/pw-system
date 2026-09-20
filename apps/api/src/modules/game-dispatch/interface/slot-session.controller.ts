@@ -18,11 +18,7 @@ import type { Request } from "express";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { GameDispatchService } from "../application/game-dispatch.service.js";
-import {
-  DispatchConflictError,
-  DispatchNotFoundError,
-  DispatchStateError,
-} from "../domain/dispatch-errors.js";
+import { mapGameDispatchError } from "./game-dispatch-error.mapper.js";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -87,14 +83,7 @@ export class SlotSessionController {
   }
 
   private mapError(error: unknown): never {
-    if (error instanceof DispatchNotFoundError)
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    if (
-      error instanceof DispatchStateError ||
-      error instanceof DispatchConflictError
-    )
-      throw new HttpException(error.message, HttpStatus.CONFLICT);
-    throw error;
+    mapGameDispatchError(error);
   }
 
   @TenantScope()

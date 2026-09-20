@@ -38,12 +38,7 @@ import {
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { GameDispatchService } from "../application/game-dispatch.service.js";
 import { PlayerBreachService } from "../application/player-breach.service.js";
-import {
-  DispatchConflictError,
-  DispatchInputError,
-  DispatchNotFoundError,
-  DispatchStateError,
-} from "../domain/dispatch-errors.js";
+import { mapGameDispatchError } from "./game-dispatch-error.mapper.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -62,15 +57,7 @@ export class GameDispatchController {
   ) {}
 
   private mapError(error: unknown): never {
-    if (error instanceof DispatchNotFoundError)
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    if (error instanceof DispatchStateError)
-      throw new HttpException(error.message, HttpStatus.CONFLICT);
-    if (error instanceof DispatchConflictError)
-      throw new HttpException(error.message, HttpStatus.CONFLICT);
-    if (error instanceof DispatchInputError)
-      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-    throw error;
+    mapGameDispatchError(error);
   }
 
   @TenantScope()

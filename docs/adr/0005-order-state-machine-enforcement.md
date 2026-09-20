@@ -68,9 +68,45 @@
    - `startSlot` / `endSlot` 补写 `order_events`（`GAME_DISPATCH_SESSION_STARTED` / `..._ENDED` 或沿用现有命名约定）；
    - 新增 `tests/integration/order-state-machine-table.spec.ts`：逐条断言「代码里发生的迁移 ⊆ 表」。
 2. **切片二（接入强制）**
-   - 在四处迁移点接入 `assertOrderTransition`，表外迁移 → 409；
+   - 在 game-dispatch **六个迁移点**（发布 / 选人 / 开始服务 / 结束服务 / 确认结算 / 释放名额）接入
+     `assertOrderTransition`，另加 worker 自动关单处的兜底，共 **7 处**；表外迁移 → 409；
+   - 错误映射收敛到 `interface/game-dispatch-error.mapper.ts`（原先三个控制器各写一份，
+     切片二发现 `SlotSessionController` 漏映射会把 409 变成 500）；
    - 更新受影响用例，跑全套门禁 + 两个 E2E project；
    - 走查复验（派单详情 / 场次详情 / 移动端服务页的状态文案）。
+
+## 实施记录（切片二，2026-09-21）
+
+### 接入位置（7 处）
+
+| 位置 | 迁移 | 触发方 |
+| --- | --- | --- |
+| `game-dispatch.service.ts` `publish` | `DRAFT`/`CONFIRMED` → `DISPATCHING` | 商家端 |
+| `game-dispatch.service.ts` `assign` | `DISPATCHING` → `ASSIGNED` | 商家端 |
+| `game-dispatch.service.ts` `startSlot` | `ASSIGNED` → `IN_PROGRESS` | 陪玩端 |
+| `game-dispatch.service.ts` `endSlot` | `IN_PROGRESS` → `PENDING_CONFIRMATION` | 陪玩端 |
+| `game-dispatch.service.ts` `confirmSettlement` | `PENDING_CONFIRMATION` → `COMPLETED` | 商家端 |
+| `game-dispatch.service.ts` `releaseSlot` | `ASSIGNED` → `DISPATCHING` | 商家端 |
+| `background/worker.ts` `autoCloseUnstaffedOrders` | `DISPATCHING` → `CANCELLED` | system |
+
+服务内用局部 `assertTransition(from, to, orderId)` 包一层：`from` / `to` 来自数据库字符串列，
+在这里收敛到集中表的联合类型；表外取值直接抛 `OrderStateConflictError`。
+
+### 切片二暴露并同批修掉的两件事
+
+1. **错误映射漂移**：`SlotSessionController`（开始 / 结束服务）自带一份 `mapError`，
+   没有映射 `OrderStateConflictError`，表外迁移会被 Nest 兜底成 **500** 而不是 409。
+   新用例第一次跑就是 500（`POST /slots/:id/session/end`），遂把三个控制器的映射
+   收敛为 `interface/game-dispatch-error.mapper.ts`：
+   `DispatchNotFound → 404`、`DispatchInput → 400`、`DispatchState`/`DispatchConflict`/`OrderStateConflict → 409`。
+2. **`endSlot` 是唯一不校验订单状态的迁移点**（只要求场次 `STARTED`、证据齐、时长 > 0），
+   因此也是唯一能被「表外 / 遗留状态」撞到的地方。兜底断言在事务内抛出 → **整单回滚**，
+   订单状态、场次状态、金额痕迹都不留半截。
+
+### 契约与前端文案
+
+- 无新增 operation、无字段变化，`openapi:check` 无差异；409 文案直接取服务端 `message`。
+- 三端状态文案映射未改动（切片二不新增状态值，只是把「表外迁移」明确拒绝）。
 
 ## 回滚方式
 
@@ -79,9 +115,25 @@
 
 ## 验证证据（落地时补齐）
 
-- 表对齐用例的实际输出与退出码；
-- 接入强制后的集成 / 租户隔离 / 契约 / 单测结果，以及两个 E2E project 的复跑；
-- 走查截图（状态文案与 409 提示）。
+### 切片一（2026-09-21）
+
+- `tests/integration/order-state-machine-table.spec.ts`：静态清单逐条「表内」断言 + 真实主线流程事件断言（2 例通过）。
+
+### 切片二（2026-09-21，本地测试库 `pw_saas_s2_task2_20260916`）
+
+- **先红**（去掉 `endSlot` 强制的变体）：同文件 → `Tests 1 failed | 2 passed`，
+  失败信息 `expected 409 "Conflict", got 201 "Created"`（表外迁移被静默放行）。
+- **后绿**（接入强制 + 收敛错误映射）：同文件 `3 passed`。新增用例断言 409 + 整单回滚：
+  订单状态不变、场次仍 `STARTED`、`slot_earning` 仍 0 行、钱包余额不变、没有写入被拒的迁移事件。
+- 门禁（退出码全 0）：`pnpm lint`、`prettier --check .`、`pnpm typecheck`（含 `tsc -p tests/tsconfig.json`）、
+  `pnpm test`（324 通过 / 1 跳过）、集成 51 文件 / 240 用例、租户隔离 11 文件 / 36 用例、
+  契约 7 文件 / 38 用例、`openapi:check`（`openapi.yaml` / `openapi.json` 无差异）、
+  `pnpm build`、`@pw/mobile typecheck`、`build:h5`、`build:weapp`。
+- E2E 走查复验（`work/s5c-walkthrough-seed.mjs scenario` 夹具，跑完 `clean`）：
+  `--project=pricing-slot-report` 5 passed、`--project=pricing-rules-console` 2 passed。
+- 走查环境踩坑（记一笔，避免下次重踩）：商家端 `next build` 在 Turbopack 下会复用
+  `.next/cache`，`NEXT_PUBLIC_API_ORIGIN` 变更必须**清 `.next` 重建**，否则产物仍内联旧端口；
+  `apps/mobile/dist` 是 H5 / weapp 共用目录，跑 H5 走查前要最后构建一次 H5。
 
 ## 批准记录
 

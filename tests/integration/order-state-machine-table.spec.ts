@@ -1,13 +1,15 @@
 /**
- * ADR-0005 切片一：订单状态机的「代码实际迁移 ⊆ 集中迁移表」只读核对。
+ * ADR-0005：订单状态机的「代码实际迁移 ⊆ 集中迁移表」核对 + 切片二的强制接入。
  *
  * 覆盖：
  * - 表内包含各模块实际使用的迁移（静态清单，来源见 ADR-0005 的背景表）；
  * - game-dispatch 主线跑一遍真实流程，把写进 order_events 的每一步 (from→to) 都用
  *   `canTransition` 复核；并断言开始/结束两步现在确实留了事件（切片一补齐）；
- * - 表外的迁移必须被拒绝（防止以后有人把"顺手改状态"当成合法迁移）。
+ * - 表外的迁移必须被拒绝（防止以后有人把"顺手改状态"当成合法迁移）；
+ * - 切片二：迁移点接入 `assertOrderTransition` 后，表外迁移在 HTTP 上表现为 409，
+ *   且整个事务回滚（状态 / 金额 / 场次痕迹都不留半截）。
  *
- * 本切片只做核对，不改变任何迁移行为（强制在 ADR-0005 切片二接入）。
+ * 切片一只做核对；强制在切片二接入（本文件第二个 describe 之外的用例仍保持只读语义）。
  */
 import "reflect-metadata";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -18,8 +20,10 @@ import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
 import {
   ORDER_TRANSITIONS,
+  assertOrderTransition,
   canTransition,
 } from "../../apps/api/src/modules/orders/domain/order-state-machine.js";
+import { OrderStateConflictError } from "../../apps/api/src/modules/orders/domain/errors.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -329,6 +333,106 @@ describe("ADR-0005：订单状态迁移表与代码实际行为核对", () => {
     );
     expect(events.map((e) => e.eventType)).toContain(
       "GAME_DISPATCH_SESSION_ENDED",
+    );
+  });
+
+  /**
+   * 切片二：把「表外迁移」真的撞到 HTTP 层，确认它是 409 + 整单回滚，而不是 500 或静默改状态。
+   *
+   * 选 `endSlot` 做靶子，因为它是六个迁移点里唯一**不校验订单状态**的：只要场次
+   * STARTED、证据齐、时长 > 0 就会去写 `IN_PROGRESS → PENDING_CONFIRMATION`。
+   * 这里用直接改库模拟一条「表外/遗留状态」（订单已是 PENDING_CONFIRMATION，场次还在跑），
+   * 正是 ADR-0005 里那条兜底要拦的情况。
+   */
+  it("切片二：表外迁移被强制拒绝（409）且整单回滚（状态/金额/场次痕迹不变）", async () => {
+    // 先确认纯域层的语义基调：PENDING_CONFIRMATION 不能迁到它自己。
+    expect(() =>
+      assertOrderTransition(
+        "probe-order",
+        "PENDING_CONFIRMATION",
+        "PENDING_CONFIRMATION",
+      ),
+    ).toThrow(OrderStateConflictError);
+
+    const draft = await req(ownerToken)
+      .post(`${DISPATCH}/orders`, {
+        templateId,
+        customerProfileId: customerId,
+        formValues: { mode: "single" },
+        durationMinutes: 60,
+        lines: [{ positionLabel: "打野", requiredCount: 1 }],
+      })
+      .expect(201);
+    const orderId = (draft.body as { data: { orderId: string } }).data.orderId;
+    const published = await req(ownerToken)
+      .post(`${DISPATCH}/orders/${orderId}/publish`)
+      .expect(201);
+    const lineId = (published.body as { data: { lines: { id: string }[] } })
+      .data.lines[0]?.id as string;
+    const application = await req(playerToken)
+      .post(`${DISPATCH}/orders/${orderId}/lines/${lineId}/applications`)
+      .expect(201);
+    await req(customerToken)
+      .post("/api/v1/boss/wallet/recharge", { amountFen: "100000" })
+      .expect(201);
+    await req(ownerToken)
+      .post(`${DISPATCH}/orders/${orderId}/assignment`, {
+        applicationIds: [
+          (application.body as { data: { id: string } }).data.id,
+        ],
+      })
+      .expect(201);
+    const slot = await client.orderSlot.findFirstOrThrow({
+      where: { tenantId, orderId },
+    });
+    await req(playerToken)
+      .post(`${DISPATCH}/slots/${slot.id}/session/start`)
+      .expect(201);
+    await new Promise((r) => setTimeout(r, 1100));
+    await request(app.getHttpServer())
+      .post(`${DISPATCH}/slots/${slot.id}/session/evidence?evidenceType=START`)
+      .set("authorization", `Bearer ${playerToken}`)
+      .set("x-file-name", "start.png")
+      .send(PNG)
+      .expect(201);
+
+    // 制造表外场景：订单已被越权/历史脚本写成 PENDING_CONFIRMATION，但场次仍在进行。
+    await client.order.update({
+      where: { id: orderId },
+      data: { status: "PENDING_CONFIRMATION" },
+    });
+    const walletBefore = await client.bossWallet.findFirstOrThrow({
+      where: { tenantId, customerProfileId: customerId },
+    });
+
+    await req(playerToken)
+      .post(`${DISPATCH}/slots/${slot.id}/session/end`)
+      .expect(409);
+
+    const orderAfter = await client.order.findFirstOrThrow({
+      where: { tenantId, id: orderId },
+    });
+    // 订单状态没被顺手改写成别的（比如 CANCELLED / COMPLETED）。
+    expect(orderAfter.status).toBe("PENDING_CONFIRMATION");
+    const sessionAfter = await client.slotSession.findFirstOrThrow({
+      where: { tenantId, orderSlotId: slot.id },
+    });
+    // 事务整体回滚：场次仍是「进行中」，没有留下半截写入。
+    expect(sessionAfter.status).toBe("STARTED");
+    expect(sessionAfter.endedAt).toBeNull();
+    expect(
+      await client.slotEarning.count({ where: { tenantId, orderId } }),
+    ).toBe(0);
+    const walletAfter = await client.bossWallet.findFirstOrThrow({
+      where: { tenantId, customerProfileId: customerId },
+    });
+    expect(walletAfter.balanceFen).toBe(walletBefore.balanceFen);
+    // 被拒的迁移也没有写事件（否则账实会不符）。
+    const events = await client.orderEvent.findMany({
+      where: { tenantId, orderId },
+    });
+    expect(events.filter((e) => e.toStatus === "PENDING_CONFIRMATION")).toEqual(
+      [],
     );
   });
 });

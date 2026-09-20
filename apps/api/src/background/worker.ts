@@ -2,6 +2,7 @@ import type { PrismaClient } from "@pw/database";
 import { drainOutbox } from "../modules/notifications/outbox.relay.js";
 import { LedgerService } from "../modules/ledger/application/ledger.service.js";
 import { PlatformBillingService } from "../modules/platform-billing/platform-billing.service.js";
+import { assertOrderTransition } from "../modules/orders/domain/order-state-machine.js";
 
 export interface BackgroundTickOptions {
   batchSize?: number;
@@ -114,6 +115,9 @@ export async function autoCloseUnstaffedOrders(
         data: { status: "CANCELLED" },
       });
       if (updated.count === 0) return false;
+      // ADR-0005：这次迁移（DISPATCHING → CANCELLED）必须在集中表内；
+      // 上面的条件更新已保证起点状态，这里是表级兜底。
+      assertOrderTransition(candidate.id, "DISPATCHING", "CANCELLED");
       await tx.gameDispatchRound.updateMany({
         where: {
           tenantId: candidate.tenantId,

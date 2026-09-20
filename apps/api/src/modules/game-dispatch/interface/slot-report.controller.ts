@@ -35,12 +35,7 @@ import {
   slotReportViewSchema,
 } from "../../../openapi/schemas.js";
 import { GameDispatchService } from "../application/game-dispatch.service.js";
-import {
-  DispatchConflictError,
-  DispatchInputError,
-  DispatchNotFoundError,
-  DispatchStateError,
-} from "../domain/dispatch-errors.js";
+import { mapGameDispatchError } from "./game-dispatch-error.mapper.js";
 
 function tenantIdOf(req: AuthenticatedRequest): string {
   const id = req.principal?.tenantId;
@@ -59,19 +54,7 @@ export class SlotReportController {
   ) {}
 
   private mapError(error: unknown): never {
-    if (error instanceof DispatchNotFoundError) {
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    }
-    if (error instanceof DispatchInputError) {
-      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-    }
-    if (
-      error instanceof DispatchStateError ||
-      error instanceof DispatchConflictError
-    ) {
-      throw new HttpException(error.message, HttpStatus.CONFLICT);
-    }
-    throw error;
+    mapGameDispatchError(error);
   }
 
   @TenantScope()

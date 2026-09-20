@@ -44,10 +44,21 @@ import {
 } from "../domain/game-pricing.js";
 import type { MoneyFen } from "../../../common/money.js";
 import { splitSettlement } from "../../ledger/domain/split.js";
+import { assertOrderTransition } from "../../orders/domain/order-state-machine.js";
 import {
   loadGameRuleItems,
   loadPlayerGameBases,
 } from "../infrastructure/prisma-game-pricing.repository.js";
+
+/** ADR-0005 切片二：订单状态迁移统一走集中表校验（表外迁移 → OrderStateConflictError → 409）。 */
+function assertTransition(from: string, to: string, orderId: string): void {
+  // 入参来自数据库列（string 列），这里收敛到集中表的联合类型做校验；表外取值会直接抛错。
+  assertOrderTransition(
+    orderId,
+    from as Parameters<typeof assertOrderTransition>[1],
+    to as Parameters<typeof assertOrderTransition>[1],
+  );
+}
 
 type Tx = DbTransaction;
 
@@ -555,6 +566,7 @@ export class GameDispatchService {
           status: "OPEN",
         },
       });
+      assertTransition(foundLocal.order.status, "DISPATCHING", orderId);
       await tx.order.update({
         where: { id: orderId },
         data: { status: "DISPATCHING" },
@@ -848,6 +860,7 @@ export class GameDispatchService {
         where: { tenantId, id: slot.orderId },
       });
       if (order && order.status === "ASSIGNED") {
+        assertTransition(order.status, "IN_PROGRESS", slot.orderId);
         await tx.order.update({
           where: { id: slot.orderId },
           data: { status: "IN_PROGRESS" },
@@ -918,6 +931,16 @@ export class GameDispatchService {
         where: { tenantId, orderId: slot.orderId, status: "ENDED" },
       });
       if (totalSlots > 0 && endedSessions >= totalSlots) {
+        const endedOrder = await tx.order.findFirst({
+          where: { tenantId, id: slot.orderId },
+          select: { status: true },
+        });
+        if (endedOrder)
+          assertTransition(
+            endedOrder.status,
+            "PENDING_CONFIRMATION",
+            slot.orderId,
+          );
         await tx.order.update({
           where: { id: slot.orderId },
           data: { status: "PENDING_CONFIRMATION" },
@@ -1249,6 +1272,7 @@ export class GameDispatchService {
         where: { tenantId, orderId, status: "PENDING" },
         data: { status: "SETTLED" },
       });
+      assertTransition(order.status, "COMPLETED", orderId);
       await tx.order.update({
         where: { id: orderId },
         data: { status: "COMPLETED" },
@@ -1641,6 +1665,7 @@ export class GameDispatchService {
       });
       const fromStatus = order.status;
       if (fromStatus !== "DISPATCHING") {
+        assertTransition(fromStatus, "DISPATCHING", order.id);
         await tx.order.update({
           where: { id: order.id },
           data: { status: "DISPATCHING" },
@@ -1873,6 +1898,7 @@ export class GameDispatchService {
       });
       const totalRequired = lines.reduce((acc, l) => acc + l.requiredCount, 0);
       if (selected >= totalRequired) {
+        assertTransition(order.status, "ASSIGNED", orderId);
         await tx.order.update({
           where: { id: orderId },
           data: { status: "ASSIGNED" },
