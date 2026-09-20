@@ -170,24 +170,50 @@ export async function autoConfirmDueOrders(
 ): Promise<number> {
   if (!ledger || !confirmTimeoutMs) return 0;
   const cutoff = new Date(Date.now() - confirmTimeoutMs);
+  const tenantScope = tenantId ? { tenantId } : {};
   const due = await client.order.findMany({
     where: {
-      ...(tenantId ? { tenantId } : {}),
+      ...tenantScope,
       status: "PENDING_CONFIRMATION",
       updatedAt: { lt: cutoff },
     },
     select: { tenantId: true, id: true },
     take: 100,
   });
+  if (due.length === 0) return 0;
+  /**
+   * 经典核算闭环只处理「经典场次流程」的订单：game-dispatch 订单没有 service_session，
+   * 由报单审批 + confirmSettlement 结算（算价模型 Task 3/4），不属于这里。
+   * 先按是否存在经典场次筛掉，避免这类订单让整次 tick 中断——否则同一 tick 的
+   * Outbox 投递与订阅到期回收会被它持续饿死。
+   */
+  const sessions = await client.serviceSession.findMany({
+    where: { ...tenantScope, orderId: { in: due.map((o) => o.id) } },
+    select: { orderId: true },
+  });
+  const classics = new Set(sessions.map((s) => s.orderId));
   let done = 0;
   for (const order of due) {
-    const result = await ledger.completeAccounting(
-      order.tenantId,
-      order.id,
-      SYSTEM_ACTOR_ID,
-      "system",
-    );
-    if (result) done += 1;
+    if (!classics.has(order.id)) continue;
+    try {
+      const result = await ledger.completeAccounting(
+        order.tenantId,
+        order.id,
+        SYSTEM_ACTOR_ID,
+        "system",
+      );
+      if (result) done += 1;
+    } catch (error) {
+      // 单笔失败（并发下状态已变化、缺少快照等）只记录并跳过，不阻断同一 tick 的其它步骤。
+      console.error(
+        JSON.stringify({
+          level: "error",
+          message: "auto confirm skipped",
+          orderId: order.id,
+          reason: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
   }
   return done;
 }

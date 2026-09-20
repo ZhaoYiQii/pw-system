@@ -62,6 +62,9 @@ describe("R4 worker tick（Outbox 消费 + 订阅到期回收）", () => {
         select: { id: true },
       });
       for (const o of orders) {
+        await client.gameDispatchOrder.deleteMany({
+          where: { tenantId, orderId: o.id },
+        });
         await client.earning.deleteMany({ where: { tenantId, orderId: o.id } });
         await client.orderEvent.deleteMany({
           where: { tenantId, orderId: o.id },
@@ -199,5 +202,64 @@ describe("R4 worker tick（Outbox 消费 + 订阅到期回收）", () => {
     expect(
       await client.earning.count({ where: { tenantId, orderId: order.id } }),
     ).toBe(1);
+  });
+
+  it("待核算的 game-dispatch 订单不阻断本次 tick 的 Outbox 投递", async () => {
+    // 该单走 game-dispatch 主线：只有派单行与档位，没有经典 service_session，
+    // 因此经典核算闭环对它「不适用」——不适用不能让整个 tick 失败，
+    // 否则 Outbox 投递与订阅回收会被这一单一直饿死。
+    const customer = await client.customerProfile.create({
+      data: { tenantId, name: "派单待核算客户" },
+    });
+    const order = await client.order.create({
+      data: {
+        tenantId,
+        orderNo: `wk_gd_${suffix}`,
+        customerProfileId: customer.id,
+        processType: "GAME_DISPATCH",
+        status: "PENDING_CONFIRMATION",
+        updatedAt: new Date(Date.now() - 2 * 60 * 1000),
+      },
+    });
+    await client.gameDispatchOrder.create({
+      data: {
+        tenantId,
+        orderId: order.id,
+        dispatchNo: `WKD${suffix}`,
+        formValuesJson: {},
+        durationMinutes: 60,
+      },
+    });
+    await client.outboxEvent.create({
+      data: {
+        tenantId,
+        aggregateType: "order",
+        aggregateId: order.id,
+        eventType: "order.cancelled",
+        payload: { orderId: order.id, orderNo: order.orderNo },
+      },
+    });
+
+    const ledger = new LedgerService(new PrismaLedgerRepository(client));
+    const billing = new PlatformBillingService(client);
+    const result = await runBackgroundTick(client, billing, {
+      batchSize: 20,
+      tenantId,
+      ledger,
+      confirmTimeoutMs: 60_000,
+    });
+
+    // 经典核算不处理这一单（也不抛错），但同一 tick 的后续步骤照常完成。
+    expect(result.autoConfirmed).toBe(0);
+    expect(result.outboxProcessed).toBe(1);
+    expect(
+      await client.notificationDelivery.count({
+        where: { tenantId, recipientType: "order", recipientId: order.id },
+      }),
+    ).toBe(1);
+    const after = await client.order.findFirstOrThrow({
+      where: { id: order.id },
+    });
+    expect(after.status).toBe("PENDING_CONFIRMATION");
   });
 });
