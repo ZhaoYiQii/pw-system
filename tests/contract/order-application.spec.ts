@@ -14,6 +14,9 @@ interface Schema {
   type?: string;
   format?: string;
   enum?: string[];
+  pattern?: string;
+  minimum?: number;
+  maximum?: number;
   nullable?: boolean;
   required?: string[];
   properties?: Record<string, Schema>;
@@ -187,5 +190,28 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
       detail.properties?.data?.properties?.lines?.items?.properties
         ?.applications?.items;
     expect(application?.properties?.slotId?.nullable).toBe(true);
+  });
+
+  it("Task 5b：报名详情与我的报名都带单价（分/小时，不乘时长）", () => {
+    // 派单详情的报名记录（老板端 / 商家端共用）：每个人的单价可空、整数分字符串。
+    const detail = schemaOf(document.paths[DISPATCH_DETAIL_PATH]?.get, "200");
+    const application =
+      detail.properties?.data?.properties?.lines?.items?.properties
+        ?.applications?.items;
+    expect(application?.properties?.unitPriceFen?.type).toBe("string");
+    expect(application?.properties?.unitPriceFen?.pattern).toBe(
+      "^(?:0|[1-9][0-9]*)$",
+    );
+    expect(application?.properties?.unitPriceFen?.nullable).toBe(true);
+
+    // 陪玩端：大厅（我的单价）与我的报名（同一数字）。
+    const hall = schemaOf(document.paths[HALL_PATH]?.get, "200");
+    expect(
+      hall.properties?.data?.items?.properties?.unitPriceFen?.nullable,
+    ).toBe(true);
+    const mine = schemaOf(document.paths[MINE_PATH]?.get, "200");
+    expect(
+      mine.properties?.data?.items?.properties?.unitPriceFen?.nullable,
+    ).toBe(true);
   });
 });

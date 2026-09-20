@@ -578,7 +578,7 @@ export class GameDispatchService {
   ): Promise<DispatchView["lines"]> {
     const found = await this.findDispatch(tenantId, orderId);
     if (!found) throw new DispatchNotFoundError();
-    return this.lines(tenantId, found.gd.id, orderId);
+    return this.lines(tenantId, found.gd, orderId);
   }
 
   async playerSignup(
@@ -1322,6 +1322,12 @@ export class GameDispatchService {
           summary: "陪玩报名",
         },
       });
+      const priceByPlayer = await this.unitPriceByPlayer(
+        tenantId,
+        found.gd,
+        [player.id],
+        tx,
+      );
       return {
         id: row.id,
         playerId: player.id,
@@ -1331,6 +1337,7 @@ export class GameDispatchService {
         createdAt: row.createdAt.toISOString(),
         // 刚报名（或重新报名）时还没有档位；选中后由选人流程写入。
         slotId: null,
+        unitPriceFen: priceByPlayer.get(player.id) ?? null,
       };
     });
   }
@@ -1409,6 +1416,7 @@ export class GameDispatchService {
         where: { tenantId, roundId: round.id },
         select: { id: true, lineId: true, playerId: true, status: true },
       });
+      const myPrice = await this.unitPriceByPlayer(tenantId, gd, [player.id]);
       out.push({
         orderId: order.id,
         dispatchNo: gd.dispatchNo,
@@ -1416,6 +1424,8 @@ export class GameDispatchService {
         durationMinutes: gd.durationMinutes,
         desiredStartAt: gd.desiredStartAt?.toISOString() ?? null,
         roundClosesAt: round.closesAt.toISOString(),
+        // 设计规格 §3.4：报名界面显示单价（不乘时长），未设置底价时为 null。
+        unitPriceFen: myPrice.get(player.id) ?? null,
         lines: lines.map((line) => {
           const lineApps = applications.filter((a) => a.lineId === line.id);
           const mine = lineApps.find((a) => a.playerId === player.id);
@@ -1466,8 +1476,14 @@ export class GameDispatchService {
           applicationId: application.id,
           status: { not: "RELEASED" },
         },
-        select: { id: true },
+        select: { id: true, unitPriceFen: true },
       });
+      const gdRow = await this.client.gameDispatchOrder.findFirst({
+        where: { tenantId, orderId: application.orderId },
+      });
+      const priceByPlayer = gdRow
+        ? await this.unitPriceByPlayer(tenantId, gdRow, [player.id])
+        : new Map<string, string | null>();
       out.push({
         applicationId: application.id,
         orderId: application.orderId,
@@ -1480,6 +1496,11 @@ export class GameDispatchService {
         createdAt: application.createdAt.toISOString(),
         slotId: slot?.id ?? null,
         canWithdraw: application.status === "APPLIED" && slot === null,
+        // 选中后取档位快照价（锁定值）；未选中按当前规则库实时计算。
+        unitPriceFen:
+          slot?.unitPriceFen !== undefined
+            ? slot.unitPriceFen.toString()
+            : (priceByPlayer.get(player.id) ?? null),
       });
     }
     return out;
@@ -1843,7 +1864,7 @@ export class GameDispatchService {
     >,
     audience: TemplateAudienceV2,
   ): Promise<DispatchView> {
-    const lines = await this.lines(tenantId, found.gd.id, orderId);
+    const lines = await this.lines(tenantId, found.gd, orderId);
     const round = await this.client.gameDispatchRound.findFirst({
       where: { tenantId, orderId },
       orderBy: { roundNo: "desc" },
@@ -1950,11 +1971,18 @@ export class GameDispatchService {
 
   private async lines(
     tenantId: string,
-    dispatchOrderId: string,
+    gd: {
+      id: string;
+      gameId: string | null;
+      formValuesJson: unknown;
+      targetRankLabel: string | null;
+      snapshotId: string | null;
+    },
     orderId: string,
+    options: { withPrices?: boolean } = {},
   ): Promise<DispatchLineView[]> {
     const rows = await this.client.gameDispatchLine.findMany({
-      where: { tenantId, dispatchOrderId },
+      where: { tenantId, dispatchOrderId: gd.id },
       orderBy: { sortOrder: "asc" },
     });
     const apps = await this.client.gameDispatchApplication.findMany({
@@ -1976,6 +2004,15 @@ export class GameDispatchService {
     const slotByApplication = new Map(
       slots.map((s) => [s.applicationId, s.id]),
     );
+    // 展示口径（设计规格 §3.4）：报名详情显示单价（老板端与陪玩端同一数字，不乘时长）。
+    const priceByPlayer =
+      options.withPrices === false
+        ? new Map<string, string | null>()
+        : await this.unitPriceByPlayer(
+            tenantId,
+            gd,
+            apps.map((a) => a.playerId),
+          );
     return rows.map((row) => ({
       id: row.id,
       positionLabel: row.positionLabel,
@@ -1990,8 +2027,64 @@ export class GameDispatchService {
           status: a.status,
           createdAt: a.createdAt.toISOString(),
           slotId: slotByApplication.get(a.id) ?? null,
+          unitPriceFen: priceByPlayer.get(a.playerId) ?? null,
         })),
     }));
+  }
+
+  /**
+   * 一批陪玩在本单的单价（分/小时）：底价（陪玩×游戏，缺省用陪玩级兜底）+ 命中维度键的加价。
+   * 与选人计价共用 `resolveUnitPriceFen`，保证「界面上看到的价」与「下单快照的价」同源。
+   */
+  private async unitPriceByPlayer(
+    tenantId: string,
+    gd: {
+      gameId: string | null;
+      formValuesJson: unknown;
+      targetRankLabel: string | null;
+      snapshotId: string | null;
+    },
+    playerIds: readonly string[],
+    tx: Tx = this.client,
+  ): Promise<Map<string, string | null>> {
+    const out = new Map<string, string | null>();
+    const unique = Array.from(new Set(playerIds));
+    if (unique.length === 0) return out;
+    const snapshot = gd.snapshotId
+      ? await tx.gameDispatchTemplateSnapshot.findFirst({
+          where: { tenantId, id: gd.snapshotId },
+        })
+      : null;
+    const pricing = await this.pricingContext(tx, tenantId, gd, snapshot);
+    const bases = pricing.gameId
+      ? await loadPlayerGameBases(tx, tenantId, pricing.gameId, unique)
+      : new Map<string, MoneyFen>();
+    const players = await tx.playerProfile.findMany({
+      where: { tenantId, id: { in: unique } },
+      select: { id: true, basePricePerHourFen: true },
+    });
+    const byId = new Map(players.map((p) => [p.id, p]));
+    for (const playerId of unique) {
+      const player = byId.get(playerId);
+      if (!player) {
+        out.set(playerId, null);
+        continue;
+      }
+      out.set(
+        playerId,
+        resolveUnitPriceFen({
+          gameBaseFen: bases.get(playerId) ?? null,
+          // 与选人一致：底价为 0 视为「未设置」，不静默按 0 展示。
+          fallbackBaseFen:
+            player.basePricePerHourFen > 0n
+              ? player.basePricePerHourFen.toString()
+              : null,
+          dimensionKeys: pricing.dimensionKeys,
+          ruleItems: pricing.ruleItems,
+        }),
+      );
+    }
+    return out;
   }
 
   private async copyResult(
@@ -2006,7 +2099,10 @@ export class GameDispatchService {
           where: { tenantId, id: found.gd.snapshotId },
         })
       : null;
-    const lines = await this.lines(tenantId, found.gd.id, orderId);
+    // 群文案不需要单价，跳过计价查询。
+    const lines = await this.lines(tenantId, found.gd, orderId, {
+      withPrices: false,
+    });
     const form = (found.gd.formValuesJson ?? {}) as Record<string, string>;
     const copyLines = (snapshot?.copyLinesJson ?? []) as unknown as Array<{
       label: string;

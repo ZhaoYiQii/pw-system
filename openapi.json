@@ -13333,6 +13333,13 @@
                                       "format": "uuid",
                                       "nullable": true,
                                       "description": "选中后落下的档位 id（商家端「释放名额」入口）；未选中或被释放为 null"
+                                    },
+                                    "unitPriceFen": {
+                                      "type": "string",
+                                      "pattern": "^(?:0|[1-9][0-9]*)$",
+                                      "example": "800",
+                                      "description": "单价（分/小时）= 底价 + 命中加价，不乘时长（设计规格 §3.4）；未设置底价为 null",
+                                      "nullable": true
                                     }
                                   },
                                   "description": "报名记录"
@@ -13785,6 +13792,13 @@
                             "nullable": true,
                             "description": "本轮报名截止时间"
                           },
+                          "unitPriceFen": {
+                            "type": "string",
+                            "pattern": "^(?:0|[1-9][0-9]*)$",
+                            "example": "800",
+                            "description": "单价（分/小时，不乘时长）：底价 + 命中加价；未设置底价为 null",
+                            "nullable": true
+                          },
                           "lines": {
                             "type": "array",
                             "description": "可报名的位置行",
@@ -14026,6 +14040,13 @@
                           "canWithdraw": {
                             "type": "boolean",
                             "description": "是否可自助取消（未选中且报名仍为 APPLIED）"
+                          },
+                          "unitPriceFen": {
+                            "type": "string",
+                            "pattern": "^(?:0|[1-9][0-9]*)$",
+                            "example": "800",
+                            "description": "单价（分/小时，不乘时长）：选中后取档位快照价，未选中按当前规则库计算；未设置底价为 null",
+                            "nullable": true
                           }
                         },
                         "description": "我的报名"

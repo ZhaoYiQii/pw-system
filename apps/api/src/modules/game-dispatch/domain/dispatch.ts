@@ -28,6 +28,11 @@ export interface DispatchApplicationView {
   createdAt: string;
   /** 选中后落下的档位 id（Task 5a：商家端据此提供「释放名额」）；未选中或被释放为 null。 */
   slotId: string | null;
+  /**
+   * 该陪玩在本单的单价（分/小时）= 陪玩×游戏底价 + 命中加价，**不乘时长**（设计规格 §3.4）。
+   * 未设置底价时为 null（此时该陪玩无法被选中）。
+   */
+  unitPriceFen: string | null;
 }
 
 /**
@@ -98,6 +103,8 @@ export interface PlayerHallOrderView {
   durationMinutes: number;
   desiredStartAt: string | null;
   roundClosesAt: string | null;
+  /** 我报名该单的单价（分/小时，不乘时长）；未设置底价时为 null。 */
+  unitPriceFen: string | null;
   lines: PlayerHallLineView[];
 }
 
@@ -115,6 +122,8 @@ export interface PlayerApplicationView {
   slotId: string | null;
   /** 未选中（无生效档位）且报名仍为 APPLIED 时才可自助取消；选中后只能由商家释放名额。 */
   canWithdraw: boolean;
+  /** 单价（分/小时，不乘时长）：选中后取档位快照价，未选中时按当前规则库计算。 */
+  unitPriceFen: string | null;
 }
 
 /** 商家「释放名额」结果：档位标记 RELEASED，订单回到报名阶段并重开一轮。 */

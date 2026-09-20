@@ -71,6 +71,8 @@ interface GdHallOrder {
   durationMinutes: number;
   desiredStartAt: string | null;
   roundClosesAt: string | null;
+  /** 我的单价（分/小时，不乘时长）；未设置底价时为 null。 */
+  unitPriceFen: string | null;
   lines: GdHallLine[];
 }
 interface GdApplication {
@@ -85,6 +87,7 @@ interface GdApplication {
   createdAt: string;
   slotId: string | null;
   canWithdraw: boolean;
+  unitPriceFen: string | null;
 }
 type HallView = "hall" | "service" | "applications";
 
@@ -684,6 +687,12 @@ export default function OrderHallPage() {
                     服务时长 · {order.durationMinutes} 分钟 · 报名截止{" "}
                     {formatDateTime(order.roundClosesAt)}
                   </Text>
+                  {/* 展示口径（设计规格 §3.4）：报名界面显示单价，不乘时长。 */}
+                  <Text className="pw-price">
+                    {order.unitPriceFen
+                      ? `${formatFenYuan(order.unitPriceFen)} / 小时`
+                      : "未设置底价，不可报名"}
+                  </Text>
                   {order.lines.map((line) => (
                     <View
                       key={line.lineId}
@@ -1106,6 +1115,12 @@ export default function OrderHallPage() {
                       </Text>
                       <Text className="pw-muted">
                         报名于 {formatDateTime(application.createdAt)}
+                      </Text>
+                      <Text className="pw-muted">
+                        单价{" "}
+                        {application.unitPriceFen
+                          ? `${formatFenYuan(application.unitPriceFen)} / 小时`
+                          : "未设置底价"}
                       </Text>
                     </View>
                     <Text

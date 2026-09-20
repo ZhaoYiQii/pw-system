@@ -1441,6 +1441,12 @@ export const gameDispatchOrderViewSchema: OpenApiSchema = {
                       description:
                         "选中后落下的档位 id（商家端「释放名额」入口）；未选中或被释放为 null",
                     },
+                    unitPriceFen: {
+                      ...nonNegativeFen("该陪玩在本单的单价"),
+                      nullable: true,
+                      description:
+                        "单价（分/小时）= 底价 + 命中加价，不乘时长（设计规格 §3.4）；未设置底价为 null",
+                    },
                   },
                   "报名记录",
                 ),
@@ -1769,6 +1775,12 @@ export const playerHallOrderViewSchema: OpenApiSchema = object(
     durationMinutes: integer("服务时长（分钟）", 1),
     desiredStartAt: dateTime("期望开始时间", true),
     roundClosesAt: dateTime("本轮报名截止时间", true),
+    unitPriceFen: {
+      ...nonNegativeFen("我的单价"),
+      nullable: true,
+      description:
+        "单价（分/小时，不乘时长）：底价 + 命中加价；未设置底价为 null",
+    },
     lines: {
       type: "array",
       description: "可报名的位置行",
@@ -1810,6 +1822,12 @@ export const playerApplicationViewSchema: OpenApiSchema = object(
         "选中后落下的档位 id（开始/结束服务与报单入口）；未选中为 null",
     },
     canWithdraw: bool("是否可自助取消（未选中且报名仍为 APPLIED）"),
+    unitPriceFen: {
+      ...nonNegativeFen("单价"),
+      nullable: true,
+      description:
+        "单价（分/小时，不乘时长）：选中后取档位快照价，未选中按当前规则库计算；未设置底价为 null",
+    },
   },
   "我的报名",
 );

@@ -42,6 +42,8 @@ interface HallOrder {
   orderNo: string;
   durationMinutes: number;
   roundClosesAt: string | null;
+  /** 单价（分/小时，陪玩×游戏底价 + 命中加价；不乘时长）。 */
+  unitPriceFen: string | null;
   lines: HallLine[];
 }
 interface MyApplication {
@@ -52,6 +54,7 @@ interface MyApplication {
   status: string;
   slotId: string | null;
   canWithdraw: boolean;
+  unitPriceFen: string | null;
 }
 interface ReleaseView {
   slotId: string;
@@ -348,6 +351,8 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     expect(hallLine?.positionLabel).toBe("打野");
     expect(hallLine?.appliedCount).toBe(0);
     expect(hallLine?.myApplicationId).toBeNull();
+    // 展示口径（设计规格 §3.4）：报名界面显示单价（底价 6000 + rank=钻石 1000），不乘时长。
+    expect(hallOrder?.unitPriceFen).toBe("7000");
 
     const applied = await apply(playerTokens["p1"], orderId, lineId).expect(
       201,
@@ -363,6 +368,7 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     expect(mineRow?.status).toBe("APPLIED");
     expect(mineRow?.canWithdraw).toBe(true);
     expect(mineRow?.slotId).toBeNull();
+    expect(mineRow?.unitPriceFen).toBe("7000");
 
     await req(playerTokens["p1"])
       .post(`${DISPATCH}/applications/${applicationId}/withdraw`)
@@ -621,12 +627,21 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     const detail = (
       await req(ownerToken).get(`${DISPATCH}/orders/${orderId}`).expect(200)
     ).body.data as {
-      lines: { applications: { id: string; slotId: string | null }[] }[];
+      lines: {
+        applications: {
+          id: string;
+          slotId: string | null;
+          unitPriceFen: string | null;
+        }[];
+      }[];
     };
     const detailApp = detail.lines
       .flatMap((line) => line.applications)
       .find((a) => a.id === applicationId);
     expect(detailApp?.slotId).toBe(slot.id);
+    // 老板端与陪玩端看到同一个单价（设计规格 §3.4）。
+    expect(detailApp?.unitPriceFen).toBe(slot.unitPriceFen.toString());
+    expect(detailApp?.unitPriceFen).toBe("7000");
 
     await req(csToken)
       .post(`${DISPATCH}/orders/${orderId}/player-breaches`, {

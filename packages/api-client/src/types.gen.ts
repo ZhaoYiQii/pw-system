@@ -7592,6 +7592,10 @@ export type GameDispatchViewResponses = {
                      * 选中后落下的档位 id（商家端「释放名额」入口）；未选中或被释放为 null
                      */
                     slotId?: string | null;
+                    /**
+                     * 单价（分/小时）= 底价 + 命中加价，不乘时长（设计规格 §3.4）；未设置底价为 null
+                     */
+                    unitPriceFen?: string | null;
                 }>;
             }>;
             /**
@@ -7867,6 +7871,10 @@ export type GameDispatchPlayerHallResponses = {
              */
             roundClosesAt: string | null;
             /**
+             * 单价（分/小时，不乘时长）：底价 + 命中加价；未设置底价为 null
+             */
+            unitPriceFen?: string | null;
+            /**
              * 可报名的位置行
              */
             lines: Array<{
@@ -7998,6 +8006,10 @@ export type GameDispatchPlayerApplicationsResponses = {
              * 是否可自助取消（未选中且报名仍为 APPLIED）
              */
             canWithdraw: boolean;
+            /**
+             * 单价（分/小时，不乘时长）：选中后取档位快照价，未选中按当前规则库计算；未设置底价为 null
+             */
+            unitPriceFen?: string | null;
         }>;
     };
 };

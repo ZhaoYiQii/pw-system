@@ -3,6 +3,7 @@ import { useLoad, useRouter } from "@tarojs/taro";
 import { useState } from "react";
 import { apiAdapter } from "@platform-api";
 import { session } from "@platform-session";
+import { formatFenYuan } from "../../../features/money/money";
 import {
   CustomerLoginCard,
   CustomerMessage,
@@ -19,6 +20,8 @@ interface AppView {
   id: string;
   playerName: string;
   status: string;
+  /** 单价（分/小时，不乘时长）；该陪玩未设置底价时为 null。 */
+  unitPriceFen: string | null;
 }
 
 interface LineView {
@@ -197,6 +200,12 @@ export default function GameSelectPage() {
                     </View>
                     <View className="cu-grow">
                       <Text className="cu-card-title">{app.playerName}</Text>
+                      {/* 展示口径（设计规格 §3.4）：老板与陪玩看到同一个单价，不乘时长。 */}
+                      <Text className="cu-meta">
+                        {app.unitPriceFen
+                          ? `${formatFenYuan(app.unitPriceFen)} / 小时`
+                          : "未设置底价，暂不可选"}
+                      </Text>
                     </View>
                     <Button
                       className={`cu-button cu-button-small ${picked[line.id] === app.id ? "cu-button-soft" : "cu-button-outline"}`}
