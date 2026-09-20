@@ -995,7 +995,7 @@ function SessionDetailView({ id }: { id: string }) {
       </section>
 
       {reportSlotId ? (
-        <section className="mc-panel">
+        <section className="mc-panel" data-testid="report-review">
           <div className="mc-section-head">
             <div>
               <h2>报单审批</h2>

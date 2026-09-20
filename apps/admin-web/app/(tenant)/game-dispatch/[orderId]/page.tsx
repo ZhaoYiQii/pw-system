@@ -477,7 +477,7 @@ function Inner({ orderId }: { orderId: string }) {
       </div>
 
       {/* 违约记录台账（Task 5a）：按订单读取，随记违约即时刷新。 */}
-      <Card>
+      <Card data-testid="breach-list">
         <CardHeader>
           <CardTitle>违约记录</CardTitle>
           <CardDescription>
@@ -511,7 +511,7 @@ function Inner({ orderId }: { orderId: string }) {
       </Card>
 
       {/* 费用口径（Task 5b-2/A）：只展示链路里真实存在的数字；抽成未落地就写明未落地。 */}
-      <Card>
+      <Card data-testid="fees-summary">
         <CardHeader>
           <CardTitle>费用口径</CardTitle>
           <CardDescription>
