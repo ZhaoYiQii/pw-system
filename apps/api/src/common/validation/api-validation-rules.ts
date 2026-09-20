@@ -902,3 +902,39 @@ routeValidations.set(
     }),
   },
 );
+
+// 算价模型 Task 3（设计规格 §3.3 / §9 第 4-6 条）：报单、客服审批与证据用途。
+// 证据用途走查询参数：移动端 uploadBytes 只带文件名头，不额外加自定义头；
+// 计时证据沿用 START/END，报单的开始/结束截图为 REPORT_START/REPORT_END。
+const slotEvidenceQuery = z.strictObject({
+  evidenceType: z
+    .enum(["START", "END", "REPORT_START", "REPORT_END"])
+    .optional(),
+});
+const slotDeclaredMinutes = z
+  .number()
+  .int()
+  .min(15, "申报时长需为 15–1440 分钟")
+  .max(1440, "申报时长需为 15–1440 分钟");
+
+for (const action of ["evidence", "capture"] as const) {
+  routeValidations.set(
+    `POST /api/v1/tenant/game-dispatch/slots/:slotId/session/${action}`,
+    { query: slotEvidenceQuery },
+  );
+}
+
+routeValidations.set("POST /api/v1/tenant/game-dispatch/slots/:slotId/report", {
+  body: z.strictObject({ declaredDurationMinutes: slotDeclaredMinutes }),
+});
+
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch/slots/:slotId/report/review",
+  {
+    body: z.strictObject({
+      approve: z.boolean(),
+      declaredDurationMinutes: slotDeclaredMinutes.optional(),
+      reason: nullableText("reason", 500),
+    }),
+  },
+);

@@ -1397,6 +1397,13 @@ model SlotSession {
   startedAt        DateTime? @map("started_at") @db.Timestamptz
   endedAt          DateTime? @map("ended_at") @db.Timestamptz
   durationSeconds  Int?      @map("duration_seconds")
+  /// 算价模型 Task 3（设计规格 §3.3）：陪玩报单申报的总时长（分钟，15–1440）；null = 尚未报单。
+  declaredDurationMinutes Int?      @map("declared_duration_minutes")
+  /// 报单与客服审批留痕；审批修正时长时原始申报值同时写入 audit_logs。
+  reportSubmittedAt       DateTime? @map("report_submitted_at") @db.Timestamptz
+  reportReviewedAt        DateTime? @map("report_reviewed_at") @db.Timestamptz
+  reportReviewedBy        String?   @map("report_reviewed_by") @db.Uuid
+  reportReviewNote        String?   @map("report_review_note")
   status           String    @default("NOT_STARTED")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")

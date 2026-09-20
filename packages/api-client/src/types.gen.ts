@@ -8476,7 +8476,9 @@ export type SlotSessionEvidenceData = {
     path: {
         slotId: string;
     };
-    query?: never;
+    query: {
+        evidenceType: string;
+    };
     url: '/api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence';
 };
 
@@ -8492,13 +8494,334 @@ export type SlotSessionCaptureData = {
     path: {
         slotId: string;
     };
-    query?: never;
+    query: {
+        evidenceType: string;
+    };
     url: '/api/v1/tenant/game-dispatch/slots/{slotId}/session/capture';
 };
 
 export type SlotSessionCaptureResponses = {
     201: unknown;
 };
+
+export type SlotReportReportData = {
+    /**
+     * 陪玩提交报单
+     */
+    body: {
+        /**
+         * 申报总时长（分钟，15–1440）
+         */
+        declaredDurationMinutes: number;
+    };
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/report';
+};
+
+export type SlotReportReportErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type SlotReportReportError = SlotReportReportErrors[keyof SlotReportReportErrors];
+
+export type SlotReportReportResponses = {
+    /**
+     * 报单与客服审批状态（金额以审批后的 SlotEarning 为准）
+     */
+    201: {
+        /**
+         * 报单与客服审批状态
+         */
+        data: {
+            /**
+             * 服务档位 id
+             */
+            slotId: string;
+            /**
+             * 场次 id
+             */
+            sessionId: string;
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 陪玩 id
+             */
+            playerId: string;
+            /**
+             * 单价（分/小时，下单时落库的快照）（十进制字符串分，>=0）
+             */
+            unitPriceFen: string;
+            /**
+             * 报单状态：未报单 / 待审批 / 已通过 / 已驳回
+             */
+            reportStatus: 'NOT_REPORTED' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+            /**
+             * 申报（或客服核定后）的总时长（分钟）
+             */
+            declaredDurationMinutes: number | null;
+            /**
+             * 证据计时长（秒），仅作对照，本版不做自动比对
+             */
+            durationSeconds: number | null;
+            /**
+             * 报单提交时间
+             */
+            reportSubmittedAt: string | null;
+            /**
+             * 客服审批时间
+             */
+            reportReviewedAt: string | null;
+            /**
+             * 审批人账号 id
+             */
+            reportReviewedBy: string | null;
+            /**
+             * 审批备注 / 时长修正理由
+             */
+            reportReviewNote: string | null;
+            /**
+             * 审批通过后的金额（分）；未通过审批为 null
+             */
+            earningFen: string | null;
+        };
+    };
+};
+
+export type SlotReportReportResponse = SlotReportReportResponses[keyof SlotReportReportResponses];
+
+export type SlotReportReviewData = {
+    /**
+     * 客服审批报单
+     */
+    body: {
+        /**
+         * 是否通过；false 为驳回（不产生金额，可重新报单）
+         */
+        approve: boolean;
+        /**
+         * 客服修正后的核定时长（分钟）；缺省沿用申报值
+         */
+        declaredDurationMinutes?: number;
+        /**
+         * 修正理由 / 审批备注
+         */
+        reason?: string | null;
+    };
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/report/review';
+};
+
+export type SlotReportReviewErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type SlotReportReviewError = SlotReportReviewErrors[keyof SlotReportReviewErrors];
+
+export type SlotReportReviewResponses = {
+    /**
+     * 报单与客服审批状态（金额以审批后的 SlotEarning 为准）
+     */
+    201: {
+        /**
+         * 报单与客服审批状态
+         */
+        data: {
+            /**
+             * 服务档位 id
+             */
+            slotId: string;
+            /**
+             * 场次 id
+             */
+            sessionId: string;
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 陪玩 id
+             */
+            playerId: string;
+            /**
+             * 单价（分/小时，下单时落库的快照）（十进制字符串分，>=0）
+             */
+            unitPriceFen: string;
+            /**
+             * 报单状态：未报单 / 待审批 / 已通过 / 已驳回
+             */
+            reportStatus: 'NOT_REPORTED' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+            /**
+             * 申报（或客服核定后）的总时长（分钟）
+             */
+            declaredDurationMinutes: number | null;
+            /**
+             * 证据计时长（秒），仅作对照，本版不做自动比对
+             */
+            durationSeconds: number | null;
+            /**
+             * 报单提交时间
+             */
+            reportSubmittedAt: string | null;
+            /**
+             * 客服审批时间
+             */
+            reportReviewedAt: string | null;
+            /**
+             * 审批人账号 id
+             */
+            reportReviewedBy: string | null;
+            /**
+             * 审批备注 / 时长修正理由
+             */
+            reportReviewNote: string | null;
+            /**
+             * 审批通过后的金额（分）；未通过审批为 null
+             */
+            earningFen: string | null;
+        };
+    };
+};
+
+export type SlotReportReviewResponse = SlotReportReviewResponses[keyof SlotReportReviewResponses];
 
 export type WalletGetData = {
     body?: never;

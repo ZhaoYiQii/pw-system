@@ -13,6 +13,7 @@ import { PrismaGameDispatchTemplateOrderRepository } from "./infrastructure/pris
 import { GameDispatchController } from "./interface/game-dispatch.controller.js";
 import { GameDispatchTemplateOrderController } from "./interface/game-dispatch-template-order.controller.js";
 import { PricingRulesController } from "./interface/pricing-rules.controller.js";
+import { SlotReportController } from "./interface/slot-report.controller.js";
 import { SlotSessionController } from "./interface/slot-session.controller.js";
 import { GameTemplateController } from "./interface/game-template.controller.js";
 import { GenericGameTemplateController } from "./interface/generic-game-template.controller.js";
@@ -29,6 +30,7 @@ export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
     GameDispatchTemplateOrderController,
     PricingRulesController,
     SlotSessionController,
+    SlotReportController,
   ],
   providers: [
     {

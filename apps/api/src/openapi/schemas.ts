@@ -1610,3 +1610,104 @@ export const playerGamePriceSaveBodySchema: OpenApiSchema = object(
   },
   "陪玩×游戏底价写入请求",
 );
+
+/**
+ * 算价模型 Task 3 契约：陪玩报单（申报时长 + 截图证据）与客服审批。
+ * 金额一律十进制字符串分；证据计时长只作对照，不参与计费。
+ */
+export const slotReportViewSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      [
+        "slotId",
+        "sessionId",
+        "orderId",
+        "playerId",
+        "unitPriceFen",
+        "reportStatus",
+        "declaredDurationMinutes",
+        "durationSeconds",
+        "reportSubmittedAt",
+        "reportReviewedAt",
+        "reportReviewedBy",
+        "reportReviewNote",
+        "earningFen",
+      ],
+      {
+        slotId: { type: "string", format: "uuid", description: "服务档位 id" },
+        sessionId: { type: "string", format: "uuid", description: "场次 id" },
+        orderId: { type: "string", format: "uuid", description: "订单 id" },
+        playerId: { type: "string", format: "uuid", description: "陪玩 id" },
+        unitPriceFen: nonNegativeFen("单价（分/小时，下单时落库的快照）"),
+        reportStatus: {
+          type: "string",
+          enum: ["NOT_REPORTED", "PENDING_REVIEW", "APPROVED", "REJECTED"],
+          description: "报单状态：未报单 / 待审批 / 已通过 / 已驳回",
+        },
+        declaredDurationMinutes: {
+          type: "integer",
+          minimum: 15,
+          maximum: 1440,
+          nullable: true,
+          description: "申报（或客服核定后）的总时长（分钟）",
+        },
+        durationSeconds: {
+          type: "integer",
+          minimum: 0,
+          nullable: true,
+          description: "证据计时长（秒），仅作对照，本版不做自动比对",
+        },
+        reportSubmittedAt: dateTime("报单提交时间", true),
+        reportReviewedAt: dateTime("客服审批时间", true),
+        reportReviewedBy: {
+          type: "string",
+          format: "uuid",
+          nullable: true,
+          description: "审批人账号 id",
+        },
+        reportReviewNote: {
+          type: "string",
+          nullable: true,
+          description: "审批备注 / 时长修正理由",
+        },
+        earningFen: {
+          ...nonNegativeFen("审批后落库的实收金额"),
+          nullable: true,
+          description: "审批通过后的金额（分）；未通过审批为 null",
+        },
+      },
+      "报单与客服审批状态",
+    ),
+  ),
+  description: "报单与客服审批状态（金额以审批后的 SlotEarning 为准）",
+};
+
+/** 陪玩提交报单：只提交申报总时长，截图先走证据通道。 */
+export const slotReportSubmitBodySchema: OpenApiSchema = object(
+  ["declaredDurationMinutes"],
+  {
+    declaredDurationMinutes: {
+      type: "integer",
+      minimum: 15,
+      maximum: 1440,
+      description: "申报总时长（分钟，15–1440）",
+    },
+  },
+  "陪玩提交报单",
+);
+
+/** 客服审批：可修正时长（修正后按修正值计费），reason 同时作为审批留痕。 */
+export const slotReportReviewBodySchema: OpenApiSchema = object(
+  ["approve"],
+  {
+    approve: bool("是否通过；false 为驳回（不产生金额，可重新报单）"),
+    declaredDurationMinutes: {
+      type: "integer",
+      minimum: 15,
+      maximum: 1440,
+      description: "客服修正后的核定时长（分钟）；缺省沿用申报值",
+    },
+    reason: optionalString("修正理由 / 审批备注", true),
+  },
+  "客服审批报单",
+);

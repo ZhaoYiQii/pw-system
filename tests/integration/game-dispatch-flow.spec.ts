@@ -426,6 +426,46 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
         .expect(201);
     }
 
+    // 算价模型 Task 3（设计规格 §3.3）：结束只写证据计时长；金额在「报单 → 客服审批」后产生。
+    const endedSlots = await client.orderSlot.findMany({
+      where: { tenantId, orderId },
+    });
+    const playerRows = await client.playerProfile.findMany({
+      where: { tenantId },
+      select: { id: true, name: true },
+    });
+    const tokenByName: Record<string, string> = {
+      阿一: playerTokens.p1,
+      阿二: playerTokens.p2,
+      阿三: playerTokens.p3,
+    };
+    for (const endedSlot of endedSlots) {
+      const ownerName =
+        playerRows.find((p) => p.id === endedSlot.playerId)?.name ?? "";
+      const token = tokenByName[ownerName];
+      for (const kind of ["REPORT_START", "REPORT_END"]) {
+        await request(app.getHttpServer())
+          .post(
+            `/api/v1/tenant/game-dispatch/slots/${endedSlot.id}/session/evidence?evidenceType=${kind}`,
+          )
+          .set("authorization", `Bearer ${token}`)
+          .set("x-file-name", `${kind.toLowerCase()}.png`)
+          .send(png)
+          .expect(201);
+      }
+      await req(token)
+        .post(`/api/v1/tenant/game-dispatch/slots/${endedSlot.id}/report`, {
+          declaredDurationMinutes: 60,
+        })
+        .expect(201);
+      await req(ownerToken)
+        .post(
+          `/api/v1/tenant/game-dispatch/slots/${endedSlot.id}/report/review`,
+          { approve: true },
+        )
+        .expect(201);
+    }
+
     const settlement = await req(ownerToken)
       .post(`/api/v1/tenant/game-dispatch/orders/${orderId}/confirm-settlement`)
       .expect(201);

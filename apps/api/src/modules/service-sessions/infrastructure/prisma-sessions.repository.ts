@@ -17,6 +17,12 @@ export interface SessionView {
   startedAt: Date | null;
   endedAt: Date | null;
   durationSeconds: number | null;
+  /** 算价模型 Task 3：报单申报时长与客服审批留痕（CLASSIC 流程恒为 null / 未报单）。 */
+  declaredDurationMinutes: number | null;
+  reportStatus: "NOT_REPORTED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+  reportSubmittedAt: Date | null;
+  reportReviewedAt: Date | null;
+  reportReviewNote: string | null;
   events: Array<{
     id: string;
     eventType: string;
@@ -30,6 +36,8 @@ export interface SessionView {
     mimeType: string;
     sizeBytes: number;
     uploadedBy: string | null;
+    /** 证据用途：计时证据 START/END；报单截图 REPORT_START/REPORT_END。 */
+    evidenceType: string;
     createdAt: Date;
   }>;
   adjustments: Array<{
@@ -129,6 +137,12 @@ export class PrismaSessionsRepository {
       startedAt: s.startedAt,
       endedAt: s.endedAt,
       durationSeconds: s.durationSeconds,
+      // CLASSIC 流程没有报单链路（ADR-0002 冻结）：固定为“未报单”。
+      declaredDurationMinutes: null,
+      reportStatus: "NOT_REPORTED",
+      reportSubmittedAt: null,
+      reportReviewedAt: null,
+      reportReviewNote: null,
       events: events.map((e) => ({
         id: e.id,
         eventType: e.eventType,
@@ -142,6 +156,8 @@ export class PrismaSessionsRepository {
         mimeType: e.mimeType,
         sizeBytes: e.sizeBytes,
         uploadedBy: e.uploadedBy,
+        // CLASSIC 证据通道不区分用途（旧流程无报单概念）。
+        evidenceType: "EVIDENCE",
         createdAt: e.createdAt,
       })),
       adjustments: adjustments.map((a) => ({
@@ -165,6 +181,11 @@ export class PrismaSessionsRepository {
     const evidence = await this.client.slotEvidence.findMany({
       where: { tenantId, sessionId: s.id },
       orderBy: { createdAt: "asc" },
+    });
+    // 报单审批通过才落 SlotEarning；有金额即“已通过”（设计规格 §3.3）。
+    const earning = await this.client.slotEarning.findFirst({
+      where: { tenantId, orderSlotId: s.orderSlotId },
+      select: { id: true },
     });
     const events: SessionView["events"] = [];
     if (s.startedAt) {
@@ -195,6 +216,18 @@ export class PrismaSessionsRepository {
       startedAt: s.startedAt,
       endedAt: s.endedAt,
       durationSeconds: s.durationSeconds,
+      declaredDurationMinutes: s.declaredDurationMinutes ?? null,
+      reportStatus:
+        s.reportSubmittedAt === null
+          ? "NOT_REPORTED"
+          : earning
+            ? "APPROVED"
+            : s.reportReviewedAt === null
+              ? "PENDING_REVIEW"
+              : "REJECTED",
+      reportSubmittedAt: s.reportSubmittedAt ?? null,
+      reportReviewedAt: s.reportReviewedAt ?? null,
+      reportReviewNote: s.reportReviewNote ?? null,
       events,
       evidence: evidence.map((e) => ({
         id: e.id,
@@ -202,6 +235,7 @@ export class PrismaSessionsRepository {
         mimeType: e.mimeType,
         sizeBytes: e.sizeBytes,
         uploadedBy: e.uploadedBy,
+        evidenceType: e.evidenceType,
         createdAt: e.createdAt,
       })),
       adjustments: [],

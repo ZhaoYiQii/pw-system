@@ -46,6 +46,118 @@ import {
 
 type Tx = DbTransaction;
 
+/** 报单状态（设计规格 §3.3）：未报单 / 待客服审批 / 已通过（已落金额）/ 已驳回。 */
+export type SlotReportStatus =
+  "NOT_REPORTED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+
+/** 报单与审批视图：金额来自审批后的 SlotEarning，证据计时长只作对照。 */
+export interface SlotReportView {
+  slotId: string;
+  sessionId: string;
+  orderId: string;
+  playerId: string;
+  unitPriceFen: string;
+  reportStatus: SlotReportStatus;
+  declaredDurationMinutes: number | null;
+  durationSeconds: number | null;
+  reportSubmittedAt: string | null;
+  reportReviewedAt: string | null;
+  reportReviewedBy: string | null;
+  reportReviewNote: string | null;
+  earningFen: string | null;
+}
+
+/** 申报时长边界（设计规格 §3.3 / §6）：15–1440 分钟。 */
+const DECLARED_MINUTES_MIN = 15;
+const DECLARED_MINUTES_MAX = 1440;
+/** 报单证据用途：复用既有 SlotEvidence 通道（设计规格 §9 第 4 条）。 */
+const REPORT_EVIDENCE_TYPES = ["REPORT_START", "REPORT_END"] as const;
+
+function declaredMinutesOrThrow(value: number): number {
+  if (
+    !Number.isInteger(value) ||
+    value < DECLARED_MINUTES_MIN ||
+    value > DECLARED_MINUTES_MAX
+  )
+    throw new DispatchInputError(
+      `申报时长需为 ${DECLARED_MINUTES_MIN}–${DECLARED_MINUTES_MAX} 分钟`,
+    );
+  return value;
+}
+
+/** 计费金额 = 单价 × 核定分钟 / 60，向上取整到分（(price*minutes+59)/60，全整数分，无浮点）。 */
+function slotEarningFen(unitPriceFen: bigint, minutes: number): bigint {
+  return (unitPriceFen * BigInt(minutes) + 59n) / 60n;
+}
+
+function slotReportStatusOf(
+  submittedAt: Date | null,
+  reviewedAt: Date | null,
+  hasEarning: boolean,
+): SlotReportStatus {
+  if (submittedAt === null) return "NOT_REPORTED";
+  if (hasEarning) return "APPROVED";
+  return reviewedAt === null ? "PENDING_REVIEW" : "REJECTED";
+}
+
+function slotReportViewOf(
+  slot: {
+    id: string;
+    orderId: string;
+    playerId: string;
+    unitPriceFen: bigint;
+  },
+  session: {
+    id: string;
+    declaredDurationMinutes: number | null;
+    durationSeconds: number | null;
+    reportSubmittedAt: Date | null;
+    reportReviewedAt: Date | null;
+    reportReviewedBy: string | null;
+    reportReviewNote: string | null;
+  },
+  earningFen: bigint | null,
+): SlotReportView {
+  return {
+    slotId: slot.id,
+    sessionId: session.id,
+    orderId: slot.orderId,
+    playerId: slot.playerId,
+    unitPriceFen: slot.unitPriceFen.toString(),
+    reportStatus: slotReportStatusOf(
+      session.reportSubmittedAt,
+      session.reportReviewedAt,
+      earningFen !== null,
+    ),
+    declaredDurationMinutes: session.declaredDurationMinutes ?? null,
+    durationSeconds: session.durationSeconds ?? null,
+    reportSubmittedAt: session.reportSubmittedAt?.toISOString() ?? null,
+    reportReviewedAt: session.reportReviewedAt?.toISOString() ?? null,
+    reportReviewedBy: session.reportReviewedBy ?? null,
+    reportReviewNote: session.reportReviewNote ?? null,
+    earningFen: earningFen === null ? null : earningFen.toString(),
+  };
+}
+
+/** 报单必须同时带开始/结束截图（设计规格 §9 第 5 条），供客服审批时人工核查。 */
+async function assertReportEvidence(
+  tx: Tx,
+  tenantId: string,
+  slotId: string,
+): Promise<void> {
+  const rows = await tx.slotEvidence.findMany({
+    where: {
+      tenantId,
+      orderSlotId: slotId,
+      evidenceType: { in: [...REPORT_EVIDENCE_TYPES] },
+    },
+    select: { evidenceType: true },
+  });
+  const kinds = new Set(rows.map((row) => row.evidenceType));
+  if (!kinds.has("REPORT_START") || !kinds.has("REPORT_END"))
+    throw new DispatchInputError("报单需先上传开始截图与结束截图");
+}
+
 function code(): string {
   return `${Date.now().toString(36).toUpperCase()}${randomBytes(4)
     .toString("hex")
@@ -631,11 +743,15 @@ export class GameDispatchService {
     const sessions = await this.client.slotSession.findMany({
       where: { tenantId, orderId, playerId: player.id },
     });
+    const earnings = await this.client.slotEarning.findMany({
+      where: { tenantId, orderId, playerId: player.id },
+    });
     return {
       orderId,
       playerName: player.name,
       slots: slots.map((slot) => {
         const session = sessions.find((s) => s.orderSlotId === slot.id);
+        const earning = earnings.find((e) => e.orderSlotId === slot.id);
         return {
           orderSlotId: slot.id,
           positionLabel: slot.positionLabel,
@@ -646,7 +762,21 @@ export class GameDispatchService {
                 status: session.status,
                 startedAt: session.startedAt?.toISOString() ?? null,
                 endedAt: session.endedAt?.toISOString() ?? null,
+                // 证据计时长仅作对照；计费以申报（或客服修正后）的分钟数为准。
                 durationSeconds: session.durationSeconds ?? null,
+                declaredDurationMinutes:
+                  session.declaredDurationMinutes ?? null,
+                reportStatus: slotReportStatusOf(
+                  session.reportSubmittedAt,
+                  session.reportReviewedAt,
+                  earning !== undefined,
+                ),
+                reportSubmittedAt:
+                  session.reportSubmittedAt?.toISOString() ?? null,
+                reportReviewedAt:
+                  session.reportReviewedAt?.toISOString() ?? null,
+                reportReviewNote: session.reportReviewNote ?? null,
+                earningFen: earning ? earning.amountFen.toString() : null,
               }
             : null,
         };
@@ -731,34 +861,8 @@ export class GameDispatchService {
           durationSeconds,
         },
       });
-      const earningFen =
-        (slot.unitPriceFen * BigInt(Math.max(0, durationSeconds)) + 3599n) /
-        3600n;
-      await tx.slotEarning.upsert({
-        where: {
-          tenantId_orderSlotId: { tenantId, orderSlotId: slot.id },
-        },
-        update: {
-          amountFen: earningFen,
-          detailJson: {
-            unitPriceFen: slot.unitPriceFen.toString(),
-            durationSeconds,
-          },
-          status: "PENDING",
-        },
-        create: {
-          tenantId,
-          orderSlotId: slot.id,
-          orderId: slot.orderId,
-          playerId: slot.playerId,
-          amountFen: earningFen,
-          detailJson: {
-            unitPriceFen: slot.unitPriceFen.toString(),
-            durationSeconds,
-          },
-          status: "PENDING",
-        },
-      });
+      // 算价模型 Task 3（设计规格 §3.3 / ADR-0003）：结束只落「证据计时长」作对照，
+      // 金额改由陪玩报单（申报时长）→ 客服审批后产生，见 reportSlot / reviewSlotReport。
       const totalSlots = await tx.orderSlot.count({
         where: { tenantId, orderId: slot.orderId },
       });
@@ -772,6 +876,215 @@ export class GameDispatchService {
         });
       }
       return updated;
+    });
+  }
+
+  /**
+   * 陪玩报单（设计规格 §3.3）：结束服务后申报总时长，并携带报单开始/结束截图。
+   * 报单本身不产生金额；金额在客服审批（reviewSlotReport）时按申报 / 修正时长落库。
+   */
+  async reportSlot(
+    tenantId: string,
+    actorId: string,
+    slotId: string,
+    input: { declaredDurationMinutes: number },
+  ): Promise<SlotReportView> {
+    const minutes = declaredMinutesOrThrow(input.declaredDurationMinutes);
+    return this.client.$transaction(async (tx) => {
+      const slot = await tx.orderSlot.findFirst({
+        where: { tenantId, id: slotId },
+      });
+      if (!slot) throw new DispatchNotFoundError("服务档位不存在");
+      const player = await tx.playerProfile.findFirst({
+        where: { tenantId, tenantAccountId: actorId },
+      });
+      if (!player || player.id !== slot.playerId)
+        throw new DispatchStateError("只能提交自己被指派场次的报单");
+      const session = await tx.slotSession.findFirst({
+        where: { tenantId, orderSlotId: slot.id },
+      });
+      if (!session || session.status !== "ENDED")
+        throw new DispatchStateError("请先结束服务再报单");
+      const isResubmit = session.reportSubmittedAt !== null;
+      if (isResubmit && session.reportReviewedAt === null)
+        throw new DispatchConflictError("报单已提交，等待客服审批");
+      if (isResubmit) {
+        // 审批通过后不可重复报单；被驳回可重新报单（驳回留痕在 audit_logs）。
+        const earned = await tx.slotEarning.findFirst({
+          where: { tenantId, orderSlotId: slot.id },
+        });
+        if (earned)
+          throw new DispatchConflictError("该场次报单已审批通过，不可重复报单");
+      }
+      await assertReportEvidence(tx, tenantId, slot.id);
+      const now = new Date();
+      // 行级 CAS：并发重复提交只有一个能改写报单状态，另一个受控 409。
+      const claimed = await tx.slotSession.updateMany({
+        where: {
+          tenantId,
+          id: session.id,
+          ...(isResubmit
+            ? { reportReviewedAt: { not: null } }
+            : { reportSubmittedAt: null }),
+        },
+        data: {
+          declaredDurationMinutes: minutes,
+          reportSubmittedAt: now,
+          reportReviewedAt: null,
+          reportReviewedBy: null,
+          reportReviewNote: null,
+        },
+      });
+      if (claimed.count === 0)
+        throw new DispatchConflictError("报单状态已变化，请刷新后重试");
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.slot_report.submitted",
+          resourceType: "slot",
+          resourceId: slot.id,
+          summary: `报单申报时长 ${minutes} 分钟（证据计时 ${
+            session.durationSeconds ?? "无"
+          } 秒，仅作对照）`,
+        },
+      });
+      return slotReportViewOf(
+        slot,
+        {
+          id: session.id,
+          declaredDurationMinutes: minutes,
+          durationSeconds: session.durationSeconds ?? null,
+          reportSubmittedAt: now,
+          reportReviewedAt: null,
+          reportReviewedBy: null,
+          reportReviewNote: null,
+        },
+        null,
+      );
+    });
+  }
+
+  /**
+   * 客服审批报单（设计规格 §3.3）：对照开始/结束截图人工核查，可修正时长；
+   * 通过时按核定分钟数落 SlotEarning，修正前后的时长都写进 audit_logs 留痕。
+   */
+  async reviewSlotReport(
+    tenantId: string,
+    actorId: string,
+    slotId: string,
+    input: {
+      approve: boolean;
+      declaredDurationMinutes?: number;
+      reason?: string;
+    },
+  ): Promise<SlotReportView> {
+    return this.client.$transaction(async (tx) => {
+      const slot = await tx.orderSlot.findFirst({
+        where: { tenantId, id: slotId },
+      });
+      if (!slot) throw new DispatchNotFoundError("服务档位不存在");
+      const session = await tx.slotSession.findFirst({
+        where: { tenantId, orderSlotId: slot.id },
+      });
+      if (!session) throw new DispatchNotFoundError("服务场次不存在");
+      if (
+        session.reportSubmittedAt === null ||
+        session.declaredDurationMinutes === null
+      )
+        throw new DispatchConflictError("该场次尚未报单");
+      if (session.reportReviewedAt !== null)
+        throw new DispatchConflictError("该报单已审批");
+      const declared = session.declaredDurationMinutes;
+      const effective = input.approve
+        ? declaredMinutesOrThrow(input.declaredDurationMinutes ?? declared)
+        : declared;
+      const note = input.reason ?? null;
+      const now = new Date();
+      // 行级 CAS：并发审批只有一个能把「已审批」写进去，另一个受控 409（不产生双份金额）。
+      const claimed = await tx.slotSession.updateMany({
+        where: {
+          tenantId,
+          id: session.id,
+          reportSubmittedAt: { not: null },
+          reportReviewedAt: null,
+        },
+        data: {
+          ...(input.approve ? { declaredDurationMinutes: effective } : {}),
+          reportReviewedAt: now,
+          reportReviewedBy: actorId,
+          reportReviewNote: note,
+        },
+      });
+      if (claimed.count === 0) throw new DispatchConflictError("该报单已审批");
+      const reviewed = {
+        id: session.id,
+        declaredDurationMinutes: effective,
+        durationSeconds: session.durationSeconds ?? null,
+        reportSubmittedAt: session.reportSubmittedAt,
+        reportReviewedAt: now,
+        reportReviewedBy: actorId,
+        reportReviewNote: note,
+      };
+      if (!input.approve) {
+        await tx.auditLog.create({
+          data: {
+            tenantId,
+            actorType: "tenant_account",
+            actorId,
+            action: "game_dispatch.slot_report.rejected",
+            resourceType: "slot",
+            resourceId: slot.id,
+            summary: `驳回报单：申报 ${declared} 分钟${
+              note === null ? "" : `（理由：${note}）`
+            }`,
+          },
+        });
+        return slotReportViewOf(slot, reviewed, null);
+      }
+      const amountFen = slotEarningFen(slot.unitPriceFen, effective);
+      await tx.slotEarning.upsert({
+        where: { tenantId_orderSlotId: { tenantId, orderSlotId: slot.id } },
+        update: {
+          amountFen,
+          status: "PENDING",
+          detailJson: {
+            unitPriceFen: slot.unitPriceFen.toString(),
+            declaredDurationMinutes: declared,
+            reviewedDurationMinutes: effective,
+            durationSeconds: session.durationSeconds ?? null,
+          },
+        },
+        create: {
+          tenantId,
+          orderSlotId: slot.id,
+          orderId: slot.orderId,
+          playerId: slot.playerId,
+          amountFen,
+          status: "PENDING",
+          detailJson: {
+            unitPriceFen: slot.unitPriceFen.toString(),
+            declaredDurationMinutes: declared,
+            reviewedDurationMinutes: effective,
+            durationSeconds: session.durationSeconds ?? null,
+          },
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.slot_report.reviewed",
+          resourceType: "slot",
+          resourceId: slot.id,
+          summary: `报单审批通过：申报 ${declared} 分钟 → 核定 ${effective} 分钟，金额 ${amountFen.toString()} 分（单价 ${slot.unitPriceFen.toString()} 分/小时，证据计时 ${
+            session.durationSeconds ?? "无"
+          } 秒仅作对照）`,
+        },
+      });
+      return slotReportViewOf(slot, reviewed, amountFen);
     });
   }
 
@@ -790,7 +1103,8 @@ export class GameDispatchService {
         where: { tenantId, orderId },
       });
       if (earnings.length !== slots.length)
-        throw new DispatchStateError("仍有档位未结束");
+        // 结束只留证据计时长；金额在报单审批后才落库（设计规格 §3.3）。
+        throw new DispatchStateError("仍有档位未完成报单审批");
       const total = earnings.reduce((acc, e) => acc + e.amountFen, 0n);
       const wallet = await tx.bossWallet.findFirst({
         where: { tenantId, customerProfileId: order.customerProfileId },

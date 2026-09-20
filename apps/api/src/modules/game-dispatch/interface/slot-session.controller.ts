@@ -11,6 +11,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
   Req,
 } from "@nestjs/common";
 import type { Request } from "express";
@@ -24,6 +25,20 @@ import {
 } from "../domain/dispatch-errors.js";
 
 const MAX_BYTES = 50 * 1024 * 1024;
+
+/**
+ * 证据用途（算价模型 Task 3 / 设计规格 §9 第 4 条）：计时证据沿用 START/END，
+ * 报单的开始/结束截图复用同一条证据通道，用 REPORT_START/REPORT_END 标识。
+ */
+const EVIDENCE_TYPES = ["START", "END", "REPORT_START", "REPORT_END"] as const;
+
+function resolveEvidenceType(value: string | undefined): string {
+  if (value === undefined || value === "") return "START";
+  if (!(EVIDENCE_TYPES as readonly string[]).includes(value))
+    throw new BadRequestException(`证据用途仅支持 ${EVIDENCE_TYPES.join("/")}`);
+  return value;
+}
+
 function detect(bytes: Buffer): { mime: string; ext: string } | null {
   if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8)
     return { mime: "image/jpeg", ext: ".jpg" };
@@ -152,8 +167,9 @@ export class SlotSessionController {
     @Req() req: AuthenticatedRequest & Request,
     @Param("slotId") slotId: string,
     @Headers("x-file-name") fileNameHeader?: string,
+    @Query("evidenceType") evidenceType?: string,
   ) {
-    return this.consume(req, slotId, fileNameHeader);
+    return this.consume(req, slotId, fileNameHeader, evidenceType);
   }
 
   @TenantScope()
@@ -163,16 +179,19 @@ export class SlotSessionController {
     @Req() req: AuthenticatedRequest & Request,
     @Param("slotId") slotId: string,
     @Headers("x-file-name") fileNameHeader?: string,
+    @Query("evidenceType") evidenceType?: string,
   ) {
-    return this.consume(req, slotId, fileNameHeader);
+    return this.consume(req, slotId, fileNameHeader, evidenceType);
   }
 
   private async consume(
     req: AuthenticatedRequest & Request,
     slotId: string,
     fileNameHeader: string | undefined,
+    evidenceType: string | undefined,
   ) {
     const tenantId = this.tenantIdOf(req);
+    const resolvedEvidenceType = resolveEvidenceType(evidenceType);
     const bytes = await new Promise<Buffer>((resolvePromise, rejectPromise) => {
       const chunks: Buffer[] = [];
       let size = 0;
@@ -221,7 +240,7 @@ export class SlotSessionController {
           mimeType: detected.mime,
           sizeBytes: bytes.length,
           sha256,
-          evidenceType: "START",
+          evidenceType: resolvedEvidenceType,
         },
       );
       return {

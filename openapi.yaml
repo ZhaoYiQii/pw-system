@@ -3981,7 +3981,7 @@ paths:
                                       minLength: 1
                                       maxLength: 50
                                       description: 旧价格规则名称
-                                    priceDeltaFen: &a38
+                                    priceDeltaFen: &a39
                                       type: string
                                       pattern: ^(?:0|[1-9][0-9]*)$
                                       example: "1000"
@@ -10773,6 +10773,11 @@ paths:
           in: header
           schema:
             type: string
+        - name: evidenceType
+          required: true
+          in: query
+          schema:
+            type: string
       responses:
         "201":
           description: ""
@@ -10791,10 +10796,524 @@ paths:
           in: header
           schema:
             type: string
+        - name: evidenceType
+          required: true
+          in: query
+          schema:
+            type: string
       responses:
         "201":
           description: ""
       tags: *a35
+  /api/v1/tenant/game-dispatch/slots/{slotId}/report:
+    post:
+      description: 申报时长 15–1440 分钟；须先上传 REPORT_START/REPORT_END 两张截图；报单不产生金额。
+      operationId: slotReport_report
+      parameters:
+        - name: slotId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - declaredDurationMinutes
+              properties:
+                declaredDurationMinutes:
+                  type: integer
+                  minimum: 15
+                  maximum: 1440
+                  description: 申报总时长（分钟，15–1440）
+              description: 陪玩提交报单
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - slotId
+                      - sessionId
+                      - orderId
+                      - playerId
+                      - unitPriceFen
+                      - reportStatus
+                      - declaredDurationMinutes
+                      - durationSeconds
+                      - reportSubmittedAt
+                      - reportReviewedAt
+                      - reportReviewedBy
+                      - reportReviewNote
+                      - earningFen
+                    properties:
+                      slotId:
+                        type: string
+                        format: uuid
+                        description: 服务档位 id
+                      sessionId:
+                        type: string
+                        format: uuid
+                        description: 场次 id
+                      orderId:
+                        type: string
+                        format: uuid
+                        description: 订单 id
+                      playerId:
+                        type: string
+                        format: uuid
+                        description: 陪玩 id
+                      unitPriceFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 单价（分/小时，下单时落库的快照）（十进制字符串分，>=0）
+                      reportStatus:
+                        type: string
+                        enum:
+                          - NOT_REPORTED
+                          - PENDING_REVIEW
+                          - APPROVED
+                          - REJECTED
+                        description: 报单状态：未报单 / 待审批 / 已通过 / 已驳回
+                      declaredDurationMinutes:
+                        type: integer
+                        minimum: 15
+                        maximum: 1440
+                        nullable: true
+                        description: 申报（或客服核定后）的总时长（分钟）
+                      durationSeconds:
+                        type: integer
+                        minimum: 0
+                        nullable: true
+                        description: 证据计时长（秒），仅作对照，本版不做自动比对
+                      reportSubmittedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 报单提交时间
+                      reportReviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 客服审批时间
+                      reportReviewedBy:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: 审批人账号 id
+                      reportReviewNote:
+                        type: string
+                        nullable: true
+                        description: 审批备注 / 时长修正理由
+                      earningFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 审批通过后的金额（分）；未通过审批为 null
+                        nullable: true
+                    description: 报单与客服审批状态
+                description: 报单与客服审批状态（金额以审批后的 SlotEarning 为准）
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+      summary: 陪玩结束服务后报单（申报总时长，截图走证据通道）
+      tags: &a36
+        - 算价模型（S6）
+  /api/v1/tenant/game-dispatch/slots/{slotId}/report/review:
+    post:
+      description: approve=false 为驳回（不产生金额，可重新报单）；approve=true 时按核定分钟数落金额。
+      operationId: slotReport_review
+      parameters:
+        - name: slotId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - approve
+              properties:
+                approve:
+                  type: boolean
+                  description: 是否通过；false 为驳回（不产生金额，可重新报单）
+                declaredDurationMinutes:
+                  type: integer
+                  minimum: 15
+                  maximum: 1440
+                  description: 客服修正后的核定时长（分钟）；缺省沿用申报值
+                reason:
+                  type: string
+                  nullable: true
+                  description: 修正理由 / 审批备注
+              description: 客服审批报单
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - slotId
+                      - sessionId
+                      - orderId
+                      - playerId
+                      - unitPriceFen
+                      - reportStatus
+                      - declaredDurationMinutes
+                      - durationSeconds
+                      - reportSubmittedAt
+                      - reportReviewedAt
+                      - reportReviewedBy
+                      - reportReviewNote
+                      - earningFen
+                    properties:
+                      slotId:
+                        type: string
+                        format: uuid
+                        description: 服务档位 id
+                      sessionId:
+                        type: string
+                        format: uuid
+                        description: 场次 id
+                      orderId:
+                        type: string
+                        format: uuid
+                        description: 订单 id
+                      playerId:
+                        type: string
+                        format: uuid
+                        description: 陪玩 id
+                      unitPriceFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 单价（分/小时，下单时落库的快照）（十进制字符串分，>=0）
+                      reportStatus:
+                        type: string
+                        enum:
+                          - NOT_REPORTED
+                          - PENDING_REVIEW
+                          - APPROVED
+                          - REJECTED
+                        description: 报单状态：未报单 / 待审批 / 已通过 / 已驳回
+                      declaredDurationMinutes:
+                        type: integer
+                        minimum: 15
+                        maximum: 1440
+                        nullable: true
+                        description: 申报（或客服核定后）的总时长（分钟）
+                      durationSeconds:
+                        type: integer
+                        minimum: 0
+                        nullable: true
+                        description: 证据计时长（秒），仅作对照，本版不做自动比对
+                      reportSubmittedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 报单提交时间
+                      reportReviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 客服审批时间
+                      reportReviewedBy:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: 审批人账号 id
+                      reportReviewNote:
+                        type: string
+                        nullable: true
+                        description: 审批备注 / 时长修正理由
+                      earningFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 审批通过后的金额（分）；未通过审批为 null
+                        nullable: true
+                    description: 报单与客服审批状态
+                description: 报单与客服审批状态（金额以审批后的 SlotEarning 为准）
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+      summary: 客服审批报单（可人工修正时长，写审计留痕）
+      tags: *a36
   /api/v1/boss/wallet:
     get:
       operationId: wallet_get
@@ -10802,7 +11321,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a36
+      tags: &a37
         - Wallet
   /api/v1/boss/wallet/recharge:
     post:
@@ -10811,7 +11330,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a36
+      tags: *a37
   /api/v1/tenant/dashboard/summary:
     get:
       operationId: dashboardSummary_summary
@@ -10828,7 +11347,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a37
+      tags: &a38
         - PlayerApplications
     get:
       operationId: playerApplications_list
@@ -10836,7 +11355,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a37
+      tags: *a38
   /api/v1/tenant/player-applications/{id}/approve:
     post:
       operationId: playerApplications_approve
@@ -10849,7 +11368,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a37
+      tags: *a38
   /api/v1/tenant/player-applications/{id}/reject:
     post:
       operationId: playerApplications_reject
@@ -10862,7 +11381,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a37
+      tags: *a38
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。
@@ -10983,7 +11502,7 @@ components:
         options:
           type: array
           maxItems: 100
-          items: &a39
+          items: &a40
             type: object
             required:
               - value
@@ -10998,7 +11517,7 @@ components:
                 minLength: 1
                 maxLength: 50
                 description: 选项名称
-              priceDeltaFen: *a38
+              priceDeltaFen: *a39
             description: 选择项（含可选加价）
           description: 选择项（选择类字段必须至少一个）
         aggregationPolicy:
@@ -11125,7 +11644,7 @@ components:
               options:
                 type: array
                 maxItems: 100
-                items: *a39
+                items: *a40
                 description: 单选列的选项
             description: 可重复表格列
           description: 表格列（最多 10 列）

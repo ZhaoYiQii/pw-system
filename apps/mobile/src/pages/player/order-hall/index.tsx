@@ -1,4 +1,4 @@
-import { Button, Text, View } from "@tarojs/components";
+import { Button, Input, Text, View } from "@tarojs/components";
 import { useLoad, useRouter } from "@tarojs/taro";
 import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
@@ -35,6 +35,26 @@ interface SessionView {
   endedAt: string | null;
   durationSeconds: number | null;
 }
+/** 算价模型 Task 3：陪玩端报单读路径（game-dispatch 主线）。 */
+interface ReportSessionView {
+  id: string;
+  status: string;
+  durationSeconds: number | null;
+  declaredDurationMinutes: number | null;
+  reportStatus: string;
+  reportReviewNote: string | null;
+  earningFen: string | null;
+}
+interface ServiceSlotView {
+  orderSlotId: string;
+  positionLabel: string;
+  unitPriceFen: string;
+  session: ReportSessionView | null;
+}
+interface ServiceSlotsView {
+  orderId: string;
+  slots: ServiceSlotView[];
+}
 type HallView = "hall" | "service" | "applications";
 
 const APPLICATION_STATUS: Record<string, string> = {
@@ -42,6 +62,14 @@ const APPLICATION_STATUS: Record<string, string> = {
   SELECTED: "已被选",
   EXPIRED: "已结束",
   WITHDRAWN: "已撤销",
+};
+
+/** 报单状态（设计规格 §3.3）：未报单 / 待客服审批 / 已通过 / 已驳回。 */
+const REPORT_STATUS: Record<string, string> = {
+  NOT_REPORTED: "待报单",
+  PENDING_REVIEW: "待客服审批",
+  APPROVED: "已审批",
+  REJECTED: "已驳回，可重新报单",
 };
 
 function formatDateTime(value: string | null): string {
@@ -65,6 +93,13 @@ export default function OrderHallPage() {
   const [hall, setHall] = useState<HallItem[]>([]);
   const [mine, setMine] = useState<MyApp[]>([]);
   const [sessions, setSessions] = useState<Record<string, SessionView>>({});
+  const [reportSlots, setReportSlots] = useState<
+    Record<string, ServiceSlotView[]>
+  >({});
+  const [minutesDraft, setMinutesDraft] = useState<Record<string, string>>({});
+  const [reportShots, setReportShots] = useState<
+    Record<string, { start: boolean; end: boolean }>
+  >({});
   const [hallEnabled, setHallEnabled] = useState(true);
 
   const loadFeatureGate = async (accessToken: string) => {
@@ -96,6 +131,7 @@ export default function OrderHallPage() {
       setHall(availableOrders);
       setMine(applications);
       const next: Record<string, SessionView> = {};
+      const nextSlots: Record<string, ServiceSlotView[]> = {};
       for (const application of applications) {
         if (application.status !== "SELECTED") continue;
         try {
@@ -119,8 +155,19 @@ export default function OrderHallPage() {
             durationSeconds: null,
           };
         }
+        // 报单挂在 game-dispatch 主线上；经典流程订单这里会返回空数组。
+        try {
+          const slotsView = await apiAdapter.request<ServiceSlotsView>(
+            `/api/v1/tenant/game-dispatch/player/orders/${application.orderId}/service-slots`,
+            { token: accessToken },
+          );
+          nextSlots[application.orderId] = slotsView.slots;
+        } catch {
+          nextSlots[application.orderId] = [];
+        }
       }
       setSessions(next);
+      setReportSlots(nextSlots);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
       if (session.getToken()) {
@@ -252,6 +299,72 @@ export default function OrderHallPage() {
     }
   };
 
+  /**
+   * 报单截图（设计规格 §3.3 / §9 第 4-5 条）：复用既有证据通道，
+   * 用 evidenceType 区分报单的开始/结束截图，供客服审批时人工核查。
+   */
+  const uploadReportShot = async (
+    slotId: string,
+    kind: "REPORT_START" | "REPORT_END",
+  ) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const evidence = await mediaAdapter.chooseEvidence({ capture: true });
+      await apiAdapter.uploadBytes(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/session/evidence?evidenceType=${kind}`,
+        token,
+        evidence.name,
+        evidence.bytes,
+      );
+      setReportShots((prev) => {
+        const current = prev[slotId] ?? { start: false, end: false };
+        return {
+          ...prev,
+          [slotId]:
+            kind === "REPORT_START"
+              ? { ...current, start: true }
+              : { ...current, end: true },
+        };
+      });
+      setMsg(kind === "REPORT_START" ? "开始截图已上传。" : "结束截图已上传。");
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 提交报单：申报总时长（15–1440 分钟）；金额由客服审批后按核定分钟数产生。 */
+  const submitReport = async (slotId: string) => {
+    if (!token) return;
+    const minutes = Number(minutesDraft[slotId] ?? "");
+    if (!Number.isInteger(minutes) || minutes < 15 || minutes > 1440) {
+      setMsg("申报时长需为 15–1440 分钟。");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/report`,
+        { method: "POST", token, body: { declaredDurationMinutes: minutes } },
+      );
+      setMsg("报单已提交，等待客服审批。");
+      setMinutesDraft((prev) => ({ ...prev, [slotId]: "" }));
+      setReportShots((prev) => ({
+        ...prev,
+        [slotId]: { start: false, end: false },
+      }));
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const selectedApplications = mine.filter(
     (application) => application.status === "SELECTED",
   );
@@ -322,7 +435,10 @@ export default function OrderHallPage() {
             msg.startsWith("报名成功") ||
             msg.startsWith("场次已") ||
             msg.startsWith("已拍摄") ||
-            msg.startsWith("证据已")
+            msg.startsWith("证据已") ||
+            msg.startsWith("开始截图已") ||
+            msg.startsWith("结束截图已") ||
+            msg.startsWith("报单已提交")
               ? "success"
               : "error"
           }
@@ -461,6 +577,124 @@ export default function OrderHallPage() {
                       : "开始服务（拍照留证）"}
                   </Button>
                 </View>
+                {(reportSlots[application.orderId] ?? []).length ? (
+                  <View className="hall-report">
+                    <Text className="hall-report-title">
+                      报单 · 申报总时长 + 开始/结束截图
+                    </Text>
+                    {(reportSlots[application.orderId] ?? []).map((slot) => {
+                      const report = slot.session;
+                      const reportStatus =
+                        report?.reportStatus ?? "NOT_REPORTED";
+                      const shots = reportShots[slot.orderSlotId] ?? {
+                        start: false,
+                        end: false,
+                      };
+                      const ended = report?.status === "ENDED";
+                      const editable =
+                        ended &&
+                        (reportStatus === "NOT_REPORTED" ||
+                          reportStatus === "REJECTED");
+                      return (
+                        <View
+                          key={slot.orderSlotId}
+                          className="hall-report-row"
+                        >
+                          <View className="pw-row-between">
+                            <Text className="pw-card-title">
+                              {slot.positionLabel}
+                            </Text>
+                            <Text className="pw-badge pw-badge-wait">
+                              {REPORT_STATUS[reportStatus] ?? reportStatus}
+                            </Text>
+                          </View>
+                          <Text className="pw-muted">
+                            单价 {formatFenYuan(slot.unitPriceFen)} / 小时
+                            {typeof report?.durationSeconds === "number"
+                              ? ` · 证据计时 ${Math.floor(report.durationSeconds / 60)} 分钟（仅作对照）`
+                              : ""}
+                          </Text>
+                          {reportStatus === "APPROVED" ? (
+                            <Text className="pw-stat-value">
+                              核定 {report?.declaredDurationMinutes ?? 0} 分钟 ·
+                              实收 {formatFenYuan(report?.earningFen ?? "0")}
+                            </Text>
+                          ) : null}
+                          {reportStatus === "PENDING_REVIEW" ? (
+                            <Text className="pw-muted">
+                              已申报 {report?.declaredDurationMinutes ?? 0}{" "}
+                              分钟，等待客服审批。
+                            </Text>
+                          ) : null}
+                          {reportStatus === "REJECTED" &&
+                          report?.reportReviewNote ? (
+                            <Text className="pw-muted">
+                              驳回原因：{report.reportReviewNote}
+                            </Text>
+                          ) : null}
+                          {!ended ? (
+                            <Text className="pw-muted">
+                              结束服务后可提交报单。
+                            </Text>
+                          ) : null}
+                          {editable ? (
+                            <>
+                              <Input
+                                className="pw-input"
+                                type="number"
+                                placeholder="总时长（分钟，15–1440）"
+                                value={minutesDraft[slot.orderSlotId] ?? ""}
+                                onInput={(event) =>
+                                  setMinutesDraft((prev) => ({
+                                    ...prev,
+                                    [slot.orderSlotId]: event.detail.value,
+                                  }))
+                                }
+                              />
+                              <View className="hall-session-actions">
+                                <Button
+                                  className={`pw-button pw-button-small ${shots.start ? "pw-button-dark" : "pw-button-plain"}`}
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void uploadReportShot(
+                                      slot.orderSlotId,
+                                      "REPORT_START",
+                                    )
+                                  }
+                                >
+                                  {shots.start
+                                    ? "开始截图已传"
+                                    : "上传开始截图"}
+                                </Button>
+                                <Button
+                                  className={`pw-button pw-button-small ${shots.end ? "pw-button-dark" : "pw-button-plain"}`}
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void uploadReportShot(
+                                      slot.orderSlotId,
+                                      "REPORT_END",
+                                    )
+                                  }
+                                >
+                                  {shots.end ? "结束截图已传" : "上传结束截图"}
+                                </Button>
+                              </View>
+                              <Button
+                                className="pw-button pw-button-primary"
+                                disabled={busy || !shots.start || !shots.end}
+                                onClick={() =>
+                                  void submitReport(slot.orderSlotId)
+                                }
+                              >
+                                提交报单
+                              </Button>
+                            </>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
               </View>
             );
           })}

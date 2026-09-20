@@ -339,6 +339,8 @@ export interface SessionEvidence {
   mimeType: string;
   sizeBytes: number;
   uploadedBy: string | null;
+  /** 证据用途：计时证据 START/END；报单截图 REPORT_START/REPORT_END（算价模型 Task 3）。 */
+  evidenceType: string;
   createdAt: string;
 }
 
@@ -352,6 +354,12 @@ export interface SessionDetail {
   startedAt: string | null;
   endedAt: string | null;
   durationSeconds: number | null;
+  /** 算价模型 Task 3：报单申报/核定时长与客服审批留痕（CLASSIC 恒为 null / NOT_REPORTED）。 */
+  declaredDurationMinutes: number | null;
+  reportStatus: "NOT_REPORTED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+  reportSubmittedAt: string | null;
+  reportReviewedAt: string | null;
+  reportReviewNote: string | null;
   events: Array<{
     id: string;
     eventType: string;

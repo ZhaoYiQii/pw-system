@@ -27,6 +27,29 @@ import {
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_ORIGIN ?? "http://127.0.0.1:3000";
 
+/** 证据用途（算价模型 Task 3）：计时证据 START/END；报单截图 REPORT_START/REPORT_END。 */
+const EVIDENCE_TYPE_LABEL: Record<string, string> = {
+  START: "开始证据",
+  END: "结束证据",
+  REPORT_START: "报单开始截图",
+  REPORT_END: "报单结束截图",
+  EVIDENCE: "证据",
+};
+
+/** 报单状态文案（设计规格 §3.3）。 */
+const REPORT_STATUS_LABEL: Record<string, string> = {
+  NOT_REPORTED: "待报单",
+  PENDING_REVIEW: "待审批",
+  APPROVED: "已通过",
+  REJECTED: "已驳回",
+};
+
+function reportTone(status: string): "pending" | "done" | "cancelled" {
+  if (status === "APPROVED") return "done";
+  if (status === "REJECTED") return "cancelled";
+  return "pending";
+}
+
 function Badge({ status }: { status: string }) {
   const tone =
     status === "OPEN" || status === "PENDING"
@@ -804,6 +827,40 @@ function SessionDetailView({ id }: { id: string }) {
     },
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
+  const [reportMinutes, setReportMinutes] = useState("");
+  const [reportReason, setReportReason] = useState("");
+  // 报单审批：客服对照开始/结束截图人工核查，可修正时长（修正按修正值计费）。
+  const reviewReport = useMutation({
+    mutationFn: ({
+      approve,
+      declaredDurationMinutes,
+      reason,
+    }: {
+      approve: boolean;
+      declaredDurationMinutes?: number;
+      reason?: string;
+    }) =>
+      apiFetch(
+        `/api/v1/tenant/game-dispatch/slots/${query.data?.slotId as string}/report/review`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            approve,
+            ...(declaredDurationMinutes === undefined
+              ? {}
+              : { declaredDurationMinutes }),
+            ...(reason === undefined || reason === "" ? {} : { reason }),
+          }),
+        },
+      ),
+    onSuccess: () => {
+      setReportMinutes("");
+      setReportReason("");
+      refresh();
+      showToast("报单已审批。");
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
+  });
   const openEvidence = async (evidence: SessionDetail["evidence"][number]) => {
     try {
       const token = getAccessToken();
@@ -831,6 +888,14 @@ function SessionDetailView({ id }: { id: string }) {
     session.status,
   );
   const canEnd = session.status === "STARTED";
+  // 报单审批只作用于 game-dispatch 主线（CLASSIC 按 ADR-0002 冻结）。
+  const reportSlotId = session.flow === "GAME_DISPATCH" ? session.slotId : null;
+  const correctedMinutes = Number(reportMinutes);
+  const hasCorrection =
+    reportMinutes.trim() !== "" &&
+    Number.isInteger(correctedMinutes) &&
+    correctedMinutes >= 15 &&
+    correctedMinutes <= 1440;
   return (
     <div>
       <Back href="/merchant-console/sessions" label="场次与证据" />
@@ -909,7 +974,7 @@ function SessionDetailView({ id }: { id: string }) {
               >
                 <span className="mc-ev-thumb">
                   <Image size={18} aria-hidden="true" />
-                  图片
+                  {EVIDENCE_TYPE_LABEL[evidence.evidenceType] ?? "证据"}
                 </span>
                 <span className="mc-ev-meta">
                   <b>{evidence.originalName}</b>
@@ -928,6 +993,123 @@ function SessionDetailView({ id }: { id: string }) {
           />
         )}
       </section>
+
+      {reportSlotId ? (
+        <section className="mc-panel">
+          <div className="mc-section-head">
+            <div>
+              <h2>报单审批</h2>
+              <p>
+                对照开始/结束截图核查申报时长；可修正，修正后按修正值计费并写审计留痕。
+              </p>
+            </div>
+            <span
+              className={`mc-status st-${reportTone(session.reportStatus)}`}
+            >
+              {REPORT_STATUS_LABEL[session.reportStatus] ??
+                session.reportStatus}
+            </span>
+          </div>
+          <div className="mc-facts">
+            <dl className="mc-fact">
+              <dt>申报 / 核定时长</dt>
+              <dd>
+                {session.declaredDurationMinutes === null
+                  ? "尚未报单"
+                  : `${session.declaredDurationMinutes} 分钟`}
+              </dd>
+            </dl>
+            <dl className="mc-fact">
+              <dt>证据计时（仅作对照）</dt>
+              <dd>{formatDuration(session.durationSeconds)}</dd>
+            </dl>
+            <dl className="mc-fact">
+              <dt>报单时间</dt>
+              <dd>{dateTime(session.reportSubmittedAt)}</dd>
+            </dl>
+            <dl className="mc-fact">
+              <dt>审批时间</dt>
+              <dd>{dateTime(session.reportReviewedAt)}</dd>
+            </dl>
+          </div>
+          {session.reportReviewNote ? (
+            <div className="mc-notice">
+              审批备注：{session.reportReviewNote}
+            </div>
+          ) : null}
+          {session.reportStatus === "PENDING_REVIEW" ? (
+            <>
+              <div className="mc-form-grid">
+                <label className="mc-field">
+                  <span>修正时长（分钟，留空按申报值）</span>
+                  <input
+                    inputMode="numeric"
+                    value={reportMinutes}
+                    placeholder="如 95"
+                    onChange={(e) => setReportMinutes(e.target.value)}
+                  />
+                </label>
+                <label className="mc-field">
+                  <span>审批备注 / 修正理由</span>
+                  <input
+                    value={reportReason}
+                    placeholder="如：截图核对为 2 小时"
+                    onChange={(e) => setReportReason(e.target.value)}
+                  />
+                </label>
+              </div>
+              {reportMinutes.trim() !== "" && !hasCorrection ? (
+                <div className="mc-notice">
+                  修正时长需为 15–1440 分钟的整数。
+                </div>
+              ) : null}
+              <div className="mc-button-row">
+                <button
+                  type="button"
+                  className="mc-btn mc-btn-primary"
+                  disabled={reviewReport.isPending}
+                  onClick={() =>
+                    reviewReport.mutate({
+                      approve: true,
+                      ...(hasCorrection
+                        ? { declaredDurationMinutes: correctedMinutes }
+                        : {}),
+                      ...(reportReason.trim() === ""
+                        ? {}
+                        : { reason: reportReason.trim() }),
+                    })
+                  }
+                >
+                  <Check size={13} /> 通过
+                </button>
+                <button
+                  type="button"
+                  className="mc-btn"
+                  disabled={reviewReport.isPending}
+                  onClick={() =>
+                    reviewReport.mutate({
+                      approve: false,
+                      ...(reportReason.trim() === ""
+                        ? {}
+                        : { reason: reportReason.trim() }),
+                    })
+                  }
+                >
+                  <X size={13} /> 驳回（可重新报单）
+                </button>
+              </div>
+            </>
+          ) : null}
+          {session.reportStatus === "NOT_REPORTED" ? (
+            <p>陪玩结束服务后需先上传开始/结束截图再报单。</p>
+          ) : null}
+          {session.reportStatus === "APPROVED" ? (
+            <p>
+              该报单已通过，金额已按核定分钟数落库；改值需通过后续调整流程。
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {session.adjustments.length ? (
         <section className="mc-panel">
