@@ -139,21 +139,41 @@ jobs:
       - name: 起应用并冒烟
         working-directory: infra/docker
         run: |
-          set -e
-          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
-            -f docker-compose.prod.yml up -d
-          for i in $(seq 1 40); do
-            if curl -fsS http://127.0.0.1:4100/ready > /dev/null 2>&1; then break; fi
+          set -euo pipefail
+          DC=(docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" -f docker-compose.prod.yml)
+          "${DC[@]}" up -d
+
+          # 注意：`up -d` 返回时 admin/h5 可能还没监听完（api 是 depends_on 的前置），
+          # 必须轮询等待，否则会以「刚起完就断言 200」的竞态误报失败（首版就踩了这个）。
+          wait_http() {
+            local url="$1" label="$2" code="000"
+            for _ in $(seq 1 40); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || true)
+              if [ "$code" = "200" ]; then echo "$label -> 200"; return 0; fi
+              sleep 3
+            done
+            echo "$label -> $code（等待超时）"
+            return 1
+          }
+
+          wait_http http://127.0.0.1:4100/ready api-ready
+          wait_http http://127.0.0.1:4200/store/login admin
+          wait_http http://127.0.0.1:4300/ h5
+
+          # 容器外走一条同源反代登录（H5 nginx /api → api）
+          ok=0
+          for _ in $(seq 1 20); do
+            if curl -fsS -X POST http://127.0.0.1:4300/api/v1/auth/login \
+              -H 'content-type: application/json' \
+              -d '{"kind":"tenant","tenantCode":"smoke","username":"owner","password":"ci_smoke_tenant"}' \
+              | grep -q accessToken; then
+              echo "h5 同源登录 -> ok"
+              ok=1
+              break
+            fi
             sleep 3
           done
-          curl -fsS http://127.0.0.1:4100/ready
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4200/store/login)" = "200"
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4300/)" = "200"
-          # 容器外登录一条（H5 同源反代路径）
-          curl -fsS -X POST http://127.0.0.1:4300/api/v1/auth/login \
-            -H 'content-type: application/json' \
-            -d '{"kind":"tenant","tenantCode":"smoke","username":"owner","password":"ci_smoke_tenant"}' \
-            | grep -q accessToken
+          [ "$ok" = "1" ]
 
       - name: 失败时导出日志
         if: failure()
