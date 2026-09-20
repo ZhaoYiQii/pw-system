@@ -13720,6 +13720,871 @@
         ]
       }
     },
+    "/api/v1/tenant/game-dispatch/player/hall": {
+      "get": {
+        "operationId": "gameDispatch_playerHall",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "orderId",
+                          "dispatchNo",
+                          "orderNo",
+                          "durationMinutes",
+                          "desiredStartAt",
+                          "roundClosesAt",
+                          "lines"
+                        ],
+                        "properties": {
+                          "orderId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "订单 id"
+                          },
+                          "dispatchNo": {
+                            "type": "string",
+                            "description": "派单号"
+                          },
+                          "orderNo": {
+                            "type": "string",
+                            "description": "订单号"
+                          },
+                          "durationMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "服务时长（分钟）"
+                          },
+                          "desiredStartAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "期望开始时间"
+                          },
+                          "roundClosesAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "本轮报名截止时间"
+                          },
+                          "lines": {
+                            "type": "array",
+                            "description": "可报名的位置行",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "lineId",
+                                "positionLabel",
+                                "requiredCount",
+                                "appliedCount",
+                                "myApplicationId",
+                                "myApplicationStatus"
+                              ],
+                              "properties": {
+                                "lineId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "位置行 id"
+                                },
+                                "positionLabel": {
+                                  "type": "string",
+                                  "description": "岗位名称"
+                                },
+                                "requiredCount": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "需要人数"
+                                },
+                                "appliedCount": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "当前报名人数（APPLIED）"
+                                },
+                                "myApplicationId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "description": "我在该行的报名 id；未报名为 null"
+                                },
+                                "myApplicationStatus": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "我在该行的报名状态（APPLIED/SELECTED/…）；未报名为 null"
+                                }
+                              },
+                              "description": "报名大厅位置行"
+                            }
+                          }
+                        },
+                        "description": "报名大厅订单"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "陪玩端报名大厅（含每个位置行的报名情况与我的报名）",
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/player/applications": {
+      "get": {
+        "operationId": "gameDispatch_playerApplications",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "applicationId",
+                          "orderId",
+                          "dispatchNo",
+                          "orderNo",
+                          "orderStatus",
+                          "lineId",
+                          "positionLabel",
+                          "status",
+                          "createdAt",
+                          "slotId",
+                          "canWithdraw"
+                        ],
+                        "properties": {
+                          "applicationId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "报名 id"
+                          },
+                          "orderId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "订单 id"
+                          },
+                          "dispatchNo": {
+                            "type": "string",
+                            "description": "派单号"
+                          },
+                          "orderNo": {
+                            "type": "string",
+                            "description": "订单号"
+                          },
+                          "orderStatus": {
+                            "type": "string",
+                            "description": "订单状态"
+                          },
+                          "lineId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "位置行 id"
+                          },
+                          "positionLabel": {
+                            "type": "string",
+                            "description": "岗位名称"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "报名状态"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "报名时间"
+                          },
+                          "slotId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true,
+                            "description": "选中后落下的档位 id（开始/结束服务与报单入口）；未选中为 null"
+                          },
+                          "canWithdraw": {
+                            "type": "boolean",
+                            "description": "是否可自助取消（未选中且报名仍为 APPLIED）"
+                          }
+                        },
+                        "description": "我的报名"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "陪玩端我的报名与选中档位（含是否可自助取消）",
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/slots/{slotId}/release": {
+      "post": {
+        "operationId": "gameDispatch_releaseSlot",
+        "parameters": [
+          {
+            "name": "slotId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "释放原因（写入审计留痕）"
+                  }
+                },
+                "description": "释放名额请求"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "slotId",
+                        "orderId",
+                        "playerId",
+                        "orderStatus",
+                        "roundNo",
+                        "releasedAt"
+                      ],
+                      "properties": {
+                        "slotId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "档位 id"
+                        },
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "订单 id"
+                        },
+                        "playerId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "被释放的陪玩 id"
+                        },
+                        "orderStatus": {
+                          "type": "string",
+                          "description": "释放后的订单状态（回到 DISPATCHING）"
+                        },
+                        "roundNo": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "重开的报名轮次号"
+                        },
+                        "releasedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "释放时间"
+                        }
+                      },
+                      "description": "释放名额结果"
+                    }
+                  },
+                  "description": "释放名额结果（档位标记 RELEASED，订单回到报名阶段并重开一轮）"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "商家释放名额（档位置 RELEASED、订单回到报名阶段并重开一轮）",
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/orders/{orderId}/player-breaches": {
+      "post": {
+        "operationId": "gameDispatch_recordBreach",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "playerId",
+                  "reason"
+                ],
+                "properties": {
+                  "playerId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "违约陪玩 id"
+                  },
+                  "orderSlotId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "相关档位 id（可选，必须属于该订单与陪玩）"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "违约事由（必填，写入审计与通知）"
+                  }
+                },
+                "description": "记录违约请求"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "playerId",
+                        "playerName",
+                        "orderId",
+                        "orderSlotId",
+                        "reason",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "违约记录 id"
+                        },
+                        "playerId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "陪玩 id"
+                        },
+                        "playerName": {
+                          "type": "string",
+                          "description": "陪玩名称"
+                        },
+                        "orderId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "订单 id"
+                        },
+                        "orderSlotId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true,
+                          "description": "相关档位 id；未关联为 null"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "description": "违约事由"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "记录时间"
+                        }
+                      },
+                      "description": "违约记录"
+                    }
+                  },
+                  "description": "违约记录（同时写审计并经 Outbox 通知老板）"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "记录陪玩违约（写库 + 审计 + 通知老板）",
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
     "/api/v1/tenant/game-dispatch/applications/{id}": {
       "delete": {
         "operationId": "gameDispatch_staffRemove",

@@ -938,3 +938,28 @@ routeValidations.set(
     }),
   },
 );
+
+// 算价模型 Task 4（设计规格 §3.5 / §6 / §9 第 3 条）：报名大厅、我的报名、释放名额与违约记录。
+routeValidations.set("GET /api/v1/tenant/game-dispatch/player/hall", {});
+routeValidations.set(
+  "GET /api/v1/tenant/game-dispatch/player/applications",
+  {},
+);
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch/slots/:slotId/release",
+  {
+    body: z.strictObject({
+      reason: nullableText("reason", 500),
+    }),
+  },
+);
+routeValidations.set(
+  "POST /api/v1/tenant/game-dispatch/orders/:orderId/player-breaches",
+  {
+    body: z.strictObject({
+      playerId: z.string().uuid(),
+      orderSlotId: z.string().uuid().nullable().optional(),
+      reason: nonEmptyText("reason", 500),
+    }),
+  },
+);

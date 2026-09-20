@@ -118,6 +118,8 @@ describe("R4 worker tick（Outbox 消费 + 订阅到期回收）", () => {
       subscriptionsExpired: 1,
       outboxProcessed: 1,
       autoConfirmed: 0,
+      // 算价模型 Task 4：本 tick 没有配置无人报名关单窗口，故为 0。
+      autoClosed: 0,
     });
     const sub = await client.tenantSubscription.findFirstOrThrow({
       where: { tenantId },

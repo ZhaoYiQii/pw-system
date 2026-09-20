@@ -31,11 +31,18 @@ async function bootstrap(): Promise<void> {
   const confirmTimeoutMs = Number(
     process.env.ORDER_CONFIRM_TIMEOUT_MS ?? 15 * 60 * 1000,
   );
+  // 无人报名自动关单窗口（默认 5 分钟）；显式传 0 即关闭该规则。
+  const noApplicationTimeoutMs = Number(
+    process.env.DISPATCH_NO_APPLICATION_TIMEOUT_MS ?? 5 * 60 * 1000,
+  );
   const tickOptions: BackgroundTickOptions = {
     ledger,
     confirmTimeoutMs: Number.isFinite(confirmTimeoutMs)
       ? confirmTimeoutMs
       : 15 * 60 * 1000,
+    noApplicationTimeoutMs: Number.isFinite(noApplicationTimeoutMs)
+      ? noApplicationTimeoutMs
+      : 5 * 60 * 1000,
   };
   let running = false;
 

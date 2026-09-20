@@ -10,6 +10,9 @@ const TITLE_BY_EVENT: Record<string, string> = {
   "order.assigned": "已为您选定陪玩",
   "order.accounted": "订单已完成核算",
   "order.cancelled": "订单已取消",
+  // 算价模型 Task 4：无人报名自动关单 + 陪玩违约（通知老板）
+  "order.auto_closed": "无人报名，订单已自动关闭",
+  "player.breach.recorded": "陪玩未到场已记为违约",
   "session.ended": "场次已结束",
 };
 

@@ -1452,3 +1452,20 @@ model SlotEarning {
   @@index([tenantId, playerId, status])
   @@map("slot_earnings")
 }
+
+/// 算价模型 Task 4（设计规格 §3.5 / §5）：陪玩放鸽子/未到场的人工违约记录。
+/// 只增不改的事件型记录（无 updated_at/version）；外键只到 tenants，档位被释放/移除后记录仍保留。
+model PlayerBreachRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  playerId    String   @map("player_id") @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  orderSlotId String?  @map("order_slot_id") @db.Uuid
+  reason      String
+  recordedBy  String?  @map("recorded_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, playerId, createdAt])
+  @@index([tenantId, orderId])
+  @@map("player_breach_records")
+}

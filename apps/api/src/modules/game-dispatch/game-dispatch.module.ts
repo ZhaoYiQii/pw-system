@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { createDatabaseClient } from "@pw/database";
 import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { GameDispatchService } from "./application/game-dispatch.service.js";
+import { PlayerBreachService } from "./application/player-breach.service.js";
 import { GameDispatchTemplateOrderService } from "./application/game-dispatch-template-order.service.js";
 import { PricingRulesService } from "./application/pricing-rules.service.js";
 import { GameTemplateService } from "./application/game-template.service.js";
@@ -84,6 +85,12 @@ export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
       provide: GameDispatchService,
       useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
         tenantGuarded(client, new GameDispatchService(client)),
+      inject: [GAME_DISPATCH_DB_CLIENT],
+    },
+    {
+      provide: PlayerBreachService,
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PlayerBreachService(client)),
       inject: [GAME_DISPATCH_DB_CLIENT],
     },
     {

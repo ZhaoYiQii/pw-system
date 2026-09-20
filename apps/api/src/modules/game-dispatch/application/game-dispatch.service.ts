@@ -13,6 +13,9 @@ import type {
   DispatchDocumentView,
   DispatchLineView,
   DispatchView,
+  PlayerApplicationView,
+  PlayerHallOrderView,
+  SlotReleaseView,
 } from "../domain/dispatch.js";
 import {
   DispatchConflictError,
@@ -156,6 +159,21 @@ async function assertReportEvidence(
   const kinds = new Set(rows.map((row) => row.evidenceType));
   if (!kinds.has("REPORT_START") || !kinds.has("REPORT_END"))
     throw new DispatchInputError("报单需先上传开始截图与结束截图");
+}
+
+/**
+ * 订单行锁（Task 4 / 设计规格 §6）：陪玩报名与后台「无人报名自动关单」都在该锁内
+ * 重新校验状态，保证并发下只有一方成功。租户过滤写在 SQL 里（RLS 之外的双保险）。
+ */
+async function lockOrderRow(
+  tx: Tx,
+  tenantId: string,
+  orderId: string,
+): Promise<void> {
+  await tx.$queryRaw`
+    SELECT id FROM orders
+    WHERE id = ${orderId}::uuid AND tenant_id = ${tenantId}::uuid
+    FOR UPDATE`;
 }
 
 function code(): string {
@@ -864,7 +882,8 @@ export class GameDispatchService {
       // 算价模型 Task 3（设计规格 §3.3 / ADR-0003）：结束只落「证据计时长」作对照，
       // 金额改由陪玩报单（申报时长）→ 客服审批后产生，见 reportSlot / reviewSlotReport。
       const totalSlots = await tx.orderSlot.count({
-        where: { tenantId, orderId: slot.orderId },
+        // 释放过的档位不再需要服务（Task 4）：只按生效档位判断是否全部结束。
+        where: { tenantId, orderId: slot.orderId, status: { not: "RELEASED" } },
       });
       const endedSessions = await tx.slotSession.count({
         where: { tenantId, orderId: slot.orderId, status: "ENDED" },
@@ -1100,7 +1119,8 @@ export class GameDispatchService {
         where: { tenantId, orderId, status: "PENDING" },
       });
       const slots = await tx.orderSlot.findMany({
-        where: { tenantId, orderId },
+        // 释放过的档位不再计入结算所需人数（Task 4）。
+        where: { tenantId, orderId, status: { not: "RELEASED" } },
       });
       if (earnings.length !== slots.length)
         // 结束只留证据计时长；金额在报单审批后才落库（设计规格 §3.3）。
@@ -1210,7 +1230,15 @@ export class GameDispatchService {
       if (!player) throw new DispatchInputError("陪玩档案未绑定");
       const found = await this.findDispatch(tenantId, orderId, tx);
       if (!found) throw new DispatchNotFoundError();
-      if (found.order.status !== "DISPATCHING")
+      // 行锁：与「无人报名自动关单」（worker）串行化，避免关单与报名同时成功。
+      // 加锁后重新读取状态，保证锁内看到的是最新状态。
+      await lockOrderRow(tx, tenantId, orderId);
+      const lockedOrder = await tx.order.findFirst({
+        where: { tenantId, id: orderId },
+        select: { status: true },
+      });
+      if (!lockedOrder) throw new DispatchNotFoundError();
+      if (lockedOrder.status !== "DISPATCHING")
         throw new DispatchStateError("订单不在报名阶段");
       const round = await tx.gameDispatchRound.findFirst({
         where: {
@@ -1283,6 +1311,16 @@ export class GameDispatchService {
       where: { tenantId, tenantAccountId: playerAccountId },
     });
     if (!player) throw new DispatchInputError("陪玩档案未绑定");
+    const application = await this.client.gameDispatchApplication.findFirst({
+      where: { tenantId, id: applicationId, playerId: player.id },
+    });
+    if (!application) throw new DispatchConflictError("仅可取消本人报名");
+    if (application.status === "SELECTED") {
+      // 设计规格 §3.5 / §6：选中（老板锁定）后不可自助取消，只能由商家释放名额。
+      throw new DispatchConflictError(
+        "APPLICATION_LOCKED：已被选中锁定，需商家释放名额后才能取消",
+      );
+    }
     const res = await this.client.gameDispatchApplication.updateMany({
       where: {
         tenantId,
@@ -1294,6 +1332,245 @@ export class GameDispatchService {
     });
     if (res.count === 0)
       throw new DispatchConflictError("仅可取消 APPLIED 状态的本人报名");
+  }
+
+  /**
+   * 陪玩端报名大厅（Task 4 / 设计规格 §3.5）：只列仍在报名阶段、且报名通道未关闭的派单，
+   * 每个位置行带上需要人数、已报名人数与「我的报名」，供陪玩端渲染报名入口。
+   */
+  async playerHall(
+    tenantId: string,
+    accountId: string,
+  ): Promise<PlayerHallOrderView[]> {
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: accountId },
+    });
+    if (!player) throw new DispatchNotFoundError("陪玩档案未绑定");
+    const orders = await this.client.order.findMany({
+      where: { tenantId, status: "DISPATCHING" },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { id: true, orderNo: true },
+    });
+    const out: PlayerHallOrderView[] = [];
+    for (const order of orders) {
+      const gd = await this.client.gameDispatchOrder.findFirst({
+        where: { tenantId, orderId: order.id },
+      });
+      if (!gd) continue;
+      const round = await this.client.gameDispatchRound.findFirst({
+        where: {
+          tenantId,
+          orderId: order.id,
+          status: "OPEN",
+          closesAt: { gt: new Date() },
+        },
+        orderBy: { roundNo: "desc" },
+      });
+      if (!round) continue;
+      const lines = await this.client.gameDispatchLine.findMany({
+        where: { tenantId, orderId: order.id },
+        orderBy: { sortOrder: "asc" },
+      });
+      const applications = await this.client.gameDispatchApplication.findMany({
+        where: { tenantId, roundId: round.id },
+        select: { id: true, lineId: true, playerId: true, status: true },
+      });
+      out.push({
+        orderId: order.id,
+        dispatchNo: gd.dispatchNo,
+        orderNo: order.orderNo,
+        durationMinutes: gd.durationMinutes,
+        desiredStartAt: gd.desiredStartAt?.toISOString() ?? null,
+        roundClosesAt: round.closesAt.toISOString(),
+        lines: lines.map((line) => {
+          const lineApps = applications.filter((a) => a.lineId === line.id);
+          const mine = lineApps.find((a) => a.playerId === player.id);
+          return {
+            lineId: line.id,
+            positionLabel: line.positionLabel,
+            requiredCount: line.requiredCount,
+            appliedCount: lineApps.filter((a) => a.status === "APPLIED").length,
+            myApplicationId: mine?.id ?? null,
+            myApplicationStatus: mine?.status ?? null,
+          };
+        }),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 陪玩端「我的接单」（Task 4）：报名状态、是否可自助取消，以及选中后落下的档位 id
+   * （档位是开始/结束服务与报单的入口）。释放过的档位不再返回，玩家可重新报名。
+   */
+  async playerApplications(
+    tenantId: string,
+    accountId: string,
+  ): Promise<PlayerApplicationView[]> {
+    const player = await this.client.playerProfile.findFirst({
+      where: { tenantId, tenantAccountId: accountId },
+    });
+    if (!player) throw new DispatchNotFoundError("陪玩档案未绑定");
+    const applications = await this.client.gameDispatchApplication.findMany({
+      where: { tenantId, playerId: player.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    const out: PlayerApplicationView[] = [];
+    for (const application of applications) {
+      const order = await this.client.order.findFirst({
+        where: { tenantId, id: application.orderId },
+        select: { orderNo: true, status: true },
+      });
+      const gd = await this.client.gameDispatchOrder.findFirst({
+        where: { tenantId, orderId: application.orderId },
+        select: { dispatchNo: true },
+      });
+      const slot = await this.client.orderSlot.findFirst({
+        where: {
+          tenantId,
+          applicationId: application.id,
+          status: { not: "RELEASED" },
+        },
+        select: { id: true },
+      });
+      out.push({
+        applicationId: application.id,
+        orderId: application.orderId,
+        dispatchNo: gd?.dispatchNo ?? "",
+        orderNo: order?.orderNo ?? "",
+        orderStatus: order?.status ?? "UNKNOWN",
+        lineId: application.lineId,
+        positionLabel: application.positionLabel,
+        status: application.status,
+        createdAt: application.createdAt.toISOString(),
+        slotId: slot?.id ?? null,
+        canWithdraw: application.status === "APPLIED" && slot === null,
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 商家释放名额（Task 4 / 设计规格 §3.5）：档位标记 RELEASED（保留单价快照与审计），
+   * 报名置 RELEASED，订单回到报名阶段并重开一轮报名，让老板可以重新选人。
+   */
+  async releaseSlot(
+    tenantId: string,
+    actorId: string,
+    slotId: string,
+    input: { reason?: string } = {},
+  ): Promise<SlotReleaseView> {
+    return this.client.$transaction(async (tx) => {
+      const slot = await tx.orderSlot.findFirst({
+        where: { tenantId, id: slotId },
+      });
+      if (!slot) throw new DispatchNotFoundError("服务档位不存在");
+      if (slot.status === "RELEASED")
+        throw new DispatchConflictError("该名额已释放");
+      const session = await tx.slotSession.findFirst({
+        where: { tenantId, orderSlotId: slot.id },
+        select: { id: true },
+      });
+      if (session)
+        throw new DispatchStateError("该档位已开始服务，不能释放名额");
+      const earning = await tx.slotEarning.findFirst({
+        where: { tenantId, orderSlotId: slot.id },
+        select: { id: true },
+      });
+      if (earning)
+        throw new DispatchStateError("该档位已产生金额，不能释放名额");
+      const gd = await tx.gameDispatchOrder.findFirst({
+        where: { tenantId, orderId: slot.orderId },
+      });
+      if (!gd) throw new DispatchNotFoundError();
+      // 订单行锁：与报名/关单串行化，保证「回到报名阶段 + 重开一轮」的原子性。
+      await lockOrderRow(tx, tenantId, slot.orderId);
+      const order = await tx.order.findFirst({
+        where: { tenantId, id: slot.orderId },
+      });
+      if (!order) throw new DispatchNotFoundError();
+      if (!["DISPATCHING", "ASSIGNED"].includes(order.status))
+        throw new DispatchStateError("订单不在可释放名额的阶段");
+      const now = new Date();
+      await tx.orderSlot.update({
+        where: { id: slot.id },
+        data: { status: "RELEASED" },
+      });
+      const application = await tx.gameDispatchApplication.findFirst({
+        where: { tenantId, id: slot.applicationId },
+      });
+      if (application && application.status === "SELECTED") {
+        await tx.gameDispatchApplication.update({
+          where: { id: application.id },
+          data: { status: "RELEASED" },
+        });
+      }
+      const roundCount = await tx.gameDispatchRound.count({
+        where: { tenantId, orderId: slot.orderId },
+      });
+      await tx.gameDispatchRound.updateMany({
+        where: { tenantId, orderId: slot.orderId, status: "OPEN" },
+        data: { status: "CLOSED" },
+      });
+      // 与 publish 同一报名窗口口径（10 分钟），重新开放报名。
+      const round = await tx.gameDispatchRound.create({
+        data: {
+          tenantId,
+          dispatchOrderId: gd.id,
+          orderId: slot.orderId,
+          roundNo: roundCount + 1,
+          opensAt: now,
+          closesAt: new Date(now.getTime() + 10 * 60 * 1000),
+          status: "OPEN",
+        },
+      });
+      const fromStatus = order.status;
+      if (fromStatus !== "DISPATCHING") {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: "DISPATCHING" },
+        });
+      }
+      await tx.orderEvent.create({
+        data: {
+          tenantId,
+          orderId: order.id,
+          eventType: "GAME_DISPATCH_SLOT_RELEASED",
+          fromStatus,
+          toStatus: "DISPATCHING",
+          actorType: "tenant_account",
+          actorId,
+          payload: {
+            slotId: slot.id,
+            playerId: slot.playerId,
+            reason: input.reason ?? null,
+          },
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          actorType: "tenant_account",
+          actorId,
+          action: "game_dispatch.slot_release",
+          resourceType: "slot",
+          resourceId: slot.id,
+          summary: `释放名额（订单 ${order.orderNo}，陪玩 ${slot.playerId}）${
+            input.reason ? `：${input.reason}` : ""
+          }`,
+        },
+      });
+      return {
+        slotId: slot.id,
+        orderId: order.id,
+        playerId: slot.playerId,
+        orderStatus: "DISPATCHING",
+        roundNo: round.roundNo,
+        releasedAt: now.toISOString(),
+      };
+    });
   }
 
   async staffRemove(
@@ -1361,7 +1638,8 @@ export class GameDispatchService {
         FOR UPDATE`;
       const balance = locks[0]?.balance_fen ?? 0n;
       const slotRows = await tx.orderSlot.findMany({
-        where: { tenantId, orderId },
+        // 释放过的档位不再占用名额、也不参与余额估算（Task 4）。
+        where: { tenantId, orderId, status: { not: "RELEASED" } },
       });
       const lines = await tx.gameDispatchLine.findMany({
         where: { tenantId, orderId },
@@ -1443,26 +1721,42 @@ export class GameDispatchService {
         if (unitPriceFen === undefined) {
           throw new DispatchInputError("位置行不存在");
         }
-        await tx.orderSlot.create({
-          data: {
-            tenantId,
-            orderId,
-            dispatchOrderId: found.gd.id,
-            lineId: app.lineId,
-            applicationId: app.id,
-            playerId: app.playerId,
-            positionLabel: app.positionLabel,
-            unitPriceFen,
-            createdBy: actorId,
-          },
+        // order_slots 的唯一键是 (tenant_id, order_id, player_id)：同一陪玩在本单只有一行档位。
+        // 「释放名额」后该行保留（status=RELEASED）作为留痕，重新选中同一陪玩时复用这一行
+        // 而不是新插一行（否则会撞唯一键），并刷新为本次选中的报名与单价快照。
+        const existingSlot = await tx.orderSlot.findFirst({
+          where: { tenantId, orderId, playerId: app.playerId },
+          select: { id: true },
         });
+        const slotData = {
+          lineId: app.lineId,
+          applicationId: app.id,
+          positionLabel: app.positionLabel,
+          unitPriceFen,
+          status: "SELECTED",
+        };
+        await (existingSlot
+          ? tx.orderSlot.update({
+              where: { id: existingSlot.id },
+              data: { ...slotData, createdBy: actorId },
+            })
+          : tx.orderSlot.create({
+              data: {
+                tenantId,
+                orderId,
+                dispatchOrderId: found.gd.id,
+                playerId: app.playerId,
+                createdBy: actorId,
+                ...slotData,
+              },
+            }));
         await tx.gameDispatchApplication.update({
           where: { id: app.id },
           data: { status: "SELECTED" },
         });
       }
       const selected = await tx.orderSlot.count({
-        where: { tenantId, orderId },
+        where: { tenantId, orderId, status: { not: "RELEASED" } },
       });
       const totalRequired = lines.reduce((acc, l) => acc + l.requiredCount, 0);
       if (selected >= totalRequired) {

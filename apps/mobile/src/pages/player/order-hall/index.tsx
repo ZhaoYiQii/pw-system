@@ -55,6 +55,37 @@ interface ServiceSlotsView {
   orderId: string;
   slots: ServiceSlotView[];
 }
+/** 算价模型 Task 4：game-dispatch 报名大厅与我的报名（陪玩端报名/取消入口）。 */
+interface GdHallLine {
+  lineId: string;
+  positionLabel: string;
+  requiredCount: number;
+  appliedCount: number;
+  myApplicationId: string | null;
+  myApplicationStatus: string | null;
+}
+interface GdHallOrder {
+  orderId: string;
+  dispatchNo: string;
+  orderNo: string;
+  durationMinutes: number;
+  desiredStartAt: string | null;
+  roundClosesAt: string | null;
+  lines: GdHallLine[];
+}
+interface GdApplication {
+  applicationId: string;
+  orderId: string;
+  dispatchNo: string;
+  orderNo: string;
+  orderStatus: string;
+  lineId: string;
+  positionLabel: string;
+  status: string;
+  createdAt: string;
+  slotId: string | null;
+  canWithdraw: boolean;
+}
 type HallView = "hall" | "service" | "applications";
 
 const APPLICATION_STATUS: Record<string, string> = {
@@ -70,6 +101,16 @@ const REPORT_STATUS: Record<string, string> = {
   PENDING_REVIEW: "待客服审批",
   APPROVED: "已审批",
   REJECTED: "已驳回，可重新报单",
+};
+
+/** game-dispatch 报名状态（设计规格 §3.5）。 */
+const GD_APPLICATION_STATUS: Record<string, string> = {
+  APPLIED: "报名待选",
+  SELECTED: "已被选中",
+  RELEASED: "名额已释放",
+  WITHDRAWN: "已取消报名",
+  REJECTED: "已被门店移除",
+  EXPIRED: "已失效",
 };
 
 function formatDateTime(value: string | null): string {
@@ -92,6 +133,8 @@ export default function OrderHallPage() {
   const [busy, setBusy] = useState(false);
   const [hall, setHall] = useState<HallItem[]>([]);
   const [mine, setMine] = useState<MyApp[]>([]);
+  const [gdHall, setGdHall] = useState<GdHallOrder[]>([]);
+  const [gdMine, setGdMine] = useState<GdApplication[]>([]);
   const [sessions, setSessions] = useState<Record<string, SessionView>>({});
   const [reportSlots, setReportSlots] = useState<
     Record<string, ServiceSlotView[]>
@@ -128,12 +171,30 @@ export default function OrderHallPage() {
         "/api/v1/tenant/player/applications",
         { token: accessToken },
       );
+      // 算价模型 Task 4：game-dispatch 主线的大厅与我的报名（报名/取消/服务都挂在这里）。
+      const [gdHallOrders, gdApplications] = await Promise.all([
+        apiAdapter
+          .request<GdHallOrder[]>("/api/v1/tenant/game-dispatch/player/hall", {
+            token: accessToken,
+          })
+          .catch(() => [] as GdHallOrder[]),
+        apiAdapter
+          .request<GdApplication[]>(
+            "/api/v1/tenant/game-dispatch/player/applications",
+            { token: accessToken },
+          )
+          .catch(() => [] as GdApplication[]),
+      ]);
       setHall(availableOrders);
       setMine(applications);
+      setGdHall(gdHallOrders);
+      setGdMine(gdApplications);
       const next: Record<string, SessionView> = {};
       const nextSlots: Record<string, ServiceSlotView[]> = {};
+      const slotOrderIds: string[] = [];
       for (const application of applications) {
         if (application.status !== "SELECTED") continue;
+        slotOrderIds.push(application.orderId);
         try {
           const sessionView = await apiAdapter.request<SessionView | null>(
             `/api/v1/tenant/orders/${application.orderId}/session`,
@@ -155,15 +216,20 @@ export default function OrderHallPage() {
             durationSeconds: null,
           };
         }
-        // 报单挂在 game-dispatch 主线上；经典流程订单这里会返回空数组。
+      }
+      for (const application of gdApplications) {
+        if (application.slotId) slotOrderIds.push(application.orderId);
+      }
+      // 报单与开始/结束服务挂在 game-dispatch 档位上；经典流程订单这里会返回空数组。
+      for (const orderId of Array.from(new Set(slotOrderIds))) {
         try {
           const slotsView = await apiAdapter.request<ServiceSlotsView>(
-            `/api/v1/tenant/game-dispatch/player/orders/${application.orderId}/service-slots`,
+            `/api/v1/tenant/game-dispatch/player/orders/${orderId}/service-slots`,
             { token: accessToken },
           );
-          nextSlots[application.orderId] = slotsView.slots;
+          nextSlots[orderId] = slotsView.slots;
         } catch {
-          nextSlots[application.orderId] = [];
+          nextSlots[orderId] = [];
         }
       }
       setSessions(next);
@@ -365,6 +431,96 @@ export default function OrderHallPage() {
     }
   };
 
+  /** game-dispatch 报名（Task 4 / 设计规格 §3.5）：未选中前可自由报名。 */
+  const applyGd = async (orderId: string, lineId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/lines/${lineId}/applications`,
+        { method: "POST", token, body: {} },
+      );
+      setMsg("报名已提交，等待门店选人。");
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 取消报名：选中锁定后服务端返回 409（APPLICATION_LOCKED），需门店释放名额。 */
+  const withdrawGd = async (applicationId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request(
+        `/api/v1/tenant/game-dispatch/applications/${applicationId}/withdraw`,
+        { method: "POST", token, body: {} },
+      );
+      setMsg("已取消报名。");
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 开始服务：开始后立刻上传开始证据（既有证据通道，用途 START）。 */
+  const startGdSession = async (slotId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiAdapter.request(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/session/start`,
+        { method: "POST", token, body: {} },
+      );
+      const evidence = await mediaAdapter.chooseEvidence({ capture: true });
+      await apiAdapter.uploadBytes(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/session/evidence?evidenceType=START`,
+        token,
+        evidence.name,
+        evidence.bytes,
+      );
+      setMsg("服务已开始，开始证据已保存。");
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 结束服务：先上传结束证据再结束；金额在报单审批后产生（Task 3）。 */
+  const endGdSession = async (slotId: string) => {
+    if (!token) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const evidence = await mediaAdapter.chooseEvidence({ capture: true });
+      await apiAdapter.uploadBytes(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/session/evidence?evidenceType=END`,
+        token,
+        evidence.name,
+        evidence.bytes,
+      );
+      await apiAdapter.request(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/session/end`,
+        { method: "POST", token, body: {} },
+      );
+      setMsg("服务已结束，请填写报单申报时长。");
+      await load(token);
+    } catch (error) {
+      setMsg(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const selectedApplications = mine.filter(
     (application) => application.status === "SELECTED",
   );
@@ -438,7 +594,10 @@ export default function OrderHallPage() {
             msg.startsWith("证据已") ||
             msg.startsWith("开始截图已") ||
             msg.startsWith("结束截图已") ||
-            msg.startsWith("报单已提交")
+            msg.startsWith("报单已提交") ||
+            msg.startsWith("报名已提交") ||
+            msg.startsWith("已取消报名") ||
+            msg.startsWith("服务已")
               ? "success"
               : "error"
           }
@@ -504,6 +663,60 @@ export default function OrderHallPage() {
               </View>
             </View>
           ))}
+          {gdHall.length ? (
+            <View className="hall-gd-section">
+              <Text className="hall-report-title">
+                游戏派单 · 可报名（选中前可自助取消）
+              </Text>
+              {gdHall.map((order) => (
+                <View key={order.orderId} className="pw-card hall-order-card">
+                  <View className="hall-match-strip">
+                    <Text>GAME DISPATCH</Text>
+                    <Text>{formatDateTime(order.desiredStartAt)}</Text>
+                  </View>
+                  <View className="hall-order-heading">
+                    <Text className="pw-card-title">
+                      派单 #{order.dispatchNo}
+                    </Text>
+                    <Text className="hall-order-no">#{order.orderNo}</Text>
+                  </View>
+                  <Text className="pw-muted">
+                    服务时长 · {order.durationMinutes} 分钟 · 报名截止{" "}
+                    {formatDateTime(order.roundClosesAt)}
+                  </Text>
+                  {order.lines.map((line) => (
+                    <View
+                      key={line.lineId}
+                      className="pw-row-between hall-gd-line"
+                    >
+                      <View className="pw-row-copy">
+                        <Text className="pw-card-title">
+                          {line.positionLabel}
+                        </Text>
+                        <Text className="pw-muted">
+                          已报名 {line.appliedCount} / 需要 {line.requiredCount}
+                          {line.myApplicationStatus === "APPLIED"
+                            ? " · 我已报名"
+                            : ""}
+                        </Text>
+                      </View>
+                      <Button
+                        className="pw-button pw-button-small pw-button-soft"
+                        disabled={
+                          busy || line.myApplicationStatus === "APPLIED"
+                        }
+                        onClick={() => void applyGd(order.orderId, line.lineId)}
+                      >
+                        {line.myApplicationStatus === "APPLIED"
+                          ? "已报名"
+                          : "报名"}
+                      </Button>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : null}
         </>
       ) : null}
 
@@ -698,6 +911,153 @@ export default function OrderHallPage() {
               </View>
             );
           })}
+          {gdMine
+            .filter((application) => application.slotId !== null)
+            .map((application) => {
+              const slot = (reportSlots[application.orderId] ?? []).find(
+                (item) => item.orderSlotId === application.slotId,
+              );
+              const session = slot?.session ?? null;
+              const reportStatus = session?.reportStatus ?? "NOT_REPORTED";
+              const shots = reportShots[application.slotId ?? ""] ?? {
+                start: false,
+                end: false,
+              };
+              const running = session?.status === "STARTED";
+              const ended = session?.status === "ENDED";
+              const editable =
+                ended &&
+                (reportStatus === "NOT_REPORTED" ||
+                  reportStatus === "REJECTED");
+              return (
+                <View key={application.applicationId} className="pw-card">
+                  <View className="pw-row-between">
+                    <View className="pw-row-copy">
+                      <Text className="pw-card-title">
+                        {application.positionLabel} · 派单 #
+                        {application.dispatchNo}
+                      </Text>
+                      <Text className="pw-muted">
+                        {running
+                          ? "服务进行中，请上传证据后结束"
+                          : ended
+                            ? "服务已结束，请提交报单"
+                            : "待开始服务"}
+                      </Text>
+                    </View>
+                    <Text
+                      className={`pw-badge ${running ? "pw-badge-live" : "pw-badge-wait"}`}
+                    >
+                      {ended
+                        ? (REPORT_STATUS[reportStatus] ?? reportStatus)
+                        : running
+                          ? "进行中"
+                          : "待开始"}
+                    </Text>
+                  </View>
+                  {slot ? (
+                    <Text className="pw-muted">
+                      单价 {formatFenYuan(slot.unitPriceFen)} / 小时
+                      {typeof session?.durationSeconds === "number"
+                        ? ` · 证据计时 ${Math.floor(session.durationSeconds / 60)} 分钟（仅作对照）`
+                        : ""}
+                    </Text>
+                  ) : null}
+                  <View className="hall-session-actions">
+                    {!running && !ended && application.slotId ? (
+                      <Button
+                        className="pw-button pw-button-primary"
+                        disabled={busy}
+                        onClick={() =>
+                          void startGdSession(application.slotId as string)
+                        }
+                      >
+                        开始服务（拍照留证）
+                      </Button>
+                    ) : null}
+                    {running && application.slotId ? (
+                      <Button
+                        className="pw-button pw-button-plain"
+                        disabled={busy}
+                        onClick={() =>
+                          void endGdSession(application.slotId as string)
+                        }
+                      >
+                        结束服务（先拍照/录像）
+                      </Button>
+                    ) : null}
+                  </View>
+                  {reportStatus === "PENDING_REVIEW" ? (
+                    <Text className="pw-muted">
+                      已申报 {session?.declaredDurationMinutes ?? 0}{" "}
+                      分钟，等待客服审批。
+                    </Text>
+                  ) : null}
+                  {reportStatus === "APPROVED" ? (
+                    <Text className="pw-stat-value">
+                      核定 {session?.declaredDurationMinutes ?? 0} 分钟 · 实收{" "}
+                      {formatFenYuan(session?.earningFen ?? "0")}
+                    </Text>
+                  ) : null}
+                  {reportStatus === "REJECTED" && session?.reportReviewNote ? (
+                    <Text className="pw-muted">
+                      驳回原因：{session.reportReviewNote}
+                    </Text>
+                  ) : null}
+                  {editable && application.slotId ? (
+                    <>
+                      <Input
+                        className="pw-input"
+                        type="number"
+                        placeholder="总时长（分钟，15–1440）"
+                        value={minutesDraft[application.slotId] ?? ""}
+                        onInput={(event) =>
+                          setMinutesDraft((prev) => ({
+                            ...prev,
+                            [application.slotId as string]: event.detail.value,
+                          }))
+                        }
+                      />
+                      <View className="hall-session-actions">
+                        <Button
+                          className={`pw-button pw-button-small ${shots.start ? "pw-button-dark" : "pw-button-plain"}`}
+                          disabled={busy}
+                          onClick={() =>
+                            void uploadReportShot(
+                              application.slotId as string,
+                              "REPORT_START",
+                            )
+                          }
+                        >
+                          {shots.start ? "开始截图已传" : "上传开始截图"}
+                        </Button>
+                        <Button
+                          className={`pw-button pw-button-small ${shots.end ? "pw-button-dark" : "pw-button-plain"}`}
+                          disabled={busy}
+                          onClick={() =>
+                            void uploadReportShot(
+                              application.slotId as string,
+                              "REPORT_END",
+                            )
+                          }
+                        >
+                          {shots.end ? "结束截图已传" : "上传结束截图"}
+                        </Button>
+                      </View>
+                      <Button
+                        className="pw-button pw-button-primary"
+                        disabled={busy || !shots.start || !shots.end}
+                        onClick={() =>
+                          void submitReport(application.slotId as string)
+                        }
+                      >
+                        提交报单
+                      </Button>
+                    </>
+                  ) : null}
+                </View>
+              );
+            })}
         </>
       ) : null}
 
@@ -733,6 +1093,64 @@ export default function OrderHallPage() {
               ) : null}
             </View>
           ))}
+          {gdMine.length ? (
+            <>
+              <Text className="hall-report-title">游戏派单 · 我的报名</Text>
+              {gdMine.map((application) => (
+                <View key={application.applicationId} className="pw-card">
+                  <View className="pw-row-between">
+                    <View className="pw-row-copy">
+                      <Text className="pw-card-title">
+                        {application.positionLabel} · 派单 #
+                        {application.dispatchNo}
+                      </Text>
+                      <Text className="pw-muted">
+                        报名于 {formatDateTime(application.createdAt)}
+                      </Text>
+                    </View>
+                    <Text
+                      className={`pw-badge ${application.status === "SELECTED" ? "pw-badge-live" : "pw-badge-wait"}`}
+                    >
+                      {GD_APPLICATION_STATUS[application.status] ??
+                        application.status}
+                    </Text>
+                  </View>
+                  {application.status === "SELECTED" &&
+                  application.slotId === null ? (
+                    <Text className="pw-muted">
+                      已被选中但档位不存在，请联系门店确认。
+                    </Text>
+                  ) : null}
+                  {application.status === "SELECTED" && application.slotId ? (
+                    <Button
+                      className="pw-button pw-button-small pw-button-dark"
+                      onClick={() => setView("service")}
+                    >
+                      查看场次
+                    </Button>
+                  ) : null}
+                  {application.status === "APPLIED" ? (
+                    <>
+                      <Button
+                        className="pw-button pw-button-small pw-button-plain"
+                        disabled={busy || !application.canWithdraw}
+                        onClick={() =>
+                          void withdrawGd(application.applicationId)
+                        }
+                      >
+                        取消报名
+                      </Button>
+                      {!application.canWithdraw ? (
+                        <Text className="pw-muted">
+                          已被选中锁定，如需取消请联系门店释放名额。
+                        </Text>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+              ))}
+            </>
+          ) : null}
         </View>
       ) : null}
     </PlayerPage>

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpException,
   HttpStatus,
@@ -10,14 +11,31 @@ import {
   Post,
   Req,
 } from "@nestjs/common";
-import { ApiNotFoundResponse, ApiOkResponse } from "@nestjs/swagger";
+import {
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiBody,
+  ApiConflictResponse,
+} from "@nestjs/swagger";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import {
+  dataArraySchema,
   gameDispatchOrderViewSchema,
   genericTemplateErrorSchema,
+  playerApplicationViewSchema,
+  playerBreachBodySchema,
+  playerBreachViewSchema,
+  playerHallOrderViewSchema,
+  slotReleaseBodySchema,
+  slotReleaseViewSchema,
 } from "../../../openapi/schemas.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { GameDispatchService } from "../application/game-dispatch.service.js";
+import { PlayerBreachService } from "../application/player-breach.service.js";
 import {
   DispatchConflictError,
   DispatchInputError,
@@ -37,6 +55,8 @@ export class GameDispatchController {
   constructor(
     @Inject(GameDispatchService)
     private readonly dispatch: GameDispatchService,
+    @Inject(PlayerBreachService)
+    private readonly breaches: PlayerBreachService,
   ) {}
 
   private mapError(error: unknown): never {
@@ -361,6 +381,125 @@ export class GameDispatchController {
         id,
       );
       return { data: { ok: true } };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  /** 陪玩端报名大厅（Task 4 / 设计规格 §3.5）：只列仍可报名的派单与位置行。 */
+  @TenantScope()
+  @Permissions("dispatch.manage")
+  @Get("player/hall")
+  @ApiOperation({
+    summary: "陪玩端报名大厅（含每个位置行的报名情况与我的报名）",
+  })
+  @ApiOkResponse({
+    schema: dataArraySchema(playerHallOrderViewSchema) as never,
+  })
+  @ApiForbiddenResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
+  async playerHall(@Req() req: AuthenticatedRequest) {
+    if (req.principal?.role !== "PLAYER")
+      throw new ForbiddenException("需要陪玩身份");
+    try {
+      return {
+        data: await this.dispatch.playerHall(
+          tenantIdOf(req),
+          req.principal.sub,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  /** 陪玩端「我的接单」（Task 4）：报名状态 + 选中后的档位 id（服务与报单入口）。 */
+  @TenantScope()
+  @Permissions("dispatch.manage")
+  @Get("player/applications")
+  @ApiOperation({ summary: "陪玩端我的报名与选中档位（含是否可自助取消）" })
+  @ApiOkResponse({
+    schema: dataArraySchema(playerApplicationViewSchema) as never,
+  })
+  @ApiForbiddenResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
+  async playerApplications(@Req() req: AuthenticatedRequest) {
+    if (req.principal?.role !== "PLAYER")
+      throw new ForbiddenException("需要陪玩身份");
+    try {
+      return {
+        data: await this.dispatch.playerApplications(
+          tenantIdOf(req),
+          req.principal.sub,
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  /** 商家释放名额（Task 4 / 设计规格 §3.5）：选中锁定后唯一的重开报名入口。 */
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Post("slots/:slotId/release")
+  @ApiOperation({
+    summary: "商家释放名额（档位置 RELEASED、订单回到报名阶段并重开一轮）",
+  })
+  @ApiBody({ schema: slotReleaseBodySchema as never })
+  @ApiCreatedResponse({ schema: slotReleaseViewSchema as never })
+  @ApiBadRequestResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiConflictResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
+  async releaseSlot(
+    @Req() req: AuthenticatedRequest,
+    @Param("slotId") slotId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    try {
+      return {
+        data: await this.dispatch.releaseSlot(
+          tenantIdOf(req),
+          req.principal?.sub ?? "system",
+          slotId,
+          typeof body.reason === "string" && body.reason.length > 0
+            ? { reason: body.reason }
+            : {},
+        ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  /** 记录违约（Task 4 / 设计规格 §3.5）：人工认定后写库 + 审计 + 通知老板。 */
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Post("orders/:orderId/player-breaches")
+  @ApiOperation({ summary: "记录陪玩违约（写库 + 审计 + 通知老板）" })
+  @ApiBody({ schema: playerBreachBodySchema as never })
+  @ApiCreatedResponse({ schema: playerBreachViewSchema as never })
+  @ApiBadRequestResponse({ schema: genericTemplateErrorSchema as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
+  async recordBreach(
+    @Req() req: AuthenticatedRequest,
+    @Param("orderId") orderId: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    try {
+      return {
+        data: await this.breaches.record(
+          tenantIdOf(req),
+          req.principal?.sub ?? "system",
+          {
+            orderId,
+            playerId: String(body.playerId ?? ""),
+            ...(body.orderSlotId === undefined || body.orderSlotId === null
+              ? {}
+              : { orderSlotId: String(body.orderSlotId) }),
+            reason: String(body.reason ?? ""),
+          },
+        ),
+      };
     } catch (error) {
       this.mapError(error);
     }

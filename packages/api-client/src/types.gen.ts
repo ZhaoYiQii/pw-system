@@ -7785,6 +7785,450 @@ export type GameDispatchWithdrawResponses = {
     201: unknown;
 };
 
+export type GameDispatchPlayerHallData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/player/hall';
+};
+
+export type GameDispatchPlayerHallErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GameDispatchPlayerHallError = GameDispatchPlayerHallErrors[keyof GameDispatchPlayerHallErrors];
+
+export type GameDispatchPlayerHallResponses = {
+    200: {
+        data: Array<{
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 派单号
+             */
+            dispatchNo: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 服务时长（分钟）
+             */
+            durationMinutes: number;
+            /**
+             * 期望开始时间
+             */
+            desiredStartAt: string | null;
+            /**
+             * 本轮报名截止时间
+             */
+            roundClosesAt: string | null;
+            /**
+             * 可报名的位置行
+             */
+            lines: Array<{
+                /**
+                 * 位置行 id
+                 */
+                lineId: string;
+                /**
+                 * 岗位名称
+                 */
+                positionLabel: string;
+                /**
+                 * 需要人数
+                 */
+                requiredCount: number;
+                /**
+                 * 当前报名人数（APPLIED）
+                 */
+                appliedCount: number;
+                /**
+                 * 我在该行的报名 id；未报名为 null
+                 */
+                myApplicationId: string | null;
+                /**
+                 * 我在该行的报名状态（APPLIED/SELECTED/…）；未报名为 null
+                 */
+                myApplicationStatus: string | null;
+            }>;
+        }>;
+    };
+};
+
+export type GameDispatchPlayerHallResponse = GameDispatchPlayerHallResponses[keyof GameDispatchPlayerHallResponses];
+
+export type GameDispatchPlayerApplicationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/player/applications';
+};
+
+export type GameDispatchPlayerApplicationsErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    403: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GameDispatchPlayerApplicationsError = GameDispatchPlayerApplicationsErrors[keyof GameDispatchPlayerApplicationsErrors];
+
+export type GameDispatchPlayerApplicationsResponses = {
+    200: {
+        data: Array<{
+            /**
+             * 报名 id
+             */
+            applicationId: string;
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 派单号
+             */
+            dispatchNo: string;
+            /**
+             * 订单号
+             */
+            orderNo: string;
+            /**
+             * 订单状态
+             */
+            orderStatus: string;
+            /**
+             * 位置行 id
+             */
+            lineId: string;
+            /**
+             * 岗位名称
+             */
+            positionLabel: string;
+            /**
+             * 报名状态
+             */
+            status: string;
+            /**
+             * 报名时间
+             */
+            createdAt: string;
+            /**
+             * 选中后落下的档位 id（开始/结束服务与报单入口）；未选中为 null
+             */
+            slotId: string | null;
+            /**
+             * 是否可自助取消（未选中且报名仍为 APPLIED）
+             */
+            canWithdraw: boolean;
+        }>;
+    };
+};
+
+export type GameDispatchPlayerApplicationsResponse = GameDispatchPlayerApplicationsResponses[keyof GameDispatchPlayerApplicationsResponses];
+
+export type GameDispatchReleaseSlotData = {
+    /**
+     * 释放名额请求
+     */
+    body: {
+        /**
+         * 释放原因（写入审计留痕）
+         */
+        reason?: string | null;
+    };
+    path: {
+        slotId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/slots/{slotId}/release';
+};
+
+export type GameDispatchReleaseSlotErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GameDispatchReleaseSlotError = GameDispatchReleaseSlotErrors[keyof GameDispatchReleaseSlotErrors];
+
+export type GameDispatchReleaseSlotResponses = {
+    /**
+     * 释放名额结果（档位标记 RELEASED，订单回到报名阶段并重开一轮）
+     */
+    201: {
+        /**
+         * 释放名额结果
+         */
+        data: {
+            /**
+             * 档位 id
+             */
+            slotId: string;
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 被释放的陪玩 id
+             */
+            playerId: string;
+            /**
+             * 释放后的订单状态（回到 DISPATCHING）
+             */
+            orderStatus: string;
+            /**
+             * 重开的报名轮次号
+             */
+            roundNo: number;
+            /**
+             * 释放时间
+             */
+            releasedAt: string;
+        };
+    };
+};
+
+export type GameDispatchReleaseSlotResponse = GameDispatchReleaseSlotResponses[keyof GameDispatchReleaseSlotResponses];
+
+export type GameDispatchRecordBreachData = {
+    /**
+     * 记录违约请求
+     */
+    body: {
+        /**
+         * 违约陪玩 id
+         */
+        playerId: string;
+        /**
+         * 相关档位 id（可选，必须属于该订单与陪玩）
+         */
+        orderSlotId?: string | null;
+        /**
+         * 违约事由（必填，写入审计与通知）
+         */
+        reason: string;
+    };
+    path: {
+        orderId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/player-breaches';
+};
+
+export type GameDispatchRecordBreachErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GameDispatchRecordBreachError = GameDispatchRecordBreachErrors[keyof GameDispatchRecordBreachErrors];
+
+export type GameDispatchRecordBreachResponses = {
+    /**
+     * 违约记录（同时写审计并经 Outbox 通知老板）
+     */
+    201: {
+        /**
+         * 违约记录
+         */
+        data: {
+            /**
+             * 违约记录 id
+             */
+            id: string;
+            /**
+             * 陪玩 id
+             */
+            playerId: string;
+            /**
+             * 陪玩名称
+             */
+            playerName: string;
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 相关档位 id；未关联为 null
+             */
+            orderSlotId: string | null;
+            /**
+             * 违约事由
+             */
+            reason: string;
+            /**
+             * 记录时间
+             */
+            createdAt: string;
+        };
+    };
+};
+
+export type GameDispatchRecordBreachResponse = GameDispatchRecordBreachResponses[keyof GameDispatchRecordBreachResponses];
+
 export type GameDispatchStaffRemoveData = {
     body?: never;
     path: {

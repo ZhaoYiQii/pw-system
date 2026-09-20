@@ -1711,3 +1711,173 @@ export const slotReportReviewBodySchema: OpenApiSchema = object(
   },
   "客服审批报单",
 );
+
+/**
+ * 算价模型 Task 4 契约：陪玩端报名大厅 / 我的报名、商家释放名额与违约记录。
+ * 金额不出现在这些 schema 里（单价与金额由报单与结算链路返回）。
+ */
+export const playerHallLineSchema: OpenApiSchema = object(
+  [
+    "lineId",
+    "positionLabel",
+    "requiredCount",
+    "appliedCount",
+    "myApplicationId",
+    "myApplicationStatus",
+  ],
+  {
+    lineId: { type: "string", format: "uuid", description: "位置行 id" },
+    positionLabel: stringField("岗位名称"),
+    requiredCount: integer("需要人数", 0),
+    appliedCount: integer("当前报名人数（APPLIED）", 0),
+    myApplicationId: {
+      type: "string",
+      format: "uuid",
+      nullable: true,
+      description: "我在该行的报名 id；未报名为 null",
+    },
+    myApplicationStatus: {
+      type: "string",
+      nullable: true,
+      description: "我在该行的报名状态（APPLIED/SELECTED/…）；未报名为 null",
+    },
+  },
+  "报名大厅位置行",
+);
+
+export const playerHallOrderViewSchema: OpenApiSchema = object(
+  [
+    "orderId",
+    "dispatchNo",
+    "orderNo",
+    "durationMinutes",
+    "desiredStartAt",
+    "roundClosesAt",
+    "lines",
+  ],
+  {
+    orderId: { type: "string", format: "uuid", description: "订单 id" },
+    dispatchNo: stringField("派单号"),
+    orderNo: stringField("订单号"),
+    durationMinutes: integer("服务时长（分钟）", 1),
+    desiredStartAt: dateTime("期望开始时间", true),
+    roundClosesAt: dateTime("本轮报名截止时间", true),
+    lines: {
+      type: "array",
+      description: "可报名的位置行",
+      items: playerHallLineSchema,
+    },
+  },
+  "报名大厅订单",
+);
+
+export const playerApplicationViewSchema: OpenApiSchema = object(
+  [
+    "applicationId",
+    "orderId",
+    "dispatchNo",
+    "orderNo",
+    "orderStatus",
+    "lineId",
+    "positionLabel",
+    "status",
+    "createdAt",
+    "slotId",
+    "canWithdraw",
+  ],
+  {
+    applicationId: { type: "string", format: "uuid", description: "报名 id" },
+    orderId: { type: "string", format: "uuid", description: "订单 id" },
+    dispatchNo: stringField("派单号"),
+    orderNo: stringField("订单号"),
+    orderStatus: stringField("订单状态"),
+    lineId: { type: "string", format: "uuid", description: "位置行 id" },
+    positionLabel: stringField("岗位名称"),
+    status: stringField("报名状态"),
+    createdAt: dateTime("报名时间"),
+    slotId: {
+      type: "string",
+      format: "uuid",
+      nullable: true,
+      description:
+        "选中后落下的档位 id（开始/结束服务与报单入口）；未选中为 null",
+    },
+    canWithdraw: bool("是否可自助取消（未选中且报名仍为 APPLIED）"),
+  },
+  "我的报名",
+);
+
+export const slotReleaseBodySchema: OpenApiSchema = object(
+  [],
+  { reason: optionalString("释放原因（写入审计留痕）", true) },
+  "释放名额请求",
+);
+
+export const slotReleaseViewSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      ["slotId", "orderId", "playerId", "orderStatus", "roundNo", "releasedAt"],
+      {
+        slotId: { type: "string", format: "uuid", description: "档位 id" },
+        orderId: { type: "string", format: "uuid", description: "订单 id" },
+        playerId: {
+          type: "string",
+          format: "uuid",
+          description: "被释放的陪玩 id",
+        },
+        orderStatus: stringField("释放后的订单状态（回到 DISPATCHING）"),
+        roundNo: integer("重开的报名轮次号", 1),
+        releasedAt: dateTime("释放时间"),
+      },
+      "释放名额结果",
+    ),
+  ),
+  description: "释放名额结果（档位标记 RELEASED，订单回到报名阶段并重开一轮）",
+};
+
+export const playerBreachBodySchema: OpenApiSchema = object(
+  ["playerId", "reason"],
+  {
+    playerId: { type: "string", format: "uuid", description: "违约陪玩 id" },
+    orderSlotId: {
+      type: "string",
+      format: "uuid",
+      nullable: true,
+      description: "相关档位 id（可选，必须属于该订单与陪玩）",
+    },
+    reason: stringField("违约事由（必填，写入审计与通知）"),
+  },
+  "记录违约请求",
+);
+
+export const playerBreachViewSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      [
+        "id",
+        "playerId",
+        "playerName",
+        "orderId",
+        "orderSlotId",
+        "reason",
+        "createdAt",
+      ],
+      {
+        id: { type: "string", format: "uuid", description: "违约记录 id" },
+        playerId: { type: "string", format: "uuid", description: "陪玩 id" },
+        playerName: stringField("陪玩名称"),
+        orderId: { type: "string", format: "uuid", description: "订单 id" },
+        orderSlotId: {
+          type: "string",
+          format: "uuid",
+          nullable: true,
+          description: "相关档位 id；未关联为 null",
+        },
+        reason: stringField("违约事由"),
+        createdAt: dateTime("记录时间"),
+      },
+      "违约记录",
+    ),
+  ),
+  description: "违约记录（同时写审计并经 Outbox 通知老板）",
+};
