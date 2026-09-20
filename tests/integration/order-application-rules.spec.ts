@@ -608,4 +608,73 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
       await client.playerBreachRecord.count({ where: { tenantId, orderId } }),
     ).toBe(0);
   });
+
+  it("商家端可见性：派单详情带档位 id，违约记录可按订单/陪玩过滤", async () => {
+    const { orderId, lineId } = await publishedOrder();
+    await apply(playerTokens["p1"], orderId, lineId).expect(201);
+    const [applicationId] = await hireOwnerSelected(orderId, "p1");
+    const slot = await client.orderSlot.findFirstOrThrow({
+      where: { tenantId, applicationId },
+    });
+
+    // 派单详情：已选中的报名要带档位 id，商家端才能点「释放名额」。
+    const detail = (
+      await req(ownerToken).get(`${DISPATCH}/orders/${orderId}`).expect(200)
+    ).body.data as {
+      lines: { applications: { id: string; slotId: string | null }[] }[];
+    };
+    const detailApp = detail.lines
+      .flatMap((line) => line.applications)
+      .find((a) => a.id === applicationId);
+    expect(detailApp?.slotId).toBe(slot.id);
+
+    await req(csToken)
+      .post(`${DISPATCH}/orders/${orderId}/player-breaches`, {
+        playerId: playerIds["p1"],
+        orderSlotId: slot.id,
+        reason: "约定时间未到场",
+      })
+      .expect(201);
+
+    const byOrder = (
+      await req(csToken)
+        .get(`${DISPATCH}/player-breaches?orderId=${orderId}`)
+        .expect(200)
+    ).body.data as {
+      id: string;
+      playerId: string;
+      playerName: string;
+      orderId: string;
+      orderSlotId: string | null;
+      reason: string;
+      createdAt: string;
+    }[];
+    expect(byOrder).toHaveLength(1);
+    expect(byOrder[0]?.playerId).toBe(playerIds["p1"]);
+    expect(byOrder[0]?.playerName).toBe("阿一");
+    expect(byOrder[0]?.reason).toBe("约定时间未到场");
+    expect(byOrder[0]?.createdAt).toBeTruthy();
+
+    // 按陪玩过滤同样能看到（后续「陪玩详情看历史违约」用同一入口）。
+    const byPlayer = (
+      await req(ownerToken)
+        .get(`${DISPATCH}/player-breaches?playerId=${playerIds["p1"]}`)
+        .expect(200)
+    ).body.data as { id: string }[];
+    // 该陪玩的历史违约可能不止本单（本文件前面用例也记过一条），这里断言包含关系。
+    expect(byPlayer.map((r) => r.id)).toEqual(
+      expect.arrayContaining(byOrder.map((r) => r.id)),
+    );
+    // 别的陪玩看不到这条记录。
+    const otherPlayer = (
+      await req(ownerToken)
+        .get(`${DISPATCH}/player-breaches?playerId=${playerIds["p2"]}`)
+        .expect(200)
+    ).body.data as { id: string }[];
+    expect(otherPlayer).toHaveLength(0);
+    // 陪玩无权查看违约记录台账。
+    await req(playerTokens["p1"])
+      .get(`${DISPATCH}/player-breaches?playerId=${playerIds["p1"]}`)
+      .expect(403);
+  });
 });

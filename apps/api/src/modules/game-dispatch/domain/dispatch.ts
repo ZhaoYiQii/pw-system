@@ -26,6 +26,8 @@ export interface DispatchApplicationView {
   positionLabel: string;
   status: string;
   createdAt: string;
+  /** 选中后落下的档位 id（Task 5a：商家端据此提供「释放名额」）；未选中或被释放为 null。 */
+  slotId: string | null;
 }
 
 /**

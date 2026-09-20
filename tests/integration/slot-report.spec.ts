@@ -16,6 +16,7 @@ import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
 import { AppModule } from "../../apps/api/src/app.module.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
+import { drainOutbox } from "../../apps/api/src/modules/notifications/outbox.relay.js";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 
@@ -214,6 +215,11 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
         await client.orderRequirement.deleteMany({ where: { tenantId: tid } });
         await client.orderEvent.deleteMany({ where: { tenantId: tid } });
         await client.auditLog.deleteMany({ where: { tenantId: tid } });
+        // 「可结算」通知：先删投递再删 Outbox，避免外键挡住租户删除。
+        await client.notificationDelivery.deleteMany({
+          where: { tenantId: tid },
+        });
+        await client.outboxEvent.deleteMany({ where: { tenantId: tid } });
         await client.order.deleteMany({ where: { tenantId: tid } });
         await client.playerProfile.deleteMany({ where: { tenantId: tid } });
         await client.walletEntry.deleteMany({ where: { tenantId: tid } });
@@ -648,5 +654,52 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
         where: { tenantId, orderSlotId: slotId },
       }),
     ).toBe(0);
+  });
+
+  it("最后一档报单审批通过时通知「可结算」（老板与门店可见）", async () => {
+    const { slotId, orderId } = await assignedSlot("p1");
+    await endService("p1", slotId);
+    await uploadEvidence(playerTokens["p1"], slotId, "REPORT_START").expect(
+      201,
+    );
+    await uploadEvidence(playerTokens["p1"], slotId, "REPORT_END").expect(201);
+    await report(playerTokens["p1"], slotId, 60).expect(201);
+    // 审批前：还没到可结算（没有金额、也没有通知）。
+    expect(
+      await client.outboxEvent.count({
+        where: {
+          tenantId,
+          aggregateId: orderId,
+          eventType: "order.ready_to_settle",
+        },
+      }),
+    ).toBe(0);
+
+    await review(ownerToken, slotId, { approve: true }).expect(201);
+
+    // 全部生效档位都有已审批报单 → 发一条「可结算」通知，门店据此确认结算。
+    await client.outboxEvent.findFirstOrThrow({
+      where: {
+        tenantId,
+        aggregateId: orderId,
+        eventType: "order.ready_to_settle",
+      },
+    });
+    expect(
+      await client.outboxEvent.count({
+        where: {
+          tenantId,
+          aggregateId: orderId,
+          eventType: "order.ready_to_settle",
+        },
+      }),
+    ).toBe(1);
+    await drainOutbox(client, 20, tenantId);
+    const notifications = (
+      await req(customerToken).get("/api/v1/tenant/notifications").expect(200)
+    ).body.data as { id: string; title: string | null }[];
+    expect(notifications.some((n) => (n.title ?? "").includes("结算"))).toBe(
+      true,
+    );
   });
 });

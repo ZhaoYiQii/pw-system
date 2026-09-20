@@ -19,8 +19,47 @@ export interface PlayerBreachInput {
   reason: string;
 }
 
+export interface PlayerBreachListQuery {
+  orderId?: string;
+  playerId?: string;
+  limit?: number;
+}
+
 export class PlayerBreachService {
   constructor(private readonly client: PrismaClient) {}
+
+  /** 违约记录台账（Task 5a）：按订单或陪玩过滤，默认最近 50 条。 */
+  async list(
+    tenantId: string,
+    query: PlayerBreachListQuery = {},
+  ): Promise<PlayerBreachView[]> {
+    const rows = await this.client.playerBreachRecord.findMany({
+      where: {
+        tenantId,
+        ...(query.orderId ? { orderId: query.orderId } : {}),
+        ...(query.playerId ? { playerId: query.playerId } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(Math.max(query.limit ?? 50, 1), 100),
+    });
+    const playerIds = Array.from(new Set(rows.map((r) => r.playerId)));
+    const players = playerIds.length
+      ? await this.client.playerProfile.findMany({
+          where: { tenantId, id: { in: playerIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameById = new Map(players.map((p) => [p.id, p.name]));
+    return rows.map((row) => ({
+      id: row.id,
+      playerId: row.playerId,
+      playerName: nameById.get(row.playerId) ?? "未知陪玩",
+      orderId: row.orderId,
+      orderSlotId: row.orderSlotId ?? null,
+      reason: row.reason,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  }
 
   async record(
     tenantId: string,

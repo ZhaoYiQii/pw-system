@@ -23,9 +23,12 @@ import { TenantNav } from "../../../_lib/tenant-nav";
 
 interface AppView {
   id: string;
+  playerId: string;
   playerName: string;
   status: string;
   createdAt: string;
+  /** 选中后落下的档位 id；未选中或被释放为 null（Task 5a：释放名额与记违约的入口）。 */
+  slotId: string | null;
 }
 interface LineView {
   id: string;
@@ -42,6 +45,15 @@ interface DispatchDetail {
   lines: LineView[];
   round: { roundNo: number; closesAt: string; status: string } | null;
 }
+interface BreachView {
+  id: string;
+  playerId: string;
+  playerName: string;
+  orderId: string;
+  orderSlotId: string | null;
+  reason: string;
+  createdAt: string;
+}
 
 function Inner({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient();
@@ -54,6 +66,71 @@ function Inner({ orderId }: { orderId: string }) {
       apiFetch<DispatchDetail>(
         `/api/v1/tenant/game-dispatch/orders/${orderId}`,
       ),
+  });
+
+  // 违约记录台账（Task 5a）：按订单读取，记录违约后刷新。
+  const breaches = useQuery({
+    queryKey: ["game-dispatch-breaches", orderId],
+    queryFn: () =>
+      apiFetch<BreachView[]>(
+        `/api/v1/tenant/game-dispatch/player-breaches?orderId=${orderId}`,
+      ),
+  });
+
+  const refreshAll = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["game-dispatch-detail", orderId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["game-dispatch-breaches", orderId],
+    });
+  };
+
+  // 释放名额（Task 4 API）：选中锁定后的唯一改派入口，订单会回到报名阶段并重开一轮。
+  const releaseSlot = useMutation({
+    mutationFn: ({ slotId, reason }: { slotId: string; reason?: string }) =>
+      apiFetch<unknown>(
+        `/api/v1/tenant/game-dispatch/slots/${slotId}/release`,
+        {
+          method: "POST",
+          body: JSON.stringify(reason ? { reason } : {}),
+        },
+      ),
+    onSuccess: () => {
+      setMessage("已释放名额：订单回到报名阶段并重开一轮，可重新选人。");
+      setChecked(new Set());
+      refreshAll();
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
+  });
+
+  // 记录违约：人工认定放鸽子/未到场，写库 + 审计并通知老板。
+  const recordBreach = useMutation({
+    mutationFn: ({
+      playerId,
+      orderSlotId,
+      reason,
+    }: {
+      playerId: string;
+      orderSlotId?: string;
+      reason: string;
+    }) =>
+      apiFetch<BreachView>(
+        `/api/v1/tenant/game-dispatch/orders/${orderId}/player-breaches`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            playerId,
+            ...(orderSlotId ? { orderSlotId } : {}),
+            reason,
+          }),
+        },
+      ),
+    onSuccess: () => {
+      setMessage("已记录违约，老板会收到站内通知。");
+      refreshAll();
+    },
+    onError: (e) => setMessage(e instanceof Error ? e.message : String(e)),
   });
 
   const removeApp = useMutation({
@@ -279,16 +356,67 @@ function Inner({ orderId }: { orderId: string }) {
                           {app.status === "APPLIED" ? "已报名" : app.status}
                         </span>
                       </label>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={
-                          app.status !== "APPLIED" || removeApp.isPending
-                        }
-                        onClick={() => removeApp.mutate(app.id)}
-                      >
-                        移除报名
-                      </Button>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={
+                            app.status !== "APPLIED" || removeApp.isPending
+                          }
+                          onClick={() => removeApp.mutate(app.id)}
+                        >
+                          移除报名
+                        </Button>
+                        {/* Task 5a：已选中的档位可释放名额（回到报名阶段），并可人工记违约。 */}
+                        {app.slotId ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={releaseSlot.isPending}
+                            onClick={() => {
+                              const reason = window.prompt(
+                                `释放 ${app.playerName} 的名额？填写原因（可留空）：`,
+                                "",
+                              );
+                              if (reason === null) return;
+                              if (
+                                window.confirm(
+                                  "释放后该档位作废、订单回到报名阶段并重开一轮报名。确认释放？",
+                                )
+                              )
+                                releaseSlot.mutate({
+                                  slotId: app.slotId as string,
+                                  ...(reason.trim()
+                                    ? { reason: reason.trim() }
+                                    : {}),
+                                });
+                            }}
+                          >
+                            释放名额
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={recordBreach.isPending}
+                          onClick={() => {
+                            const reason = window.prompt(
+                              `记录 ${app.playerName} 的违约（如未到场/放鸽子）：`,
+                              "",
+                            );
+                            if (reason === null || reason.trim() === "") return;
+                            recordBreach.mutate({
+                              playerId: app.playerId,
+                              ...(app.slotId
+                                ? { orderSlotId: app.slotId }
+                                : {}),
+                              reason: reason.trim(),
+                            });
+                          }}
+                        >
+                          记违约
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -309,6 +437,40 @@ function Inner({ orderId }: { orderId: string }) {
           确认选中的陪玩
         </Button>
       </div>
+
+      {/* 违约记录台账（Task 5a）：按订单读取，随记违约即时刷新。 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>违约记录</CardTitle>
+          <CardDescription>
+            人工认定放鸽子/未到场后记录；记录会通知老板，并作为后续选人参考。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {breaches.isPending ? (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          ) : (breaches.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">本单暂无违约记录。</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {(breaches.data ?? []).map((breach) => (
+                <li
+                  key={breach.id}
+                  className="rounded-md border px-3 py-2 text-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{breach.playerName}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(breach.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground">{breach.reason}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

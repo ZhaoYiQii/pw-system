@@ -963,3 +963,16 @@ routeValidations.set(
     }),
   },
 );
+
+routeValidations.set("GET /api/v1/tenant/game-dispatch/player-breaches", {
+  query: z.strictObject({
+    orderId: z.string().uuid().optional(),
+    playerId: z.string().uuid().optional(),
+    limit: z
+      .string()
+      .regex(/^[1-9][0-9]*$/, "limit 需为正整数")
+      .transform(Number)
+      .pipe(z.number().int().min(1).max(100))
+      .optional(),
+  }),
+});

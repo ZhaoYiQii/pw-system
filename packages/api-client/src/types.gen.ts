@@ -7588,6 +7588,10 @@ export type GameDispatchViewResponses = {
                      * 报名时间
                      */
                     createdAt: string;
+                    /**
+                     * 选中后落下的档位 id（商家端「释放名额」入口）；未选中或被释放为 null
+                     */
+                    slotId?: string | null;
                 }>;
             }>;
             /**
@@ -8228,6 +8232,78 @@ export type GameDispatchRecordBreachResponses = {
 };
 
 export type GameDispatchRecordBreachResponse = GameDispatchRecordBreachResponses[keyof GameDispatchRecordBreachResponses];
+
+export type GameDispatchListBreachesData = {
+    body?: never;
+    path?: never;
+    query: {
+        orderId: string;
+        playerId: string;
+        limit: string;
+    };
+    url: '/api/v1/tenant/game-dispatch/player-breaches';
+};
+
+export type GameDispatchListBreachesErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type GameDispatchListBreachesError = GameDispatchListBreachesErrors[keyof GameDispatchListBreachesErrors];
+
+export type GameDispatchListBreachesResponses = {
+    200: {
+        data: Array<{
+            /**
+             * 违约记录 id
+             */
+            id: string;
+            /**
+             * 陪玩 id
+             */
+            playerId: string;
+            /**
+             * 陪玩名称
+             */
+            playerName: string;
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 相关档位 id；未关联为 null
+             */
+            orderSlotId: string | null;
+            /**
+             * 违约事由
+             */
+            reason: string;
+            /**
+             * 记录时间
+             */
+            createdAt: string;
+        }>;
+    };
+};
+
+export type GameDispatchListBreachesResponse = GameDispatchListBreachesResponses[keyof GameDispatchListBreachesResponses];
 
 export type GameDispatchStaffRemoveData = {
     body?: never;

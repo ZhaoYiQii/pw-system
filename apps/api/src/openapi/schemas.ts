@@ -1434,6 +1434,13 @@ export const gameDispatchOrderViewSchema: OpenApiSchema = {
                     positionLabel: stringField("报名岗位"),
                     status: stringField("报名状态"),
                     createdAt: dateTime("报名时间"),
+                    slotId: {
+                      type: "string",
+                      format: "uuid",
+                      nullable: true,
+                      description:
+                        "选中后落下的档位 id（商家端「释放名额」入口）；未选中或被释放为 null",
+                    },
                   },
                   "报名记录",
                 ),
@@ -1850,34 +1857,35 @@ export const playerBreachBodySchema: OpenApiSchema = object(
   "记录违约请求",
 );
 
+/** 单条违约记录（列表与写入响应共用同一个条目 schema）。 */
+export const playerBreachItemSchema: OpenApiSchema = object(
+  [
+    "id",
+    "playerId",
+    "playerName",
+    "orderId",
+    "orderSlotId",
+    "reason",
+    "createdAt",
+  ],
+  {
+    id: { type: "string", format: "uuid", description: "违约记录 id" },
+    playerId: { type: "string", format: "uuid", description: "陪玩 id" },
+    playerName: stringField("陪玩名称"),
+    orderId: { type: "string", format: "uuid", description: "订单 id" },
+    orderSlotId: {
+      type: "string",
+      format: "uuid",
+      nullable: true,
+      description: "相关档位 id；未关联为 null",
+    },
+    reason: stringField("违约事由"),
+    createdAt: dateTime("记录时间"),
+  },
+  "违约记录",
+);
+
 export const playerBreachViewSchema: OpenApiSchema = {
-  ...dataSchema(
-    object(
-      [
-        "id",
-        "playerId",
-        "playerName",
-        "orderId",
-        "orderSlotId",
-        "reason",
-        "createdAt",
-      ],
-      {
-        id: { type: "string", format: "uuid", description: "违约记录 id" },
-        playerId: { type: "string", format: "uuid", description: "陪玩 id" },
-        playerName: stringField("陪玩名称"),
-        orderId: { type: "string", format: "uuid", description: "订单 id" },
-        orderSlotId: {
-          type: "string",
-          format: "uuid",
-          nullable: true,
-          description: "相关档位 id；未关联为 null",
-        },
-        reason: stringField("违约事由"),
-        createdAt: dateTime("记录时间"),
-      },
-      "违约记录",
-    ),
-  ),
+  ...dataSchema(playerBreachItemSchema),
   description: "违约记录（同时写审计并经 Outbox 通知老板）",
 };

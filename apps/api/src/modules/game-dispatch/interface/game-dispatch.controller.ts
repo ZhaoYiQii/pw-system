@@ -9,6 +9,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
   Req,
 } from "@nestjs/common";
 import {
@@ -27,6 +28,7 @@ import {
   gameDispatchOrderViewSchema,
   genericTemplateErrorSchema,
   playerApplicationViewSchema,
+  playerBreachItemSchema,
   playerBreachBodySchema,
   playerBreachViewSchema,
   playerHallOrderViewSchema,
@@ -499,6 +501,37 @@ export class GameDispatchController {
             reason: String(body.reason ?? ""),
           },
         ),
+      };
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  /** 违约记录台账（Task 5a）：按订单或陪玩过滤，供商家端「违约记录」入口读取。 */
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Get("player-breaches")
+  @ApiOperation({
+    summary: "违约记录台账（可按 orderId / playerId 过滤，默认最近 50 条）",
+  })
+  @ApiOkResponse({ schema: dataArraySchema(playerBreachItemSchema) as never })
+  @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
+  async listBreaches(
+    @Req() req: AuthenticatedRequest,
+    @Query("orderId") orderId?: string,
+    @Query("playerId") playerId?: string,
+    @Query("limit") limit?: string,
+  ) {
+    try {
+      const parsedLimit = Number(limit);
+      return {
+        data: await this.breaches.list(tenantIdOf(req), {
+          ...(orderId ? { orderId } : {}),
+          ...(playerId ? { playerId } : {}),
+          ...(Number.isFinite(parsedLimit) && parsedLimit > 0
+            ? { limit: parsedLimit }
+            : {}),
+        }),
       };
     } catch (error) {
       this.mapError(error);

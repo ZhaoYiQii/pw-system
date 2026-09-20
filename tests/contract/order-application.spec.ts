@@ -21,6 +21,7 @@ interface Schema {
 }
 interface Operation {
   operationId?: string;
+  parameters?: Array<{ name?: string; in?: string; required?: boolean }>;
   requestBody?: { content?: Record<string, { schema?: Schema }> };
   responses?: Record<string, { content?: Record<string, { schema?: Schema }> }>;
 }
@@ -41,6 +42,8 @@ const MINE_PATH = "/api/v1/tenant/game-dispatch/player/applications";
 const RELEASE_PATH = "/api/v1/tenant/game-dispatch/slots/{slotId}/release";
 const BREACH_PATH =
   "/api/v1/tenant/game-dispatch/orders/{orderId}/player-breaches";
+const BREACH_LIST_PATH = "/api/v1/tenant/game-dispatch/player-breaches";
+const DISPATCH_DETAIL_PATH = "/api/v1/tenant/game-dispatch/orders/{orderId}";
 
 function schemaOf(
   operation: Operation | undefined,
@@ -156,5 +159,33 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
     ]) {
       expect(sdkSource).toContain(`export const ${fn} =`);
     }
+  });
+
+  it("Task 5a：违约台账 operation 与派单详情里的档位 id", () => {
+    expect(document.paths[BREACH_LIST_PATH]?.get?.operationId).toBe(
+      "gameDispatch_listBreaches",
+    );
+    const list = schemaOf(document.paths[BREACH_LIST_PATH]?.get, "200");
+    const item = list.properties?.data?.items;
+    expect(item?.required).toEqual([
+      "id",
+      "playerId",
+      "playerName",
+      "orderId",
+      "orderSlotId",
+      "reason",
+      "createdAt",
+    ]);
+    expect(
+      document.paths[BREACH_LIST_PATH]?.get?.parameters?.map((p) => p.name),
+    ).toEqual(["orderId", "playerId", "limit"]);
+    expect(sdkSource).toContain("export const gameDispatchListBreaches =");
+
+    // 派单详情的报名记录必须带 slotId，商家端才能渲染「释放名额」。
+    const detail = schemaOf(document.paths[DISPATCH_DETAIL_PATH]?.get, "200");
+    const application =
+      detail.properties?.data?.properties?.lines?.items?.properties
+        ?.applications?.items;
+    expect(application?.properties?.slotId?.nullable).toBe(true);
   });
 });

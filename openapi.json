@@ -13327,6 +13327,12 @@
                                       "format": "date-time",
                                       "nullable": false,
                                       "description": "报名时间"
+                                    },
+                                    "slotId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "选中后落下的档位 id（商家端「释放名额」入口）；未选中或被释放为 null"
                                     }
                                   },
                                   "description": "报名记录"
@@ -14580,6 +14586,158 @@
           }
         },
         "summary": "记录陪玩违约（写库 + 审计 + 通知老板）",
+        "tags": [
+          "GameDispatch"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-dispatch/player-breaches": {
+      "get": {
+        "operationId": "gameDispatch_listBreaches",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "playerId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "playerId",
+                          "playerName",
+                          "orderId",
+                          "orderSlotId",
+                          "reason",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "违约记录 id"
+                          },
+                          "playerId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "陪玩 id"
+                          },
+                          "playerName": {
+                            "type": "string",
+                            "description": "陪玩名称"
+                          },
+                          "orderId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "订单 id"
+                          },
+                          "orderSlotId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true,
+                            "description": "相关档位 id；未关联为 null"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "description": "违约事由"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "记录时间"
+                          }
+                        },
+                        "description": "违约记录"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "违约记录台账（可按 orderId / playerId 过滤，默认最近 50 条）",
         "tags": [
           "GameDispatch"
         ]

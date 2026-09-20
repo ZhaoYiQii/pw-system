@@ -1103,6 +1103,37 @@ export class GameDispatchService {
           } 秒仅作对照）`,
         },
       });
+      // Task 5a：全部生效档位都拿到已审批报单 → 通知门店「可结算」（老板按订单同样可见），
+      // 避免订单停在待核算却没人知道该点「确认结算」。
+      const activeSlots = await tx.orderSlot.findMany({
+        where: { tenantId, orderId: slot.orderId, status: { not: "RELEASED" } },
+        select: { id: true },
+      });
+      const approvedEarnings = await tx.slotEarning.count({
+        where: {
+          tenantId,
+          orderId: slot.orderId,
+          orderSlotId: { in: activeSlots.map((s) => s.id) },
+        },
+      });
+      if (activeSlots.length > 0 && approvedEarnings === activeSlots.length) {
+        const settledOrder = await tx.order.findFirst({
+          where: { tenantId, id: slot.orderId },
+          select: { orderNo: true },
+        });
+        await tx.outboxEvent.create({
+          data: {
+            tenantId,
+            aggregateType: "order",
+            aggregateId: slot.orderId,
+            eventType: "order.ready_to_settle",
+            payload: {
+              orderId: slot.orderId,
+              orderNo: settledOrder?.orderNo ?? "",
+            },
+          },
+        });
+      }
       return slotReportViewOf(slot, reviewed, amountFen);
     });
   }
@@ -1298,6 +1329,8 @@ export class GameDispatchService {
         positionLabel: line.positionLabel,
         status: row.status,
         createdAt: row.createdAt.toISOString(),
+        // 刚报名（或重新报名）时还没有档位；选中后由选人流程写入。
+        slotId: null,
       };
     });
   }
@@ -1934,6 +1967,15 @@ export class GameDispatchService {
         })
       : [];
     const byId = new Map(players.map((p) => [p.id, p]));
+    // Task 5a：把「已选中」的档位 id 一起返回，商家端据此提供「释放名额」入口；
+    // 释放过的档位不再返回（该报名回到可重新报名的状态）。
+    const slots = await this.client.orderSlot.findMany({
+      where: { tenantId, orderId, status: { not: "RELEASED" } },
+      select: { id: true, applicationId: true },
+    });
+    const slotByApplication = new Map(
+      slots.map((s) => [s.applicationId, s.id]),
+    );
     return rows.map((row) => ({
       id: row.id,
       positionLabel: row.positionLabel,
@@ -1947,6 +1989,7 @@ export class GameDispatchService {
           positionLabel: a.positionLabel,
           status: a.status,
           createdAt: a.createdAt.toISOString(),
+          slotId: slotByApplication.get(a.id) ?? null,
         })),
     }));
   }
