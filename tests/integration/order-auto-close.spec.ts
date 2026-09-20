@@ -2,10 +2,11 @@
  * 算价模型 Task 4：无人报名自动关单（设计规格 §3.5、§6）。
  *
  * 覆盖：
- * - 报名窗口内无人报名（窗口默认 5 分钟、可配置）→ 后台 tick 以 system actor 关单：
+ * - 报名窗口内无人报名（关单窗口与报名窗口同源，默认 10 分钟、可配置，P3 / D4）→ 后台 tick 以 system actor 关单：
  *   订单 CANCELLED、报名轮次 CLOSED、写 order_events 与 audit_logs、经 Outbox 通知老板；
  * - 已有人报名（APPLIED/SELECTED）时绝不自动关单；窗口未到不关；窗口传 0/不传即关闭该规则；
  * - 并发：自动关单与陪玩报名同一瞬间只有一个成功（订单行锁 + 条件更新）。
+ * - P3 / D4：报名窗口长度由 `DISPATCH_ROUND_WINDOW_MS` 决定（默认 10 分钟），窗口关闭后报名 409。
  */
 import "reflect-metadata";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -345,5 +346,45 @@ describe("算价模型 Task 4：无人报名自动关单", () => {
       expect(order.status).toBe("CANCELLED");
       expect(applications).toHaveLength(0);
     }
+  });
+
+  it("P3 / D4：报名窗口长度跟随配置（默认 10 分钟、自定义值生效）", async () => {
+    const before = process.env.DISPATCH_ROUND_WINDOW_MS;
+    try {
+      delete process.env.DISPATCH_ROUND_WINDOW_MS;
+      const { orderId: defaultOrderId } = await publishedOrder();
+      const defaultRound = await client.gameDispatchRound.findFirstOrThrow({
+        where: { tenantId, orderId: defaultOrderId },
+      });
+      expect(
+        defaultRound.closesAt.getTime() - defaultRound.opensAt.getTime(),
+      ).toBe(10 * 60 * 1000);
+
+      process.env.DISPATCH_ROUND_WINDOW_MS = "120000";
+      const { orderId: customOrderId } = await publishedOrder();
+      const customRound = await client.gameDispatchRound.findFirstOrThrow({
+        where: { tenantId, orderId: customOrderId },
+      });
+      expect(
+        customRound.closesAt.getTime() - customRound.opensAt.getTime(),
+      ).toBe(120_000);
+    } finally {
+      if (before === undefined) delete process.env.DISPATCH_ROUND_WINDOW_MS;
+      else process.env.DISPATCH_ROUND_WINDOW_MS = before;
+    }
+  });
+
+  it("P3 / D4：报名窗口关闭后报名被拒 409", async () => {
+    const { orderId, lineId } = await publishedOrder();
+    // 把 closesAt 拨到过去 = 报名窗口已结束（等价于等到窗口自然结束）
+    await client.gameDispatchRound.updateMany({
+      where: { tenantId, orderId },
+      data: { closesAt: new Date(Date.now() - 1000) },
+    });
+    const res = await req(playerToken).post(
+      `${DISPATCH}/orders/${orderId}/lines/${lineId}/applications`,
+    );
+    expect(res.status).toBe(409);
+    expect(JSON.stringify(res.body)).toContain("报名通道已关闭");
   });
 });

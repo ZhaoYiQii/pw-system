@@ -58,6 +58,8 @@ services:
       ADMIN_WEB_ORIGIN: ${ADMIN_WEB_ORIGIN}
       H5_ORIGIN: ${H5_ORIGIN}
       EVIDENCE_ROOT: /app/data/evidence
+      # P3 / D4：报名窗口长度（api 发布/释放名额时创建轮次使用）
+      DISPATCH_ROUND_WINDOW_MS: ${DISPATCH_ROUND_WINDOW_MS:-600000}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       ALLOW_MOCK_PAYMENT: ${ALLOW_MOCK_PAYMENT:-false}
       # P2 冒烟发现：api 启动会过 SMS Provider 守卫；NODE_ENV=production 下缺这两项会直接抛
@@ -102,6 +104,8 @@ services:
       PII_MASTER_KEY: ${PII_MASTER_KEY}
       OUTBOX_POLL_MS: "5000"
       ORDER_CONFIRM_TIMEOUT_MS: "900000"
+      # P3 / D4：报名窗口与关单窗口同一配置源（默认 10 分钟）；关单窗口缺省跟随，0 关闭。
+      DISPATCH_ROUND_WINDOW_MS: ${DISPATCH_ROUND_WINDOW_MS:-600000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -166,6 +170,7 @@ services:
       # 种子脚本会走身份模块，与 api 同口径带上 SMS 开关
       SMS_PROVIDER: ${SMS_PROVIDER:-mock}
       ALLOW_MOCK_SMS: ${ALLOW_MOCK_SMS:-false}
+      DISPATCH_ROUND_WINDOW_MS: ${DISPATCH_ROUND_WINDOW_MS:-600000}
     volumes:
       - evidence:/app/data/evidence
     depends_on:

@@ -45,6 +45,7 @@ import {
 import type { MoneyFen } from "../../../common/money.js";
 import { splitSettlement } from "../../ledger/domain/split.js";
 import { assertOrderTransition } from "../../orders/domain/order-state-machine.js";
+import { resolveRoundWindowMs } from "../domain/dispatch-window.js";
 import {
   loadGameRuleItems,
   loadPlayerGameBases,
@@ -562,7 +563,8 @@ export class GameDispatchService {
           orderId,
           roundNo: roundCount + 1,
           opensAt: now,
-          closesAt: new Date(now.getTime() + 10 * 60 * 1000),
+          // P3 / D4：报名窗口与关单窗口共用同一配置源（默认 10 分钟）。
+          closesAt: new Date(now.getTime() + resolveRoundWindowMs()),
           status: "OPEN",
         },
       });
@@ -1651,7 +1653,7 @@ export class GameDispatchService {
         where: { tenantId, orderId: slot.orderId, status: "OPEN" },
         data: { status: "CLOSED" },
       });
-      // 与 publish 同一报名窗口口径（10 分钟），重新开放报名。
+      // 与 publish 同一配置源（P3 / D4：默认 10 分钟，可配置），重新开放报名。
       const round = await tx.gameDispatchRound.create({
         data: {
           tenantId,
@@ -1659,7 +1661,7 @@ export class GameDispatchService {
           orderId: slot.orderId,
           roundNo: roundCount + 1,
           opensAt: now,
-          closesAt: new Date(now.getTime() + 10 * 60 * 1000),
+          closesAt: new Date(now.getTime() + resolveRoundWindowMs()),
           status: "OPEN",
         },
       });

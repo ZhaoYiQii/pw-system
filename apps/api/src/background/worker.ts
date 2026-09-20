@@ -12,7 +12,7 @@ export interface BackgroundTickOptions {
   ledger?: LedgerService;
   confirmTimeoutMs?: number;
   /**
-   * 报名窗口内无人报名的自动关单窗口（毫秒，默认 5 分钟）。
+   * 报名窗口内无人报名的自动关单窗口（毫秒，默认跟随报名窗口＝10 分钟，见 P3 / D4）。
    * 传 0 或负数即关闭该规则；不传表示不启用（由 bootstrap 显式注入默认值）。
    */
   noApplicationTimeoutMs?: number;
@@ -57,7 +57,8 @@ export async function runBackgroundTick(
 export const SYSTEM_ACTOR_ID = "00000000-0000-4000-8000-000000000001";
 
 /**
- * 报名窗口内无人报名 → 自动关单（设计规格 §3.5 / §6 / §9 第 3 条，默认窗口 5 分钟、可配置）。
+ * 报名窗口内无人报名 → 自动关单（设计规格 §3.5 / §6 / §9 第 3 条；
+ * P3 / D4 起默认窗口与报名窗口一致＝10 分钟，可配置，0 表示关闭）。
  *
  * - 只处理仍在 DISPATCHING、且最新一轮报名已开出 `timeoutMs` 的订单；
  * - 「无人报名」= 该单不存在 APPLIED/SELECTED 报名（报名后取消/被释放也会回到该状态）；

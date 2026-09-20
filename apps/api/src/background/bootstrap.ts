@@ -3,6 +3,11 @@ import { tenantGuarded } from "../common/database/tenant-guard.js";
 import { LedgerService } from "../modules/ledger/application/ledger.service.js";
 import { PrismaLedgerRepository } from "../modules/ledger/infrastructure/prisma-ledger.repository.js";
 import { PlatformBillingService } from "../modules/platform-billing/platform-billing.service.js";
+import {
+  resolveNoApplicationTimeoutMs,
+  resolveRoundWindowMs,
+  roundWindowFallbackNotice,
+} from "../modules/game-dispatch/domain/dispatch-window.js";
 import { runBackgroundTick, type BackgroundTickOptions } from "./worker.js";
 
 /**
@@ -31,18 +36,24 @@ async function bootstrap(): Promise<void> {
   const confirmTimeoutMs = Number(
     process.env.ORDER_CONFIRM_TIMEOUT_MS ?? 15 * 60 * 1000,
   );
-  // 无人报名自动关单窗口（默认 5 分钟）；显式传 0 即关闭该规则。
-  const noApplicationTimeoutMs = Number(
-    process.env.DISPATCH_NO_APPLICATION_TIMEOUT_MS ?? 5 * 60 * 1000,
+  // P3 / D4：无人报名自动关单窗口默认跟随报名窗口（默认 10 分钟）；显式 0 关闭该规则。
+  const noApplicationTimeoutMs = resolveNoApplicationTimeoutMs(process.env);
+  const roundWindowNotice = roundWindowFallbackNotice(process.env);
+  if (roundWindowNotice) {
+    console.warn(
+      `[worker] ${roundWindowNotice.variable}="${roundWindowNotice.raw}" 非法或越界，` +
+        `回退默认 ${roundWindowNotice.effective}ms`,
+    );
+  }
+  console.log(
+    `[worker] 报名窗口 ${resolveRoundWindowMs(process.env)}ms，无人报名关单窗口 ${noApplicationTimeoutMs}ms（0=关闭）`,
   );
   const tickOptions: BackgroundTickOptions = {
     ledger,
     confirmTimeoutMs: Number.isFinite(confirmTimeoutMs)
       ? confirmTimeoutMs
       : 15 * 60 * 1000,
-    noApplicationTimeoutMs: Number.isFinite(noApplicationTimeoutMs)
-      ? noApplicationTimeoutMs
-      : 5 * 60 * 1000,
+    noApplicationTimeoutMs,
   };
   let running = false;
 

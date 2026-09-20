@@ -29,8 +29,9 @@
 | `EVIDENCE_ROOT` | 建议 | `slot-session.controller.ts` 等 | `<cwd>/data/evidence` | 生产建议 `/app/data/evidence`（挂卷，否则证据文件落在容器可写层） |
 | `REDIS_URL` | 可选 | `health.service.ts` 等 | 空 = `/ready` 显示 `redis: skipped` | 生产是否需要必填未核实（本轮不宣称） |
 | `OUTBOX_POLL_MS` | 可选 | `background/bootstrap.ts` | `5000` | — |
-| `ORDER_CONFIRM_TIMEOUT_MS` | 可选 | `background/bootstrap.ts` | `900000` | — |
-| `DISPATCH_NO_APPLICATION_TIMEOUT_MS` | 可选 | `background/bootstrap.ts` | `300000` | — |
+| `ORDER_CONFIRM_TIMEOUT_MS` | 可选 | `background/bootstrap.ts` | `900000` | 只影响 CLASSIC 订单 |
+| `DISPATCH_ROUND_WINDOW_MS` | 可选 | `game-dispatch/domain/dispatch-window.ts`（api 建轮次、worker 读默认） | `600000`（10 分钟），范围 60000–7200000 | 非法/越界回退默认并在启动日志 `warn` |
+| `DISPATCH_NO_APPLICATION_TIMEOUT_MS` | 可选 | `background/bootstrap.ts` | **缺省跟随 `DISPATCH_ROUND_WINDOW_MS`**（P3/D4 前为 300000）；显式 `0` = 关闭该规则 | 非法/负数视为未配置 |
 
 ## 3. 商家端构建期（admin 镜像 build args）
 
