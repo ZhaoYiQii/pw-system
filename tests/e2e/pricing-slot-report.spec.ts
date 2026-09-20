@@ -147,7 +147,15 @@ test.describe("算价模型：报单审批 / 释放名额 / 费用口径", () =>
     await expect(page.getByText("报单开始截图")).toBeVisible();
     await expect(page.getByText("报单结束截图")).toBeVisible();
     await expect(panel.getByText("申报 / 核定时长")).toBeVisible();
-    await expect(panel.getByText("90 分钟")).toBeVisible();
+    // exact 限定：D2 的差异提示里也会出现「90 分钟」，避免 strict 模式撞成两处命中。
+    await expect(panel.getByText("90 分钟", { exact: true })).toBeVisible();
+    // P3 / D2：审批卡片给出「申报 vs 证据计时」对照；夹具申报 90 分钟、证据仅约 1 秒，
+    // 差异远超阈值，必须出现高亮提示（但不影响审批结果）。
+    await expect(page.getByTestId("report-duration-gap")).toBeVisible();
+    await expect(page.getByTestId("report-duration-gap-warning")).toBeVisible();
+    await expect(
+      page.getByText("与证据计时差异较大，请重点核对开始/结束截图"),
+    ).toBeVisible();
     await expect(panel).toHaveScreenshot("report-review-pending.png", {
       mask: [page.getByText(VOLATILE_TEXT)],
     });

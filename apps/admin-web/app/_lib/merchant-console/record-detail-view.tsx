@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, getAccessToken } from "../api";
 import { formatFenYuan } from "../money";
 import { DemoDialog, DemoEmptyState, useDemoToast } from "./demo-ui";
+import { durationGap } from "./duration-gap";
 import {
   type CatalogGame,
   type CustomerAccount,
@@ -890,6 +891,23 @@ function SessionDetailView({ id }: { id: string }) {
   const canEnd = session.status === "STARTED";
   // 报单审批只作用于 game-dispatch 主线（CLASSIC 按 ADR-0002 冻结）。
   const reportSlotId = session.flow === "GAME_DISPATCH" ? session.slotId : null;
+  // P3 / D2：申报时长与证据计时的对照（只做提示，不参与计费与审批结果）。
+  const reportGap = durationGap(
+    session.declaredDurationMinutes,
+    session.durationSeconds,
+  );
+  const gapRoundedMinutes =
+    reportGap.deltaMinutes === null
+      ? null
+      : Math.round(reportGap.deltaMinutes * 10) / 10;
+  const gapDeltaLabel =
+    gapRoundedMinutes === null
+      ? null
+      : `${gapRoundedMinutes > 0 ? "+" : ""}${
+          Number.isInteger(gapRoundedMinutes)
+            ? gapRoundedMinutes
+            : gapRoundedMinutes.toFixed(1)
+        } 分钟`;
   const correctedMinutes = Number(reportMinutes);
   const hasCorrection =
     reportMinutes.trim() !== "" &&
@@ -1024,6 +1042,12 @@ function SessionDetailView({ id }: { id: string }) {
               <dd>{formatDuration(session.durationSeconds)}</dd>
             </dl>
             <dl className="mc-fact">
+              <dt>申报与证据差异</dt>
+              <dd data-testid="report-duration-gap">
+                {reportGap.tone === "unknown" ? "证据计时缺失" : gapDeltaLabel}
+              </dd>
+            </dl>
+            <dl className="mc-fact">
               <dt>报单时间</dt>
               <dd>{dateTime(session.reportSubmittedAt)}</dd>
             </dl>
@@ -1035,6 +1059,16 @@ function SessionDetailView({ id }: { id: string }) {
           {session.reportReviewNote ? (
             <div className="mc-notice">
               审批备注：{session.reportReviewNote}
+            </div>
+          ) : null}
+          {reportGap.tone === "warn" ? (
+            <div
+              className="mc-notice"
+              data-testid="report-duration-gap-warning"
+            >
+              与证据计时差异较大，请重点核对开始/结束截图（申报{" "}
+              {session.declaredDurationMinutes} 分钟 / 证据{" "}
+              {formatDuration(session.durationSeconds)}，差 {gapDeltaLabel}）。
             </div>
           ) : null}
           {session.reportStatus === "PENDING_REVIEW" ? (
