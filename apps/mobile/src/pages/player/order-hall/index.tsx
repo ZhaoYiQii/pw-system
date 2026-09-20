@@ -166,14 +166,18 @@ export default function OrderHallPage() {
 
   const load = async (accessToken: string) => {
     try {
-      const availableOrders = await apiAdapter.request<HallItem[]>(
-        "/api/v1/tenant/player/order-hall",
-        { token: accessToken },
-      );
-      const applications = await apiAdapter.request<MyApp[]>(
-        "/api/v1/tenant/player/applications",
-        { token: accessToken },
-      );
+      // 走查修复 F1：经典接单大厅是 addon 能力，未开通时返回 403——它不可用只应让该区块降级，
+      // 不能把整页判成未登录（否则 game-dispatch 主线的报名/报单入口也会被一起挡在登录卡外面）。
+      const availableOrders = await apiAdapter
+        .request<HallItem[]>("/api/v1/tenant/player/order-hall", {
+          token: accessToken,
+        })
+        .catch(() => [] as HallItem[]);
+      const applications = await apiAdapter
+        .request<MyApp[]>("/api/v1/tenant/player/applications", {
+          token: accessToken,
+        })
+        .catch(() => [] as MyApp[]);
       // 算价模型 Task 4：game-dispatch 主线的大厅与我的报名（报名/取消/服务都挂在这里）。
       const [gdHallOrders, gdApplications] = await Promise.all([
         apiAdapter
@@ -239,7 +243,9 @@ export default function OrderHallPage() {
       setReportSlots(nextSlots);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
-      if (session.getToken()) {
+      // 只有鉴权失败（401/403）才清 token 退回登录；其它错误保留会话，页面局部提示即可。
+      const status = (error as { status?: number }).status;
+      if (status === 401 && session.getToken()) {
         session.clearToken();
         setToken(null);
       }
@@ -530,6 +536,11 @@ export default function OrderHallPage() {
   const runningCount = selectedApplications.filter(
     (application) => sessions[application.orderId]?.status === "STARTED",
   ).length;
+  // 走查修复 F5：进行中计数要同时含 game-dispatch 场次（否则服务页徽标恒为 0 进行中）。
+  const gdRunningCount = Object.values(reportSlots)
+    .flat()
+    .filter((slot) => slot.session?.status === "STARTED").length;
+  const runningTotal = runningCount + gdRunningCount;
   const pageTitle =
     view === "hall" ? "接单大厅" : view === "service" ? "服务中" : "我的接单";
   const subtitle =
@@ -547,10 +558,10 @@ export default function OrderHallPage() {
       badge={
         token ? (
           <Text
-            className={`pw-badge ${view === "service" && runningCount > 0 ? "pw-badge-live" : ""}`}
+            className={`pw-badge ${view === "service" && runningTotal > 0 ? "pw-badge-live" : ""}`}
           >
             {view === "service"
-              ? `${runningCount} 进行中`
+              ? `${runningTotal} 进行中`
               : hallEnabled
                 ? "可接单"
                 : "未开通"}

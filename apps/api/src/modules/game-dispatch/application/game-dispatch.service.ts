@@ -1154,6 +1154,11 @@ export class GameDispatchService {
         // 释放过的档位不再计入结算所需人数（Task 4）。
         where: { tenantId, orderId, status: { not: "RELEASED" } },
       });
+      // 走查修复 F4：档位全部被释放时不能按 0 元把订单结算掉（否则老板支出=0、订单直接完成）。
+      if (slots.length === 0)
+        throw new DispatchStateError(
+          "没有生效档位，无法结算：请先重新选人或取消订单",
+        );
       if (earnings.length !== slots.length)
         // 结束只留证据计时长；金额在报单审批后才落库（设计规格 §3.3）。
         throw new DispatchStateError("仍有档位未完成报单审批");

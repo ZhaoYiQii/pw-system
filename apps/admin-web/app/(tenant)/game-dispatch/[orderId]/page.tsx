@@ -30,6 +30,8 @@ interface AppView {
   createdAt: string;
   /** 选中后落下的档位 id；未选中或被释放为 null（Task 5a：释放名额与记违约的入口）。 */
   slotId: string | null;
+  /** 该陪玩在本单的单价（分/小时，不乘时长）；未设置底价为 null。 */
+  unitPriceFen: string | null;
 }
 interface LineView {
   id: string;
@@ -296,7 +298,11 @@ function Inner({ orderId }: { orderId: string }) {
                 发布派单
               </Button>
             ) : null}
-            {data.status === "PENDING_CONFIRMATION" ? (
+            {/* 走查修复 F2：未备齐（生效档位为 0 或仍有档位未核定）时不给可点的结算入口。 */}
+            {data.status === "PENDING_CONFIRMATION" &&
+            data.settlement.activeSlotCount > 0 &&
+            data.settlement.approvedSlotCount ===
+              data.settlement.activeSlotCount ? (
               <Button
                 disabled={settle.isPending}
                 onClick={() => {
@@ -308,6 +314,16 @@ function Inner({ orderId }: { orderId: string }) {
               >
                 确认结算
               </Button>
+            ) : null}
+            {data.status === "PENDING_CONFIRMATION" &&
+            (data.settlement.activeSlotCount === 0 ||
+              data.settlement.approvedSlotCount <
+                data.settlement.activeSlotCount) ? (
+              <span className="self-center text-xs text-muted-foreground">
+                {data.settlement.activeSlotCount === 0
+                  ? "没有生效档位，无法结算：请先重新选人或取消订单。"
+                  : `还有 ${data.settlement.activeSlotCount - data.settlement.approvedSlotCount} 个档位未完成报单审批，暂不能结算。`}
+              </span>
             ) : null}
             <Button
               variant="outline"
@@ -327,7 +343,11 @@ function Inner({ orderId }: { orderId: string }) {
       </Card>
 
       {data.lines.map((line) => {
-        const remaining = line.requiredCount - checked.size;
+        // 走查修复 F3：「还差 N 人」按已选中人数算（原实现用勾选数，已选定后仍显示还差 1 人）。
+        const selectedCount = line.applications.filter(
+          (app) => app.status === "SELECTED",
+        ).length;
+        const remaining = Math.max(0, line.requiredCount - selectedCount);
         return (
           <Card key={line.id}>
             <CardHeader>
@@ -366,6 +386,12 @@ function Inner({ orderId }: { orderId: string }) {
                         <span className="font-medium">{app.playerName}</span>
                         <span className="text-xs text-muted-foreground">
                           {app.status === "APPLIED" ? "已报名" : app.status}
+                        </span>
+                        {/* 走查修复 F5：商家端也展示单价（与老板端/陪玩端同一数字，不乘时长）。 */}
+                        <span className="text-xs text-muted-foreground">
+                          {app.unitPriceFen
+                            ? `${formatFenYuan(app.unitPriceFen)} / 小时`
+                            : "未设置底价"}
                         </span>
                       </label>
                       <div className="flex flex-wrap items-center justify-end gap-2">

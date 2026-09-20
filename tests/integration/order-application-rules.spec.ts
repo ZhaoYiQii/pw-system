@@ -712,4 +712,37 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
       .get(`${DISPATCH}/player-breaches?playerId=${playerIds["p1"]}`)
       .expect(403);
   });
+
+  it("走查修复 F4：没有生效档位时拒绝按 0 元结算", async () => {
+    const { orderId, lineId } = await publishedOrder();
+    await apply(playerTokens["p1"], orderId, lineId).expect(201);
+    const [applicationId] = await hireOwnerSelected(orderId, "p1");
+    const slot = await client.orderSlot.findFirstOrThrow({
+      where: { tenantId, applicationId },
+    });
+    // 正常 API 流程里「释放名额」会把订单退回报名阶段，所以这个边界状态需要直接构造：
+    // 已到待核算、但生效档位为 0（例如未来出现新的释放/取消入口）。
+    await client.orderSlot.update({
+      where: { id: slot.id },
+      data: { status: "RELEASED" },
+    });
+    await client.order.update({
+      where: { id: orderId },
+      data: { status: "PENDING_CONFIRMATION" },
+    });
+
+    const failed = await req(ownerToken)
+      .post(`${DISPATCH}/orders/${orderId}/confirm-settlement`)
+      .expect(409);
+    expect((failed.body as { message: string }).message).toContain(
+      "没有生效档位",
+    );
+    const after = await client.order.findFirstOrThrow({
+      where: { id: orderId },
+    });
+    expect(after.status).toBe("PENDING_CONFIRMATION");
+    expect(
+      await client.slotEarning.count({ where: { tenantId, orderId } }),
+    ).toBe(0);
+  });
 });
