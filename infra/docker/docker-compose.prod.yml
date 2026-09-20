@@ -18,6 +18,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql
+      # 首部署引导/授权 SQL（P2 冒烟验证；owner 连进容器即可直接 -f 执行）
+      - ./bootstrap-owner.sql:/opt/pw-saas/bootstrap-owner.sql:ro
+      - ./grant-runtime.sql:/opt/pw-saas/grant-runtime.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -57,6 +60,11 @@ services:
       EVIDENCE_ROOT: /app/data/evidence
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       ALLOW_MOCK_PAYMENT: ${ALLOW_MOCK_PAYMENT:-false}
+      # P2 冒烟发现：api 启动会过 SMS Provider 守卫；NODE_ENV=production 下缺这两项会直接抛
+      # "mock sms is not allowed in production" 进入崩溃循环（admin/h5 因依赖不健康一并起不来）。
+      # 默认 fail-closed；演示部署在 .env 里显式 ALLOW_MOCK_SMS=true（与 mock 支付同口径）。
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      ALLOW_MOCK_SMS: ${ALLOW_MOCK_SMS:-false}
     volumes:
       - evidence:/app/data/evidence
     ports:
@@ -155,6 +163,9 @@ services:
       SEED_TENANT_HOSTS: ${SEED_TENANT_HOSTS}
       SEED_PLATFORM_PASSWORD: ${SEED_PLATFORM_PASSWORD}
       SEED_TENANT_PASSWORD: ${SEED_TENANT_PASSWORD}
+      # 种子脚本会走身份模块，与 api 同口径带上 SMS 开关
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      ALLOW_MOCK_SMS: ${ALLOW_MOCK_SMS:-false}
     volumes:
       - evidence:/app/data/evidence
     depends_on:

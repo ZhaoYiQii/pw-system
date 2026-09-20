@@ -26,6 +26,10 @@ WORKDIR /app
 
 COPY apps/admin-web apps/admin-web
 COPY packages/tsconfig packages/tsconfig
+# admin-web 通过 `@pw/api-client` / `@pw/api-client/client` 消费生成客户端，
+# 其 package.json exports 指向 dist/（不入库），必须在镜像内先构出 dist。
+COPY packages/api-client packages/api-client
+RUN pnpm --filter @pw/api-client build
 
 ARG NEXT_PUBLIC_API_ORIGIN=https://api.17ai.club
 ENV NEXT_PUBLIC_API_ORIGIN=${NEXT_PUBLIC_API_ORIGIN}
