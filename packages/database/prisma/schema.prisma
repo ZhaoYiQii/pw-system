@@ -1145,6 +1145,65 @@ model GameDispatchRankRule {
   @@map("game_dispatch_rank_rules")
 }
 
+/// 算价模型（ADR-0003）规则项类型：本版只写 SURCHARGE；FIXED（固定价）保留类型位，后续独立立项。
+enum GamePricingRuleItemKind {
+  SURCHARGE
+  FIXED
+}
+
+/// 算价模型（ADR-0003）：陪玩 × 游戏底价。PlayerProfile.basePricePerHourFen 降级为兜底默认。
+model PlayerGamePrice {
+  id                  String   @id @default(uuid()) @db.Uuid
+  tenantId            String   @map("tenant_id") @db.Uuid
+  playerId            String   @map("player_id") @db.Uuid
+  gameId              String   @map("game_id") @db.Uuid
+  basePricePerHourFen BigInt   @map("base_price_per_hour_fen") @db.BigInt
+  status              String   @default("ACTIVE")
+  createdBy           String?  @map("created_by") @db.Uuid
+  updatedBy           String?  @map("updated_by") @db.Uuid
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  version             Int      @default(1)
+
+  @@unique([tenantId, playerId, gameId], map: "pgp_tenant_player_game_key")
+  @@index([tenantId, gameId, status], map: "pgp_tenant_game_status_idx")
+  @@map("player_game_prices")
+}
+
+/// 算价模型（ADR-0003）：按游戏绑定的定价规则库，是加价的唯一权威。
+model GamePricingRule {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  gameId    String   @map("game_id") @db.Uuid
+  enabled   Boolean  @default(true)
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedBy String?  @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  @@unique([tenantId, gameId], map: "gpr_tenant_game_key")
+  @@map("game_pricing_rules")
+}
+
+/// 规则项：命中键 dimensionKey = 模板字段 stableKey + 选项值（如 `mode=ranked`）。
+model GamePricingRuleItem {
+  id           String                  @id @default(uuid()) @db.Uuid
+  tenantId     String                  @map("tenant_id") @db.Uuid
+  ruleId       String                  @map("rule_id") @db.Uuid
+  kind         GamePricingRuleItemKind @default(SURCHARGE)
+  dimensionKey String                  @map("dimension_key")
+  amountFen    BigInt                  @map("amount_fen") @db.BigInt
+  sortOrder    Int                     @default(0) @map("sort_order")
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+  version      Int                     @default(1)
+
+  @@unique([tenantId, ruleId, dimensionKey], map: "gpritem_tenant_rule_dim_key")
+  @@index([tenantId, ruleId, sortOrder], map: "gpritem_tenant_rule_sort_idx")
+  @@map("game_pricing_rule_items")
+}
+
 model GameDispatchTemplateSnapshot {
   id           String   @id @default(uuid()) @db.Uuid
   tenantId     String   @map("tenant_id") @db.Uuid

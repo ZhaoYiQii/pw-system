@@ -861,3 +861,44 @@ routeValidations.set("DELETE /api/v1/tenant/game-dispatch-templates/:id", {
       .pipe(z.number().int().min(0)),
   }),
 });
+
+// 算价模型（ADR-0003）：按游戏的加价规则库 + 陪玩×游戏底价。
+// 命中键 = `<模板字段 stableKey>=<选项值>`（如 mode=ranked）；金额一律十进制字符串分。
+const gamePricingDimensionKey = z
+  .string()
+  .max(130, "命中键超长")
+  .regex(
+    /^[a-z][a-z0-9_]{0,63}=[^=\s].*$/,
+    "命中键需为「字段标识=选项值」，如 mode=ranked",
+  );
+
+const gamePricingRuleItemBody = z.strictObject({
+  kind: z.enum(["SURCHARGE", "FIXED"]).optional(),
+  dimensionKey: gamePricingDimensionKey,
+  amountFen: fenMoney("amountFen"),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
+routeValidations.set("GET /api/v1/tenant/game-pricing/games/:gameId", {});
+
+routeValidations.set("PUT /api/v1/tenant/game-pricing/games/:gameId", {
+  body: z.strictObject({
+    enabled: z.boolean().optional(),
+    items: z.array(gamePricingRuleItemBody).max(200),
+  }),
+});
+
+routeValidations.set(
+  "GET /api/v1/tenant/game-pricing/players/:playerId/games/:gameId/base",
+  {},
+);
+
+routeValidations.set(
+  "PUT /api/v1/tenant/game-pricing/players/:playerId/games/:gameId/base",
+  {
+    body: z.strictObject({
+      basePricePerHourFen: fenMoney("basePricePerHourFen"),
+      status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+    }),
+  },
+);

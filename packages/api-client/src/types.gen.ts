@@ -8042,6 +8042,393 @@ export type GameDispatchTemplateOrderCreateResponses = {
 
 export type GameDispatchTemplateOrderCreateResponse = GameDispatchTemplateOrderCreateResponses[keyof GameDispatchTemplateOrderCreateResponses];
 
+export type PricingRulesGetGameRuleData = {
+    body?: never;
+    path: {
+        gameId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-pricing/games/{gameId}';
+};
+
+export type PricingRulesGetGameRuleErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type PricingRulesGetGameRuleError = PricingRulesGetGameRuleErrors[keyof PricingRulesGetGameRuleErrors];
+
+export type PricingRulesGetGameRuleResponses = {
+    /**
+     * 某游戏的加价规则库（写入为 PUT 整表替换）
+     */
+    200: {
+        /**
+         * 游戏加价规则库
+         */
+        data: {
+            /**
+             * 游戏 id
+             */
+            gameId: string;
+            /**
+             * 规则是否启用
+             */
+            enabled: boolean;
+            /**
+             * 该游戏的加价规则项
+             */
+            items: Array<{
+                /**
+                 * 规则项 id
+                 */
+                id: string;
+                /**
+                 * 规则类型（本版只写 SURCHARGE；FIXED 保留类型位）
+                 */
+                kind: 'SURCHARGE' | 'FIXED';
+                /**
+                 * 命中键：字段标识=选项值，如 mode=ranked
+                 */
+                dimensionKey: string;
+                /**
+                 * 加价（十进制字符串分，>=0）
+                 */
+                amountFen: string;
+                /**
+                 * 排序
+                 */
+                sortOrder: number;
+            }>;
+            /**
+             * 最近更新时间；null 表示尚未配置
+             */
+            updatedAt: string | null;
+        };
+    };
+};
+
+export type PricingRulesGetGameRuleResponse = PricingRulesGetGameRuleResponses[keyof PricingRulesGetGameRuleResponses];
+
+export type PricingRulesPutGameRuleData = {
+    /**
+     * 加价规则库写入请求（整表替换）
+     */
+    body: {
+        /**
+         * 是否启用（缺省启用；停用即整条规则不参与计价）
+         */
+        enabled?: boolean;
+        /**
+         * 整表替换的规则项（最多 200 条）
+         */
+        items: Array<{
+            /**
+             * 缺省 SURCHARGE；本版拒绝 FIXED（固定价后续单独立项）
+             */
+            kind?: 'SURCHARGE' | 'FIXED';
+            /**
+             * 命中键：字段标识=选项值，如 mode=ranked
+             */
+            dimensionKey: string;
+            /**
+             * 加价（十进制字符串分，>=0）
+             */
+            amountFen: string;
+            /**
+             * 排序（缺省按数组顺序）
+             */
+            sortOrder?: number;
+        }>;
+    };
+    path: {
+        gameId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-pricing/games/{gameId}';
+};
+
+export type PricingRulesPutGameRuleErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type PricingRulesPutGameRuleError = PricingRulesPutGameRuleErrors[keyof PricingRulesPutGameRuleErrors];
+
+export type PricingRulesPutGameRuleResponses = {
+    /**
+     * 某游戏的加价规则库（写入为 PUT 整表替换）
+     */
+    200: {
+        /**
+         * 游戏加价规则库
+         */
+        data: {
+            /**
+             * 游戏 id
+             */
+            gameId: string;
+            /**
+             * 规则是否启用
+             */
+            enabled: boolean;
+            /**
+             * 该游戏的加价规则项
+             */
+            items: Array<{
+                /**
+                 * 规则项 id
+                 */
+                id: string;
+                /**
+                 * 规则类型（本版只写 SURCHARGE；FIXED 保留类型位）
+                 */
+                kind: 'SURCHARGE' | 'FIXED';
+                /**
+                 * 命中键：字段标识=选项值，如 mode=ranked
+                 */
+                dimensionKey: string;
+                /**
+                 * 加价（十进制字符串分，>=0）
+                 */
+                amountFen: string;
+                /**
+                 * 排序
+                 */
+                sortOrder: number;
+            }>;
+            /**
+             * 最近更新时间；null 表示尚未配置
+             */
+            updatedAt: string | null;
+        };
+    };
+};
+
+export type PricingRulesPutGameRuleResponse = PricingRulesPutGameRuleResponses[keyof PricingRulesPutGameRuleResponses];
+
+export type PricingRulesGetPlayerGamePriceData = {
+    body?: never;
+    path: {
+        playerId: string;
+        gameId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-pricing/players/{playerId}/games/{gameId}/base';
+};
+
+export type PricingRulesGetPlayerGamePriceErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type PricingRulesGetPlayerGamePriceError = PricingRulesGetPlayerGamePriceErrors[keyof PricingRulesGetPlayerGamePriceErrors];
+
+export type PricingRulesGetPlayerGamePriceResponses = {
+    /**
+     * 陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时会用哪个价）
+     */
+    200: {
+        /**
+         * 陪玩×游戏底价
+         */
+        data: {
+            /**
+             * 陪玩 id
+             */
+            playerId: string;
+            /**
+             * 游戏 id
+             */
+            gameId: string;
+            /**
+             * 陪玩×游戏底价（分/小时）；null 表示未设置，计价时回退到陪玩级兜底
+             */
+            basePricePerHourFen: string | null;
+            /**
+             * 陪玩级兜底底价（分/小时）；null 表示也没有兜底
+             */
+            fallbackBasePricePerHourFen: string | null;
+            /**
+             * 底价状态；null 表示未设置
+             */
+            status: 'ACTIVE' | 'INACTIVE';
+        };
+    };
+};
+
+export type PricingRulesGetPlayerGamePriceResponse = PricingRulesGetPlayerGamePriceResponses[keyof PricingRulesGetPlayerGamePriceResponses];
+
+export type PricingRulesPutPlayerGamePriceData = {
+    /**
+     * 陪玩×游戏底价写入请求
+     */
+    body: {
+        /**
+         * 底价（分/小时）（十进制字符串分，>=0）
+         */
+        basePricePerHourFen: string;
+        /**
+         * 缺省 ACTIVE；INACTIVE 时计价回退到陪玩级兜底
+         */
+        status?: 'ACTIVE' | 'INACTIVE';
+    };
+    path: {
+        playerId: string;
+        gameId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/game-pricing/players/{playerId}/games/{gameId}/base';
+};
+
+export type PricingRulesPutPlayerGamePriceErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    404: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type PricingRulesPutPlayerGamePriceError = PricingRulesPutPlayerGamePriceErrors[keyof PricingRulesPutPlayerGamePriceErrors];
+
+export type PricingRulesPutPlayerGamePriceResponses = {
+    /**
+     * 陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时会用哪个价）
+     */
+    200: {
+        /**
+         * 陪玩×游戏底价
+         */
+        data: {
+            /**
+             * 陪玩 id
+             */
+            playerId: string;
+            /**
+             * 游戏 id
+             */
+            gameId: string;
+            /**
+             * 陪玩×游戏底价（分/小时）；null 表示未设置，计价时回退到陪玩级兜底
+             */
+            basePricePerHourFen: string | null;
+            /**
+             * 陪玩级兜底底价（分/小时）；null 表示也没有兜底
+             */
+            fallbackBasePricePerHourFen: string | null;
+            /**
+             * 底价状态；null 表示未设置
+             */
+            status: 'ACTIVE' | 'INACTIVE';
+        };
+    };
+};
+
+export type PricingRulesPutPlayerGamePriceResponse = PricingRulesPutPlayerGamePriceResponses[keyof PricingRulesPutPlayerGamePriceResponses];
+
 export type SlotSessionServiceSlotsData = {
     body?: never;
     path: {

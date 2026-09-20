@@ -3,7 +3,9 @@ import type { PublishedConfigV2 } from "./game-template-config-v2.js";
 import {
   calculateTemplatePriceAdjustmentFen,
   calculateTemplateStaffing,
+  templatePricingDimensionFields,
   TemplateRuntimeValueError,
+  validateTemplateChoiceValues,
 } from "./game-template-calculations.js";
 
 function publishedConfig(
@@ -347,5 +349,92 @@ describe("通用模板选项加价计算", () => {
         target_rank: "king",
       }),
     ).toThrow(/整数分/);
+  });
+});
+
+describe("算价模型（ADR-0003）：维度字段与取值校验", () => {
+  /** 启用区块内的单选 + 多选 + 说明组件；说明组件不参与命中。 */
+  function choiceConfig(sectionEnabled = true): PublishedConfigV2 {
+    return publishedConfig({
+      sections: [
+        {
+          stableKey: "requirements",
+          label: "需求信息",
+          enabled: sectionEnabled,
+          sortOrder: 0,
+          layout: { columns: 2 },
+        },
+      ],
+      components: [
+        {
+          kind: "FIELD",
+          stableKey: "mode",
+          sectionKey: "requirements",
+          label: "游戏模式",
+          enabled: true,
+          sortOrder: 0,
+          layout: { colSpan: 1, rowBreakBefore: false },
+          fieldType: "SINGLE_SELECT",
+          semanticRole: "MODE",
+          required: true,
+          options: [
+            { value: "ranked", label: "排位" },
+            { value: "normal", label: "匹配" },
+          ],
+        },
+        {
+          kind: "FIELD",
+          stableKey: "extras",
+          sectionKey: "requirements",
+          label: "附加服务",
+          enabled: true,
+          sortOrder: 1,
+          layout: { colSpan: 1, rowBreakBefore: false },
+          fieldType: "MULTI_SELECT",
+          semanticRole: "CUSTOM",
+          required: false,
+          aggregationPolicy: "SUM",
+          options: [{ value: "fast", label: "快速响应" }],
+        },
+        {
+          kind: "NOTE",
+          stableKey: "notice",
+          sectionKey: "requirements",
+          label: "须知",
+          enabled: true,
+          sortOrder: 2,
+          layout: { colSpan: 1, rowBreakBefore: false },
+          text: "上号前请确认订单",
+        },
+      ],
+    });
+  }
+
+  it("维度字段只取启用区块内的选择类字段：stableKey + 选项值", () => {
+    expect(templatePricingDimensionFields(choiceConfig())).toEqual([
+      { key: "mode", optionValues: ["ranked", "normal"] },
+      { key: "extras", optionValues: ["fast"] },
+    ]);
+  });
+
+  it("区块停用后其中的字段不参与命中（与人数/文案同一套启用语义）", () => {
+    expect(templatePricingDimensionFields(choiceConfig(false))).toEqual([]);
+  });
+
+  it("取值校验保留：未知选项、重复多选被拒，合法取值放行", () => {
+    expect(() =>
+      validateTemplateChoiceValues(choiceConfig(), { mode: "unknown" }),
+    ).toThrow(/不在模板选项中/);
+    expect(() =>
+      validateTemplateChoiceValues(choiceConfig(), {
+        extras: ["fast", "fast"],
+      }),
+    ).toThrow(/重复选择/);
+    expect(() =>
+      validateTemplateChoiceValues(choiceConfig(), {
+        mode: "ranked",
+        extras: ["fast"],
+      }),
+    ).not.toThrow();
   });
 });

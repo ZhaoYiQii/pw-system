@@ -14219,6 +14219,772 @@
         ]
       }
     },
+    "/api/v1/tenant/game-pricing/games/{gameId}": {
+      "get": {
+        "operationId": "pricingRules_getGameRule",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "gameId",
+                        "enabled",
+                        "items",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "gameId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "游戏 id"
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "规则是否启用"
+                        },
+                        "items": {
+                          "type": "array",
+                          "description": "该游戏的加价规则项",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "kind",
+                              "dimensionKey",
+                              "amountFen",
+                              "sortOrder"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "规则项 id"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "SURCHARGE",
+                                  "FIXED"
+                                ],
+                                "description": "规则类型（本版只写 SURCHARGE；FIXED 保留类型位）"
+                              },
+                              "dimensionKey": {
+                                "type": "string",
+                                "description": "命中键：字段标识=选项值，如 mode=ranked"
+                              },
+                              "amountFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "加价（十进制字符串分，>=0）"
+                              },
+                              "sortOrder": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "排序"
+                              }
+                            },
+                            "description": "加价规则项"
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "最近更新时间；null 表示尚未配置"
+                        }
+                      },
+                      "description": "游戏加价规则库"
+                    }
+                  },
+                  "description": "某游戏的加价规则库（写入为 PUT 整表替换）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "读取某游戏的加价规则库",
+        "tags": [
+          "算价模型（S6）"
+        ]
+      },
+      "put": {
+        "description": "命中键为「字段标识=选项值」，如 mode=ranked；本版只接受 SURCHARGE。",
+        "operationId": "pricingRules_putGameRule",
+        "parameters": [
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "是否启用（缺省启用；停用即整条规则不参与计价）"
+                  },
+                  "items": {
+                    "type": "array",
+                    "description": "整表替换的规则项（最多 200 条）",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "dimensionKey",
+                        "amountFen"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "SURCHARGE",
+                            "FIXED"
+                          ],
+                          "description": "缺省 SURCHARGE；本版拒绝 FIXED（固定价后续单独立项）"
+                        },
+                        "dimensionKey": {
+                          "type": "string",
+                          "description": "命中键：字段标识=选项值，如 mode=ranked"
+                        },
+                        "amountFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "加价（十进制字符串分，>=0）"
+                        },
+                        "sortOrder": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "排序（缺省按数组顺序）"
+                        }
+                      },
+                      "description": "加价规则项入参"
+                    }
+                  }
+                },
+                "description": "加价规则库写入请求（整表替换）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "gameId",
+                        "enabled",
+                        "items",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "gameId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "游戏 id"
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "规则是否启用"
+                        },
+                        "items": {
+                          "type": "array",
+                          "description": "该游戏的加价规则项",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "kind",
+                              "dimensionKey",
+                              "amountFen",
+                              "sortOrder"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "规则项 id"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "SURCHARGE",
+                                  "FIXED"
+                                ],
+                                "description": "规则类型（本版只写 SURCHARGE；FIXED 保留类型位）"
+                              },
+                              "dimensionKey": {
+                                "type": "string",
+                                "description": "命中键：字段标识=选项值，如 mode=ranked"
+                              },
+                              "amountFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "加价（十进制字符串分，>=0）"
+                              },
+                              "sortOrder": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "排序"
+                              }
+                            },
+                            "description": "加价规则项"
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "最近更新时间；null 表示尚未配置"
+                        }
+                      },
+                      "description": "游戏加价规则库"
+                    }
+                  },
+                  "description": "某游戏的加价规则库（写入为 PUT 整表替换）"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "整表替换某游戏的加价规则（PUT 语义，金额为分字符串）",
+        "tags": [
+          "算价模型（S6）"
+        ]
+      }
+    },
+    "/api/v1/tenant/game-pricing/players/{playerId}/games/{gameId}/base": {
+      "get": {
+        "operationId": "pricingRules_getPlayerGamePrice",
+        "parameters": [
+          {
+            "name": "playerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "playerId",
+                        "gameId",
+                        "basePricePerHourFen",
+                        "fallbackBasePricePerHourFen",
+                        "status"
+                      ],
+                      "properties": {
+                        "playerId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "陪玩 id"
+                        },
+                        "gameId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "游戏 id"
+                        },
+                        "basePricePerHourFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩×游戏底价（分/小时）；null 表示未设置，计价时回退到陪玩级兜底",
+                          "nullable": true
+                        },
+                        "fallbackBasePricePerHourFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩级兜底底价（分/小时）；null 表示也没有兜底",
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "INACTIVE"
+                          ],
+                          "nullable": true,
+                          "description": "底价状态；null 表示未设置"
+                        }
+                      },
+                      "description": "陪玩×游戏底价"
+                    }
+                  },
+                  "description": "陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时会用哪个价）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "读取陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时用哪个价）",
+        "tags": [
+          "算价模型（S6）"
+        ]
+      },
+      "put": {
+        "operationId": "pricingRules_putPlayerGamePrice",
+        "parameters": [
+          {
+            "name": "playerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gameId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "basePricePerHourFen"
+                ],
+                "properties": {
+                  "basePricePerHourFen": {
+                    "type": "string",
+                    "pattern": "^(?:0|[1-9][0-9]*)$",
+                    "example": "800",
+                    "description": "底价（分/小时）（十进制字符串分，>=0）"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "INACTIVE"
+                    ],
+                    "description": "缺省 ACTIVE；INACTIVE 时计价回退到陪玩级兜底"
+                  }
+                },
+                "description": "陪玩×游戏底价写入请求"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "playerId",
+                        "gameId",
+                        "basePricePerHourFen",
+                        "fallbackBasePricePerHourFen",
+                        "status"
+                      ],
+                      "properties": {
+                        "playerId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "陪玩 id"
+                        },
+                        "gameId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "游戏 id"
+                        },
+                        "basePricePerHourFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩×游戏底价（分/小时）；null 表示未设置，计价时回退到陪玩级兜底",
+                          "nullable": true
+                        },
+                        "fallbackBasePricePerHourFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "example": "800",
+                          "description": "陪玩级兜底底价（分/小时）；null 表示也没有兜底",
+                          "nullable": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "INACTIVE"
+                          ],
+                          "nullable": true,
+                          "description": "底价状态；null 表示未设置"
+                        }
+                      },
+                      "description": "陪玩×游戏底价"
+                    }
+                  },
+                  "description": "陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时会用哪个价）"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "设置陪玩在某游戏的底价（分/小时）",
+        "tags": [
+          "算价模型（S6）"
+        ]
+      }
+    },
     "/api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots": {
       "get": {
         "operationId": "slotSession_serviceSlots",

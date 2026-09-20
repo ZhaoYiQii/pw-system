@@ -3,13 +3,16 @@ import { createDatabaseClient } from "@pw/database";
 import { tenantGuarded } from "../../common/database/tenant-guard.js";
 import { GameDispatchService } from "./application/game-dispatch.service.js";
 import { GameDispatchTemplateOrderService } from "./application/game-dispatch-template-order.service.js";
+import { PricingRulesService } from "./application/pricing-rules.service.js";
 import { GameTemplateService } from "./application/game-template.service.js";
 import { GenericGameTemplateService } from "./application/generic-game-template.service.js";
+import { PrismaGamePricingRepository } from "./infrastructure/prisma-game-pricing.repository.js";
 import { PrismaGameTemplateRepository } from "./infrastructure/prisma-game-template.repository.js";
 import { PrismaGenericGameTemplateRepository } from "./infrastructure/prisma-generic-game-template.repository.js";
 import { PrismaGameDispatchTemplateOrderRepository } from "./infrastructure/prisma-game-dispatch-template-order.repository.js";
 import { GameDispatchController } from "./interface/game-dispatch.controller.js";
 import { GameDispatchTemplateOrderController } from "./interface/game-dispatch-template-order.controller.js";
+import { PricingRulesController } from "./interface/pricing-rules.controller.js";
 import { SlotSessionController } from "./interface/slot-session.controller.js";
 import { GameTemplateController } from "./interface/game-template.controller.js";
 import { GenericGameTemplateController } from "./interface/generic-game-template.controller.js";
@@ -24,6 +27,7 @@ export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
     CustomerGameTemplateController,
     GameDispatchController,
     GameDispatchTemplateOrderController,
+    PricingRulesController,
     SlotSessionController,
   ],
   providers: [
@@ -79,6 +83,18 @@ export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
       useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
         tenantGuarded(client, new GameDispatchService(client)),
       inject: [GAME_DISPATCH_DB_CLIENT],
+    },
+    {
+      provide: PrismaGamePricingRepository,
+      useFactory: (client: ReturnType<typeof createDatabaseClient>) =>
+        tenantGuarded(client, new PrismaGamePricingRepository(client)),
+      inject: [GAME_DISPATCH_DB_CLIENT],
+    },
+    {
+      provide: PricingRulesService,
+      useFactory: (repo: PrismaGamePricingRepository) =>
+        new PricingRulesService(repo),
+      inject: [PrismaGamePricingRepository],
     },
   ],
   exports: [GameDispatchService],

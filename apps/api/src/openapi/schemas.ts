@@ -1494,3 +1494,119 @@ export const gameDispatchOrderViewSchema: OpenApiSchema = {
   ),
   description: "派单详情（含 v2 自动文案）",
 };
+
+/**
+ * 算价模型（ADR-0003）契约：按游戏的加价规则库 + 陪玩×游戏底价。
+ * 金额一律十进制字符串分；命中键 = 模板字段 stableKey + 选项值（如 `mode=ranked`）。
+ */
+export const gamePricingRuleItemSchema: OpenApiSchema = object(
+  ["id", "kind", "dimensionKey", "amountFen", "sortOrder"],
+  {
+    id: { type: "string", format: "uuid", description: "规则项 id" },
+    kind: {
+      type: "string",
+      enum: ["SURCHARGE", "FIXED"],
+      description: "规则类型（本版只写 SURCHARGE；FIXED 保留类型位）",
+    },
+    dimensionKey: stringField("命中键：字段标识=选项值，如 mode=ranked"),
+    amountFen: nonNegativeFen("加价"),
+    sortOrder: integer("排序", 0),
+  },
+  "加价规则项",
+);
+
+export const gamePricingRuleViewSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      ["gameId", "enabled", "items", "updatedAt"],
+      {
+        gameId: { type: "string", format: "uuid", description: "游戏 id" },
+        enabled: bool("规则是否启用"),
+        items: {
+          type: "array",
+          description: "该游戏的加价规则项",
+          items: gamePricingRuleItemSchema,
+        },
+        updatedAt: dateTime("最近更新时间；null 表示尚未配置", true),
+      },
+      "游戏加价规则库",
+    ),
+  ),
+  description: "某游戏的加价规则库（写入为 PUT 整表替换）",
+};
+
+export const gamePricingRuleSaveBodySchema: OpenApiSchema = object(
+  ["items"],
+  {
+    enabled: bool("是否启用（缺省启用；停用即整条规则不参与计价）"),
+    items: {
+      type: "array",
+      description: "整表替换的规则项（最多 200 条）",
+      items: object(
+        ["dimensionKey", "amountFen"],
+        {
+          kind: {
+            type: "string",
+            enum: ["SURCHARGE", "FIXED"],
+            description: "缺省 SURCHARGE；本版拒绝 FIXED（固定价后续单独立项）",
+          },
+          dimensionKey: stringField("命中键：字段标识=选项值，如 mode=ranked"),
+          amountFen: nonNegativeFen("加价"),
+          sortOrder: integer("排序（缺省按数组顺序）", 0),
+        },
+        "加价规则项入参",
+      ),
+    },
+  },
+  "加价规则库写入请求（整表替换）",
+);
+
+export const playerGamePriceViewSchema: OpenApiSchema = {
+  ...dataSchema(
+    object(
+      [
+        "playerId",
+        "gameId",
+        "basePricePerHourFen",
+        "fallbackBasePricePerHourFen",
+        "status",
+      ],
+      {
+        playerId: { type: "string", format: "uuid", description: "陪玩 id" },
+        gameId: { type: "string", format: "uuid", description: "游戏 id" },
+        basePricePerHourFen: {
+          ...nonNegativeFen("陪玩×游戏底价"),
+          nullable: true,
+          description:
+            "陪玩×游戏底价（分/小时）；null 表示未设置，计价时回退到陪玩级兜底",
+        },
+        fallbackBasePricePerHourFen: {
+          ...nonNegativeFen("陪玩级兜底底价"),
+          nullable: true,
+          description: "陪玩级兜底底价（分/小时）；null 表示也没有兜底",
+        },
+        status: {
+          type: "string",
+          enum: ["ACTIVE", "INACTIVE"],
+          nullable: true,
+          description: "底价状态；null 表示未设置",
+        },
+      },
+      "陪玩×游戏底价",
+    ),
+  ),
+  description: "陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时会用哪个价）",
+};
+
+export const playerGamePriceSaveBodySchema: OpenApiSchema = object(
+  ["basePricePerHourFen"],
+  {
+    basePricePerHourFen: nonNegativeFen("底价（分/小时）"),
+    status: {
+      type: "string",
+      enum: ["ACTIVE", "INACTIVE"],
+      description: "缺省 ACTIVE；INACTIVE 时计价回退到陪玩级兜底",
+    },
+  },
+  "陪玩×游戏底价写入请求",
+);

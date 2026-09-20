@@ -1,9 +1,11 @@
 import { parseFenString, type MoneyFen } from "../../../common/money.js";
+import type { PricingDimensionField } from "./game-pricing.js";
 import {
   GAME_TEMPLATE_V2_LIMITS,
   type PublishedConfigV2,
   type TemplateChoiceOptionV2,
   type TemplateComponentV2,
+  type TemplateFieldComponentV2,
   type TemplateRepeatableTableV2,
 } from "./game-template-config-v2.js";
 
@@ -253,32 +255,83 @@ export function calculateTemplatePriceAdjustmentFen(
   config: PublishedConfigV2,
   values: TemplateRuntimeValues,
 ): MoneyFen {
-  const components = activeComponents(config);
-  assertKnownRuntimeKeys(components, values);
   let total = 0n;
 
-  for (const component of components) {
-    if (
-      component.kind !== "FIELD" ||
-      (component.fieldType !== "SINGLE_SELECT" &&
-        component.fieldType !== "MULTI_SELECT")
-    ) {
+  for (const { component, options } of collectChoiceSelections(
+    config,
+    values,
+  )) {
+    const prices = options.map((option) =>
+      optionPriceFen(
+        option,
+        `$.components.${component.stableKey}.options.${option.value}.priceDeltaFen`,
+      ),
+    );
+    if (component.fieldType === "SINGLE_SELECT") {
+      total += prices[0] ?? 0n;
       continue;
     }
+    if (component.aggregationPolicy === "SUM") {
+      total += prices.reduce((sum, price) => sum + price, 0n);
+    } else if (component.aggregationPolicy === "MAX") {
+      total += prices.reduce(
+        (maximum, price) => (price > maximum ? price : maximum),
+        0n,
+      );
+    } else {
+      throw new TemplateRuntimeValueError(
+        "TEMPLATE_PRICE_RULE_INVALID",
+        `$.components.${component.stableKey}.aggregationPolicy`,
+        "多选加价必须声明 SUM 或 MAX",
+      );
+    }
+  }
+
+  return total.toString();
+}
+
+/** 启用且在启用区块内的选择类字段（单选 / 多选）——加价命中的候选字段。 */
+function choiceComponents(
+  config: PublishedConfigV2,
+): TemplateFieldComponentV2[] {
+  return activeComponents(config).filter(
+    (component): component is TemplateFieldComponentV2 =>
+      component.kind === "FIELD" &&
+      (component.fieldType === "SINGLE_SELECT" ||
+        component.fieldType === "MULTI_SELECT"),
+  );
+}
+
+interface TemplateChoiceSelection {
+  component: TemplateFieldComponentV2;
+  /** 本次提交命中的选项，顺序与提交顺序一致（多选逐项）。 */
+  options: TemplateChoiceOptionV2[];
+}
+
+/**
+ * 校验选择类字段的取值并返回命中的选项：
+ * 未知键、选项之外的取值、多选非数组 / 超条数 / 重复都在这里被拒绝。
+ */
+function collectChoiceSelections(
+  config: PublishedConfigV2,
+  values: TemplateRuntimeValues,
+): TemplateChoiceSelection[] {
+  const components = choiceComponents(config);
+  assertKnownRuntimeKeys(activeComponents(config), values);
+  const selections: TemplateChoiceSelection[] = [];
+
+  for (const component of components) {
     const rawValue = values[component.stableKey];
     if (rawValue === undefined) continue;
     const options = component.options ?? [];
 
     if (component.fieldType === "SINGLE_SELECT") {
-      const option = selectedOption(
-        options,
-        rawValue,
-        `$.values.${component.stableKey}`,
-      );
-      total += optionPriceFen(
-        option,
-        `$.components.${component.stableKey}.options.${option.value}.priceDeltaFen`,
-      );
+      selections.push({
+        component,
+        options: [
+          selectedOption(options, rawValue, `$.values.${component.stableKey}`),
+        ],
+      });
       continue;
     }
 
@@ -306,32 +359,38 @@ export function calculateTemplatePriceAdjustmentFen(
         "多选字段不能重复选择同一选项",
       );
     }
-    const prices = rawValue.map((value) => {
-      const option = selectedOption(
-        options,
-        value,
-        `$.values.${component.stableKey}`,
-      );
-      return optionPriceFen(
-        option,
-        `$.components.${component.stableKey}.options.${option.value}.priceDeltaFen`,
-      );
+    selections.push({
+      component,
+      options: rawValue.map((value) =>
+        selectedOption(options, value, `$.values.${component.stableKey}`),
+      ),
     });
-    if (component.aggregationPolicy === "SUM") {
-      total += prices.reduce((sum, price) => sum + price, 0n);
-    } else if (component.aggregationPolicy === "MAX") {
-      total += prices.reduce(
-        (maximum, price) => (price > maximum ? price : maximum),
-        0n,
-      );
-    } else {
-      throw new TemplateRuntimeValueError(
-        "TEMPLATE_PRICE_RULE_INVALID",
-        `$.components.${component.stableKey}.aggregationPolicy`,
-        "多选加价必须声明 SUM 或 MAX",
-      );
-    }
   }
 
-  return total.toString();
+  return selections;
+}
+
+/**
+ * 下单时的选择类取值校验（选项成员、多选去重与条数）。
+ * 定价自 ADR-0003 起收敛到规则库，这里只负责取值合法性，
+ * 金额由 `resolveUnitPriceFen` / `resolveSurchargeFen` 按维度键命中计算。
+ */
+export function validateTemplateChoiceValues(
+  config: PublishedConfigV2,
+  values: TemplateRuntimeValues,
+): void {
+  collectChoiceSelections(config, values);
+}
+
+/**
+ * 参与加价命中的模板字段：与迁移脚本 `scripts/migrate-pricing-rules.mjs`
+ * 的 v2 归并口径一致（只处理 FIELD 组件，表格列选项不参与）。
+ */
+export function templatePricingDimensionFields(
+  config: PublishedConfigV2,
+): PricingDimensionField[] {
+  return choiceComponents(config).map((component) => ({
+    key: component.stableKey,
+    optionValues: (component.options ?? []).map((option) => option.value),
+  }));
 }
