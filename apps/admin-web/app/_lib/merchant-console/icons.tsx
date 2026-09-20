@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import {
   AlertTriangle,
+  BadgeDollarSign,
   Banknote,
   Bell,
   BookOpen,
@@ -38,6 +39,7 @@ export const MODULE_ICONS: Record<MerchantModuleId, ModuleIcon> = {
   players: User,
   "player-applications": ClipboardList,
   catalog: BookOpen,
+  pricing: BadgeDollarSign,
   finance: Wallet,
   settlements: Banknote,
   disputes: ShieldAlert,

@@ -99,6 +99,15 @@ export const MERCHANT_MODULES = [
     features: ["游戏与服务项目", "岗位需求模板", "价格与时长规则"],
   },
   {
+    id: "pricing",
+    group: "settings",
+    label: "算价模型",
+    kicker: "SETTINGS / PRICING",
+    description:
+      "维护按游戏的加价规则与每陪玩每游戏底价（单价 = 底价 + 命中加价）。",
+    features: ["按游戏的加价规则", "陪玩×游戏底价", "命中键与整数分校验"],
+  },
+  {
     id: "finance",
     group: "records",
     label: "收入账本",
@@ -234,7 +243,7 @@ export const MERCHANT_NAV_DOMAINS = [
     id: "settings",
     label: "运营设置",
     description: "门店、权限与审计配置",
-    activeModuleIds: ["settings", "audit"],
+    activeModuleIds: ["settings", "pricing", "audit"],
   },
 ] as const satisfies readonly {
   id: string;
@@ -567,6 +576,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "players",
     "player-applications",
     "catalog",
+    "pricing",
     "finance",
     "settlements",
     "disputes",
@@ -587,6 +597,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "players",
     "player-applications",
     "catalog",
+    "pricing",
     "finance",
     "settlements",
     "disputes",

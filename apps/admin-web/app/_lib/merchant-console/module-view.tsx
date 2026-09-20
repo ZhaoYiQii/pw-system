@@ -16,6 +16,7 @@ import {
 } from "./module-views";
 import { getMonitorModule } from "./monitor-data";
 import { MonitorModuleView } from "./monitor-view";
+import { PricingRulesModuleView } from "./pricing-rules-view";
 import { SettingsModuleView } from "./settings-view";
 
 export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
@@ -46,6 +47,8 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
       return record(moduleId, <DisputesModuleView />);
     case "audit":
       return record(moduleId, <AuditModuleView />);
+    case "pricing":
+      return record(moduleId, <PricingRulesModuleView />);
     default:
       break;
   }
