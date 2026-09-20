@@ -484,6 +484,29 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
     const slotView = slots.slots.find((s) => s.orderSlotId === slotId);
     expect(slotView?.session?.declaredDurationMinutes).toBe(95);
     expect(slotView?.session?.reportStatus).toBe("APPROVED");
+
+    // 费用口径（Task 5b-2/A）：老板支出 = 已核定档位金额合计，陪玩实收当前整额发放；
+    // 门店抽成/平台费尚未在本链路分账，返回 null 并标记 splitApplied=false。
+    const detail = (
+      await req(ownerToken).get(`${DISPATCH}/orders/${orderId}`).expect(200)
+    ).body.data as {
+      settlement: {
+        orderAmountFen: string;
+        playerShareFen: string;
+        storeProfitFen: string;
+        storeCutFen: string | null;
+        splitApplied: boolean;
+        approvedSlotCount: number;
+        activeSlotCount: number;
+      };
+    };
+    expect(detail.settlement.orderAmountFen).toBe("11084");
+    expect(detail.settlement.playerShareFen).toBe("11084");
+    expect(detail.settlement.storeProfitFen).toBe("0");
+    expect(detail.settlement.storeCutFen).toBeNull();
+    expect(detail.settlement.splitApplied).toBe(false);
+    expect(detail.settlement.approvedSlotCount).toBe(1);
+    expect(detail.settlement.activeSlotCount).toBe(1);
   });
 
   it("审批修正时长：按修正值计费，审计保留原始申报值", async () => {

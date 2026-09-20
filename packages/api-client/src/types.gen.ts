@@ -7669,6 +7669,43 @@ export type GameDispatchViewResponses = {
                  */
                 generatedFromSnapshotAt: string;
             } | null;
+            /**
+             * 费用口径
+             */
+            settlement: {
+                /**
+                 * 老板支出（分）= 已核定档位金额合计，与确认结算的实际扣款额一致
+                 */
+                orderAmountFen: string;
+                /**
+                 * 陪玩实收（分）；当前链路整额发放（与支出相同），分账落地后为扣除抽成后的金额
+                 */
+                playerShareFen: string;
+                /**
+                 * 门店毛利（分）= 支出 − 实收；分账未落地时为 0
+                 */
+                storeProfitFen: string;
+                /**
+                 * 门店抽成（分）；尚未分账时恒为 null
+                 */
+                storeCutFen: string | null;
+                /**
+                 * 平台费（分）；尚未分账时恒为 null
+                 */
+                platformFeeFen: string | null;
+                /**
+                 * 是否已按费率分账（本版恒 false）
+                 */
+                splitApplied: boolean;
+                /**
+                 * 已核定档位数
+                 */
+                approvedSlotCount: number;
+                /**
+                 * 生效档位数（不含已释放）
+                 */
+                activeSlotCount: number;
+            };
         };
     };
 };

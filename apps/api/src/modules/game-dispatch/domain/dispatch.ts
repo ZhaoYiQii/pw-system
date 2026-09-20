@@ -69,6 +69,35 @@ export interface DispatchView {
   bossUrl: string;
   /** v2 订单的自动文案；旧订单或快照不可解析时为 null。 */
   document: DispatchDocumentView | null;
+  /** 费用口径（Task 5b-2/A，设计规格 §3.2 / §3.4）：只报链路里真实存在的数字。 */
+  settlement: DispatchSettlementView;
+}
+
+/**
+ * 订单费用口径。
+ *
+ * 本版（A 方案）只披露真实数字：老板支出 = 已核定档位金额合计（= 确认结算实际扣款额），
+ * 陪玩实收在当前链路为**整额发放**（与支出相同）。门店抽成与平台费尚未在本链路分账，
+ * 因此 `storeCutFen` / `platformFeeFen` 恒为 null，`splitApplied` 恒为 false——
+ * 不按规格公式编造毛利（规格 §3.2 的分账待落地，见后续 ADR）。
+ */
+export interface DispatchSettlementView {
+  /** 老板支出（分，字符串）：已核定档位金额合计。 */
+  orderAmountFen: string;
+  /** 陪玩实收（分，字符串）：当前链路整额发放，等于 orderAmountFen。 */
+  playerShareFen: string;
+  /** 门店毛利（分，字符串）：= 支出 − 实收，分账未落地时为 0。 */
+  storeProfitFen: string;
+  /** 门店抽成（分）：尚未分账，恒为 null。 */
+  storeCutFen: string | null;
+  /** 平台费（分）：尚未分账，恒为 null。 */
+  platformFeeFen: string | null;
+  /** 是否已按费率分账；本版恒为 false。 */
+  splitApplied: boolean;
+  /** 已核定（有报单审批金额）的生效档位数。 */
+  approvedSlotCount: number;
+  /** 生效档位数（不含已释放）。 */
+  activeSlotCount: number;
 }
 
 export interface DispatchListRow {

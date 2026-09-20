@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError, apiFetch } from "../../../_lib/api";
+import { formatFenYuan } from "../../../_lib/money";
 import { TenantNav } from "../../../_lib/tenant-nav";
 
 interface AppView {
@@ -44,6 +45,17 @@ interface DispatchDetail {
   bossUrl: string;
   lines: LineView[];
   round: { roundNo: number; closesAt: string; status: string } | null;
+  /** 费用口径（Task 5b-2/A）：只含链路里真实存在的数字。 */
+  settlement: {
+    orderAmountFen: string;
+    playerShareFen: string;
+    storeProfitFen: string;
+    storeCutFen: string | null;
+    platformFeeFen: string | null;
+    splitApplied: boolean;
+    approvedSlotCount: number;
+    activeSlotCount: number;
+  };
 }
 interface BreachView {
   id: string;
@@ -469,6 +481,57 @@ function Inner({ orderId }: { orderId: string }) {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      {/* 费用口径（Task 5b-2/A）：只展示链路里真实存在的数字；抽成未落地就写明未落地。 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>费用口径</CardTitle>
+          <CardDescription>
+            金额按已核定的报单时长计算；确认结算会按“老板支出”扣老板钱包。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">老板支出</span>
+            <span className="font-medium">
+              {formatFenYuan(data.settlement.orderAmountFen)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">陪玩实收</span>
+            <span className="font-medium">
+              {formatFenYuan(data.settlement.playerShareFen)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">门店抽成</span>
+            <span className="font-medium text-muted-foreground">
+              {data.settlement.storeCutFen === null
+                ? "未分账"
+                : formatFenYuan(data.settlement.storeCutFen)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">门店毛利</span>
+            <span className="font-medium">
+              {formatFenYuan(data.settlement.storeProfitFen)}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            已核定档位 {data.settlement.approvedSlotCount} / 生效档位{" "}
+            {data.settlement.activeSlotCount}。
+            {data.settlement.approvedSlotCount < data.settlement.activeSlotCount
+              ? "还有档位未完成报单审批，确认结算前请先审批。"
+              : ""}
+          </p>
+          {!data.settlement.splitApplied ? (
+            <p className="text-xs text-amber-600">
+              门店抽成与平台费尚未在本链路分账：陪玩按档位金额整额发放，抽成/平台费暂不参与计算（规格
+              §3.2 待落地）。
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

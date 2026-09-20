@@ -214,4 +214,28 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
       mine.properties?.data?.items?.properties?.unitPriceFen?.nullable,
     ).toBe(true);
   });
+
+  it("Task 5b-2(A)：派单详情带费用口径，抽成未落地时为 null 且 splitApplied=false", () => {
+    const detail = schemaOf(document.paths[DISPATCH_DETAIL_PATH]?.get, "200");
+    const settlement = detail.properties?.data?.properties?.settlement;
+    expect(settlement?.required).toEqual([
+      "orderAmountFen",
+      "playerShareFen",
+      "storeProfitFen",
+      "storeCutFen",
+      "platformFeeFen",
+      "splitApplied",
+      "approvedSlotCount",
+      "activeSlotCount",
+    ]);
+    // 金额一律字符串分；抽成/平台费可空（未分账），用 flag 明示而不是编数。
+    expect(settlement?.properties?.orderAmountFen?.type).toBe("string");
+    expect(settlement?.properties?.playerShareFen?.pattern).toBe(
+      "^(?:0|[1-9][0-9]*)$",
+    );
+    expect(settlement?.properties?.storeCutFen?.nullable).toBe(true);
+    expect(settlement?.properties?.platformFeeFen?.nullable).toBe(true);
+    expect(settlement?.properties?.splitApplied?.type).toBe("boolean");
+    expect(settlement?.properties?.approvedSlotCount?.type).toBe("integer");
+  });
 });

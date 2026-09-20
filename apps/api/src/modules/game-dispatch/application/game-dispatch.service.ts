@@ -15,6 +15,7 @@ import type {
   DispatchView,
   PlayerApplicationView,
   PlayerHallOrderView,
+  DispatchSettlementView,
   SlotReleaseView,
 } from "../domain/dispatch.js";
 import {
@@ -1876,6 +1877,7 @@ export class GameDispatchService {
       (found.gd.formValuesJson ?? {}) as Record<string, unknown>,
       audience,
     );
+    const settlement = await this.settlementView(tenantId, orderId);
     return {
       orderId,
       dispatchOrderId: found.gd.id,
@@ -1885,6 +1887,7 @@ export class GameDispatchService {
       templateName: "",
       formValues: snapshotView.values as Record<string, string>,
       document: snapshotView.document,
+      settlement,
       durationMinutes: found.gd.durationMinutes,
       desiredStartAt: found.gd.desiredStartAt
         ? found.gd.desiredStartAt.toISOString()
@@ -1899,6 +1902,43 @@ export class GameDispatchService {
           }
         : null,
       ...copy,
+    };
+  }
+
+  /**
+   * 费用口径（Task 5b-2/A，设计规格 §3.2 / §3.4）：只报链路里真实存在的数字。
+   *
+   * 现状：档位金额**整额**扣老板钱包并整额进结算批次，门店抽成与平台费尚未分账，
+   * 所以抽成/平台费返回 null 并用 `splitApplied=false` 显式标注，不按规格公式编造毛利。
+   * 分账落地（ADR 批准后）时，这里改为复用 `splitSettlement` 并把 flag 置 true。
+   */
+  private async settlementView(
+    tenantId: string,
+    orderId: string,
+  ): Promise<DispatchSettlementView> {
+    const activeSlots = await this.client.orderSlot.findMany({
+      where: { tenantId, orderId, status: { not: "RELEASED" } },
+      select: { id: true },
+    });
+    const earnings = await this.client.slotEarning.findMany({
+      where: {
+        tenantId,
+        orderId,
+        orderSlotId: { in: activeSlots.map((s) => s.id) },
+      },
+      select: { amountFen: true },
+    });
+    const orderAmountFen = earnings.reduce((acc, e) => acc + e.amountFen, 0n);
+    return {
+      orderAmountFen: orderAmountFen.toString(),
+      // 当前链路：陪玩实收 = 档位金额（整额发放）。
+      playerShareFen: orderAmountFen.toString(),
+      storeProfitFen: "0",
+      storeCutFen: null,
+      platformFeeFen: null,
+      splitApplied: false,
+      approvedSlotCount: earnings.length,
+      activeSlotCount: activeSlots.length,
     };
   }
 

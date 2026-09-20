@@ -634,6 +634,16 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
           unitPriceFen: string | null;
         }[];
       }[];
+      settlement: {
+        orderAmountFen: string;
+        playerShareFen: string;
+        storeProfitFen: string;
+        storeCutFen: string | null;
+        platformFeeFen: string | null;
+        splitApplied: boolean;
+        approvedSlotCount: number;
+        activeSlotCount: number;
+      };
     };
     const detailApp = detail.lines
       .flatMap((line) => line.applications)
@@ -642,6 +652,16 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     // 老板端与陪玩端看到同一个单价（设计规格 §3.4）。
     expect(detailApp?.unitPriceFen).toBe(slot.unitPriceFen.toString());
     expect(detailApp?.unitPriceFen).toBe("7000");
+    // 费用口径（Task 5b-2/A）：只报真实数字——还没核定报单时支出为 0，
+    // 抽成/平台费返回 null 并标记「尚未分账」，不按规格公式编造毛利。
+    expect(detail.settlement.orderAmountFen).toBe("0");
+    expect(detail.settlement.playerShareFen).toBe("0");
+    expect(detail.settlement.storeProfitFen).toBe("0");
+    expect(detail.settlement.storeCutFen).toBeNull();
+    expect(detail.settlement.platformFeeFen).toBeNull();
+    expect(detail.settlement.splitApplied).toBe(false);
+    expect(detail.settlement.approvedSlotCount).toBe(0);
+    expect(detail.settlement.activeSlotCount).toBe(1);
 
     await req(csToken)
       .post(`${DISPATCH}/orders/${orderId}/player-breaches`, {

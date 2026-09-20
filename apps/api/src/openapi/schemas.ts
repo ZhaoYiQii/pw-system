@@ -1375,6 +1375,7 @@ export const gameDispatchOrderViewSchema: OpenApiSchema = {
         "applyUrl",
         "bossUrl",
         "document",
+        "settlement",
       ],
       {
         orderId: { type: "string", format: "uuid", description: "订单 id" },
@@ -1501,6 +1502,48 @@ export const gameDispatchOrderViewSchema: OpenApiSchema = {
             generatedFromSnapshotAt: dateTime("快照生成时间"),
           },
         },
+        settlement: object(
+          [
+            "orderAmountFen",
+            "playerShareFen",
+            "storeProfitFen",
+            "storeCutFen",
+            "platformFeeFen",
+            "splitApplied",
+            "approvedSlotCount",
+            "activeSlotCount",
+          ],
+          {
+            orderAmountFen: {
+              ...nonNegativeFen("老板支出"),
+              description:
+                "老板支出（分）= 已核定档位金额合计，与确认结算的实际扣款额一致",
+            },
+            playerShareFen: {
+              ...nonNegativeFen("陪玩实收"),
+              description:
+                "陪玩实收（分）；当前链路整额发放（与支出相同），分账落地后为扣除抽成后的金额",
+            },
+            storeProfitFen: {
+              ...nonNegativeFen("门店毛利"),
+              description: "门店毛利（分）= 支出 − 实收；分账未落地时为 0",
+            },
+            storeCutFen: {
+              type: "string",
+              nullable: true,
+              description: "门店抽成（分）；尚未分账时恒为 null",
+            },
+            platformFeeFen: {
+              type: "string",
+              nullable: true,
+              description: "平台费（分）；尚未分账时恒为 null",
+            },
+            splitApplied: bool("是否已按费率分账（本版恒 false）"),
+            approvedSlotCount: integer("已核定档位数", 0),
+            activeSlotCount: integer("生效档位数（不含已释放）", 0),
+          },
+          "费用口径",
+        ),
       },
       "派单详情",
     ),
