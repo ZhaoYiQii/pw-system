@@ -1,0 +1,170 @@
+name: Container Smoke
+
+# 生产容器路径的冒烟（P2）。只在这些路径变化时跑，避免拖慢日常提交；
+# 另加每周定时一次，用来探测外部漂移（基础镜像、npm 侧变化、Node 版本）。
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "infra/docker/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".nvmrc"
+      - "packages/database/prisma/migrations/**"
+      - "apps/api/package.json"
+      - "apps/admin-web/package.json"
+      - "apps/mobile/package.json"
+      - "scripts/seed-prod.mjs"
+      - "scripts/seed-store-demo.mjs"
+      - ".github/workflows/container-smoke.yml"
+  schedule:
+    - cron: "0 18 * * 0" # 每周一 02:00（CST）漂移探测
+
+concurrency:
+  group: container-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 写入一次性冒烟环境（哑值，仅本 job）
+        run: |
+          cat > "$RUNNER_TEMP/pw-smoke.env" <<'EOF'
+          NODE_ENV=production
+          POSTGRES_USER=pw_saas
+          POSTGRES_PASSWORD=ci_smoke_owner
+          POSTGRES_DB=pw_saas_smoke
+          PW_RUNTIME_PASSWORD=ci_smoke_runtime
+          DATABASE_URL=postgresql://pw_runtime:ci_smoke_runtime@postgres:5432/pw_saas_smoke?schema=public
+          PLATFORM_DATABASE_URL=postgresql://pw_saas:ci_smoke_owner@postgres:5432/pw_saas_smoke?schema=public
+          DATABASE_MIGRATION_URL=postgresql://pw_saas:ci_smoke_owner@postgres:5432/pw_saas_smoke?schema=public
+          REDIS_URL=redis://redis:6379/0
+          SESSION_SECRET=ci-smoke-session-secret-0123456789
+          # CI 专用固定哑值（32 字节 base64，仅本 job 的一次性库使用，数据随栈销毁）
+          PII_MASTER_KEY=YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+          EVIDENCE_ROOT=/app/data/evidence
+          ADMIN_WEB_ORIGIN=http://127.0.0.1:4200
+          H5_ORIGIN=http://127.0.0.1:4300
+          NEXT_PUBLIC_API_ORIGIN=http://127.0.0.1:4100
+          NEXT_PUBLIC_TENANT_HOST_SUFFIX=smoke.local
+          PAYMENT_PROVIDER=mock
+          ALLOW_MOCK_PAYMENT=true
+          SMS_PROVIDER=mock
+          ALLOW_MOCK_SMS=true
+          SEED_TENANT_CODE=smoke
+          SEED_TENANT_NAME=ci smoke store
+          SEED_TENANT_HOSTS=
+          SEED_PLATFORM_USER=admin
+          SEED_PLATFORM_PASSWORD=ci_smoke_platform
+          SEED_TENANT_PASSWORD=ci_smoke_tenant
+          EOF
+          # PII_MASTER_KEY 必须是 32 字节 base64
+          node -e "const k=Buffer.from('YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=','base64'); if(k.length!==32) process.exit(1); console.log('pii key ok', k.length)"
+
+      - name: 构建生产镜像
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml build api pw-init admin h5
+
+      - name: 起依赖并等待 healthy
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml up -d postgres redis
+          for i in $(seq 1 40); do
+            healthy=$(docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+              -f docker-compose.prod.yml ps --format '{{.Health}}' | grep -c healthy || true)
+            [ "$healthy" -ge 2 ] && break
+            sleep 3
+          done
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml ps
+
+      - name: 建库引导（pw 角色）
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml exec -T postgres \
+            psql -U pw_saas -d pw_saas_smoke -v ON_ERROR_STOP=1 \
+            -f /opt/pw-saas/bootstrap-owner.sql
+
+      - name: 迁移（断言全部应用）
+        working-directory: infra/docker
+        run: |
+          set -o pipefail
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml run --rm pw-init \
+            sh -c 'cd /app/packages/database && DATABASE_URL=$DATABASE_MIGRATION_URL \
+            node node_modules/prisma/build/index.js migrate deploy --config prisma7.config.ts' \
+            | tee "$RUNNER_TEMP/migrate.log"
+          grep -q "All migrations have been successfully applied" "$RUNNER_TEMP/migrate.log"
+
+      - name: 运行时口令轮换
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml exec -T postgres \
+            psql -U pw_saas -d pw_saas_smoke \
+            -c "ALTER ROLE pw_runtime PASSWORD 'ci_smoke_runtime';"
+
+      - name: 运行时授权补齐并断言覆盖 64/64
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml exec -T postgres \
+            psql -U pw_saas -d pw_saas_smoke -v ON_ERROR_STOP=1 \
+            -f /opt/pw-saas/grant-runtime.sql
+          read -r covered total < <(docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml exec -T postgres \
+            psql -U pw_saas -d pw_saas_smoke -At -F' ' -c \
+            "select count(*) filter (where has_table_privilege('pw_runtime', format('%I.%I', schemaname, tablename), 'SELECT')), count(*) from pg_policies where policyname='tenant_isolation_runtime';")
+          echo "runtime grants: $covered/$total"
+          [ "$covered" = "$total" ]
+
+      - name: 种子数据
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml run --rm pw-init \
+            sh -c 'DATABASE_URL=$DATABASE_MIGRATION_URL node /app/scripts/seed-prod.mjs \
+            && DATABASE_URL=$DATABASE_MIGRATION_URL node /app/scripts/seed-store-demo.mjs'
+
+      - name: 起应用并冒烟
+        working-directory: infra/docker
+        run: |
+          set -e
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml up -d
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4100/ready > /dev/null 2>&1; then break; fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:4100/ready
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4200/store/login)" = "200"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4300/)" = "200"
+          # 容器外登录一条（H5 同源反代路径）
+          curl -fsS -X POST http://127.0.0.1:4300/api/v1/auth/login \
+            -H 'content-type: application/json' \
+            -d '{"kind":"tenant","tenantCode":"smoke","username":"owner","password":"ci_smoke_tenant"}' \
+            | grep -q accessToken
+
+      - name: 失败时导出日志
+        if: failure()
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml logs --tail 80 || true
+
+      - name: 拆卸（只删本 job 的栈）
+        if: always()
+        working-directory: infra/docker
+        run: |
+          docker compose -p pw-saas-smoke --env-file "$RUNNER_TEMP/pw-smoke.env" \
+            -f docker-compose.prod.yml down -v || true
