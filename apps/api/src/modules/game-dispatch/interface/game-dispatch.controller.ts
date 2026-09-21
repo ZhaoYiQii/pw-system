@@ -65,8 +65,39 @@ export class GameDispatchController {
   @TenantScope()
   @Permissions("gameDispatch.manage")
   @Get()
-  async list(@Req() req: AuthenticatedRequest) {
-    return { data: await this.dispatch.list(tenantIdOf(req)) };
+  @ApiQuery({
+    name: "status",
+    required: false,
+    type: String,
+    description: "按订单状态过滤",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "每页条数 1–100，默认 20",
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    type: Number,
+    description: "分页偏移，默认 0",
+  })
+  async list(
+    @Req() req: AuthenticatedRequest,
+    @Query("status") status?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+  ) {
+    const parsedLimit = limit === undefined ? undefined : Number(limit);
+    const parsedOffset = offset === undefined ? undefined : Number(offset);
+    // 保留 `{ data: [...] }` 形状（既有前端与 E2E 依赖），额外返回分页元信息。
+    const page = await this.dispatch.list(tenantIdOf(req), {
+      ...(status ? { status } : {}),
+      ...(parsedLimit === undefined ? {} : { limit: parsedLimit }),
+      ...(parsedOffset === undefined ? {} : { offset: parsedOffset }),
+    });
+    return { data: page.items, total: page.total };
   }
 
   @TenantScope()

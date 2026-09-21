@@ -63,6 +63,22 @@ function assertTransition(from: string, to: string, orderId: string): void {
 
 type Tx = DbTransaction;
 
+/** 列表分页上限（订单中心列表 Slice 0）：默认 20、最多 100。 */
+export const DISPATCH_LIST_DEFAULT_LIMIT = 20;
+export const DISPATCH_LIST_MAX_LIMIT = 100;
+
+export function clampListLimit(limit: number | undefined): number {
+  if (limit === undefined || !Number.isFinite(limit)) {
+    return DISPATCH_LIST_DEFAULT_LIMIT;
+  }
+  return Math.min(Math.max(Math.trunc(limit), 1), DISPATCH_LIST_MAX_LIMIT);
+}
+
+export function clampListOffset(offset: number | undefined): number {
+  if (offset === undefined || !Number.isFinite(offset)) return 0;
+  return Math.max(Math.trunc(offset), 0);
+}
+
 /** 报单状态（设计规格 §3.3）：未报单 / 待客服审批 / 已通过（已落金额）/ 已驳回。 */
 export type SlotReportStatus =
   "NOT_REPORTED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
@@ -517,28 +533,53 @@ export class GameDispatchService {
     return result;
   }
 
-  async list(tenantId: string): Promise<DispatchListRow[]> {
+  /**
+   * 派单列表（订单中心列表 Slice 0）：
+   * - 支持 `status` 过滤与 `limit`/`offset` 分页，并返回 `total`（不再用 `take: 100` 硬截断）；
+   * - 订单状态用**一次**批量查询取回，去掉原先逐条 `order.findFirst` 的 N+1；
+   * - `limit` 上限 100、默认 20；`offset` 默认 0（调用方给非法值时按默认处理）。
+   */
+  async list(
+    tenantId: string,
+    query: { status?: string; limit?: number; offset?: number } = {},
+  ): Promise<{ items: DispatchListRow[]; total: number }> {
+    const limit = clampListLimit(query.limit);
+    const offset = clampListOffset(query.offset);
     const rows = await this.client.gameDispatchOrder.findMany({
       where: { tenantId },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      select: {
+        orderId: true,
+        dispatchNo: true,
+        durationMinutes: true,
+        tenantId: true,
+        createdAt: true,
+      },
     });
-    const out: DispatchListRow[] = [];
-    for (const row of rows) {
-      const order = await this.client.order.findFirst({
-        where: { tenantId, id: row.orderId },
-        select: { status: true },
-      });
-      out.push({
-        orderId: row.orderId,
-        dispatchNo: row.dispatchNo,
-        status: order?.status ?? "UNKNOWN",
-        durationMinutes: row.durationMinutes,
-        customerProfileId: row.tenantId,
-        createdAt: row.createdAt.toISOString(),
-      });
-    }
-    return out;
+    // N+1 修复：一次取回本页所涉及订单的状态（下面按 status 过滤后仍复用同一份映射）。
+    const orderIds = Array.from(new Set(rows.map((row) => row.orderId)));
+    const orders = orderIds.length
+      ? await this.client.order.findMany({
+          where: { tenantId, id: { in: orderIds } },
+          select: { id: true, status: true },
+        })
+      : [];
+    const statusByOrder = new Map(orders.map((o) => [o.id, o.status]));
+    const mapped: DispatchListRow[] = rows.map((row) => ({
+      orderId: row.orderId,
+      dispatchNo: row.dispatchNo,
+      status: statusByOrder.get(row.orderId) ?? "UNKNOWN",
+      durationMinutes: row.durationMinutes,
+      customerProfileId: row.tenantId,
+      createdAt: row.createdAt.toISOString(),
+    }));
+    const filtered = query.status
+      ? mapped.filter((row) => row.status === query.status)
+      : mapped;
+    return {
+      items: filtered.slice(offset, offset + limit),
+      total: filtered.length,
+    };
   }
 
   async publish(
