@@ -216,10 +216,30 @@ describe("订单中心列表（Slice 1 新增纯逻辑）", () => {
     expect(tabCounts(ROWS, ["ALL"], -3)).toEqual({ ALL: 0 });
   });
 
-  it("时间范围 → 服务端 from 参数：今天含 00:00，近 3 天含今天与前两天，全部为空", () => {
-    // NOW = 2026-09-21T21:30+08:00 → 本地当天 00:00 即 2026-09-20T16:00Z
-    expect(rangeStartIso("TODAY", NOW)).toBe("2026-09-20T16:00:00.000Z");
-    expect(rangeStartIso("LAST_3D", NOW)).toBe("2026-09-18T16:00:00.000Z");
+  it("时间范围 → 服务端 from 参数：今天从本地 00:00 起，近 3 天再往前两天，全部为空", () => {
+    // 口径是**本地时区**的日历日，所以断言不能写死 UTC 偏移：
+    // 先按本地日历日拼出当天 00:00，再断言返回的正是这个时刻。
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const localMidnightOf = (date: Date) =>
+      new Date(
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T00:00:00`,
+      );
+    const today = localMidnightOf(NOW);
+    expect(rangeStartIso("TODAY", NOW)).toBe(today.toISOString());
+    // 近 3 天 = 今天 + 前两天（含边界）：比今天早 2 个日历日
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 2);
+    expect(rangeStartIso("LAST_3D", NOW)).toBe(threeDaysAgo.toISOString());
+    // 与「本地日历日」一致：返回时刻在本地的时分秒必须是 00:00:00
+    const start = new Date(rangeStartIso("TODAY", NOW) ?? "");
+    expect([start.getHours(), start.getMinutes(), start.getSeconds()]).toEqual([
+      0, 0, 0,
+    ]);
+    expect(
+      rangeStartIso("LAST_3D", NOW)!.localeCompare(
+        rangeStartIso("TODAY", NOW)!,
+      ),
+    ).toBeLessThan(0);
     expect(rangeStartIso("ALL", NOW)).toBeNull();
   });
 
