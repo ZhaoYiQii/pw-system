@@ -27,6 +27,7 @@ import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import {
   dataArraySchema,
   gameDispatchOrderViewSchema,
+  gameDispatchListPageSchema,
   genericTemplateErrorSchema,
   playerApplicationViewSchema,
   assignmentBodySchema,
@@ -101,6 +102,40 @@ export class GameDispatchController {
     type: String,
     description: "created_desc（默认）| created_asc | status",
   })
+  @ApiQuery({
+    name: "gameId",
+    required: false,
+    type: String,
+    description: "按游戏过滤（v1 派单按模板快照的游戏归属兜底）",
+  })
+  @ApiQuery({
+    name: "playerId",
+    required: false,
+    type: String,
+    description: "按已选中陪玩过滤（OrderSlot.playerId）",
+  })
+  @ApiQuery({
+    name: "customerProfileId",
+    required: false,
+    type: String,
+    description: "按老板档案过滤（Order.customerProfileId）",
+  })
+  @ApiQuery({
+    name: "minAmountFen",
+    required: false,
+    type: String,
+    description: "金额区间下界（整数分，含边界），作用于预估金额",
+  })
+  @ApiQuery({
+    name: "maxAmountFen",
+    required: false,
+    type: String,
+    description: "金额区间上界（整数分，含边界），作用于预估金额",
+  })
+  @ApiOkResponse({
+    schema: gameDispatchListPageSchema as never,
+    description: "派单列表页（data 为当前页，total 为筛选后的总条数）",
+  })
   async list(
     @Req() req: AuthenticatedRequest,
     @Query("status") status?: string,
@@ -109,6 +144,11 @@ export class GameDispatchController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("sort") sort?: string,
+    @Query("gameId") gameId?: string,
+    @Query("playerId") playerId?: string,
+    @Query("customerProfileId") customerProfileId?: string,
+    @Query("minAmountFen") minAmountFen?: string,
+    @Query("maxAmountFen") maxAmountFen?: string,
   ) {
     const parsedLimit = limit === undefined ? undefined : Number(limit);
     const parsedOffset = offset === undefined ? undefined : Number(offset);
@@ -118,6 +158,11 @@ export class GameDispatchController {
       ...(from ? { from } : {}),
       ...(to ? { to } : {}),
       ...(sort ? { sort } : {}),
+      ...(gameId ? { gameId } : {}),
+      ...(playerId ? { playerId } : {}),
+      ...(customerProfileId ? { customerProfileId } : {}),
+      ...(minAmountFen ? { minAmountFen } : {}),
+      ...(maxAmountFen ? { maxAmountFen } : {}),
       ...(parsedLimit === undefined ? {} : { limit: parsedLimit }),
       ...(parsedOffset === undefined ? {} : { offset: parsedOffset }),
     });

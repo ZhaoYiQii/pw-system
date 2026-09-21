@@ -7435,13 +7435,88 @@ export type GameDispatchListData = {
          * created_desc（默认）| created_asc | status
          */
         sort?: string;
+        /**
+         * 按游戏过滤（v1 派单按模板快照的游戏归属兜底）
+         */
+        gameId?: string;
+        /**
+         * 按已选中陪玩过滤（OrderSlot.playerId）
+         */
+        playerId?: string;
+        /**
+         * 按老板档案过滤（Order.customerProfileId）
+         */
+        customerProfileId?: string;
+        /**
+         * 金额区间下界（整数分，含边界），作用于预估金额
+         */
+        minAmountFen?: string;
+        /**
+         * 金额区间上界（整数分，含边界），作用于预估金额
+         */
+        maxAmountFen?: string;
     };
     url: '/api/v1/tenant/game-dispatch';
 };
 
 export type GameDispatchListResponses = {
-    200: unknown;
+    /**
+     * 派单列表页
+     */
+    200: {
+        /**
+         * 当前页派单列表
+         */
+        data: Array<{
+            /**
+             * 订单 id
+             */
+            orderId: string;
+            /**
+             * 派单号
+             */
+            dispatchNo: string;
+            /**
+             * 订单状态
+             */
+            status: string;
+            /**
+             * 服务时长（分钟）
+             */
+            durationMinutes: number;
+            /**
+             * 老板档案 id
+             */
+            customerProfileId: string;
+            /**
+             * 老板名
+             */
+            customerName: string;
+            /**
+             * 已选中的陪玩名；未选人为 null
+             */
+            playerName: string | null;
+            /**
+             * 档位单价（分/小时，不乘时长）；未选人为 null
+             */
+            unitPriceFen: string | null;
+            /**
+             * 按「单价 × 时长 / 60 向上取整」算出的整额（分）；未选人为 null
+             */
+            estimatedAmountFen: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+        }>;
+        /**
+         * 当前筛选条件下的总条数
+         */
+        total: number;
+    };
 };
+
+export type GameDispatchListResponse = GameDispatchListResponses[keyof GameDispatchListResponses];
 
 export type GameDispatchCreateDraftData = {
     body?: never;

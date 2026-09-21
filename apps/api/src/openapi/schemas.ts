@@ -1353,6 +1353,69 @@ export const genericTemplateOrderResultSchema: OpenApiSchema = {
 };
 
 /**
+ * 订单中心列表行（Slice 0）：把列表页真正会读的字段写进契约。
+ * 未选中陪玩的订单 `playerName` / `unitPriceFen` / `estimatedAmountFen` 为 null。
+ */
+export const gameDispatchListRowSchema: OpenApiSchema = object(
+  [
+    "orderId",
+    "dispatchNo",
+    "status",
+    "durationMinutes",
+    "customerProfileId",
+    "customerName",
+    "playerName",
+    "unitPriceFen",
+    "estimatedAmountFen",
+    "createdAt",
+  ],
+  {
+    orderId: { type: "string", format: "uuid", description: "订单 id" },
+    dispatchNo: stringField("派单号"),
+    status: stringField("订单状态"),
+    durationMinutes: integer("服务时长（分钟）", 1),
+    customerProfileId: {
+      type: "string",
+      format: "uuid",
+      description: "老板档案 id",
+    },
+    customerName: stringField("老板名"),
+    playerName: {
+      type: "string",
+      nullable: true,
+      description: "已选中的陪玩名；未选人为 null",
+    },
+    unitPriceFen: {
+      ...nonNegativeFen("档位单价（分/小时）"),
+      nullable: true,
+      description: "档位单价（分/小时，不乘时长）；未选人为 null",
+    },
+    estimatedAmountFen: {
+      ...nonNegativeFen("预估金额"),
+      nullable: true,
+      description:
+        "按「单价 × 时长 / 60 向上取整」算出的整额（分）；未选人为 null",
+    },
+    createdAt: dateTime("创建时间", false),
+  },
+  "派单列表行",
+);
+
+/** 订单中心列表响应：保持 `{ data: [...] }` 形状，并带 `total` 分页元信息。 */
+export const gameDispatchListPageSchema: OpenApiSchema = object(
+  ["data", "total"],
+  {
+    data: {
+      type: "array",
+      description: "当前页派单列表",
+      items: gameDispatchListRowSchema,
+    },
+    total: integer("当前筛选条件下的总条数"),
+  },
+  "派单列表页",
+);
+
+/**
  * S4 订单详情：既有字段（此前未在契约中描述）保持原样，
  * 新增 document 为 v2 订单的自动文案；旧订单为 null。
  */

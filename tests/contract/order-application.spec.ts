@@ -47,6 +47,7 @@ const BREACH_PATH =
   "/api/v1/tenant/game-dispatch/orders/{orderId}/player-breaches";
 const BREACH_LIST_PATH = "/api/v1/tenant/game-dispatch/player-breaches";
 const DISPATCH_DETAIL_PATH = "/api/v1/tenant/game-dispatch/orders/{orderId}";
+const DISPATCH_LIST_PATH = "/api/v1/tenant/game-dispatch";
 
 function schemaOf(
   operation: Operation | undefined,
@@ -238,5 +239,53 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
     expect(settlement?.properties?.platformFeeFen?.nullable).toBe(true);
     expect(settlement?.properties?.splitApplied?.type).toBe("boolean");
     expect(settlement?.properties?.approvedSlotCount?.type).toBe("integer");
+  });
+
+  /**
+   * 订单中心列表（Slice 0）：行字段与查询参数是前端列表的函数契约，
+   * 少一个字段/参数就会让筛选、计数或导出静默失真，所以在这里钉死。
+   */
+  it("订单中心列表契约：行字段齐全 + 6+ 查询参数 + total 分页元信息", () => {
+    const list = document.paths[DISPATCH_LIST_PATH]?.get;
+    expect(list?.operationId).toBe("gameDispatch_list");
+    const body = schemaOf(list, "200");
+    // 响应保留 `{ data: [...] }` 形状，并额外返回 `total`（分页元信息）。
+    expect(body.required).toEqual(["data", "total"]);
+    expect(body.properties?.total?.type).toBe("integer");
+    const row = body.properties?.data?.items;
+    expect(row?.required).toEqual([
+      "orderId",
+      "dispatchNo",
+      "status",
+      "durationMinutes",
+      "customerProfileId",
+      "customerName",
+      "playerName",
+      "unitPriceFen",
+      "estimatedAmountFen",
+      "createdAt",
+    ]);
+    // 金额是整数分字符串，未选人时为空。
+    expect(row?.properties?.unitPriceFen?.pattern).toBe("^(?:0|[1-9][0-9]*)$");
+    expect(row?.properties?.unitPriceFen?.nullable).toBe(true);
+    expect(row?.properties?.estimatedAmountFen?.nullable).toBe(true);
+    expect(row?.properties?.playerName?.nullable).toBe(true);
+
+    // 查询参数：状态/时间范围/排序/游戏/陪玩/老板/金额区间/分页。
+    expect(list?.parameters?.map((p) => p.name)).toEqual([
+      "status",
+      "limit",
+      "offset",
+      "from",
+      "to",
+      "sort",
+      "gameId",
+      "playerId",
+      "customerProfileId",
+      "minAmountFen",
+      "maxAmountFen",
+    ]);
+    expect(list?.parameters?.every((p) => p.required === false)).toBe(true);
+    expect(sdkSource).toContain("export const gameDispatchList =");
   });
 });

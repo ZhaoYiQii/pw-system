@@ -79,6 +79,22 @@ export function clampListOffset(offset: number | undefined): number {
   return Math.max(Math.trunc(offset), 0);
 }
 
+/**
+ * 列表金额区间参数（整数分）。非法值返回 null = 该边界不参与比较。
+ *
+ * 用字符串走 BigInt，避免大额（> 2^53）在 Number 上丢精度；`"abc"` / `""` / 负数都不生效。
+ */
+export function parseAmountFenFilter(value: string | undefined): bigint | null {
+  if (value === undefined) return null;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  try {
+    return BigInt(trimmed);
+  } catch {
+    return null;
+  }
+}
+
 /** 列表排序键：创建时间倒序（默认）/ 正序 / 按订单状态流转顺序。 */
 export type DispatchListSort = "created_desc" | "created_asc" | "status";
 
@@ -484,6 +500,8 @@ export class GameDispatchService {
         data: {
           tenantId,
           orderId: order.id,
+          // 游戏归属随模板落库（此前只写进快照）：列表按游戏过滤、加价上下文都用同一列。
+          ...(template.gameId ? { gameId: template.gameId } : {}),
           snapshotId: snapshot.id,
           dispatchNo,
           formValuesJson: formValues,
@@ -558,6 +576,12 @@ export class GameDispatchService {
    * - 支持 `status` 过滤与 `limit`/`offset` 分页，并返回 `total`（不再用 `take: 100` 硬截断）；
    * - 订单状态用**一次**批量查询取回，去掉原先逐条 `order.findFirst` 的 N+1；
    * - `limit` 上限 100、默认 20；`offset` 默认 0（调用方给非法值时按默认处理）。
+   * - 筛选维度：状态 / 创建时间范围 / 游戏 / 陪玩 / 老板 / 金额区间；`total` 与筛选同步。
+   *
+   * 可行下推的维度先在 SQL 侧收窄（tenant、gameId、createdAt），剩余维度（订单状态、老板、
+   * 陪玩、金额区间）在映射后的行上过滤：订单状态与老板在 `Order` 表、陪玩在 `OrderSlot` 表，
+   * 而金额区间依赖「单价 × 时长」派生值，三者都不在 `GameDispatchOrder` 上，所以必须本地判定后
+   * 再分页，否则 `total` 会与筛选条件不一致。
    */
   async list(
     tenantId: string,
@@ -567,6 +591,16 @@ export class GameDispatchService {
       from?: string;
       to?: string;
       sort?: string;
+      /** 按游戏（`GameDispatchOrder.gameId`）过滤；v1 派单按模板快照的游戏归属兜底。 */
+      gameId?: string;
+      /** 按已选中陪玩（`OrderSlot.playerId`）过滤。 */
+      playerId?: string;
+      /** 按老板档案（`Order.customerProfileId`）过滤。 */
+      customerProfileId?: string;
+      /** 金额区间下界（整数分，含边界），作用于 `estimatedAmountFen`。 */
+      minAmountFen?: string;
+      /** 金额区间上界（整数分，含边界），作用于 `estimatedAmountFen`。 */
+      maxAmountFen?: string;
       limit?: number;
       offset?: number;
     } = {},
@@ -576,13 +610,41 @@ export class GameDispatchService {
     const sort = normalizeListSort(query.sort);
     const fromMs = query.from ? Date.parse(query.from) : Number.NaN;
     const toMs = query.to ? Date.parse(query.to) : Number.NaN;
+    // 金额一律整数分；非法输入按「未提供」处理，不静默当成 0 或 NaN 参与比较。
+    const minAmountFen = parseAmountFenFilter(query.minAmountFen);
+    const maxAmountFen = parseAmountFenFilter(query.maxAmountFen);
+    const createdAtFilter: { gte?: Date; lte?: Date } = {
+      ...(Number.isNaN(fromMs) ? {} : { gte: new Date(fromMs) }),
+      ...(Number.isNaN(toMs) ? {} : { lte: new Date(toMs) }),
+    };
+    // 游戏过滤：优先用 `gd.gameId`（v2 模板下单写入），并为历史 v1 派单按同模板快照兜底，
+    // 口径与加价上下文（pricingContext）保持一致。
+    let gameSnapshotIds: string[] | null = null;
+    if (query.gameId) {
+      const snapshots = await this.client.gameDispatchTemplateSnapshot.findMany(
+        {
+          where: { tenantId, gameId: query.gameId },
+          select: { id: true },
+        },
+      );
+      gameSnapshotIds = snapshots.map((snapshot) => snapshot.id);
+    }
     const rows = await this.client.gameDispatchOrder.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        ...(query.gameId ? { gameId: query.gameId } : {}),
+        ...(Number.isNaN(fromMs) && Number.isNaN(toMs)
+          ? {}
+          : { createdAt: createdAtFilter }),
+      },
       orderBy: { createdAt: "desc" },
       select: {
+        id: true,
         orderId: true,
         dispatchNo: true,
         durationMinutes: true,
+        gameId: true,
+        snapshotId: true,
         tenantId: true,
         createdAt: true,
       },
@@ -658,7 +720,33 @@ export class GameDispatchService {
       DISPATCH_STATUS_ORDER.map((status, index) => [status as string, index]),
     );
     const filtered = mapped
+      .filter((row, index) => {
+        if (!query.gameId) return true;
+        const source = rows[index];
+        if (source?.gameId === query.gameId) return true;
+        return Boolean(
+          source?.snapshotId && gameSnapshotIds?.includes(source.snapshotId),
+        );
+      })
+      .filter((row) => {
+        if (!query.playerId) return true;
+        const slot = slotByOrder.get(row.orderId);
+        return slot?.playerId === query.playerId;
+      })
       .filter((row) => (query.status ? row.status === query.status : true))
+      .filter((row) =>
+        query.customerProfileId
+          ? row.customerProfileId === query.customerProfileId
+          : true,
+      )
+      .filter((row) => {
+        if (minAmountFen === null && maxAmountFen === null) return true;
+        if (row.estimatedAmountFen === null) return false;
+        const amount = BigInt(row.estimatedAmountFen);
+        if (minAmountFen !== null && amount < minAmountFen) return false;
+        if (maxAmountFen !== null && amount > maxAmountFen) return false;
+        return true;
+      })
       .filter((row) => {
         if (Number.isNaN(fromMs) && Number.isNaN(toMs)) return true;
         const created = Date.parse(row.createdAt);

@@ -84,6 +84,8 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
   let playerIds: Record<string, string> = {};
   let customerId = "";
   let templateId = "";
+  /** Slice 0 列表筛选用例的「另一个游戏」，用来验证 gameId 过滤。 */
+  let otherGameId = "";
 
   beforeAll(async () => {
     client = createDatabaseClient(
@@ -157,6 +159,10 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
       data: { tenantId, name: `英雄联盟-${suffix}` },
     });
     gameId = game.id;
+    const otherGame = await client.game.create({
+      data: { tenantId, name: `无畏契约-${suffix}` },
+    });
+    otherGameId = otherGame.id;
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -760,6 +766,114 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     await req(playerTokens["p1"])
       .get(`${DISPATCH}/player-breaches?playerId=${playerIds["p1"]}`)
       .expect(403);
+  });
+
+  /**
+   * Slice 0 剩余：列表筛选补齐「游戏 / 陪玩 / 老板 / 金额区间」，并保证 `total` 与筛选同步。
+   *
+   * 契约口径：`data` 仍是数组、`total` 是**同一筛选条件下的总数**（不是当前页条数）；
+   * 金额区间作用在列表行已有的 `estimatedAmountFen`（整数分，含边界）。
+   * 每次筛选都用「只可能命中本用例订单」的未知 id 做反向断言，避免同文件其它订单干扰。
+   */
+  it("订单中心列表筛选：游戏 / 陪玩 / 老板 / 金额区间 + total 同步", async () => {
+    const { orderId, lineId } = await publishedOrder();
+    await apply(playerTokens["p1"], orderId, lineId).expect(201);
+    await hireOwnerSelected(orderId, "p1");
+    const dispatch = await client.gameDispatchOrder.findFirstOrThrow({
+      where: { tenantId, orderId },
+    });
+    expect(dispatch.gameId).toBe(gameId);
+
+    type ListRow = {
+      orderId: string;
+      status: string;
+      customerProfileId: string;
+      customerName: string;
+      playerName: string | null;
+      estimatedAmountFen: string | null;
+    };
+    async function list(query: string) {
+      const body = (
+        await req(csToken).get(`${DISPATCH}?${query}&limit=100`).expect(200)
+      ).body as unknown as { data: ListRow[]; total: number };
+      // total 必须等于当前筛选条件下的行数（超过单页上限时至少不小于当前页）。
+      expect(body.total).toBeGreaterThanOrEqual(body.data.length);
+      return body;
+    }
+
+    // 游戏：命中本单所在游戏；不存在的游戏返回空集且 total 归零。
+    const byGame = await list(`gameId=${gameId}`);
+    expect(byGame.data.map((row) => row.orderId)).toContain(orderId);
+    const unknownGame = await list(
+      "gameId=00000000-0000-0000-0000-000000000000",
+    );
+    expect(unknownGame.data).toEqual([]);
+    expect(unknownGame.total).toBe(0);
+    // 另一个游戏不能把本单捞出来（证明是过滤而不是忽略参数）。
+    const otherGameRows = await list(`gameId=${otherGameId}`);
+    expect(otherGameRows.data.map((row) => row.orderId)).not.toContain(orderId);
+
+    // 陪玩：按选中陪玩过滤能看到本单；另一个陪玩 / 未知 id 看不到。
+    const byPlayer = await list(`playerId=${playerIds["p1"]}`);
+    expect(byPlayer.data.map((row) => row.orderId)).toContain(orderId);
+    expect(byPlayer.data.every((row) => row.playerName !== null)).toBe(true);
+    const otherPlayerRows = await list(`playerId=${playerIds["p2"]}`);
+    expect(otherPlayerRows.data.map((row) => row.orderId)).not.toContain(
+      orderId,
+    );
+    const unknownPlayer = await list(
+      "playerId=00000000-0000-0000-0000-000000000000",
+    );
+    expect(unknownPlayer.total).toBe(0);
+
+    // 老板：按 customerProfileId 过滤能看到本单；未知 id 返回空集。
+    const byCustomer = await list(`customerProfileId=${customerId}`);
+    expect(byCustomer.data.map((row) => row.orderId)).toContain(orderId);
+    expect(
+      byCustomer.data.every((row) => row.customerProfileId === customerId),
+    ).toBe(true);
+    const unknownCustomer = await list(
+      "customerProfileId=00000000-0000-0000-0000-000000000000",
+    );
+    expect(unknownCustomer.data).toEqual([]);
+    expect(unknownCustomer.total).toBe(0);
+
+    // 金额区间：本单 60 分钟 × 7000 分/小时 = 7000 分（含边界）。
+    const tooRich = await list(
+      `customerProfileId=${customerId}&minAmountFen=7001`,
+    );
+    expect(tooRich.data).toEqual([]);
+    expect(tooRich.total).toBe(0);
+    const tooCheap = await list(
+      `customerProfileId=${customerId}&maxAmountFen=6999`,
+    );
+    expect(tooCheap.data).toEqual([]);
+    expect(tooCheap.total).toBe(0);
+    const exact = await list(
+      `customerProfileId=${customerId}&minAmountFen=7000&maxAmountFen=7000`,
+    );
+    expect(exact.data.map((row) => row.orderId)).toContain(orderId);
+    expect(exact.data.every((row) => row.estimatedAmountFen === "7000")).toBe(
+      true,
+    );
+    expect(exact.total).toBe(exact.data.length);
+
+    // 组合筛选：游戏 + 老板 + 陪玩 + 状态同时生效。
+    const combined = await list(
+      `gameId=${gameId}&customerProfileId=${customerId}` +
+        `&playerId=${playerIds["p1"]}&status=ASSIGNED`,
+    );
+    const combinedRow = combined.data.find((row) => row.orderId === orderId);
+    expect(combinedRow?.status).toBe("ASSIGNED");
+    expect(combinedRow?.playerName).toBe("阿一");
+    expect(combinedRow?.estimatedAmountFen).toBe("7000");
+
+    // 组合筛选里只要有一个条件不匹配，整行就不出现。
+    const mismatchedGame = await list(
+      `gameId=${otherGameId}&customerProfileId=${customerId}`,
+    );
+    expect(mismatchedGame.data).toEqual([]);
+    expect(mismatchedGame.total).toBe(0);
   });
 
   it("走查修复 F4：没有生效档位时拒绝按 0 元结算", async () => {

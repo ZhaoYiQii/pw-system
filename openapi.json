@@ -13151,11 +13151,149 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "gameId",
+            "required": false,
+            "in": "query",
+            "description": "按游戏过滤（v1 派单按模板快照的游戏归属兜底）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "playerId",
+            "required": false,
+            "in": "query",
+            "description": "按已选中陪玩过滤（OrderSlot.playerId）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerProfileId",
+            "required": false,
+            "in": "query",
+            "description": "按老板档案过滤（Order.customerProfileId）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minAmountFen",
+            "required": false,
+            "in": "query",
+            "description": "金额区间下界（整数分，含边界），作用于预估金额",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxAmountFen",
+            "required": false,
+            "in": "query",
+            "description": "金额区间上界（整数分，含边界），作用于预估金额",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "派单列表页（data 为当前页，total 为筛选后的总条数）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "total"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "description": "当前页派单列表",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "orderId",
+                          "dispatchNo",
+                          "status",
+                          "durationMinutes",
+                          "customerProfileId",
+                          "customerName",
+                          "playerName",
+                          "unitPriceFen",
+                          "estimatedAmountFen",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "orderId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "订单 id"
+                          },
+                          "dispatchNo": {
+                            "type": "string",
+                            "description": "派单号"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "订单状态"
+                          },
+                          "durationMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "服务时长（分钟）"
+                          },
+                          "customerProfileId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "老板档案 id"
+                          },
+                          "customerName": {
+                            "type": "string",
+                            "description": "老板名"
+                          },
+                          "playerName": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "已选中的陪玩名；未选人为 null"
+                          },
+                          "unitPriceFen": {
+                            "type": "string",
+                            "pattern": "^(?:0|[1-9][0-9]*)$",
+                            "example": "800",
+                            "description": "档位单价（分/小时，不乘时长）；未选人为 null",
+                            "nullable": true
+                          },
+                          "estimatedAmountFen": {
+                            "type": "string",
+                            "pattern": "^(?:0|[1-9][0-9]*)$",
+                            "example": "800",
+                            "description": "按「单价 × 时长 / 60 向上取整」算出的整额（分）；未选人为 null",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": false,
+                            "description": "创建时间"
+                          }
+                        },
+                        "description": "派单列表行"
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "当前筛选条件下的总条数"
+                    }
+                  },
+                  "description": "派单列表页"
+                }
+              }
+            }
           }
         },
         "tags": [
