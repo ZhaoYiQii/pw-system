@@ -82,6 +82,43 @@ async function discoverFixture(): Promise<{
   }
 }
 
+/**
+ * P3 / D1 专用：只找一个「仍在 DISPATCHING 且还有 APPLIED 报名」的订单。
+ *
+ * 不能复用 discoverFixture：它要求同时存在 ASSIGNED 单，而前面的用例会把那张单释放回
+ * DISPATCHING（夹具状态在会话内是单向变化的）。
+ */
+async function discoverPublishedOrder(): Promise<{
+  orderId: string;
+} | null> {
+  const api = await request.newContext({ baseURL: API_BASE });
+  try {
+    const token = await loginApi(api);
+    if (!token) return null;
+    const headers = { authorization: `Bearer ${token}` };
+    const list = await api.get("/api/v1/tenant/game-dispatch", { headers });
+    if (!list.ok()) return null;
+    const rows = (await list.json()).data as DispatchRow[];
+    for (const row of rows.filter((item) => item.status === "DISPATCHING")) {
+      const detail = await api.get(
+        `/api/v1/tenant/game-dispatch/orders/${row.orderId}`,
+        { headers },
+      );
+      if (!detail.ok()) continue;
+      const data = (await detail.json()).data as {
+        lines: { applications: { status: string }[] }[];
+      };
+      const hasApplied = data.lines
+        .flatMap((line) => line.applications)
+        .some((app) => app.status === "APPLIED");
+      if (hasApplied) return { orderId: row.orderId };
+    }
+    return null;
+  } finally {
+    await api.dispose();
+  }
+}
+
 async function loginAsOwner(page: Page): Promise<void> {
   await page.goto("/store/login");
   await page.waitForTimeout(3000);
@@ -281,5 +318,47 @@ test.describe("算价模型：报单审批 / 释放名额 / 费用口径", () =>
     } finally {
       await context.close();
     }
+  });
+
+  // 放在文件末尾：本用例会把夹具里的「已发布」订单选人（状态变 ASSIGNED），
+  // 会改变大厅可见性，因此必须在上面依赖 DISPATCHING 的用例之后执行。
+  test("固定价：选人时填写并覆盖单价，低于单价需二次确认（P3 / D1）", async ({
+    page,
+  }) => {
+    const target = await discoverPublishedOrder();
+    expect(
+      target,
+      "缺少可选的已发布订单：先跑 work/s5c-walkthrough-seed.mjs scenario",
+    ).not.toBeNull();
+    await loginAsOwner(page);
+    await page.goto(`/game-dispatch/${target!.orderId}`);
+
+    // 选人前先确认报名行渲染出算法单价（夹具里是 ¥65.00 或 ¥70.00，这里不写死数字）
+    const row = page.locator("label", { has: page.getByRole("checkbox") });
+    await expect(row.getByText(/¥\d+\.\d{2} \/ 小时/).first()).toBeVisible({
+      timeout: 20000,
+    });
+
+    await page.getByRole("checkbox").first().check();
+    // 10 元/小时 必然低于夹具里的任何底价（60 元起），用于触发低于单价确认
+    await page.getByLabel("固定价（元/小时）").fill("10");
+
+    // 低于当前单价 → 必须先二次确认（ADR-0006：允许低于底价，但要人工确认 + 审计）
+    const dialogMessage = new Promise<string>((resolve) => {
+      page.once("dialog", (dialog) => {
+        resolve(dialog.message());
+        void dialog.accept();
+      });
+    });
+    await page.getByRole("button", { name: "确认选中的陪玩" }).click();
+    expect(await dialogMessage).toContain("固定价低于当前单价");
+
+    await expect(
+      page.getByText("已确认选中，可复制选定文案并 @ 对应陪玩。"),
+    ).toBeVisible({ timeout: 20000 });
+    // 展示口径跟随档位快照：单价被固定价覆盖为 ¥10.00 / 小时
+    await expect(page.getByText("¥10.00 / 小时").first()).toBeVisible({
+      timeout: 20000,
+    });
   });
 });

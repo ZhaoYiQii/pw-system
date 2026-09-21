@@ -1907,6 +1907,43 @@ export const slotReleaseViewSchema: OpenApiSchema = {
   description: "释放名额结果（档位标记 RELEASED，订单回到报名阶段并重开一轮）",
 };
 
+/** P3 / D1：选人请求体——applicationIds 必填，fixedPrices 为可选「本单固定价」。 */
+export const assignmentBodySchema: OpenApiSchema = object(
+  ["applicationIds"],
+  {
+    applicationIds: {
+      type: "array",
+      minItems: 1,
+      maxItems: 100,
+      items: { type: "string", format: "uuid" },
+      description: "本次选中的报名 id",
+    },
+    fixedPrices: {
+      type: "array",
+      maxItems: 100,
+      description:
+        "可选：本单固定价（分/小时，整数十进制字符串，1–1000000），命中即覆盖算法单价（ADR-0006）",
+      items: object(
+        ["applicationId", "unitPriceFen"],
+        {
+          applicationId: {
+            type: "string",
+            format: "uuid",
+            description: "必须属于本次 applicationIds",
+          },
+          unitPriceFen: {
+            type: "string",
+            pattern: "^(?:0|[1-9][0-9]*)$",
+            description: "固定单价（分/小时），1–1000000，整数十进制字符串",
+          },
+        },
+        "固定价条目",
+      ),
+    },
+  },
+  "选人请求体",
+);
+
 export const playerBreachBodySchema: OpenApiSchema = object(
   ["playerId", "reason"],
   {

@@ -577,7 +577,14 @@ export const gameDispatchListBreaches = <ThrowOnError extends boolean = false>(o
 
 export const gameDispatchStaffRemove = <ThrowOnError extends boolean = false>(options: Options<GameDispatchStaffRemoveData, ThrowOnError>): RequestResult<GameDispatchStaffRemoveResponses, unknown, ThrowOnError> => (options.client ?? client).delete<GameDispatchStaffRemoveResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/applications/{id}', ...options });
 
-export const gameDispatchAssign = <ThrowOnError extends boolean = false>(options: Options<GameDispatchAssignData, ThrowOnError>): RequestResult<GameDispatchAssignResponses, unknown, ThrowOnError> => (options.client ?? client).post<GameDispatchAssignResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/orders/{orderId}/assignment', ...options });
+export const gameDispatchAssign = <ThrowOnError extends boolean = false>(options: Options<GameDispatchAssignData, ThrowOnError>): RequestResult<GameDispatchAssignResponses, unknown, ThrowOnError> => (options.client ?? client).post<GameDispatchAssignResponses, unknown, ThrowOnError>({
+    url: '/api/v1/tenant/game-dispatch/orders/{orderId}/assignment',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 按锁定的发布版本创建派单（人数与价格由服务端计算）

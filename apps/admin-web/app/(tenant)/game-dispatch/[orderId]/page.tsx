@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError, apiFetch } from "../../../_lib/api";
-import { formatFenYuan } from "../../../_lib/money";
+import { formatFenYuan, yuanToFenString } from "../../../_lib/money";
 import { TenantNav } from "../../../_lib/tenant-nav";
 
 interface AppView {
@@ -72,6 +72,13 @@ interface BreachView {
 function Inner({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient();
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  /**
+   * P3 / D1（ADR-0006）：选人时可选填「本单固定价」（元/小时，按报名 id）。
+   * 空值表示按算法单价（底价 + 加价）计价。
+   */
+  const [fixedPriceYuan, setFixedPriceYuan] = useState<Record<string, string>>(
+    {},
+  );
   const [message, setMessage] = useState<string | null>(null);
 
   const { data, isPending, isError, error } = useQuery({
@@ -162,17 +169,55 @@ function Inner({ orderId }: { orderId: string }) {
   });
 
   const assign = useMutation({
-    mutationFn: () =>
-      apiFetch<DispatchDetail>(
+    mutationFn: () => {
+      // P3 / D1：把「元」输入换算成整数分；低于该陪玩算法单价时二次确认（ADR-0006）。
+      const fixedPrices: Array<{
+        applicationId: string;
+        unitPriceFen: string;
+      }> = [];
+      const belowBase: string[] = [];
+      const allApplications =
+        data?.lines.flatMap((line) => line.applications) ?? [];
+      for (const appId of checked) {
+        const raw = (fixedPriceYuan[appId] ?? "").trim();
+        if (raw === "") continue;
+        const fen = yuanToFenString(raw);
+        if (fen === null || fen === "0") {
+          throw new Error("固定价请填写大于 0 的金额（元/小时，最多两位小数）");
+        }
+        const app = allApplications.find((item) => item.id === appId);
+        if (app?.unitPriceFen && BigInt(fen) < BigInt(app.unitPriceFen)) {
+          belowBase.push(
+            `${app.playerName}：${formatFenYuan(fen)} < 单价 ${formatFenYuan(
+              app.unitPriceFen,
+            )}`,
+          );
+        }
+        fixedPrices.push({ applicationId: appId, unitPriceFen: fen });
+      }
+      if (belowBase.length > 0) {
+        const ok =
+          typeof window === "undefined" ||
+          window.confirm(
+            `固定价低于当前单价，确认继续？\n${belowBase.join("\n")}`,
+          );
+        if (!ok) throw new Error("已取消：固定价低于单价");
+      }
+      return apiFetch<DispatchDetail>(
         `/api/v1/tenant/game-dispatch/orders/${orderId}/assignment`,
         {
           method: "POST",
-          body: JSON.stringify({ applicationIds: Array.from(checked) }),
+          body: JSON.stringify({
+            applicationIds: Array.from(checked),
+            ...(fixedPrices.length > 0 ? { fixedPrices } : {}),
+          }),
         },
-      ),
+      );
+    },
     onSuccess: () => {
       setMessage("已确认选中，可复制选定文案并 @ 对应陪玩。");
       setChecked(new Set());
+      setFixedPriceYuan({});
       void queryClient.invalidateQueries({
         queryKey: ["game-dispatch-detail", orderId],
       });
@@ -394,6 +439,25 @@ function Inner({ orderId }: { orderId: string }) {
                             : "未设置底价"}
                         </span>
                       </label>
+                      {checked.has(app.id) ? (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>固定价（元/小时）</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            aria-label="固定价（元/小时）"
+                            className="h-8 w-24 rounded-md border border-input bg-transparent px-2 text-sm"
+                            placeholder="留空按单价"
+                            value={fixedPriceYuan[app.id] ?? ""}
+                            onChange={(e) =>
+                              setFixedPriceYuan((prev) => ({
+                                ...prev,
+                                [app.id]: e.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+                      ) : null}
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         <Button
                           variant="destructive"

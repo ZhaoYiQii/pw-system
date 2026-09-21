@@ -490,8 +490,23 @@ routeValidations.set("POST /api/v1/tenant/game-dispatch/orders", {
 routeValidations.set(
   "POST /api/v1/tenant/game-dispatch/orders/:orderId/assignment",
   {
+    // P3 / D1：可选「本单固定价」（分/小时）。整数分 1..1000000，越界 400。
     body: z.strictObject({
       applicationIds: z.array(z.string().uuid()).min(1).max(100),
+      fixedPrices: z
+        .array(
+          z.strictObject({
+            applicationId: z.string().uuid(),
+            // 注意：这里不能用 BigInt()——非法输入会让 refine 抛异常（500）；
+            // 正则已保证是十进制数字串，Number() 比较不会抛。
+            unitPriceFen: positiveFenMoney("unitPriceFen").refine(
+              (value) => Number(value) <= 1_000_000,
+              { message: "unitPriceFen 不能超过 1000000 分/小时" },
+            ),
+          }),
+        )
+        .max(100)
+        .optional(),
     }),
   },
 );
@@ -499,8 +514,10 @@ routeValidations.set(
 routeValidations.set(
   "POST /api/v1/tenant/game-dispatch/customer/orders/:orderId/assignment",
   {
+    // P3 / D1（ADR-0006）：老板端不参与定价——显式声明并忽略该字段（其余字段仍 strict）。
     body: z.strictObject({
       applicationIds: z.array(z.string().uuid()).min(1).max(100),
+      fixedPrices: z.unknown().optional(),
     }),
   },
 );

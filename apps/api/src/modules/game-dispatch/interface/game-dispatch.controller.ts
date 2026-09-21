@@ -29,6 +29,7 @@ import {
   gameDispatchOrderViewSchema,
   genericTemplateErrorSchema,
   playerApplicationViewSchema,
+  assignmentBodySchema,
   playerBreachItemSchema,
   playerBreachBodySchema,
   playerBreachViewSchema,
@@ -575,14 +576,36 @@ export class GameDispatchController {
   @TenantScope()
   @Permissions("gameDispatch.manage")
   @Post("orders/:orderId/assignment")
+  @ApiBody({ schema: assignmentBodySchema as never })
   async assign(
     @Req() req: AuthenticatedRequest,
     @Param("orderId") orderId: string,
-    @Body() body: { applicationIds?: unknown },
+    @Body()
+    body: {
+      applicationIds?: unknown;
+      fixedPrices?: unknown;
+    },
   ) {
     try {
       const ids = Array.isArray(body.applicationIds)
         ? body.applicationIds.filter((v): v is string => typeof v === "string")
+        : [];
+      // P3 / D1：固定价为可选入参；形状已由校验层保证（整数分 1..1000000）。
+      const fixedPrices = Array.isArray(body.fixedPrices)
+        ? body.fixedPrices
+            .filter(
+              (item): item is { applicationId: string; unitPriceFen: string } =>
+                typeof item === "object" &&
+                item !== null &&
+                typeof (item as { applicationId?: unknown }).applicationId ===
+                  "string" &&
+                typeof (item as { unitPriceFen?: unknown }).unitPriceFen ===
+                  "string",
+            )
+            .map((item) => ({
+              applicationId: item.applicationId,
+              unitPriceFen: item.unitPriceFen,
+            }))
         : [];
       return {
         data: await this.dispatch.assign(
@@ -590,6 +613,7 @@ export class GameDispatchController {
           req.principal?.sub ?? "system",
           orderId,
           ids,
+          fixedPrices,
         ),
       };
     } catch (error) {

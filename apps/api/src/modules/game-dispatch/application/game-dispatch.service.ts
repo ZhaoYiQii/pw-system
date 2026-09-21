@@ -1740,9 +1740,23 @@ export class GameDispatchService {
     actorId: string,
     orderId: string,
     applicationIds: string[],
+    /** P3 / D1：可选的「本单固定价」（分/小时），按报名 id 指定；覆盖算法单价。 */
+    fixedPrices: Array<{ applicationId: string; unitPriceFen: string }> = [],
   ): Promise<DispatchView> {
     if (applicationIds.length === 0)
       throw new DispatchInputError("至少选择一个报名");
+    // 入参已在 API 校验层过滤（整数分 1..1000000）；这里再收敛成 bigint 并校验归属。
+    const fixedByApplication = new Map<string, bigint>();
+    for (const item of fixedPrices) {
+      if (!applicationIds.includes(item.applicationId)) {
+        throw new DispatchInputError("固定价只能用于本次选中的报名");
+      }
+      const amount = BigInt(item.unitPriceFen);
+      if (amount < 1n || amount > 1_000_000n) {
+        throw new DispatchInputError("固定价需在 1–1000000 分/小时之间");
+      }
+      fixedByApplication.set(item.applicationId, amount);
+    }
     await this.client.$transaction(async (tx) => {
       const found = await this.findDispatch(tenantId, orderId, tx);
       if (!found) throw new DispatchNotFoundError();
@@ -1804,7 +1818,10 @@ export class GameDispatchService {
           )
         : new Map<string, MoneyFen>();
       /** 单价先算后落：既无陪玩×游戏底价也无陪玩级兜底时拒绝选人，不静默按 0 计（规格 §6）。 */
-      const unitPriceOf = async (playerId: string): Promise<bigint> => {
+      const unitPriceOf = async (
+        playerId: string,
+        options: { allowMissing?: boolean } = {},
+      ): Promise<bigint | null> => {
         const player = await tx.playerProfile.findFirst({
           where: { tenantId, id: playerId },
         });
@@ -1821,6 +1838,8 @@ export class GameDispatchService {
           ruleItems: pricing.ruleItems,
         });
         if (unitPrice === null) {
+          // P3 / D1：填了固定价时允许没有算法价（客服直接议价）；此时审计里 from 记 null。
+          if (options.allowMissing) return null;
           throw new DispatchStateError(
             `陪玩「${player.name}」在该游戏没有底价，无法确认：请先维护算价模型底价`,
           );
@@ -1828,13 +1847,36 @@ export class GameDispatchService {
         return BigInt(unitPrice);
       };
       const unitPrices = new Map<string, bigint>();
+      /** P3 / D1：需要写审计的固定价（算法价 from → 固定价 to）。 */
+      const fixedPriceAudits: Array<{
+        applicationId: string;
+        from: bigint | null;
+        to: bigint;
+      }> = [];
       const slotPrices = slotRows.map((s) => s.unitPriceFen);
       for (const app of apps) {
         const line = lines.find((l) => l.id === app.lineId);
         if (!line) continue;
-        const unitPrice = await unitPriceOf(app.playerId);
-        unitPrices.set(app.id, unitPrice);
-        slotPrices.push(unitPrice);
+        const fixed = fixedByApplication.get(app.id);
+        const algorithmic = await unitPriceOf(app.playerId, {
+          allowMissing: fixed !== undefined,
+        });
+        const effective = fixed ?? algorithmic;
+        if (effective === null) {
+          // 无固定价且无算法价：保持原有受控失败（unitPriceOf 已抛错，这里兜底）。
+          throw new DispatchStateError(
+            "该陪玩在该游戏没有底价，无法确认：请先维护算价模型底价",
+          );
+        }
+        unitPrices.set(app.id, effective);
+        slotPrices.push(effective);
+        if (fixed !== undefined) {
+          fixedPriceAudits.push({
+            applicationId: app.id,
+            from: algorithmic,
+            to: fixed,
+          });
+        }
       }
       const expectedFen = slotPrices.reduce(
         (acc, price) =>
@@ -1875,7 +1917,7 @@ export class GameDispatchService {
           unitPriceFen,
           status: "SELECTED",
         };
-        await (existingSlot
+        const savedSlot = await (existingSlot
           ? tx.orderSlot.update({
               where: { id: existingSlot.id },
               data: { ...slotData, createdBy: actorId },
@@ -1890,6 +1932,27 @@ export class GameDispatchService {
                 ...slotData,
               },
             }));
+        // P3 / D1：固定价必须留痕（算法价 → 固定价 + 操作人），低于底价时审计是唯一凭据。
+        const fixedAudit = fixedPriceAudits.find(
+          (item) => item.applicationId === app.id,
+        );
+        if (fixedAudit) {
+          await tx.auditLog.create({
+            data: {
+              tenantId,
+              actorType: "tenant_account",
+              actorId,
+              action: "game_dispatch.slot_fixed_price",
+              resourceType: "slot",
+              resourceId: savedSlot.id,
+              summary: `固定价（订单 ${orderId}，陪玩 ${app.playerId}）：${
+                fixedAudit.from === null
+                  ? "无算法价"
+                  : `${fixedAudit.from.toString()} 分/小时`
+              } → ${fixedAudit.to.toString()} 分/小时`,
+            },
+          });
+        }
         await tx.gameDispatchApplication.update({
           where: { id: app.id },
           data: { status: "SELECTED" },
@@ -2167,10 +2230,17 @@ export class GameDispatchService {
     // 释放过的档位不再返回（该报名回到可重新报名的状态）。
     const slots = await this.client.orderSlot.findMany({
       where: { tenantId, orderId, status: { not: "RELEASED" } },
-      select: { id: true, applicationId: true },
+      select: { id: true, applicationId: true, unitPriceFen: true },
     });
     const slotByApplication = new Map(
       slots.map((s) => [s.applicationId, s.id]),
+    );
+    // P3 / D1：已选中的报名必须显示**档位快照单价**（可能与算法价不同，例如客服填了固定价；
+    // 结算用的就是快照）。未选中的报名才按当前规则现算。
+    const slotPriceByApplication = new Map(
+      slots
+        .filter((s) => s.applicationId !== null)
+        .map((s) => [s.applicationId as string, s.unitPriceFen.toString()]),
     );
     // 展示口径（设计规格 §3.4）：报名详情显示单价（老板端与陪玩端同一数字，不乘时长）。
     const priceByPlayer =
@@ -2195,7 +2265,10 @@ export class GameDispatchService {
           status: a.status,
           createdAt: a.createdAt.toISOString(),
           slotId: slotByApplication.get(a.id) ?? null,
-          unitPriceFen: priceByPlayer.get(a.playerId) ?? null,
+          unitPriceFen:
+            slotPriceByApplication.get(a.id) ??
+            priceByPlayer.get(a.playerId) ??
+            null,
         })),
     }));
   }

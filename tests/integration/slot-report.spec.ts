@@ -286,7 +286,10 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
   }
 
   /** 建单 → 发布 → 报名 → 选人：得到一个已落单价快照的档位。 */
-  async function assignedSlot(player: "p1" | "p2" = "p1") {
+  async function assignedSlot(
+    player: "p1" | "p2" = "p1",
+    options: { fixedPricePerHourFen?: string } = {},
+  ) {
     const draft = await req(ownerToken)
       .post(`${DISPATCH}/orders`, {
         templateId,
@@ -318,7 +321,18 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       .post("/api/v1/boss/wallet/recharge", { amountFen: "100000" })
       .expect(201);
     await req(ownerToken)
-      .post(`${DISPATCH}/orders/${orderId}/assignment`, { applicationIds })
+      .post(`${DISPATCH}/orders/${orderId}/assignment`, {
+        applicationIds,
+        // P3 / D1：可选固定价（分/小时），覆盖该档位单价快照。
+        ...(options.fixedPricePerHourFen
+          ? {
+              fixedPrices: applicationIds.map((applicationId) => ({
+                applicationId,
+                unitPriceFen: options.fixedPricePerHourFen,
+              })),
+            }
+          : {}),
+      })
       .expect(201);
     const slot = await client.orderSlot.findFirstOrThrow({
       where: { tenantId, orderId, playerId: playerIds[player] },
@@ -810,5 +824,152 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       where: { tenantId },
       data: { platformFeeBp: 0, storeCutBp: 2000 },
     });
+  });
+
+  /**
+   * P3 / D1（ADR-0006）：固定价最小版。
+   *
+   * 固定价由商家端选人时填写，覆盖该档位单价快照（跳过底价+加价），
+   * 结算仍走 `单价 × 申报分钟 / 60` 向上取整；低于底价允许但必须留审计。
+   */
+  it("P3 / D1：固定价覆盖单价快照，结算按固定价计费并写审计（from→to）", async () => {
+    // 底价 7000，固定价 12000（高于底价，不触发二次确认分支）
+    const { orderId, slotId } = await assignedSlot("p1", {
+      fixedPricePerHourFen: "12000",
+    });
+    const slot = await client.orderSlot.findFirstOrThrow({
+      where: { tenantId, id: slotId },
+    });
+    expect(slot.unitPriceFen).toBe(12000n);
+
+    // 视图口径一致：派单详情里该报名的单价 = 固定价
+    const detail = (
+      await req(ownerToken).get(`${DISPATCH}/orders/${orderId}`).expect(200)
+    ).body.data as {
+      lines: {
+        applications: { slotId: string | null; unitPriceFen: string | null }[];
+      }[];
+    };
+    const app = detail.lines
+      .flatMap((line) => line.applications)
+      .find((item) => item.slotId === slotId);
+    expect(app?.unitPriceFen).toBe("12000");
+
+    // 审计留痕：算法价 → 固定价
+    const fixedAudit = await client.auditLog.findFirstOrThrow({
+      where: {
+        tenantId,
+        action: "game_dispatch.slot_fixed_price",
+        resourceId: slotId,
+      },
+    });
+    expect(fixedAudit.summary).toContain("7000");
+    expect(fixedAudit.summary).toContain("12000");
+
+    await endService("p1", slotId);
+    await uploadEvidence(playerTokens["p1"], slotId, "REPORT_START").expect(
+      201,
+    );
+    await uploadEvidence(playerTokens["p1"], slotId, "REPORT_END").expect(201);
+    await report(playerTokens["p1"], slotId, 90).expect(201);
+    const reviewed = await review(ownerToken, slotId, { approve: true }).expect(
+      201,
+    );
+    // 12000 × 90 / 60 = 18000（整额）；门店抽成 20% = 3600 → 陪玩实收 14400
+    const view = (reviewed.body as { data: SlotReportView }).data;
+    expect(view.earningFen).toBe("14400");
+
+    const earning = await client.slotEarning.findFirstOrThrow({
+      where: { tenantId, orderSlotId: slotId },
+    });
+    // 单价只落在 order_slots 快照（上面已断言）；SlotEarning 存的是实收与分账明细。
+    expect(earning.amountFen).toBe(14400n);
+    const splitDetail = earning.detailJson as Record<string, string>;
+    expect(splitDetail.grossFen).toBe("18000");
+    expect(splitDetail.storeCutFen).toBe("3600");
+
+    // 结算按整额扣老板钱包（与报单口径一致）
+    const settled = await req(ownerToken)
+      .post(`${DISPATCH}/orders/${orderId}/confirm-settlement`)
+      .expect(201);
+    expect((settled.body as { data: { totalFen: string } }).data.totalFen).toBe(
+      "18000",
+    );
+  });
+
+  it("P3 / D1：固定价入参校验（越界 / 未选中报名 → 400），老板端不参与定价", async () => {
+    // 造一单：p1/p2 各报名一条，后续用于「未选中报名」与「老板端忽略」两组断言
+    const draft = await req(ownerToken)
+      .post(`${DISPATCH}/orders`, {
+        templateId,
+        customerProfileId: customerId,
+        formValues: { rank: "钻石" },
+        durationMinutes: 60,
+        lines: [{ positionLabel: "打野", requiredCount: 2 }],
+      })
+      .expect(201);
+    const orderId = (draft.body as { data: { orderId: string } }).data.orderId;
+    const published = await req(ownerToken)
+      .post(`${DISPATCH}/orders/${orderId}/publish`)
+      .expect(201);
+    const lineId = (published.body as { data: { lines: { id: string }[] } })
+      .data.lines[0]?.id;
+    if (!lineId) throw new Error("发布后没有位置行");
+    await req(playerTokens["p1"])
+      .post(`${DISPATCH}/orders/${orderId}/lines/${lineId}/applications`)
+      .expect(201);
+    await req(playerTokens["p2"])
+      .post(`${DISPATCH}/orders/${orderId}/lines/${lineId}/applications`)
+      .expect(201);
+    await req(customerToken)
+      .post("/api/v1/boss/wallet/recharge", { amountFen: "100000" })
+      .expect(201);
+    const applications = (
+      await req(ownerToken)
+        .get(`${DISPATCH}/orders/${orderId}/applications`)
+        .expect(200)
+    ).body.data as { applications: { id: string; playerId: string }[] }[];
+    const flat = applications.flatMap((item) => item.applications);
+    const p1Application = flat.find((x) => x.playerId === playerIds["p1"]);
+    const p2Application = flat.find((x) => x.playerId === playerIds["p2"]);
+    if (!p1Application || !p2Application)
+      throw new Error("报名数据不完整，无法继续断言");
+
+    // 越界：不在 1..1000000 分内 → 400
+    for (const bad of ["0", "1000001", "abc"]) {
+      await req(ownerToken)
+        .post(`${DISPATCH}/orders/${orderId}/assignment`, {
+          applicationIds: [p1Application.id],
+          fixedPrices: [{ applicationId: p1Application.id, unitPriceFen: bad }],
+        })
+        .expect(400);
+    }
+
+    // 未选中报名不能定价 → 400
+    await req(ownerToken)
+      .post(`${DISPATCH}/orders/${orderId}/assignment`, {
+        applicationIds: [p1Application.id],
+        fixedPrices: [
+          { applicationId: p2Application.id, unitPriceFen: "12000" },
+        ],
+      })
+      .expect(400);
+    expect(await client.orderSlot.count({ where: { tenantId, orderId } })).toBe(
+      0,
+    );
+
+    // 老板端自助选人不接受定价字段：传了也按算法价（7000）
+    await req(customerToken)
+      .post(`${DISPATCH}/customer/orders/${orderId}/assignment`, {
+        applicationIds: [p1Application.id],
+        fixedPrices: [
+          { applicationId: p1Application.id, unitPriceFen: "99000" },
+        ],
+      })
+      .expect(201);
+    const bossSlot = await client.orderSlot.findFirstOrThrow({
+      where: { tenantId, orderId, playerId: playerIds["p1"] },
+    });
+    expect(bossSlot.unitPriceFen).toBe(7000n);
   });
 });

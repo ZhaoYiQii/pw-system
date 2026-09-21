@@ -8383,7 +8383,28 @@ export type GameDispatchStaffRemoveResponses = {
 };
 
 export type GameDispatchAssignData = {
-    body?: never;
+    /**
+     * 选人请求体
+     */
+    body: {
+        /**
+         * 本次选中的报名 id
+         */
+        applicationIds: Array<string>;
+        /**
+         * 可选：本单固定价（分/小时，整数十进制字符串，1–1000000），命中即覆盖算法单价（ADR-0006）
+         */
+        fixedPrices?: Array<{
+            /**
+             * 必须属于本次 applicationIds
+             */
+            applicationId: string;
+            /**
+             * 固定单价（分/小时），1–1000000，整数十进制字符串
+             */
+            unitPriceFen: string;
+        }>;
+    };
     path: {
         orderId: string;
     };

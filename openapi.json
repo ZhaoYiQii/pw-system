@@ -14887,6 +14887,57 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "applicationIds"
+                ],
+                "properties": {
+                  "applicationIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "本次选中的报名 id"
+                  },
+                  "fixedPrices": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "description": "可选：本单固定价（分/小时，整数十进制字符串，1–1000000），命中即覆盖算法单价（ADR-0006）",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "applicationId",
+                        "unitPriceFen"
+                      ],
+                      "properties": {
+                        "applicationId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "必须属于本次 applicationIds"
+                        },
+                        "unitPriceFen": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9][0-9]*)$",
+                          "description": "固定单价（分/小时），1–1000000，整数十进制字符串"
+                        }
+                      },
+                      "description": "固定价条目"
+                    }
+                  }
+                },
+                "description": "选人请求体"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
