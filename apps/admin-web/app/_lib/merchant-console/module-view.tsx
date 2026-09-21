@@ -17,6 +17,7 @@ import {
 import { getMonitorModule } from "./monitor-data";
 import { MonitorModuleView } from "./monitor-view";
 import { PricingRulesModuleView } from "./pricing-rules-view";
+import { ReviewConsoleView } from "./review-console-view";
 import { SettingsModuleView } from "./settings-view";
 import { BreachLedgerModuleView } from "./breach-ledger-view";
 
@@ -51,6 +52,9 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
       return record(moduleId, <DisputesModuleView />);
     case "audit":
       return record(moduleId, <AuditModuleView />);
+    case "review":
+      // 订单中心列表 Slice 2：报单审核台（三栏队列）。
+      return record(moduleId, <ReviewConsoleView />);
     case "pricing":
       return record(moduleId, <PricingRulesModuleView />);
     default:

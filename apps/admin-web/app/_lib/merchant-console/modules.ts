@@ -152,6 +152,20 @@ export const MERCHANT_MODULES = [
     description: "追踪敏感操作、状态变更和操作者。",
     features: ["操作日志", "状态变更记录", "筛选与导出"],
   },
+  // 订单中心列表 Slice 2：审核台（报单审批从场次详情收敛到独立队列）。
+  {
+    id: "review",
+    group: "records",
+    label: "审核台",
+    kicker: "RECORDS / REVIEW",
+    description:
+      "报单队列 + 开始/结束截图并排对照 + 通过/驳回动作，审批留痕沿用审计日志。",
+    features: [
+      "报单队列（待审批/已通过/已驳回）",
+      "截图并排对照与时长差异",
+      "通过可修正时长",
+    ],
+  },
   {
     id: "overview",
     group: "monitor",
@@ -216,7 +230,7 @@ export const MERCHANT_NAV_DOMAINS = [
     id: "orders",
     label: "订单履约",
     description: "从下单、派单到服务完成",
-    activeModuleIds: ["dispatch", "sessions", "disputes"],
+    activeModuleIds: ["dispatch", "review", "sessions", "disputes"],
   },
   {
     id: "people",
@@ -293,6 +307,7 @@ const ACTIVE_NAV_LABELS: Partial<Record<MerchantModuleId, string>> = {
   health: "消息与任务",
   ai: "智能助手",
   dispatch: "订单中心",
+  review: "审核台",
   disputes: "售后纠纷",
   finance: "经营入账",
   settings: "门店与套餐",
@@ -585,6 +600,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "work",
     "ai",
     "dispatch",
+    "review",
     "sessions",
     "customers",
     "players",
@@ -607,6 +623,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "work",
     "ai",
     "dispatch",
+    "review",
     "sessions",
     "customers",
     "players",
@@ -627,6 +644,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "work",
     "ai",
     "dispatch",
+    "review",
     "sessions",
     "customers",
     "players",
@@ -638,6 +656,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
   FINANCE: [
     "work",
     "dispatch",
+    "review",
     "sessions",
     "finance",
     "settlements",

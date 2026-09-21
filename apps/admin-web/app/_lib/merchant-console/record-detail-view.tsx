@@ -828,40 +828,6 @@ function SessionDetailView({ id }: { id: string }) {
     },
     onError: (e) => setError(e instanceof Error ? e.message : String(e)),
   });
-  const [reportMinutes, setReportMinutes] = useState("");
-  const [reportReason, setReportReason] = useState("");
-  // 报单审批：客服对照开始/结束截图人工核查，可修正时长（修正按修正值计费）。
-  const reviewReport = useMutation({
-    mutationFn: ({
-      approve,
-      declaredDurationMinutes,
-      reason,
-    }: {
-      approve: boolean;
-      declaredDurationMinutes?: number;
-      reason?: string;
-    }) =>
-      apiFetch(
-        `/api/v1/tenant/game-dispatch/slots/${query.data?.slotId as string}/report/review`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            approve,
-            ...(declaredDurationMinutes === undefined
-              ? {}
-              : { declaredDurationMinutes }),
-            ...(reason === undefined || reason === "" ? {} : { reason }),
-          }),
-        },
-      ),
-    onSuccess: () => {
-      setReportMinutes("");
-      setReportReason("");
-      refresh();
-      showToast("报单已审批。");
-    },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
-  });
   const openEvidence = async (evidence: SessionDetail["evidence"][number]) => {
     try {
       const token = getAccessToken();
@@ -908,12 +874,6 @@ function SessionDetailView({ id }: { id: string }) {
             ? gapRoundedMinutes
             : gapRoundedMinutes.toFixed(1)
         } 分钟`;
-  const correctedMinutes = Number(reportMinutes);
-  const hasCorrection =
-    reportMinutes.trim() !== "" &&
-    Number.isInteger(correctedMinutes) &&
-    correctedMinutes >= 15 &&
-    correctedMinutes <= 1440;
   return (
     <div>
       <Back href="/merchant-console/sessions" label="场次与证据" />
@@ -1072,67 +1032,16 @@ function SessionDetailView({ id }: { id: string }) {
             </div>
           ) : null}
           {session.reportStatus === "PENDING_REVIEW" ? (
-            <>
-              <div className="mc-form-grid">
-                <label className="mc-field">
-                  <span>修正时长（分钟，留空按申报值）</span>
-                  <input
-                    inputMode="numeric"
-                    value={reportMinutes}
-                    placeholder="如 95"
-                    onChange={(e) => setReportMinutes(e.target.value)}
-                  />
-                </label>
-                <label className="mc-field">
-                  <span>审批备注 / 修正理由</span>
-                  <input
-                    value={reportReason}
-                    placeholder="如：截图核对为 2 小时"
-                    onChange={(e) => setReportReason(e.target.value)}
-                  />
-                </label>
-              </div>
-              {reportMinutes.trim() !== "" && !hasCorrection ? (
-                <div className="mc-notice">
-                  修正时长需为 15–1440 分钟的整数。
-                </div>
-              ) : null}
-              <div className="mc-button-row">
-                <button
-                  type="button"
-                  className="mc-btn mc-btn-primary"
-                  disabled={reviewReport.isPending}
-                  onClick={() =>
-                    reviewReport.mutate({
-                      approve: true,
-                      ...(hasCorrection
-                        ? { declaredDurationMinutes: correctedMinutes }
-                        : {}),
-                      ...(reportReason.trim() === ""
-                        ? {}
-                        : { reason: reportReason.trim() }),
-                    })
-                  }
-                >
-                  <Check size={13} /> 通过
-                </button>
-                <button
-                  type="button"
-                  className="mc-btn"
-                  disabled={reviewReport.isPending}
-                  onClick={() =>
-                    reviewReport.mutate({
-                      approve: false,
-                      ...(reportReason.trim() === ""
-                        ? {}
-                        : { reason: reportReason.trim() }),
-                    })
-                  }
-                >
-                  <X size={13} /> 驳回（可重新报单）
-                </button>
-              </div>
-            </>
+            // 订单中心列表 Slice 2：审批动作收敛到「审核台」（队列 + 截图并排对照），
+            // 详情页只保留事实与跳转，避免同一动作出现两个入口。
+            <div className="mc-button-row">
+              <Link
+                href={`/merchant-console/dispatch/audit?sessionId=${session.id}`}
+                className="mc-btn mc-btn-primary"
+              >
+                去审核台处理这条报单
+              </Link>
+            </div>
           ) : null}
           {session.reportStatus === "NOT_REPORTED" ? (
             <p>陪玩结束服务后需先上传开始/结束截图再报单。</p>

@@ -197,13 +197,23 @@ test.describe("算价模型：报单审批 / 释放名额 / 费用口径", () =>
       mask: [page.getByText(VOLATILE_TEXT)],
     });
 
-    await panel.getByRole("button", { name: /通过/ }).click();
-    await expect(page.getByText("已通过").first()).toBeVisible({
+    // 订单中心列表 Slice 2：审批动作已从场次详情收敛到「审核台」。
+    // 详情页只留事实与跳转；这里点过去，在审核台完成「通过」。
+    await page.getByRole("link", { name: "去审核台处理这条报单" }).click();
+    await expect(page).toHaveURL(/\/merchant-console\/dispatch\/audit/);
+    // 深链 `?sessionId=` 应自动选中这条报单，并展示同一份对照数据。
+    await expect(page.getByRole("heading", { name: "审核台" })).toBeVisible({
       timeout: 20000,
     });
     await expect(
-      page.getByText("该报单已通过，金额已按核定分钟数落库"),
+      page.getByRole("heading", { name: /·/ }).first(),
     ).toBeVisible();
+    await expect(page.getByText("时长差异需重点核对")).toBeVisible();
+
+    await page.getByRole("button", { name: "通过报单" }).click();
+    await expect(
+      page.getByText("报单已通过。", { exact: false }).first(),
+    ).toBeVisible({ timeout: 20000 });
   });
 
   test("备齐后可结算：费用口径给出支出/实收/毛利", async ({ page }) => {

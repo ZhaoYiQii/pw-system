@@ -10,9 +10,9 @@ import {
 } from "./modules";
 
 describe("merchant navigation and UI permission mock", () => {
-  it("keeps 20 registered modules across four roles", () => {
-    // P3 / D3 新增「陪玩违约」台账模块（records 组）。
-    expect(MERCHANT_MODULES).toHaveLength(20);
+  it("keeps 21 registered modules across four roles", () => {
+    // P3 / D3 新增「陪玩违约」台账模块；订单中心列表 Slice 2 新增「审核台」模块。
+    expect(MERCHANT_MODULES).toHaveLength(21);
     expect(MERCHANT_ROLES).toEqual(["OWNER", "ADMIN", "CS", "FINANCE"]);
   });
 
@@ -24,10 +24,10 @@ describe("merchant navigation and UI permission mock", () => {
       ]),
     );
     expect(counts).toEqual({
-      OWNER: 20,
-      ADMIN: 18,
-      CS: 10,
-      FINANCE: 11,
+      OWNER: 21,
+      ADMIN: 19,
+      CS: 11,
+      FINANCE: 12,
     });
   });
 
@@ -37,6 +37,13 @@ describe("merchant navigation and UI permission mock", () => {
     expect(canAccessModule("FINANCE", "audit")).toBe(true);
     expect(canAccessModule("CS", "finance")).toBe(false);
     expect(canAccessModule("OWNER", "settings")).toBe(true);
+  });
+
+  it("审核台（Slice 2）对四种角色都可见：报单审批是客服日常队列", () => {
+    for (const role of MERCHANT_ROLES) {
+      expect(canAccessModule(role, "review")).toBe(true);
+    }
+    expect(getModuleDomain("review")?.label).toBe("订单履约");
   });
 
   it("keeps eight business domains in the approved order", () => {

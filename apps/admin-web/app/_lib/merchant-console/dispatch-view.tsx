@@ -53,6 +53,25 @@ interface GameDispatchListRow {
   createdAt: string;
 }
 
+/**
+ * 审核台队列里的待审批条数（订单中心证据列的口径）。
+ *
+ * 注意：订单列表行**没有 slotId**，所以这里只能给出「有 N 条报单待审批」的入口提示，
+ * 不做「这一行到底是哪一单」的精确映射（那会在每行再加一次请求）。精确到单的对照
+ * 在审核台里完成——点进去默认就是待审批队列的第一条。
+ */
+async function fetchPendingReviewCount(): Promise<number> {
+  const payload = await apiFetch<unknown>(
+    "/api/v1/tenant/sessions?reportStatus=PENDING_REVIEW",
+  );
+  const rows = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { data?: unknown } | null)?.data)
+      ? ((payload as { data: unknown[] }).data ?? [])
+      : [];
+  return rows.length;
+}
+
 /** 服务端首页上限：服务端 clamp 到 100，这里保持一致，便于「是不是还有更多」的判断。 */
 const SERVER_LIMIT = 100;
 
@@ -249,6 +268,12 @@ export function DispatchListView() {
     queryFn: () =>
       apiFetch<Array<{ id: string; name: string }>>("/api/v1/tenant/customers"),
   });
+  // 审核台待审批条数：给「证据」列当入口提示（Slice 2：报单审批收敛到审核台）。
+  const pendingReviewQuery = useQuery({
+    queryKey: ["merchant", "review", "pending-count"],
+    queryFn: fetchPendingReviewCount,
+  });
+  const pendingReviewCount = pendingReviewQuery.data ?? 0;
 
   const serverRows = listQuery.data?.data ?? [];
   const serverTotal = listQuery.data?.total ?? 0;
@@ -867,6 +892,21 @@ export function DispatchListView() {
                       {columnVisible(hiddenColumns, "createdAt") ? (
                         <th className="px-3 py-2">创建时间</th>
                       ) : null}
+                      <th className="px-3 py-2">
+                        审核
+                        {pendingReviewCount > 0 ? (
+                          <Link
+                            href="/merchant-console/dispatch/audit"
+                            className="ml-1 text-xs text-primary hover:underline"
+                          >
+                            待审批 {pendingReviewCount}
+                          </Link>
+                        ) : (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            无待审
+                          </span>
+                        )}
+                      </th>
                       <th className="px-3 py-2 text-right">操作</th>
                     </tr>
                   </thead>
@@ -880,6 +920,7 @@ export function DispatchListView() {
                         busyKeys={busyKeys}
                         rushKeys={rushKeys}
                         canOperate={canOperate}
+                        pendingReviewCount={pendingReviewCount}
                         onToggle={(key) =>
                           setSelected((current) => toggleRow(current, key))
                         }
@@ -967,6 +1008,7 @@ function GroupRows({
   busyKeys,
   rushKeys,
   canOperate,
+  pendingReviewCount,
   onToggle,
   onPublish,
   onRelease,
@@ -977,6 +1019,7 @@ function GroupRows({
   busyKeys: ReadonlySet<string>;
   rushKeys: ReadonlySet<string>;
   canOperate: boolean;
+  pendingReviewCount: number;
   onToggle: (key: string) => void;
   onPublish: (row: DispatchListRowView) => void;
   onRelease: (row: DispatchListRowView) => void;
@@ -1039,19 +1082,23 @@ function GroupRows({
               <td className="px-3 py-2">{row.durationText}</td>
             ) : null}
             {columnVisible(hiddenColumns, "amount") ? (
-              <td className="px-3 py-2">
-                {formatAmount(view.amountFen)}
-                <span
-                  className="ml-1 text-xs text-muted-foreground"
-                  title="证据差异徽章将在审核台（Slice 2）接真实对照数据"
-                >
-                  证据 —
-                </span>
-              </td>
+              <td className="px-3 py-2">{formatAmount(view.amountFen)}</td>
             ) : null}
             {columnVisible(hiddenColumns, "createdAt") ? (
               <td className="px-3 py-2">{formatDateTime(row.createdAt)}</td>
             ) : null}
+            <td className="px-3 py-2 text-sm">
+              {pendingReviewCount > 0 ? (
+                <Link
+                  href="/merchant-console/dispatch/audit"
+                  className="text-primary hover:underline"
+                >
+                  去审核
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </td>
             <td className="px-3 py-2">
               <span className="flex items-center justify-end gap-1">
                 <Link
@@ -1100,6 +1147,6 @@ function GroupRows({
 
 function COLUMN_SPAN(hidden: ReadonlySet<ColumnId>): number {
   const visible = COLUMNS.filter((column) => !hidden.has(column.id)).length;
-  // +1 勾选列，+1 操作列
-  return visible + 2;
+  // +1 勾选列，+1 审核列，+1 操作列
+  return visible + 3;
 }
