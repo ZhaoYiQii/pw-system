@@ -72,3 +72,74 @@ jobs:
       - run: pnpm build
       - run: pnpm build:h5
       - run: pnpm build:weapp
+
+      # ---------- H5 E2E（mobile-h5 project）----------
+      # 为什么只跑这一个 project：它只依赖「门店 + 陪玩/老板账号与档案」这一组夹具，
+      # 一个库一个 API 就够；cross-entry 需要第二个库与第二个 API 实例，另行评估。
+      - name: H5 E2E 环境准备（夹具 + 浏览器）
+        run: |
+          npx playwright install --with-deps msedge
+          DATABASE_URL=postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public \
+            node work/ci-e2e-seed.mjs
+          # 商家端在 E2E 里要指向 3300：API 基址是**构建期**注入的（NEXT_PUBLIC_*），
+          # 默认 3000 兜底，所以这里用正确的 API 基址重构建一次，再 next start。
+          NEXT_PUBLIC_API_ORIGIN=http://127.0.0.1:3300 pnpm --filter @pw/admin-web build
+
+      - name: 启动 H5 E2E 三件套（API 3300 / 商家端 3005 / H5 3101）
+        env:
+          # 这三个只服务 E2E 进程；CI 的 job 级 env 仍是测试库口径。
+          E2E_DATABASE_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
+          E2E_PLATFORM_DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
+        run: |
+          mkdir -p "$RUNNER_TEMP/evidence-ci"
+
+          DATABASE_URL="$E2E_DATABASE_URL" \
+          PLATFORM_DATABASE_URL="$E2E_PLATFORM_DATABASE_URL" \
+          DATABASE_MIGRATION_URL="$E2E_PLATFORM_DATABASE_URL" \
+          SESSION_SECRET="$SESSION_SECRET" \
+          PAYMENT_PROVIDER=mock \
+          PORT=3300 \
+          EVIDENCE_ROOT="$RUNNER_TEMP/evidence-ci" \
+          ADMIN_WEB_ORIGIN=http://localhost:3005 \
+          H5_ORIGIN=http://localhost:3101 \
+          node apps/api/dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &
+
+          (cd apps/admin-web && node ../../node_modules/next/dist/bin/next start -p 3005 \
+            > "$RUNNER_TEMP/web.log" 2>&1 &)
+
+          # H5 产物按同源调用 /api，所以本地必须靠这个脚本把 /api 反代到 3300。
+          PHONE_H5_PORT=3101 PHONE_API_PORT=3300 \
+            node work/phone-h5-server.mjs > "$RUNNER_TEMP/h5.log" 2>&1 &
+
+          # 就绪探测：只看端口会骗人（旧进程占端口会让新进程静默失败），这里直接打接口与页面。
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3300/api/v1/auth/login -o /dev/null -X POST \
+                -H 'content-type: application/json' \
+                -d '{"kind":"tenant","tenantCode":"c1","username":"player","password":"zcloud1024"}'; then
+              echo "api ready"; break
+            fi
+            sleep 1
+          done
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3005/store/login -o /dev/null; then echo "admin ready"; break; fi
+            sleep 1
+          done
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3101/ -o /dev/null; then echo "h5 ready"; break; fi
+            sleep 1
+          done
+
+          curl -sf http://127.0.0.1:3300/api/v1/auth/login -o /dev/null -X POST \
+            -H 'content-type: application/json' \
+            -d '{"kind":"tenant","tenantCode":"c1","username":"player","password":"zcloud1024"}' \
+            || { echo "API 未就绪"; cat "$RUNNER_TEMP/api.log"; exit 1; }
+          curl -sf http://127.0.0.1:3005/store/login -o /dev/null \
+            || { echo "商家端未就绪"; cat "$RUNNER_TEMP/web.log"; exit 1; }
+          curl -sf http://127.0.0.1:3101/ -o /dev/null \
+            || { echo "H5 未就绪"; cat "$RUNNER_TEMP/h5.log"; exit 1; }
+
+      - name: H5 E2E（mobile-h5）
+        env:
+          # E2E 用例默认找 c1；夹具脚本建的就是它。
+          E2E_TENANT_CODE: c1
+        run: node node_modules/@playwright/test/cli.js test --project=mobile-h5
