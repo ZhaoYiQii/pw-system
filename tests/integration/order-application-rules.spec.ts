@@ -663,6 +663,29 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     expect(detail.settlement.approvedSlotCount).toBe(0);
     expect(detail.settlement.activeSlotCount).toBe(1);
 
+    // Slice 0：列表行补齐「陪玩 / 老板 / 金额」，并支持分页元信息（响应仍是 { data: [...] }）。
+    const listRow = (
+      await req(csToken).get(`${DISPATCH}?status=ASSIGNED&limit=50`).expect(200)
+    ).body as unknown as {
+      data: {
+        orderId: string;
+        status: string;
+        playerName: string | null;
+        customerName: string;
+        unitPriceFen: string | null;
+        estimatedAmountFen: string | null;
+      }[];
+      total: number;
+    };
+    const row = listRow.data.find((item) => item.orderId === orderId);
+    expect(row?.status).toBe("ASSIGNED");
+    expect(row?.playerName).toBe("阿一");
+    expect(row?.customerName).toBe("报名规则老板");
+    expect(row?.unitPriceFen).toBe("7000");
+    // 60 分钟 × 7000 分/小时 = 7000 分（与结算同口径，向上取整）
+    expect(row?.estimatedAmountFen).toBe("7000");
+    expect(listRow.total).toBeGreaterThanOrEqual(1);
+
     await req(csToken)
       .post(`${DISPATCH}/orders/${orderId}/player-breaches`, {
         playerId: playerIds["p1"],

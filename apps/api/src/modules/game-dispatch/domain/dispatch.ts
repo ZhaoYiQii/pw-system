@@ -105,7 +105,16 @@ export interface DispatchListRow {
   dispatchNo: string;
   status: string;
   durationMinutes: number;
+  /** 老板档案 id（Slice 0 修正：此前误填成 tenantId）。 */
   customerProfileId: string;
+  /** 老板名（商家端列表"老板"列）。 */
+  customerName: string;
+  /** 已选中陪玩名；未选人为 null。 */
+  playerName: string | null;
+  /** 档位单价快照（分/小时）；未选人为 null。 */
+  unitPriceFen: string | null;
+  /** 按单价 × 时长估算的整额（分，向上取整，与结算同口径）；未选人为 null。 */
+  estimatedAmountFen: string | null;
   createdAt: string;
 }
 

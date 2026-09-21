@@ -556,23 +556,73 @@ export class GameDispatchService {
         createdAt: true,
       },
     });
-    // N+1 修复：一次取回本页所涉及订单的状态（下面按 status 过滤后仍复用同一份映射）。
+    // N+1 修复：订单（状态 + 老板）、档位（陪玩 + 单价）、陪玩名、老板名各查一次后本地映射。
     const orderIds = Array.from(new Set(rows.map((row) => row.orderId)));
     const orders = orderIds.length
       ? await this.client.order.findMany({
           where: { tenantId, id: { in: orderIds } },
-          select: { id: true, status: true },
+          select: { id: true, status: true, customerProfileId: true },
         })
       : [];
-    const statusByOrder = new Map(orders.map((o) => [o.id, o.status]));
-    const mapped: DispatchListRow[] = rows.map((row) => ({
-      orderId: row.orderId,
-      dispatchNo: row.dispatchNo,
-      status: statusByOrder.get(row.orderId) ?? "UNKNOWN",
-      durationMinutes: row.durationMinutes,
-      customerProfileId: row.tenantId,
-      createdAt: row.createdAt.toISOString(),
-    }));
+    const orderById = new Map(orders.map((o) => [o.id, o]));
+    const slots = orderIds.length
+      ? await this.client.orderSlot.findMany({
+          where: {
+            tenantId,
+            orderId: { in: orderIds },
+            status: { not: "RELEASED" },
+          },
+          select: { orderId: true, playerId: true, unitPriceFen: true },
+        })
+      : [];
+    const slotByOrder = new Map(slots.map((slot) => [slot.orderId, slot]));
+    const playerIds = Array.from(new Set(slots.map((slot) => slot.playerId)));
+    const customerIds = Array.from(
+      new Set(orders.map((o) => o.customerProfileId)),
+    );
+    const [players, customers] = await Promise.all([
+      playerIds.length
+        ? this.client.playerProfile.findMany({
+            where: { tenantId, id: { in: playerIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+      customerIds.length
+        ? this.client.customerProfile.findMany({
+            where: { tenantId, id: { in: customerIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    const playerNameById = new Map(players.map((p) => [p.id, p.name]));
+    const customerNameById = new Map(customers.map((c) => [c.id, c.name]));
+    const mapped: DispatchListRow[] = rows.map((row) => {
+      const order = orderById.get(row.orderId);
+      const slot = slotByOrder.get(row.orderId);
+      const unitPriceFen = slot ? slot.unitPriceFen : null;
+      return {
+        orderId: row.orderId,
+        dispatchNo: row.dispatchNo,
+        status: order?.status ?? "UNKNOWN",
+        durationMinutes: row.durationMinutes,
+        customerProfileId: order?.customerProfileId ?? "",
+        customerName: order
+          ? (customerNameById.get(order.customerProfileId) ?? "未知老板")
+          : "未知老板",
+        playerName: slot
+          ? (playerNameById.get(slot.playerId) ?? "未知陪玩")
+          : null,
+        unitPriceFen: unitPriceFen === null ? null : unitPriceFen.toString(),
+        estimatedAmountFen:
+          unitPriceFen === null
+            ? null
+            : (
+                (unitPriceFen * BigInt(row.durationMinutes) + 59n) /
+                60n
+              ).toString(),
+        createdAt: row.createdAt.toISOString(),
+      };
+    });
     const filtered = query.status
       ? mapped.filter((row) => row.status === query.status)
       : mapped;
