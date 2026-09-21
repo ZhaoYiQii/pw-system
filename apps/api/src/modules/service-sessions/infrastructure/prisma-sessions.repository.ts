@@ -65,7 +65,36 @@ export interface SessionListRow {
   evidenceCount: number;
   adjustmentPendingCount: number;
   createdAt: Date;
+  /**
+   * 报单字段（Slice 2 审核台）：CLASSIC 恒为未报单；GAME_DISPATCH 与详情页同一推导口径。
+   * 列表页此前没有这些字段，客服只能逐条翻详情，审核台因此无法成队列。
+   */
+  declaredDurationMinutes: number | null;
+  reportStatus: SlotReportStatus;
+  reportSubmittedAt: Date | null;
+  /** 是否已上传报单需要的开始/结束截图（两类都齐才算 true）。 */
+  hasReportEvidence: boolean;
 }
+
+export type SlotReportStatus =
+  "NOT_REPORTED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+
+/**
+ * 报单状态推导（与场次详情同一口径，避免两处漂移）：
+ * 未提交=NOT_REPORTED；有 SlotEarning=APPROVED；已审批但无金额=REJECTED；其余=PENDING_REVIEW。
+ */
+export function slotReportStatusOf(input: {
+  reportSubmittedAt: Date | null;
+  reportReviewedAt: Date | null;
+  hasEarning: boolean;
+}): SlotReportStatus {
+  if (input.reportSubmittedAt === null) return "NOT_REPORTED";
+  if (input.hasEarning) return "APPROVED";
+  return input.reportReviewedAt === null ? "PENDING_REVIEW" : "REJECTED";
+}
+
+/** 报单截图的两类用途；两类都上传才算证据齐全。 */
+const REPORT_EVIDENCE_TYPES = ["REPORT_START", "REPORT_END"] as const;
 
 export class PrismaSessionsRepository {
   constructor(private readonly client: PrismaClient) {}
@@ -217,14 +246,12 @@ export class PrismaSessionsRepository {
       endedAt: s.endedAt,
       durationSeconds: s.durationSeconds,
       declaredDurationMinutes: s.declaredDurationMinutes ?? null,
-      reportStatus:
-        s.reportSubmittedAt === null
-          ? "NOT_REPORTED"
-          : earning
-            ? "APPROVED"
-            : s.reportReviewedAt === null
-              ? "PENDING_REVIEW"
-              : "REJECTED",
+      // 推导收敛到 `slotReportStatusOf`：列表（审核台队列）与详情必须同一口径。
+      reportStatus: slotReportStatusOf({
+        reportSubmittedAt: s.reportSubmittedAt ?? null,
+        reportReviewedAt: s.reportReviewedAt ?? null,
+        hasEarning: earning !== null && earning !== undefined,
+      }),
       reportSubmittedAt: s.reportSubmittedAt ?? null,
       reportReviewedAt: s.reportReviewedAt ?? null,
       reportReviewNote: s.reportReviewNote ?? null,
@@ -244,8 +271,14 @@ export class PrismaSessionsRepository {
 
   async list(
     tenantId: string,
-    opts: { status?: string; q?: string } = {},
+    opts: {
+      status?: string;
+      q?: string;
+      /** 审核台队列：按报单状态过滤（与详情页 reportStatus 同口径）。 */
+      reportStatus?: string;
+    } = {},
   ): Promise<SessionListRow[]> {
+    const wantReportStatus = opts.reportStatus;
     const classicRows = await this.client.serviceSession.findMany({
       where: {
         tenantId,
@@ -318,6 +351,29 @@ export class PrismaSessionsRepository {
             _count: { _all: true },
           })
         : [];
+    // 审核台队列：报单截图按用途分组，用于判断「开始/结束截图是否齐」。
+    const reportEvidenceRows =
+      slotRows.length > 0
+        ? await this.client.slotEvidence.groupBy({
+            by: ["sessionId", "evidenceType"],
+            where: {
+              tenantId,
+              sessionId: { in: slotRows.map((r) => r.id) },
+              evidenceType: { in: [...REPORT_EVIDENCE_TYPES] },
+            },
+            _count: { _all: true },
+          })
+        : [];
+    // 审批通过才会落 SlotEarning；有金额=APPROVED，已审批无金额=REJECTED（与详情同口径）。
+    const slotIdsForEarning = slotRows.map((r) => r.orderSlotId);
+    const earningRows =
+      slotIdsForEarning.length > 0
+        ? await this.client.slotEarning.findMany({
+            where: { tenantId, orderSlotId: { in: slotIdsForEarning } },
+            select: { orderSlotId: true },
+          })
+        : [];
+    const earningSlotIds = new Set(earningRows.map((row) => row.orderSlotId));
     const customerIds = Array.from(
       new Set(orders.map((o) => o.customerProfileId)),
     );
@@ -340,6 +396,19 @@ export class PrismaSessionsRepository {
     const pendingCount = new Map(
       pendingAdjustments.map((r) => [r.sessionId, r._count._all]),
     );
+    // 报单截图是否齐：按 sessionId 收集已上传的用途集合
+    const reportEvidenceTypes = new Map<string, Set<string>>();
+    for (const row of reportEvidenceRows) {
+      const types = reportEvidenceTypes.get(row.sessionId) ?? new Set<string>();
+      types.add(row.evidenceType);
+      reportEvidenceTypes.set(row.sessionId, types);
+    }
+    const hasFullReportEvidence = (sessionId: string): boolean => {
+      const types = reportEvidenceTypes.get(sessionId);
+      return (
+        types !== undefined && REPORT_EVIDENCE_TYPES.every((t) => types.has(t))
+      );
+    };
     const classicOut = classicRows.map((r) => {
       const order = orderById.get(r.orderId);
       return {
@@ -360,6 +429,11 @@ export class PrismaSessionsRepository {
         evidenceCount: evidenceCount.get(r.id) ?? 0,
         adjustmentPendingCount: pendingCount.get(r.id) ?? 0,
         createdAt: r.createdAt,
+        // CLASSIC 流程没有报单链路（ADR-0002 冻结）：固定「未报单」。
+        declaredDurationMinutes: null,
+        reportStatus: "NOT_REPORTED" as SlotReportStatus,
+        reportSubmittedAt: null,
+        hasReportEvidence: false,
       };
     });
     const slotOut = slotRows.map((r) => {
@@ -382,9 +456,20 @@ export class PrismaSessionsRepository {
         evidenceCount: slotEvidenceCount.get(r.id) ?? 0,
         adjustmentPendingCount: 0,
         createdAt: r.createdAt,
+        declaredDurationMinutes: r.declaredDurationMinutes ?? null,
+        reportStatus: slotReportStatusOf({
+          reportSubmittedAt: r.reportSubmittedAt ?? null,
+          reportReviewedAt: r.reportReviewedAt ?? null,
+          hasEarning: earningSlotIds.has(r.orderSlotId),
+        }),
+        reportSubmittedAt: r.reportSubmittedAt ?? null,
+        hasReportEvidence: hasFullReportEvidence(r.id),
       };
     });
     return [...slotOut, ...classicOut]
+      .filter((row) =>
+        wantReportStatus ? row.reportStatus === wantReportStatus : true,
+      )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, 100);
   }

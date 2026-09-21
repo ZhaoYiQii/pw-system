@@ -100,6 +100,7 @@ export class SessionsController {
   async list(
     @Req() req: AuthenticatedRequest,
     @Query("status") status?: unknown,
+    @Query("reportStatus") reportStatus?: unknown,
   ) {
     const role = req.principal?.role;
     if (
@@ -110,8 +111,16 @@ export class SessionsController {
     )
       throw new ForbiddenException("仅门店员工可查看场次台账");
     const s = typeof status === "string" && status ? status : undefined;
+    // 审核台队列：按报单状态过滤（NOT_REPORTED / PENDING_REVIEW / APPROVED / REJECTED）。
+    const rs =
+      typeof reportStatus === "string" && reportStatus
+        ? reportStatus
+        : undefined;
     return {
-      data: await this.repo.list(tenantIdOf(req), s ? { status: s } : {}),
+      data: await this.repo.list(tenantIdOf(req), {
+        ...(s ? { status: s } : {}),
+        ...(rs ? { reportStatus: rs } : {}),
+      }),
     };
   }
 

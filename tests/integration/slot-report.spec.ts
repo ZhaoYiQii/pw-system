@@ -972,4 +972,109 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
     });
     expect(bossSlot.unitPriceFen).toBe(7000n);
   });
+
+  /**
+   * Slice 2（审核台）：场次列表要能直接当「报单队列」用——按报单状态过滤，
+   * 并带上申报时长、提交时间与「开始/结束截图是否齐」。
+   *
+   * 契约口径：`reportStatus` 与场次详情的推导一致
+   * （未提交=NOT_REPORTED；有 SlotEarning=APPROVED；已审批无金额=REJECTED；其余=PENDING_REVIEW）。
+   */
+  it("审核台队列：场次列表支持 reportStatus 过滤并带报单字段", async () => {
+    const sessionsPath = "/api/v1/tenant/sessions";
+
+    // ① 待审批：报单已提交、尚未审批
+    const pending = await assignedSlot("p1");
+    await endService("p1", pending.slotId);
+    await uploadEvidence(
+      playerTokens["p1"],
+      pending.slotId,
+      "REPORT_START",
+    ).expect(201);
+    await uploadEvidence(
+      playerTokens["p1"],
+      pending.slotId,
+      "REPORT_END",
+    ).expect(201);
+    const pendingReport = (
+      await report(playerTokens["p1"], pending.slotId, 90).expect(201)
+    ).body as { data: SlotReportView };
+
+    // ② 已通过：报单 + 审批通过（落金额）
+    const approved = await assignedSlot("p2");
+    await endService("p2", approved.slotId);
+    await uploadEvidence(
+      playerTokens["p2"],
+      approved.slotId,
+      "REPORT_START",
+    ).expect(201);
+    await uploadEvidence(
+      playerTokens["p2"],
+      approved.slotId,
+      "REPORT_END",
+    ).expect(201);
+    await report(playerTokens["p2"], approved.slotId, 60).expect(201);
+    await review(ownerToken, approved.slotId, { approve: true }).expect(201);
+
+    type SessionListRow = {
+      id: string;
+      slotId: string | null;
+      orderId: string;
+      reportStatus: string;
+      declaredDurationMinutes: number | null;
+      reportSubmittedAt: string | null;
+      hasReportEvidence: boolean;
+    };
+    const listSessions = async (query = "") =>
+      ((await req(ownerToken).get(`${sessionsPath}${query}`).expect(200)).body
+        .data ?? []) as SessionListRow[];
+
+    // 不带过滤：两条都在，且字段齐全（列表行此前完全没有报单字段）
+    const all = await listSessions();
+    const pendingRow = all.find(
+      (row) => row.id === pendingReport.data.sessionId,
+    );
+    expect(pendingRow?.reportStatus).toBe("PENDING_REVIEW");
+    expect(pendingRow?.declaredDurationMinutes).toBe(90);
+    expect(pendingRow?.reportSubmittedAt).not.toBeNull();
+    expect(pendingRow?.hasReportEvidence).toBe(true);
+    const approvedRow = all.find((row) => row.slotId === approved.slotId);
+    expect(approvedRow?.reportStatus).toBe("APPROVED");
+    expect(approvedRow?.hasReportEvidence).toBe(true);
+
+    // 按报单状态过滤：各队列只含对应状态（同文件其它用例造的场次也可能在内，所以断言「包含 + 全体一致」）
+    const pendingQueue = await listSessions("?reportStatus=PENDING_REVIEW");
+    expect(pendingQueue.map((row) => row.id)).toContain(
+      pendingReport.data.sessionId,
+    );
+    expect(
+      pendingQueue.every((row) => row.reportStatus === "PENDING_REVIEW"),
+    ).toBe(true);
+
+    const approvedQueue = await listSessions("?reportStatus=APPROVED");
+    expect(approvedQueue.map((row) => row.slotId)).toContain(approved.slotId);
+    expect(approvedQueue.every((row) => row.reportStatus === "APPROVED")).toBe(
+      true,
+    );
+    expect(approvedQueue.map((row) => row.id)).not.toContain(
+      pendingReport.data.sessionId,
+    );
+
+    // 未报单队列里不应出现上面两条
+    const notReported = await listSessions("?reportStatus=NOT_REPORTED");
+    expect(
+      notReported.every((row) => row.reportStatus === "NOT_REPORTED"),
+    ).toBe(true);
+    expect(notReported.map((row) => row.id)).not.toContain(
+      pendingReport.data.sessionId,
+    );
+
+    // 别家租户看不到本租户的待审批单（租户隔离）
+    const otherSessions = ((
+      await req(otherOwnerToken).get(sessionsPath).expect(200)
+    ).body.data ?? []) as SessionListRow[];
+    expect(otherSessions.map((row) => row.id)).not.toContain(
+      pendingReport.data.sessionId,
+    );
+  });
 });
