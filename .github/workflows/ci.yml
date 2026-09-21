@@ -72,6 +72,10 @@ jobs:
       - run: pnpm build
       - run: pnpm build:h5
       - run: pnpm build:weapp
+      # apps/mobile/config 的 outputRoot 是同一个 dist：weapp 构建会覆盖掉 H5 产物，
+      # 所以必须**再建一次 H5**，否则 E2E 用到的 apps/mobile/dist/index.html 不存在
+      # （H5 静态服务会回退 404，表现为「H5 未就绪」，曾把 CI 连红三轮）。
+      - run: pnpm build:h5
 
       # ---------- H5 E2E（mobile-h5 project）----------
       # 为什么只跑这一个 project：它只依赖「门店 + 陪玩/老板账号与档案」这一组夹具，
@@ -85,12 +89,10 @@ jobs:
           # 默认 3000 兜底，所以这里用正确的 API 基址重构建一次，再 next start。
           NEXT_PUBLIC_API_ORIGIN=http://127.0.0.1:3300 pnpm --filter @pw/admin-web build
 
-      # 现阶段是「跑但不拦」：H5 服务在 CI 冷启动下迟迟不 listen（本机秒起、CI 用满 90s 窗口），
-      # 根因未定。为了让 CI 保持绿色、不再发失败邮件，这一步先 continue-on-error，
-      # 并在失败时把诊断信息打全；等定位清楚后再摘掉这个开关（届时 H5 E2E 才真正算门禁）。
+      # 根因已定位（weapp 覆盖 H5 产物 → dist 里没有 index.html），这里恢复为真正的门禁：
+      # 起不来就红，红的时候诊断快照会直接给出端口/进程/产物/日志四项事实。
       - name: 启动 H5 E2E 三件套（API 3300 / 商家端 3005 / H5 3101）
         id: e2e_stack
-        continue-on-error: true
         env:
           # 这三个只服务 E2E 进程；CI 的 job 级 env 仍是测试库口径。
           E2E_DATABASE_URL: postgresql://pw_runtime:pw_runtime_dev_only@localhost:5432/pw_ci?schema=public
@@ -130,8 +132,8 @@ jobs:
           echo "h5.log 大小: $(wc -c < "$RUNNER_TEMP/h5.log" 2>/dev/null || echo 0)"
 
           # 就绪探测：只看端口会骗人（旧进程占端口会让新进程静默失败），这里直接打接口与页面。
-          # 超时余量按 CI 冷启动给足：runner 上进程启动明显慢于本机（H5 曾实测约 31s 才 listen，
-          # 而当时窗口只有 30s，差 0.3s 就判失败），所以三个服务统一给 90s，并在末尾再校验一次。
+          # 窗口统一 90s，末尾再校验一次；失败时先打诊断（端口/进程/产物/日志），
+          # 避免再次把「产物缺失」误读成「服务启动慢」。
           for i in $(seq 1 90); do
             if curl -sf http://127.0.0.1:3300/api/v1/auth/login -o /dev/null -X POST \
                 -H 'content-type: application/json' \
@@ -157,7 +159,7 @@ jobs:
             || { echo "商家端未就绪"; cat "$RUNNER_TEMP/web.log"; exit 1; }
           curl -sf http://127.0.0.1:3101/ -o /dev/null \
             || {
-              echo "H5 未就绪（本步为 continue-on-error，不拦 CI）"
+              echo "H5 未就绪"
               echo "--- 末次诊断 ---"
               echo "h5 pid: $(pgrep -f phone-h5-server.mjs || echo none)"
               ss -ltnp 2>/dev/null | grep ':3101' || echo "3101 未在监听"
@@ -167,8 +169,6 @@ jobs:
             }
 
       - name: H5 E2E（mobile-h5）
-        # 三件套没就绪就跳过：现阶段这层还不是门禁（见上一步 continue-on-error 的说明）。
-        if: steps.e2e_stack.outcome == 'success'
         env:
           # E2E 用例默认找 c1；夹具脚本建的就是它。
           E2E_TENANT_CODE: c1
