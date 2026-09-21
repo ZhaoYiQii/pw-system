@@ -691,6 +691,11 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     expect((row as { slotId?: string | null } | undefined)?.slotId).toBe(
       slot.id,
     );
+    // 列表「游戏 / 位置」列：派单所在游戏名与首个岗位都要带出来（前端表格要用）。
+    const listed = row as
+      { gameName?: string | null; positionLabel?: string | null } | undefined;
+    expect(listed?.gameName).toBe(`英雄联盟-${suffix}`);
+    expect(listed?.positionLabel).toBe("打野");
     expect(row?.unitPriceFen).toBe("7000");
     // 60 分钟 × 7000 分/小时 = 7000 分（与结算同口径，向上取整）
     expect(row?.estimatedAmountFen).toBe("7000");

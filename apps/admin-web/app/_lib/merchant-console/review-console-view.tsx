@@ -13,9 +13,6 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ApiError, getAccessToken } from "../api";
 import { durationGap, GAP_ABS_MINUTES, GAP_RATIO } from "./duration-gap";
@@ -45,6 +42,14 @@ interface QueueRow {
   declaredDurationMinutes: number | null;
   reportSubmittedAt: string | null;
   hasReportEvidence: boolean;
+  /** 档位单价（分/小时，快照）；用于动作区的金额换算，未定价为 null。 */
+  unitPriceFen: string | null;
+}
+
+/** 已通过队列行：只用来统计「今日已通过」。 */
+interface ApprovedRow {
+  id: string;
+  reportReviewedAt: string | null;
 }
 
 interface EvidenceItem {
@@ -99,6 +104,10 @@ export function ReviewConsoleView() {
   const [correctedMinutes, setCorrectedMinutes] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  /** 站内放大截图（点图放大，稿子里标了「点图放大」）。 */
+  const [zoom, setZoom] = useState<{ url: string; title: string } | null>(null);
+  /** 截图视图：并排看整体 / 单张看细节（竖屏截图并排会变小）。 */
+  const [shotView, setShotView] = useState<"pair" | "one">("pair");
 
   // 深链：`?sessionId=` 直接选中一条（场次详情「去审核台」、订单中心证据徽章都走这个）。
   useEffect(() => {
@@ -114,7 +123,22 @@ export function ReviewConsoleView() {
       apiFetch<unknown>(`/api/v1/tenant/sessions?reportStatus=${tab}`),
     placeholderData: (previous) => previous,
   });
-  const queue = useMemo(() => rowsOf(queueQuery.data), [queueQuery.data]);
+  /**
+   * 队列按等待时长排序（等最久的排最前）：时间缺失的排最前，不假装它最不急；
+   * 未来时间按 0 等待处理，不插队。
+   */
+  const queue = useMemo(() => {
+    const submittedAt = (row: QueueRow) => {
+      if (!row.reportSubmittedAt) return Number.POSITIVE_INFINITY;
+      const parsed = Date.parse(row.reportSubmittedAt);
+      return Number.isNaN(parsed)
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, Date.now() - parsed);
+    };
+    return [...rowsOf(queueQuery.data)].sort(
+      (a, b) => submittedAt(b) - submittedAt(a),
+    );
+  }, [queueQuery.data]);
 
   const visibleQueue = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -135,6 +159,25 @@ export function ReviewConsoleView() {
   }, [selectedId, visibleQueue]);
   const active = visibleQueue.find((row) => row.id === activeId) ?? null;
 
+  // 「今日已通过」：拉已通过队列，按审批时间落在今天过滤（只读计数，不影响主流程）。
+  const approvedQuery = useQuery({
+    queryKey: ["merchant", "review", "queue", "APPROVED", "today-count"],
+    queryFn: () =>
+      apiFetch<unknown>("/api/v1/tenant/sessions?reportStatus=APPROVED"),
+  });
+  const approvedTodayCount = useMemo(() => {
+    const rows = Array.isArray(approvedQuery.data)
+      ? (approvedQuery.data as ApprovedRow[])
+      : ((approvedQuery.data as { data?: ApprovedRow[] } | null)?.data ?? []);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return rows.filter((row) => {
+      if (!row.reportReviewedAt) return false;
+      const reviewed = Date.parse(row.reportReviewedAt);
+      return !Number.isNaN(reviewed) && reviewed >= startOfToday.getTime();
+    }).length;
+  }, [approvedQuery.data]);
+
   const detailQuery = useQuery({
     queryKey: ["merchant", "review", "session", activeId],
     queryFn: () =>
@@ -142,6 +185,35 @@ export function ReviewConsoleView() {
     enabled: activeId !== null,
   });
   const detail = detailQuery.data ?? null;
+
+  /**
+   * 档位单价（分/小时，快照）：场次接口不带这个字段，所以从订单详情取报名行上的 `unitPriceFen`。
+   * 只用于动作区的**预计**金额换算（结算仍以后端核定为准），取不到就显示 ¥—，不编数字。
+   */
+  const orderQuery = useQuery({
+    queryKey: ["merchant", "review", "order-price", detail?.orderId],
+    queryFn: () =>
+      apiFetch<{
+        lines?: Array<{
+          applications?: Array<{
+            playerId?: string;
+            slotId?: string | null;
+            unitPriceFen?: string | null;
+          }>;
+        }>;
+      }>(`/api/v1/tenant/game-dispatch/orders/${detail?.orderId}`),
+    enabled: Boolean(detail?.orderId),
+  });
+  const unitPriceFen = useMemo(() => {
+    const targetSlotId = detail?.slotId ?? active?.slotId ?? null;
+    const applications = (orderQuery.data?.lines ?? []).flatMap(
+      (line) => line.applications ?? [],
+    );
+    const hit =
+      applications.find((item) => item.slotId === targetSlotId) ??
+      applications.find((item) => item.playerId === detail?.playerId);
+    return hit?.unitPriceFen ?? null;
+  }, [orderQuery.data, detail?.slotId, detail?.playerId, active?.slotId]);
 
   const reportEvidence = useMemo(() => {
     const items = detail?.evidence ?? [];
@@ -155,6 +227,24 @@ export function ReviewConsoleView() {
     detail?.declaredDurationMinutes ?? null,
     detail?.durationSeconds ?? null,
   );
+
+  /**
+   * 动作区换算：生效分钟数 = 修正值（填了且为整数）否则申报值；
+   * 金额按「单价 × 分钟 ÷ 60 向上取整」与结算同口径，全部走整数分（BigInt），不碰浮点。
+   * 单价缺失时不编数字。
+   */
+  const effectiveMinutes = useMemo(() => {
+    const corrected = correctedMinutes.trim();
+    if (/^\d+$/.test(corrected)) return Number(corrected);
+    return detail?.declaredDurationMinutes ?? null;
+  }, [correctedMinutes, detail?.declaredDurationMinutes]);
+  const previewAmountLabel = useMemo(() => {
+    if (!unitPriceFen || effectiveMinutes === null) return "¥—";
+    const fen = (BigInt(unitPriceFen) * BigInt(effectiveMinutes) + 59n) / 60n;
+    const yuan = fen / 100n;
+    const cents = fen % 100n;
+    return `¥${yuan}.${cents.toString().padStart(2, "0")}`;
+  }, [unitPriceFen, effectiveMinutes]);
 
   async function review(approve: boolean) {
     if (!active?.slotId) {
@@ -200,75 +290,78 @@ export function ReviewConsoleView() {
   }
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="pw-review rv-page">
+      {/* 页头（原型 v3）：左标题 + 右两胶囊（待审批 / 今日已通过） */}
+      <header className="rv-head">
         <div>
-          <p className="text-xs tracking-widest text-muted-foreground uppercase">
-            RECORDS / REVIEW
-          </p>
-          <h1 className="text-2xl font-semibold">审核台</h1>
-          <p className="text-sm text-muted-foreground">
-            报单队列 → 开始/结束截图并排对照 →
-            通过或驳回；通过时可按证据修正时长（修正值计费）。
+          <p className="rv-eyebrow">RECORDS / REVIEW</p>
+          <h1>审核台</h1>
+          <p className="rv-sub">
+            对照开始 /
+            结束截图核对申报时长；通过时可按证据修正，修正值计费并写审计。
           </p>
         </div>
-        <Badge variant="secondary">队列 {queue.length} 条</Badge>
+        <div className="rv-pills">
+          <span className="rv-pill warn">待审批 {queue.length}</span>
+          <span className="rv-pill ok">今日已通过 {approvedTodayCount}</span>
+        </div>
       </header>
 
       {notice ? (
         <p
           role="status"
           aria-live="polite"
-          className="rounded-md bg-muted px-3 py-2 text-sm"
+          className="mt-3 rounded-md bg-muted px-3 py-2 text-sm"
         >
           {notice}
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="mt-3 text-sm text-destructive">
           {error}
         </p>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_320px]">
-        {/* 左栏：队列 */}
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            <div role="tablist" aria-label="报单状态" className="flex gap-1.5">
-              {QUEUE_TABS.map((item) => {
-                const activeTab = tab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab}
-                    className={`rounded-md border px-2.5 py-1 text-sm ${
-                      activeTab
-                        ? "border-primary bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-muted"
-                    }`}
-                    onClick={() => {
-                      setTab(item.id);
-                      setSelectedId(null);
-                      setNotice(null);
-                      setError(null);
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
+      <div className="rv-grid">
+        {/* 左栏：队列（按等待时长排序） */}
+        <section className="rv-card">
+          <div className="rv-colhead">
+            <b>待审核队列</b>
+            <span>按等待时长</span>
+          </div>
+
+          <div className="px-3 pt-3">
+            <div role="tablist" aria-label="报单状态" className="rv-seg w-full">
+              {QUEUE_TABS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === item.id}
+                  className={`${tab === item.id ? "on" : ""} flex-1`}
+                  onClick={() => {
+                    setTab(item.id);
+                    setSelectedId(null);
+                    setNotice(null);
+                    setError(null);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
             <Input
               aria-label="搜索队列"
               placeholder="陪玩 / 单号 / 老板"
+              className="mt-2 h-8 text-[12.5px]"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
+          </div>
 
+          <div className="mt-2">
             {queueQuery.isError ? (
-              <p className="text-sm text-destructive">
+              <p className="px-3 py-2 text-sm text-destructive">
                 {queueQuery.error instanceof ApiError &&
                 queueQuery.error.status === 403
                   ? "当前角色没有查看场次的权限。"
@@ -276,7 +369,7 @@ export function ReviewConsoleView() {
               </p>
             ) : null}
             {queueQuery.isLoading ? (
-              <div className="space-y-2" aria-busy="true">
+              <div className="space-y-2 px-3 py-2" aria-busy="true">
                 {[0, 1, 2].map((index) => (
                   <div
                     key={index}
@@ -288,146 +381,186 @@ export function ReviewConsoleView() {
               </div>
             ) : null}
             {!queueQuery.isLoading && visibleQueue.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="px-3 py-4 text-sm text-muted-foreground">
                 这个队列现在是空的。
               </p>
             ) : null}
 
-            <ul className="space-y-1.5">
-              {visibleQueue.map((row) => (
-                <li key={row.id}>
+            {visibleQueue.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                aria-current={row.id === activeId ? "true" : undefined}
+                className={`rv-q ${row.id === activeId ? "on" : ""}`}
+                onClick={() => {
+                  setSelectedId(row.id);
+                  setCorrectedMinutes("");
+                  setReason("");
+                  setNotice(null);
+                  setError(null);
+                }}
+              >
+                <i
+                  aria-hidden="true"
+                  className={`rv-dot ${
+                    row.reportStatus === "APPROVED"
+                      ? "ok"
+                      : row.reportStatus === "REJECTED"
+                        ? "bad"
+                        : ""
+                  }`}
+                />
+                <span className="main">
+                  <span className="l1">
+                    <b>{row.playerName}</b>
+                    <span className="pw-num text-[11.5px] text-muted-foreground">
+                      {row.declaredDurationMinutes ?? "—"} 分
+                    </span>
+                  </span>
+                  <span className="l2">
+                    {row.orderNo} · {row.customerName}
+                  </span>
+                  <span className="l3">
+                    <span className="pw-num">
+                      {formatWait(row.reportSubmittedAt)}
+                    </span>
+                    <span
+                      className={
+                        row.hasReportEvidence
+                          ? undefined
+                          : "text-[color:var(--mc-red)]"
+                      }
+                    >
+                      {row.hasReportEvidence ? "截图齐" : "缺截图"}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* 中栏：证据对照 */}
+        <section className="rv-card">
+          {active === null ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              左侧选一条报单开始核对。
+            </p>
+          ) : (
+            <>
+              <div className="rv-midhead">
+                <div>
+                  <h2 className="pw-num">证据对照 · {active.orderNo}</h2>
+                  <div className="sub">
+                    {active.playerName} · {active.customerName} · 提交于{" "}
+                    {formatDateTime(detail?.reportSubmittedAt ?? null)}
+                  </div>
+                </div>
+                <span
+                  className={`rv-pill ${
+                    gap.tone === "warn" ? "warn" : gap.tone === "ok" ? "ok" : ""
+                  }`}
+                >
+                  {gap.tone === "unknown"
+                    ? "证据计时缺失"
+                    : gap.tone === "warn"
+                      ? "差异需核对"
+                      : "时长吻合"}
+                </span>
+              </div>
+
+              <div className="rv-viewbar">
+                <span className="text-[11.5px] text-muted-foreground">
+                  点任意一张可在站内放大看细节
+                </span>
+                <span className="rv-seg">
                   <button
                     type="button"
-                    aria-current={row.id === activeId ? "true" : undefined}
-                    className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                      row.id === activeId
-                        ? "border-primary bg-accent"
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => {
-                      setSelectedId(row.id);
-                      setCorrectedMinutes("");
-                      setReason("");
-                      setNotice(null);
-                      setError(null);
-                    }}
+                    aria-pressed={shotView === "pair"}
+                    className={shotView === "pair" ? "on" : ""}
+                    onClick={() => setShotView("pair")}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <b>{row.playerName}</b>
-                      <span className="text-xs text-muted-foreground">
-                        {row.declaredDurationMinutes ?? "—"} 分钟
-                      </span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {row.orderNo} · {row.customerName}
-                    </span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-xs">
-                      <span>{formatDateTime(row.reportSubmittedAt)}</span>
-                      <Badge
-                        variant={
-                          row.hasReportEvidence ? "secondary" : "destructive"
-                        }
-                      >
-                        {row.hasReportEvidence ? "截图齐" : "缺截图"}
-                      </Badge>
-                    </span>
+                    并排
                   </button>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* 中栏：截图并排对照 */}
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            {active === null ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                左侧选一条报单开始核对。
-              </p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h2 className="text-lg font-medium">
-                      {active.playerName} · {active.orderNo}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      老板 {active.customerName} · 场次状态 {active.status}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      gap.tone === "warn"
-                        ? "destructive"
-                        : gap.tone === "ok"
-                          ? "secondary"
-                          : "outline"
-                    }
+                  <button
+                    type="button"
+                    aria-pressed={shotView === "one"}
+                    className={shotView === "one" ? "on" : ""}
+                    onClick={() => setShotView("one")}
                   >
-                    {gap.tone === "unknown"
-                      ? "证据计时缺失"
-                      : gap.tone === "warn"
-                        ? "时长差异需重点核对"
-                        : "时长吻合"}
-                  </Badge>
-                </div>
+                    单张
+                  </button>
+                </span>
+              </div>
 
-                <div className="flex flex-wrap gap-4 text-sm">
-                  <span>
-                    申报：<b>{detail?.declaredDurationMinutes ?? "—"} 分钟</b>
-                  </span>
-                  <span>
-                    证据计时：
-                    <b>
-                      {gap.evidenceMinutes === null
-                        ? "—"
-                        : `${gap.evidenceMinutes.toFixed(1)} 分钟`}
-                    </b>
-                  </span>
-                  <span>
-                    差额：
-                    <b>
-                      {gap.deltaMinutes === null
-                        ? "—"
-                        : `${gap.deltaMinutes.toFixed(1)} 分钟`}
-                    </b>
-                  </span>
-                  <span className="text-muted-foreground">
-                    提示阈值：≥ {GAP_ABS_MINUTES} 分钟或申报的{" "}
-                    {Math.round(GAP_RATIO * 100)}%
-                  </span>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
+              <div className={`rv-shots ${shotView}`}>
+                <EvidencePane
+                  title="报单开始截图"
+                  evidenceId={reportEvidence.start?.id ?? null}
+                  onZoom={(url) => setZoom({ url, title: "报单开始截图" })}
+                />
+                {shotView === "pair" ? (
                   <EvidencePane
-                    title="开始截图"
-                    evidenceId={reportEvidence.start?.id ?? null}
-                  />
-                  <EvidencePane
-                    title="结束截图"
+                    title="报单结束截图"
                     evidenceId={reportEvidence.end?.id ?? null}
+                    onZoom={(url) => setZoom({ url, title: "报单结束截图" })}
                   />
-                </div>
+                ) : null}
+              </div>
 
-                <p className="text-xs text-muted-foreground">
-                  提交于 {formatDateTime(detail?.reportSubmittedAt ?? null)}
-                  {detail?.reportReviewedAt
-                    ? ` · 上次审批 ${formatDateTime(detail.reportReviewedAt)}`
-                    : ""}
-                  {detail?.reportReviewNote
-                    ? ` · 备注：${detail.reportReviewNote}`
-                    : ""}
+              {/* 单行事实（原型 v3）：申报 · 证据计时 · 差额 */}
+              <div className="rv-oneline">
+                <span>
+                  <span className="k">申报</span>{" "}
+                  <span className="v pw-num">
+                    {detail?.declaredDurationMinutes ?? "—"} 分
+                  </span>
+                </span>
+                <span>
+                  <span className="k">证据计时</span>{" "}
+                  <span className="v pw-num">
+                    {gap.evidenceMinutes === null
+                      ? "—"
+                      : formatEvidenceMinutes(gap.evidenceMinutes)}
+                  </span>
+                </span>
+                <span>
+                  <span className="k">差额</span>{" "}
+                  <span
+                    className={`v pw-num ${gap.tone === "warn" ? "bad" : ""}`}
+                  >
+                    {gap.deltaMinutes === null
+                      ? "—"
+                      : `${gap.deltaMinutes > 0 ? "+" : ""}${formatEvidenceMinutes(
+                          gap.deltaMinutes,
+                        )}`}
+                  </span>
+                </span>
+              </div>
+
+              {gap.tone === "warn" ? (
+                <p className="rv-warnbar">
+                  超出阈值（{GAP_ABS_MINUTES} 分或 {Math.round(GAP_RATIO * 100)}
+                  %）· 修正按修正值计费
                 </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              ) : null}
+
+              {detail?.reportReviewNote ? (
+                <p className="mx-3 mb-3 text-[11.5px] text-muted-foreground">
+                  上次审批备注：{detail.reportReviewNote}
+                </p>
+              ) : null}
+            </>
+          )}
+        </section>
 
         {/* 右栏：动作 */}
-        <Card>
-          <CardContent className="space-y-3 p-4">
-            <h2 className="text-base font-medium">审批动作</h2>
+        <section className="rv-card">
+          <div className="rv-colhead">
+            <b>审批动作</b>
+            <span>留痕入审计</span>
+          </div>
+          <div className="rv-actions">
             {active === null ? (
               <p className="text-sm text-muted-foreground">先选中一条报单。</p>
             ) : active.slotId === null ? (
@@ -436,60 +569,91 @@ export function ReviewConsoleView() {
               </p>
             ) : (
               <>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium">
-                    修正时长（分钟，可空）
+                <label className="rv-field">
+                  <span>
+                    修正时长（分钟，留空按申报{" "}
+                    {active.declaredDurationMinutes ?? "—"} 分钟计费）
                   </span>
                   <Input
                     aria-label="修正时长（分钟）"
                     inputMode="numeric"
-                    placeholder={`留空按申报 ${active.declaredDurationMinutes ?? "—"} 分钟计费`}
+                    placeholder="如 95"
+                    className="h-8 text-[12.5px]"
                     value={correctedMinutes}
                     onChange={(event) =>
                       setCorrectedMinutes(event.target.value)
                     }
                   />
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    通过时填了就以修正值计费，原始申报值仍留在审计里。
-                  </span>
                 </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium">
-                    理由 / 备注（驳回必填）
-                  </span>
+                <label className="rv-field">
+                  <span>理由 / 备注（驳回必填）</span>
                   <Input
                     aria-label="理由或备注"
                     placeholder="如：截图核对为 2 小时"
+                    className="h-8 text-[12.5px]"
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
                   />
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
+                <div className="rv-calc">
+                  <span className="pw-num">
+                    {unitPriceFen
+                      ? `${unitPriceFen} 分/小时 × ${effectiveMinutes} 分 ÷ 60`
+                      : "档位未定价"}
+                  </span>
+                  <b className="pw-num">{previewAmountLabel}</b>
+                </div>
+                <div className="rv-btnrow">
+                  <button
+                    type="button"
+                    className="rv-btn p"
                     disabled={busy}
                     onClick={() => void review(true)}
                   >
-                    {busy ? "提交中…" : "通过报单"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                    {busy ? "提交中…" : `通过并计费 ${previewAmountLabel}`}
+                  </button>
+                  <button
+                    type="button"
+                    className="rv-btn d"
                     disabled={busy}
                     onClick={() => void review(false)}
                   >
-                    驳回
-                  </Button>
+                    驳回重报
+                  </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  审批结果写入
-                  `audit_logs`（`game_dispatch.slot_report.reviewed`），不在这里新建留痕。
+                <div className="rv-divider" />
+                <p className="rv-hint">
+                  通过后金额按核定分钟数落
+                  `slot_earnings`；驳回要求陪玩重新报单。
+                  <br />
+                  动作写入
+                  `audit_logs`（`game_dispatch.slot_report.reviewed`）。
                 </p>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </div>
+
+      {zoom ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${zoom.title}放大预览`}
+          className="fixed inset-0 z-50 flex flex-col items-center gap-3 overflow-auto bg-black/70 p-6"
+          onClick={() => setZoom(null)}
+        >
+          {/* 证据是运行时 blob，不能用 next/image 的静态优化。 */}
+          <img
+            src={zoom.url}
+            alt={zoom.title}
+            className="max-w-[92vw] rounded-md bg-white object-contain shadow-xl"
+          />
+          <p className="text-sm text-white">
+            {zoom.title} · 点任意处或按 Esc 返回
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -498,12 +662,18 @@ export function ReviewConsoleView() {
 function EvidencePane({
   title,
   evidenceId,
+  onZoom,
 }: {
   title: string;
   evidenceId: string | null;
+  onZoom: (url: string) => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  /**
+   * 空态分三种，全部用文字表达，避免浏览器画「图片裂开」的默认占位图标：
+   * `none` 正常 / `load` 取图失败（HTTP 或网络）/ `missing` 取回了 blob 但图片解码失败。
+   */
+  const [failed, setFailed] = useState<"none" | "load" | "missing">("none");
 
   useEffect(() => {
     if (evidenceId === null) return;
@@ -523,7 +693,7 @@ function EvidencePane({
         setUrl(objectUrl);
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (!cancelled) setFailed("load");
       });
     return () => {
       cancelled = true;
@@ -532,32 +702,63 @@ function EvidencePane({
   }, [evidenceId]);
 
   return (
-    <figure className="space-y-1.5">
-      <figcaption className="text-sm font-medium">{title}</figcaption>
+    <figure className="rv-shot">
+      <div className="rv-shot-cap">
+        <span>{title}</span>
+      </div>
       {evidenceId === null ? (
-        <p className="rounded-md border border-dashed px-3 py-8 text-center text-sm text-muted-foreground">
-          未上传
-        </p>
-      ) : failed ? (
-        <p className="rounded-md border border-dashed px-3 py-8 text-center text-sm text-destructive">
-          截图加载失败
-        </p>
+        <div className="rv-shot-body">未上传（等陪玩补图）</div>
+      ) : failed === "load" ? (
+        <div className="rv-shot-body text-[color:var(--mc-red)]">
+          截图加载失败（可点右侧「刷新队列」后重试）
+        </div>
+      ) : failed === "missing" ? (
+        <div className="rv-shot-body">图片数据缺失（记录里查不到这张图）</div>
       ) : url === null ? (
-        <div
-          className="h-40 animate-pulse rounded-md bg-muted"
-          aria-busy="true"
-          aria-label={`${title}加载中`}
-        />
+        <div className="rv-shot-body animate-pulse" aria-busy="true">
+          加载中…
+        </div>
       ) : (
-        <a href={url} target="_blank" rel="noreferrer">
+        <button
+          type="button"
+          onClick={() => onZoom(url)}
+          className="rv-shot-body w-full border-0"
+          aria-label={`放大${title}`}
+        >
           {/* 证据是运行时 blob（object URL），next/image 的静态优化不适用。 */}
+          {/*
+            接管解码失败：浏览器默认会画「图片裂开」的小图标（就是页面里那个碍事的图标），
+            这里换成文字空态，界面上不再出现在破图图标。
+          */}
           <img
             src={url}
             alt={title}
-            className="max-h-72 w-full rounded-md border object-contain"
+            onError={() => {
+              setUrl(null);
+              setFailed("missing");
+            }}
           />
-        </a>
+        </button>
       )}
     </figure>
   );
+}
+/** 证据计时/差额的紧凑写法：不足 1 分钟显示秒，否则显示一位小数分钟。 */
+function formatEvidenceMinutes(minutes: number): string {
+  if (Math.abs(minutes) < 1) {
+    return `${Math.round(Math.abs(minutes) * 60)} 秒`;
+  }
+  return `${minutes.toFixed(1)} 分`;
+}
+
+/** 等待时长（原型左栏用 `1h12m` 这种紧凑写法）。 */
+function formatWait(iso: string | null, now: number = Date.now()): string {
+  if (!iso) return "待补";
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) return "待补";
+  const minutes = Math.max(0, Math.floor((now - parsed) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h${rest}m`;
 }

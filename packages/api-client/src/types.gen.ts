@@ -7497,6 +7497,14 @@ export type GameDispatchListResponses = {
              */
             playerName: string | null;
             /**
+             * 游戏名（列表「游戏 / 位置」列）；未归类到游戏的派单为 null
+             */
+            gameName: string | null;
+            /**
+             * 该单第一个岗位名（与游戏名同列展示）；没有岗位行为 null
+             */
+            positionLabel: string | null;
+            /**
              * 已选中的档位 id（order_slots.id）；未选人为 null
              */
             slotId: string | null;

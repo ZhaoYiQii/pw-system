@@ -28,7 +28,6 @@ import {
   paginate,
   rangeStartIso,
   reviewBadge,
-  RUSH_GAP_MINUTES,
   selectedSummary,
   slotReportStatusMap,
   tabCounts,
@@ -38,7 +37,6 @@ import {
   type PageSize,
   type PlayerGroup,
   type RangeKey,
-  type ReviewBadge,
   type SortKey,
 } from "./dispatch-list-state";
 import { statusLabel } from "./merchant-api";
@@ -51,6 +49,10 @@ interface GameDispatchListRow {
   durationMinutes: number;
   customerName: string;
   playerName: string | null;
+  /** 游戏名（列表「游戏 / 位置」列）。 */
+  gameName: string | null;
+  /** 该单首个岗位名（与游戏名同列）。 */
+  positionLabel: string | null;
   slotId: string | null;
   unitPriceFen: string | null;
   estimatedAmountFen: string | null;
@@ -166,6 +168,8 @@ const RELEASABLE = new Set(["ASSIGNED", "READY", "IN_PROGRESS"]);
 
 interface DispatchListRowView extends DispatchListRow {
   playerName: string | null;
+  gameName: string | null;
+  positionLabel: string | null;
   durationMinutes: number;
   amountFen: string | null;
   startAt: string | null;
@@ -203,6 +207,31 @@ function formatDateTime(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
   return parsed.toLocaleString("zh-CN", { hour12: false });
+}
+
+/** 只取时间部分（原型「创建时间」列显示 19:52 这种短格式）。 */
+function timeOnly(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return parsed.toLocaleTimeString("zh-CN", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * 等待时长（原型第 9 列）：先按「创建至今」显示。
+ * 后端补上 `desiredStartAt` 与场次状态后，这里会改成「报名倒计时 / 服务剩余」。
+ */
+function formatWait(iso: string, now: number = Date.now()): string {
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) return "—";
+  const minutes = Math.max(0, Math.floor((now - parsed) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h${rest}m`;
 }
 
 function formatAmount(amountFen: string | null): string {
@@ -346,6 +375,8 @@ export function DispatchListView() {
         durationText: `${row.durationMinutes} 分钟`,
         createdAt: row.createdAt,
         playerName: row.playerName,
+        gameName: row.gameName,
+        positionLabel: row.positionLabel,
         durationMinutes: row.durationMinutes,
         amountFen: row.estimatedAmountFen,
         startAt: null,
@@ -386,6 +417,15 @@ export function DispatchListView() {
   const exportableSelected = useMemo(
     () => filtered.filter((row) => selected.has(row.key)).length,
     [filtered, selected],
+  );
+  /** 「进行中」KPI：与页签计数同口径（已选定 / 待开始 / 服务中 三态之和）。 */
+  const ongoingCount = useMemo(
+    () =>
+      (["ASSIGNED", "READY", "IN_PROGRESS"] as const).reduce(
+        (sum, status) => sum + (counts[status] ?? 0),
+        0,
+      ),
+    [counts],
   );
 
   const canOperate = role === "OWNER" || role === "ADMIN" || role === "CS";
@@ -569,6 +609,30 @@ export function DispatchListView() {
         ) : null}
       </header>
 
+      {/*
+        KPI 卡片（原型顶部 4 卡）：现在先上能真实计算的两张，其余两张明确显示「待接口」，
+        不编数字——风险/待结算的口径要后端给数据来源后再补。
+      */}
+      <section
+        aria-label="关键指标"
+        className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <KpiCard
+          label="进行中"
+          value={`${ongoingCount}`}
+          hint="服务中 / 待开始"
+        />
+        <KpiCard
+          label="待审批报单"
+          value={`${pendingReviewCount}`}
+          hint={pendingReviewCount > 0 ? "最久一条见审核台" : "暂无待审批"}
+          href="/merchant-console/dispatch/audit"
+          tone="warn"
+        />
+        <KpiCard label="风险" value="—" hint="待接口：违约/异常口径" />
+        <KpiCard label="今晚待结算" value="—" hint="待接口：待核定金额" />
+      </section>
+
       {notice ? (
         <p
           role="status"
@@ -737,6 +801,14 @@ export function DispatchListView() {
               onClick={() => setColumnsOpen((open) => !open)}
             >
               列设置
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={listQuery.isFetching}
+              onClick={() => void listQuery.refetch()}
+            >
+              {listQuery.isFetching ? "刷新中…" : "刷新"}
             </Button>
             {columnsOpen ? (
               <div className="flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs">
@@ -909,13 +981,13 @@ export function DispatchListView() {
                 </p>
               ) : null}
               <div className="w-full overflow-auto">
-                <table className="w-full text-sm">
+                <table className="pw-data-table text-left">
                   <caption className="sr-only">
                     订单列表（按状态页签筛选，可勾选批量操作）
                   </caption>
                   <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="w-8 px-3 py-2">
+                    <tr>
+                      <th className="w-8">
                         <input
                           type="checkbox"
                           aria-label="全选本页"
@@ -927,45 +999,49 @@ export function DispatchListView() {
                           }
                         />
                       </th>
-                      {columnVisible(hiddenColumns, "no") ? (
-                        <th className="px-3 py-2">单号</th>
-                      ) : null}
                       {columnVisible(hiddenColumns, "status") ? (
-                        <th className="px-3 py-2">状态</th>
+                        <th className="text-[11px] tracking-wider uppercase">
+                          状态
+                        </th>
+                      ) : null}
+                      {columnVisible(hiddenColumns, "no") ? (
+                        <th className="text-[11px] tracking-wider uppercase">
+                          订单
+                        </th>
+                      ) : null}
+                      {/* 「游戏 / 位置」列（原型第 4 列）：游戏名 + 首个岗位。 */}
+                      <th className="text-[11px] tracking-wider uppercase">
+                        游戏 / 位置
+                      </th>
+                      {columnVisible(hiddenColumns, "player") ? (
+                        <th className="text-[11px] tracking-wider uppercase">
+                          陪玩
+                        </th>
                       ) : null}
                       {columnVisible(hiddenColumns, "customer") ? (
-                        <th className="px-3 py-2">老板</th>
+                        <th className="text-[11px] tracking-wider uppercase">
+                          老板
+                        </th>
                       ) : null}
-                      {columnVisible(hiddenColumns, "player") ? (
-                        <th className="px-3 py-2">陪玩</th>
-                      ) : null}
-                      {columnVisible(hiddenColumns, "duration") ? (
-                        <th className="px-3 py-2">时长</th>
-                      ) : null}
-                      {columnVisible(hiddenColumns, "amount") ? (
-                        <th className="px-3 py-2">预估金额</th>
-                      ) : null}
-                      {columnVisible(hiddenColumns, "createdAt") ? (
-                        <th className="px-3 py-2">创建时间</th>
-                      ) : null}
-                      <th className="px-3 py-2">
-                        <span className="flex items-center gap-1.5">
-                          审核
-                          {pendingReviewCount > 0 ? (
-                            <Link
-                              href="/merchant-console/dispatch/audit"
-                              className="rounded bg-muted px-1.5 text-xs text-primary hover:underline"
-                            >
-                              待审 {pendingReviewCount}
-                            </Link>
-                          ) : (
-                            <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">
-                              无待审
-                            </span>
-                          )}
-                        </span>
+                      {/* 「申报 / 核定」列（原型第 7 列）：数据待后端补字段，先留位。 */}
+                      <th className="text-[11px] tracking-wider uppercase">
+                        申报 / 核定
                       </th>
-                      <th className="px-3 py-2 text-right">操作</th>
+                      {columnVisible(hiddenColumns, "amount") ? (
+                        <th className="text-[11px] tracking-wider uppercase">
+                          金额
+                        </th>
+                      ) : null}
+                      {/* 「等待 / 倒计时」列（原型第 9 列）：先按已等待时长显示。 */}
+                      <th className="text-[11px] tracking-wider uppercase">
+                        等待 / 倒计时
+                      </th>
+                      {columnVisible(hiddenColumns, "createdAt") ? (
+                        <th className="text-[11px] tracking-wider uppercase">
+                          创建时间
+                        </th>
+                      ) : null}
+                      <th className="text-right" />
                     </tr>
                   </thead>
                   <tbody>
@@ -1031,6 +1107,55 @@ export function DispatchListView() {
   );
 }
 
+/**
+ * KPI 卡片（原型顶部四卡）：与项目既有卡片样式一致（Card + token），不引入新视觉语言。
+ * 「待接口」的两张卡明确显示占位符而不是编造数字。
+ */
+function KpiCard({
+  label,
+  value,
+  hint,
+  href,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  href?: string;
+  tone?: "warn";
+}) {
+  const body = (
+    <>
+      <p
+        className={`text-xs ${
+          tone === "warn"
+            ? "text-[color:var(--mc-amber-text)]"
+            : "text-muted-foreground"
+        }`}
+      >
+        {label}
+      </p>
+      <p className="mt-0.5 font-mono text-xl font-semibold tabular-nums">
+        {value}
+      </p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
+    </>
+  );
+  return (
+    <Card>
+      <CardContent className="p-3">
+        {href ? (
+          <Link href={href} className="block hover:opacity-90">
+            {body}
+          </Link>
+        ) : (
+          body
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function countPublishable(byStatus: Record<string, number>): number {
   let count = 0;
   for (const status of PUBLISHABLE) count += byStatus[status] ?? 0;
@@ -1087,16 +1212,19 @@ function GroupRows({
 }) {
   return (
     <>
-      <tr className="bg-muted/60">
-        <td
-          colSpan={COLUMN_SPAN(hiddenColumns)}
-          className="px-3 py-1.5 text-xs font-medium"
-        >
-          {group.playerName ?? "未选人（待指派陪玩）"}
-          {group.rows.length > 1 ? ` · ${group.rows.length} 单` : ""}
-          {group.rushKeys.length > 0
-            ? ` · ⚠ 有 ${group.rushKeys.length} 单时间间隔小于 ${RUSH_GAP_MINUTES} 分钟`
-            : ""}
+      <tr className="pw-group-row">
+        <td colSpan={COLUMN_SPAN(hiddenColumns)}>
+          <span className="flex flex-wrap items-center gap-1.5">
+            {group.playerName
+              ? `按陪玩分组 · ${group.playerName}`
+              : "未选人 / 待指派"}
+            {group.rows.length > 1 ? `（共 ${group.rows.length} 单）` : ""}
+            {group.rushKeys.length > 0 ? (
+              <span className="rounded border border-[color:var(--mc-amber)] bg-[color:var(--mc-amber-2)] px-1.5 text-[11px] font-normal text-[color:var(--mc-amber-text)]">
+                时段相邻，注意赶场
+              </span>
+            ) : null}
+          </span>
         </td>
       </tr>
       {group.rows.map((row) => {
@@ -1104,8 +1232,8 @@ function GroupRows({
         const busy = busyKeys.has(row.key);
         const rush = rushKeys.has(row.key);
         return (
-          <tr key={row.key} className="border-b">
-            <td className="px-3 py-2">
+          <tr key={row.key}>
+            <td className="text-xs">
               <input
                 type="checkbox"
                 aria-label={`勾选 ${row.no}`}
@@ -1113,8 +1241,15 @@ function GroupRows({
                 onChange={() => onToggle(row.key)}
               />
             </td>
+            {columnVisible(hiddenColumns, "status") ? (
+              <td className="text-xs">
+                <Badge variant={statusVariant(row.status)}>
+                  {statusLabel(row.status)}
+                </Badge>
+              </td>
+            ) : null}
             {columnVisible(hiddenColumns, "no") ? (
-              <td className="px-3 py-2">
+              <td className="pw-num">
                 <Link
                   href={`/merchant-console/dispatch/${row.id}?kind=GD`}
                   className="text-primary hover:underline"
@@ -1126,36 +1261,61 @@ function GroupRows({
                 ) : null}
               </td>
             ) : null}
-            {columnVisible(hiddenColumns, "status") ? (
-              <td className="px-3 py-2">
-                <Badge variant={statusVariant(row.status)}>
-                  {statusLabel(row.status)}
-                </Badge>
+            {/* 游戏 / 位置：游戏名 + 首个岗位（原型第 4 列）。 */}
+            <td className="text-xs">
+              {view.gameName ?? "—"}
+              {view.positionLabel ? (
+                <span className="text-muted-foreground">
+                  {" · "}
+                  {view.positionLabel}
+                </span>
+              ) : null}
+            </td>
+            {columnVisible(hiddenColumns, "player") ? (
+              <td className="text-xs">
+                {row.playerName ?? (
+                  <span className="text-muted-foreground">未选人</span>
+                )}
               </td>
             ) : null}
             {columnVisible(hiddenColumns, "customer") ? (
-              <td className="px-3 py-2">{row.customerName}</td>
+              <td className="text-xs">{row.customerName}</td>
             ) : null}
-            {columnVisible(hiddenColumns, "player") ? (
-              <td className="px-3 py-2">{row.playerName ?? "—"}</td>
-            ) : null}
-            {columnVisible(hiddenColumns, "duration") ? (
-              <td className="px-3 py-2">{row.durationText}</td>
-            ) : null}
-            {columnVisible(hiddenColumns, "amount") ? (
-              <td className="px-3 py-2">{formatAmount(view.amountFen)}</td>
-            ) : null}
-            {columnVisible(hiddenColumns, "createdAt") ? (
-              <td className="px-3 py-2">{formatDateTime(row.createdAt)}</td>
-            ) : null}
-            <td className="px-3 py-2 text-sm">
-              <ReviewCell
-                badge={reviewBadge(view.slotId, reviewBySlot)}
-                href={auditHref(view.slotId, sessionIdBySlot)}
-              />
+            {/* 申报 / 核定：等待后端字段（原型第 7 列），先占位不编数字。 */}
+            <td className="pw-num">
+              {row.durationText}
+              <span className="ml-1 text-muted-foreground">/ —</span>
             </td>
-            <td className="px-3 py-2">
-              <span className="flex items-center justify-end gap-1">
+            {columnVisible(hiddenColumns, "amount") ? (
+              <td className="pw-num text-right">
+                {formatAmount(view.amountFen)}
+              </td>
+            ) : null}
+            {/* 等待 / 倒计时：先按「创建至今」显示，后端补字段后再区分报名倒计时。 */}
+            <td className="pw-num">{formatWait(row.createdAt)}</td>
+            {columnVisible(hiddenColumns, "createdAt") ? (
+              <td className="pw-num text-muted-foreground">
+                {timeOnly(row.createdAt)}
+              </td>
+            ) : null}
+            <td>
+              <span className="flex flex-wrap items-center justify-end gap-1">
+                {/* 审核列原来在这里，按原型并入「状态 + 操作」：待审批时给「核定」入口。 */}
+                {reviewBadge(view.slotId, reviewBySlot).actionable ? (
+                  <Link
+                    href={auditHref(view.slotId, sessionIdBySlot)}
+                    className="inline-flex items-center rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                  >
+                    {reviewBadge(view.slotId, reviewBySlot).tone === "pending"
+                      ? "核定"
+                      : "审核记录"}
+                  </Link>
+                ) : null}
+                {/*
+                  行内动作按状态出现（对齐原型的模块设计）：
+                  待发布/已确认 → 发布；已选定/待开始/服务中 → 释放；其余只给详情。
+                  不可用的动作不再用灰按钮占位，避免「看起来能点」。
+                */}
                 <Link
                   href={`/merchant-console/dispatch/${row.id}?kind=GD`}
                   className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-muted"
@@ -1163,34 +1323,28 @@ function GroupRows({
                   详情
                   <ArrowRight size={12} aria-hidden="true" />
                 </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={
-                    busy || !canOperate || !PUBLISHABLE.has(view.status)
-                  }
-                  title={
-                    PUBLISHABLE.has(view.status)
-                      ? "发布后开放报名"
-                      : "只有草稿/已确认的派单可以发布"
-                  }
-                  onClick={() => onPublish(view)}
-                >
-                  发布
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy || !canOperate || !RELEASABLE.has(view.status)}
-                  title={
-                    RELEASABLE.has(view.status)
-                      ? "释放后回到报名阶段"
-                      : "当前状态没有可释放的名额"
-                  }
-                  onClick={() => onRelease(view)}
-                >
-                  释放
-                </Button>
+                {PUBLISHABLE.has(view.status) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy || !canOperate}
+                    title="发布后开放报名"
+                    onClick={() => onPublish(view)}
+                  >
+                    发布
+                  </Button>
+                ) : null}
+                {RELEASABLE.has(view.status) ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy || !canOperate}
+                    title="释放后回到报名阶段"
+                    onClick={() => onRelease(view)}
+                  >
+                    释放
+                  </Button>
+                ) : null}
               </span>
             </td>
           </tr>
@@ -1202,25 +1356,6 @@ function GroupRows({
 
 function COLUMN_SPAN(hidden: ReadonlySet<ColumnId>): number {
   const visible = COLUMNS.filter((column) => !hidden.has(column.id)).length;
-  // +1 勾选列，+1 审核列，+1 操作列
-  return visible + 3;
-}
-
-/** 审核列单元格：精确到档位的报单状态徽章，可点进审核台（命中时带 sessionId 深链）。 */
-function ReviewCell({ badge, href }: { badge: ReviewBadge; href: string }) {
-  if (!badge.actionable) {
-    return <span className="text-muted-foreground">{badge.label}</span>;
-  }
-  return (
-    <Link
-      href={href}
-      className={
-        badge.tone === "pending"
-          ? "rounded bg-muted px-1.5 py-0.5 text-xs text-destructive hover:underline"
-          : "rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:underline"
-      }
-    >
-      {badge.label}
-    </Link>
-  );
+  // +1 勾选列、+1「游戏 / 位置」列、+1「申报 / 核定」列、+1「等待 / 倒计时」列、+1 操作列
+  return visible + 5;
 }

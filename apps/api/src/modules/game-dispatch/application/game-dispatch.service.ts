@@ -651,6 +651,14 @@ export class GameDispatchService {
     });
     // N+1 修复：订单（状态 + 老板）、档位（陪玩 + 单价）、陪玩名、老板名各查一次后本地映射。
     const orderIds = Array.from(new Set(rows.map((row) => row.orderId)));
+    // 列表「游戏 / 位置」列：游戏名按 gameId 批量取回（v1 单 gameId 为空则显示 —）。
+    const gameIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.gameId)
+          .filter((id): id is string => typeof id === "string"),
+      ),
+    );
     const orders = orderIds.length
       ? await this.client.order.findMany({
           where: { tenantId, id: { in: orderIds } },
@@ -679,7 +687,7 @@ export class GameDispatchService {
     const customerIds = Array.from(
       new Set(orders.map((o) => o.customerProfileId)),
     );
-    const [players, customers] = await Promise.all([
+    const [players, customers, games, lines] = await Promise.all([
       playerIds.length
         ? this.client.playerProfile.findMany({
             where: { tenantId, id: { in: playerIds } },
@@ -692,9 +700,31 @@ export class GameDispatchService {
             select: { id: true, name: true },
           })
         : Promise.resolve([]),
+      // 列表「游戏 / 位置」列：游戏名取派单订单的 gameId，位置取该单第一个岗位行。
+      gameIds.length
+        ? this.client.game.findMany({
+            where: { tenantId, id: { in: gameIds } },
+            select: { id: true, name: true },
+          })
+        : Promise.resolve([]),
+      orderIds.length
+        ? this.client.gameDispatchLine.findMany({
+            where: { tenantId, orderId: { in: orderIds } },
+            orderBy: { sortOrder: "asc" },
+            select: { orderId: true, positionLabel: true },
+          })
+        : Promise.resolve([]),
     ]);
     const playerNameById = new Map(players.map((p) => [p.id, p.name]));
     const customerNameById = new Map(customers.map((c) => [c.id, c.name]));
+    const gameNameById = new Map(games.map((g) => [g.id, g.name]));
+    const positionByOrder = new Map<string, string>();
+    for (const line of lines) {
+      // 只保留每单第一个岗位行（按 sortOrder 升序，先到先存）。
+      if (!positionByOrder.has(line.orderId)) {
+        positionByOrder.set(line.orderId, line.positionLabel);
+      }
+    }
     const mapped: DispatchListRow[] = rows.map((row) => {
       const order = orderById.get(row.orderId);
       const slot = slotByOrder.get(row.orderId);
@@ -711,6 +741,10 @@ export class GameDispatchService {
         playerName: slot
           ? (playerNameById.get(slot.playerId) ?? "未知陪玩")
           : null,
+        /** 游戏名（列表「游戏 / 位置」列）；未归类到游戏的派单为 null。 */
+        gameName: row.gameId ? (gameNameById.get(row.gameId) ?? null) : null,
+        /** 该单第一个岗位名（与游戏名同列展示）；没有岗位行为 null。 */
+        positionLabel: positionByOrder.get(row.orderId) ?? null,
         /** 已选中档位 id；未选人为 null。审核列据此精确对应报单队列。 */
         slotId: slot ? slot.id : null,
         unitPriceFen: unitPriceFen === null ? null : unitPriceFen.toString(),

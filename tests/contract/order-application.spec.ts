@@ -261,6 +261,8 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
       "customerProfileId",
       "customerName",
       "playerName",
+      "gameName",
+      "positionLabel",
       "slotId",
       "unitPriceFen",
       "estimatedAmountFen",

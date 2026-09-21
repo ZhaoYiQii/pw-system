@@ -111,6 +111,10 @@ export interface DispatchListRow {
   customerName: string;
   /** 已选中陪玩名；未选人为 null。 */
   playerName: string | null;
+  /** 游戏名（列表「游戏 / 位置」列）；未归类到游戏的派单为 null。 */
+  gameName: string | null;
+  /** 该单第一个岗位名（与游戏名同列展示）；没有岗位行为 null。 */
+  positionLabel: string | null;
   /** 已选中档位 id（`order_slots.id`）；未选人为 null。审核列据此精确映射报单队列。 */
   slotId: string | null;
   /** 档位单价快照（分/小时）；未选人为 null。 */
