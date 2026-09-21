@@ -208,6 +208,7 @@ export default function PlayerAvailabilityPage() {
               <Text className="pw-field-label">开始时间</Text>
               <Input
                 className="pw-input"
+                nativeProps={{ "aria-label": "开始时间", name: "startsAt" }}
                 value={startsAt}
                 onInput={(event) => setStartsAt(event.detail.value)}
                 placeholder="2026-09-08T19:00"
@@ -217,6 +218,7 @@ export default function PlayerAvailabilityPage() {
               <Text className="pw-field-label">结束时间</Text>
               <Input
                 className="pw-input"
+                nativeProps={{ "aria-label": "结束时间", name: "endsAt" }}
                 value={endsAt}
                 onInput={(event) => setEndsAt(event.detail.value)}
                 placeholder="2026-09-08T23:00"
@@ -226,6 +228,7 @@ export default function PlayerAvailabilityPage() {
               <Text className="pw-field-label">备注（选填）</Text>
               <Input
                 className="pw-input"
+                nativeProps={{ "aria-label": "备注（选填）", name: "reason" }}
                 value={reason}
                 onInput={(event) => setReason(event.detail.value)}
                 placeholder="例如：临时有事"

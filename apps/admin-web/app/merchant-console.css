@@ -2975,6 +2975,11 @@
   font-size: 12px;
   outline: none;
 }
+/* 聚焦替代：input 自身去掉了 outline，用外层容器给出可见焦点环（键盘可达性）。 */
+.pw-merchant .mc-designer-search:focus-within {
+  border-color: #2f6f4f;
+  box-shadow: 0 0 0 2px rgba(47, 111, 79, 0.25);
+}
 
 .pw-merchant .mc-designer-rail-list {
   display: grid;

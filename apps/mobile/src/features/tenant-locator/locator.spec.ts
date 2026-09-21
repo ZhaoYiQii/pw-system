@@ -24,4 +24,26 @@ describe("H5 tenant locator 短码直达", () => {
   it("host 与 code 都缺失时返回 null（页面视为未配置）", () => {
     expect(resolveLocatorParam("?other=1", "")).toBeNull();
   });
+
+  it("本地/局域网地址不发起 host 解析（避免每页一条 404 噪音）", () => {
+    for (const host of [
+      "127.0.0.1:3101",
+      "localhost:3101",
+      "192.168.21.4:3101",
+      "[::1]:3101",
+      "mac-mini.local",
+    ]) {
+      expect(resolveLocatorParam("", host), host).toBeNull();
+    }
+    // 短码优先，不受 host 形态影响
+    expect(resolveLocatorParam("?t=xingchen", "127.0.0.1:3101")).toEqual({
+      name: "code",
+      value: "xingchen",
+    });
+    // 真实域名照常解析
+    expect(resolveLocatorParam("", "xingchen.17ai.club")).toEqual({
+      name: "host",
+      value: "xingchen.17ai.club",
+    });
+  });
 });

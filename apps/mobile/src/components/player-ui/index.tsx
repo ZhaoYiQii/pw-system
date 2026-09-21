@@ -109,6 +109,7 @@ export function PlayerLoginCard({
         <Text className="pw-field-label">门店 code</Text>
         <Input
           className="pw-input"
+          nativeProps={{ "aria-label": "门店 code", name: "tenantCode" }}
           value={tenantCode}
           onInput={(event) => onTenantCode(event.detail.value)}
           placeholder="demo"
@@ -118,6 +119,7 @@ export function PlayerLoginCard({
         <Text className="pw-field-label">陪玩账号</Text>
         <Input
           className="pw-input"
+          nativeProps={{ "aria-label": "陪玩账号", name: "username" }}
           value={username}
           onInput={(event) => onUsername(event.detail.value)}
           placeholder="player"
@@ -127,6 +129,7 @@ export function PlayerLoginCard({
         <Text className="pw-field-label">密码</Text>
         <Input
           className="pw-input"
+          nativeProps={{ "aria-label": "密码", name: "password" }}
           password
           value={password}
           onInput={(event) => onPassword(event.detail.value)}
