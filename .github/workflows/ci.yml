@@ -104,7 +104,9 @@ jobs:
           H5_ORIGIN=http://localhost:3101 \
           node apps/api/dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &
 
-          (cd apps/admin-web && node ../../node_modules/next/dist/bin/next start -p 3005 \
+          # 用 `pnpm exec next` 而不是手写 node_modules 路径：pnpm 依赖在 .pnpm store 里，
+          # 仓库根没有 node_modules/next（本机在包目录下能用相对路径，CI 不行——已被 CI 抓到一次）。
+          (cd apps/admin-web && pnpm exec next start -p 3005 \
             > "$RUNNER_TEMP/web.log" 2>&1 &)
 
           # H5 产物按同源调用 /api，所以本地必须靠这个脚本把 /api 反代到 3300。
