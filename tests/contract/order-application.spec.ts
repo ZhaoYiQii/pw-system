@@ -261,6 +261,7 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
       "customerProfileId",
       "customerName",
       "playerName",
+      "slotId",
       "unitPriceFen",
       "estimatedAmountFen",
       "createdAt",
@@ -270,6 +271,8 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
     expect(row?.properties?.unitPriceFen?.nullable).toBe(true);
     expect(row?.properties?.estimatedAmountFen?.nullable).toBe(true);
     expect(row?.properties?.playerName?.nullable).toBe(true);
+    // 审核列精确徽章依赖档位 id：未选人时必须可为 null。
+    expect(row?.properties?.slotId?.nullable).toBe(true);
 
     // 查询参数：状态/时间范围/排序/游戏/陪玩/老板/金额区间/分页。
     expect(list?.parameters?.map((p) => p.name)).toEqual([

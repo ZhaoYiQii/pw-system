@@ -27,8 +27,10 @@ import {
   normalizeListResponse,
   paginate,
   rangeStartIso,
+  reviewBadge,
   RUSH_GAP_MINUTES,
   selectedSummary,
+  slotReportStatusMap,
   tabCounts,
   toggleAllOnPage,
   toggleRow,
@@ -36,6 +38,7 @@ import {
   type PageSize,
   type PlayerGroup,
   type RangeKey,
+  type ReviewBadge,
   type SortKey,
 } from "./dispatch-list-state";
 import { statusLabel } from "./merchant-api";
@@ -48,28 +51,55 @@ interface GameDispatchListRow {
   durationMinutes: number;
   customerName: string;
   playerName: string | null;
+  slotId: string | null;
   unitPriceFen: string | null;
   estimatedAmountFen: string | null;
   createdAt: string;
 }
 
 /**
- * 审核台队列里的待审批条数（订单中心证据列的口径）。
+ * 审核台队列 → `slotId → reportStatus` 映射（每次只查一个队列，两次并发）。
  *
- * 注意：订单列表行**没有 slotId**，所以这里只能给出「有 N 条报单待审批」的入口提示，
- * 不做「这一行到底是哪一单」的精确映射（那会在每行再加一次请求）。精确到单的对照
- * 在审核台里完成——点进去默认就是待审批队列的第一条。
+ * 列表行现在带 `slotId`（本片给列表补的字段），所以每个订单能精确对上自己的报单状态，
+ * 不再是「有 N 条待审批」的总数提示。
  */
-async function fetchPendingReviewCount(): Promise<number> {
+interface ReportQueueRow {
+  slotId: string | null;
+  reportStatus: string;
+  /** 场次 id（`GET /tenant/sessions` 用的是 `id`，不是 `sessionId`）。 */
+  id: string;
+  orderId: string;
+}
+
+async function fetchReportQueue(
+  reportStatus: "PENDING_REVIEW" | "APPROVED",
+): Promise<ReportQueueRow[]> {
   const payload = await apiFetch<unknown>(
-    "/api/v1/tenant/sessions?reportStatus=PENDING_REVIEW",
+    `/api/v1/tenant/sessions?reportStatus=${reportStatus}`,
   );
   const rows = Array.isArray(payload)
     ? payload
     : Array.isArray((payload as { data?: unknown } | null)?.data)
       ? ((payload as { data: unknown[] }).data ?? [])
       : [];
-  return rows.length;
+  return rows as ReportQueueRow[];
+}
+
+/** 审核台入口：命中队列行时带 `sessionId` 深链，否则退回列表入口。 */
+const AUDIT_ENTRY = "/merchant-console/dispatch/audit";
+
+/**
+ * 审核列深链：本次请求到的队列行里找到同一档位时带 `sessionId`（审核台会自动选中），
+ * 找不到就退回列表入口——跳转必须始终有效，不因为队列里恰好没有就用坏链接。
+ */
+function auditHref(
+  slotId: string | null | undefined,
+  sessionIdBySlot: ReadonlyMap<string, string>,
+): string {
+  const sessionId = slotId ? sessionIdBySlot.get(slotId) : undefined;
+  return sessionId
+    ? `${AUDIT_ENTRY}?sessionId=${encodeURIComponent(sessionId)}`
+    : AUDIT_ENTRY;
 }
 
 /** 服务端首页上限：服务端 clamp 到 100，这里保持一致，便于「是不是还有更多」的判断。 */
@@ -139,6 +169,8 @@ interface DispatchListRowView extends DispatchListRow {
   durationMinutes: number;
   amountFen: string | null;
   startAt: string | null;
+  /** 已选中档位 id；审核列据此精确映射报单状态。 */
+  slotId: string | null;
 }
 
 interface FilterState {
@@ -268,12 +300,35 @@ export function DispatchListView() {
     queryFn: () =>
       apiFetch<Array<{ id: string; name: string }>>("/api/v1/tenant/customers"),
   });
-  // 审核台待审批条数：给「证据」列当入口提示（Slice 2：报单审批收敛到审核台）。
+  // 审核列数据源：待审批 + 已通过两个队列 → 每行精确对应自己的报单状态。
   const pendingReviewQuery = useQuery({
-    queryKey: ["merchant", "review", "pending-count"],
-    queryFn: fetchPendingReviewCount,
+    queryKey: ["merchant", "review", "queue", "PENDING_REVIEW"],
+    queryFn: () => fetchReportQueue("PENDING_REVIEW"),
   });
-  const pendingReviewCount = pendingReviewQuery.data ?? 0;
+  const approvedReviewQuery = useQuery({
+    queryKey: ["merchant", "review", "queue", "APPROVED"],
+    queryFn: () => fetchReportQueue("APPROVED"),
+  });
+  const reviewBySlot = useMemo(
+    () =>
+      slotReportStatusMap([
+        ...(pendingReviewQuery.data ?? []),
+        ...(approvedReviewQuery.data ?? []),
+      ]),
+    [pendingReviewQuery.data, approvedReviewQuery.data],
+  );
+  // 审核列深链：`slotId → sessionId`（审核台按 sessionId 选中，不按 slotId）。
+  const sessionIdBySlot = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of [
+      ...(pendingReviewQuery.data ?? []),
+      ...(approvedReviewQuery.data ?? []),
+    ]) {
+      if (row.slotId && row.id) map.set(row.slotId, row.id);
+    }
+    return map;
+  }, [pendingReviewQuery.data, approvedReviewQuery.data]);
+  const pendingReviewCount = pendingReviewQuery.data?.length ?? 0;
 
   const serverRows = listQuery.data?.data ?? [];
   const serverTotal = listQuery.data?.total ?? 0;
@@ -294,6 +349,7 @@ export function DispatchListView() {
         durationMinutes: row.durationMinutes,
         amountFen: row.estimatedAmountFen,
         startAt: null,
+        slotId: row.slotId,
       })),
     [serverRows],
   );
@@ -893,19 +949,21 @@ export function DispatchListView() {
                         <th className="px-3 py-2">创建时间</th>
                       ) : null}
                       <th className="px-3 py-2">
-                        审核
-                        {pendingReviewCount > 0 ? (
-                          <Link
-                            href="/merchant-console/dispatch/audit"
-                            className="ml-1 text-xs text-primary hover:underline"
-                          >
-                            待审批 {pendingReviewCount}
-                          </Link>
-                        ) : (
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            无待审
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1.5">
+                          审核
+                          {pendingReviewCount > 0 ? (
+                            <Link
+                              href="/merchant-console/dispatch/audit"
+                              className="rounded bg-muted px-1.5 text-xs text-primary hover:underline"
+                            >
+                              待审 {pendingReviewCount}
+                            </Link>
+                          ) : (
+                            <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">
+                              无待审
+                            </span>
+                          )}
+                        </span>
                       </th>
                       <th className="px-3 py-2 text-right">操作</th>
                     </tr>
@@ -920,7 +978,8 @@ export function DispatchListView() {
                         busyKeys={busyKeys}
                         rushKeys={rushKeys}
                         canOperate={canOperate}
-                        pendingReviewCount={pendingReviewCount}
+                        reviewBySlot={reviewBySlot}
+                        sessionIdBySlot={sessionIdBySlot}
                         onToggle={(key) =>
                           setSelected((current) => toggleRow(current, key))
                         }
@@ -1008,7 +1067,8 @@ function GroupRows({
   busyKeys,
   rushKeys,
   canOperate,
-  pendingReviewCount,
+  reviewBySlot,
+  sessionIdBySlot,
   onToggle,
   onPublish,
   onRelease,
@@ -1019,7 +1079,8 @@ function GroupRows({
   busyKeys: ReadonlySet<string>;
   rushKeys: ReadonlySet<string>;
   canOperate: boolean;
-  pendingReviewCount: number;
+  reviewBySlot: ReadonlyMap<string, string>;
+  sessionIdBySlot: ReadonlyMap<string, string>;
   onToggle: (key: string) => void;
   onPublish: (row: DispatchListRowView) => void;
   onRelease: (row: DispatchListRowView) => void;
@@ -1088,16 +1149,10 @@ function GroupRows({
               <td className="px-3 py-2">{formatDateTime(row.createdAt)}</td>
             ) : null}
             <td className="px-3 py-2 text-sm">
-              {pendingReviewCount > 0 ? (
-                <Link
-                  href="/merchant-console/dispatch/audit"
-                  className="text-primary hover:underline"
-                >
-                  去审核
-                </Link>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
+              <ReviewCell
+                badge={reviewBadge(view.slotId, reviewBySlot)}
+                href={auditHref(view.slotId, sessionIdBySlot)}
+              />
             </td>
             <td className="px-3 py-2">
               <span className="flex items-center justify-end gap-1">
@@ -1149,4 +1204,23 @@ function COLUMN_SPAN(hidden: ReadonlySet<ColumnId>): number {
   const visible = COLUMNS.filter((column) => !hidden.has(column.id)).length;
   // +1 勾选列，+1 审核列，+1 操作列
   return visible + 3;
+}
+
+/** 审核列单元格：精确到档位的报单状态徽章，可点进审核台（命中时带 sessionId 深链）。 */
+function ReviewCell({ badge, href }: { badge: ReviewBadge; href: string }) {
+  if (!badge.actionable) {
+    return <span className="text-muted-foreground">{badge.label}</span>;
+  }
+  return (
+    <Link
+      href={href}
+      className={
+        badge.tone === "pending"
+          ? "rounded bg-muted px-1.5 py-0.5 text-xs text-destructive hover:underline"
+          : "rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:underline"
+      }
+    >
+      {badge.label}
+    </Link>
+  );
 }

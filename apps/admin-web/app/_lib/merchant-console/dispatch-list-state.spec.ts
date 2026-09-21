@@ -17,8 +17,10 @@ import {
   pageCount,
   paginate,
   rangeStartIso,
+  reviewBadge,
   RUSH_GAP_MINUTES,
   selectedSummary,
+  slotReportStatusMap,
   sortRows,
   statusCounts,
   tabCounts,
@@ -352,6 +354,38 @@ describe("订单中心列表（Slice 1 新增纯逻辑）", () => {
     expect(
       buildSelectedCsvForColumns(["单号"], rows, new Set(), () => ["x"]),
     ).toBeNull();
+  });
+
+  it("审核徽章：按档位精确映射报单状态，未选人/未报单不可点", () => {
+    const bySlot = slotReportStatusMap([
+      { slotId: "slot-a", reportStatus: "PENDING_REVIEW" },
+      { slotId: "slot-b", reportStatus: "APPROVED" },
+      { slotId: "slot-c", reportStatus: "REJECTED" },
+      // 没有档位的行（CLASSIC 冻结链路）不参与映射
+      { slotId: null, reportStatus: "NOT_REPORTED" },
+      { slotId: "slot-d", reportStatus: null },
+    ]);
+    expect([...bySlot.keys()].sort()).toEqual(["slot-a", "slot-b", "slot-c"]);
+
+    expect(reviewBadge("slot-a", bySlot)).toEqual({
+      tone: "pending",
+      label: "待审批",
+      actionable: true,
+    });
+    expect(reviewBadge("slot-b", bySlot).label).toBe("已通过");
+    expect(reviewBadge("slot-c", bySlot).label).toBe("已驳回");
+    // 未选人 / 该档位还没有报单 / 未知档位 → 显示占位且不可点
+    for (const slotId of [null, undefined, "slot-d", "slot-unknown"]) {
+      expect(reviewBadge(slotId, bySlot)).toEqual({
+        tone: "none",
+        label: "—",
+        actionable: false,
+      });
+    }
+    // 未知状态不臆造
+    expect(
+      reviewBadge("slot-x", new Map([["slot-x", "SOMETHING_ELSE"]])).label,
+    ).toBe("未报单");
   });
 
   it("列表响应形状兜底：{data,total} 与「只剩数组」两种形状都能读出总数", () => {

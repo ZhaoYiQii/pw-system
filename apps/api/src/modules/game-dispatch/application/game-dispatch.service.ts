@@ -665,7 +665,13 @@ export class GameDispatchService {
             orderId: { in: orderIds },
             status: { not: "RELEASED" },
           },
-          select: { orderId: true, playerId: true, unitPriceFen: true },
+          // id 一并取回：审核列要按档位精确映射报单队列（列表行没有它就只能给总数提示）。
+          select: {
+            id: true,
+            orderId: true,
+            playerId: true,
+            unitPriceFen: true,
+          },
         })
       : [];
     const slotByOrder = new Map(slots.map((slot) => [slot.orderId, slot]));
@@ -705,6 +711,8 @@ export class GameDispatchService {
         playerName: slot
           ? (playerNameById.get(slot.playerId) ?? "未知陪玩")
           : null,
+        /** 已选中档位 id；未选人为 null。审核列据此精确对应报单队列。 */
+        slotId: slot ? slot.id : null,
         unitPriceFen: unitPriceFen === null ? null : unitPriceFen.toString(),
         estimatedAmountFen:
           unitPriceFen === null

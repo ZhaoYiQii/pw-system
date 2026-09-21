@@ -7497,6 +7497,10 @@ export type GameDispatchListResponses = {
              */
             playerName: string | null;
             /**
+             * 已选中的档位 id（order_slots.id）；未选人为 null
+             */
+            slotId: string | null;
+            /**
              * 档位单价（分/小时，不乘时长）；未选人为 null
              */
             unitPriceFen: string | null;

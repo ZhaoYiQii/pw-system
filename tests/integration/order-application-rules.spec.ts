@@ -687,6 +687,10 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     expect(row?.status).toBe("ASSIGNED");
     expect(row?.playerName).toBe("阿一");
     expect(row?.customerName).toBe("报名规则老板");
+    // 审核列精确徽章需要档位 id：列表行必须带上已选中档位（未选人为 null）。
+    expect((row as { slotId?: string | null } | undefined)?.slotId).toBe(
+      slot.id,
+    );
     expect(row?.unitPriceFen).toBe("7000");
     // 60 分钟 × 7000 分/小时 = 7000 分（与结算同口径，向上取整）
     expect(row?.estimatedAmountFen).toBe("7000");

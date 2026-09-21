@@ -403,3 +403,57 @@ export function buildSelectedCsvForColumns<T extends DispatchListRow>(
   if (picked.length === 0) return null;
   return buildCsvForColumns(columns, picked, project);
 }
+
+/** 审核列口径：按「该档位对应的报单状态」给出徽章文案与是否可点。 */
+export type ReviewBadgeTone = "pending" | "approved" | "rejected" | "none";
+
+export interface ReviewBadge {
+  tone: ReviewBadgeTone;
+  label: string;
+  /** 是否渲染成可点入口（`none` 时为 false）。 */
+  actionable: boolean;
+}
+
+/**
+ * 队列行 → `slotId → reportStatus` 映射（审核列精确徽章的唯一输入）。
+ *
+ * 只留带档位 id 的行：没有档位的报单（CLASSIC 冻结链路）在订单中心没有对应行，
+ * 不需要参与映射；`slotId` 为 null 时跳过，避免把 null 当成 key。
+ * 同一个档位出现多次时后者覆盖前者，由调用方保证只取当前有效队列。
+ */
+export function slotReportStatusMap(
+  rows: readonly { slotId?: string | null; reportStatus?: string | null }[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (!row.slotId || !row.reportStatus) continue;
+    map.set(row.slotId, row.reportStatus);
+  }
+  return map;
+}
+
+/**
+ * 审核徽章：
+ * - 没有档位 id（未选人）或该档位还没有报单 → `none`（显示「—」，不可点）；
+ * - 待审批 → 「待审批」（可点，进审核台处理）；
+ * - 已通过 / 已驳回 → 给出结果但不再是待办，仍可点回看对照；
+ * - 其它未知状态按「未报单」处理，不臆造。
+ */
+export function reviewBadge(
+  slotId: string | null | undefined,
+  bySlot: ReadonlyMap<string, string>,
+): ReviewBadge {
+  if (!slotId) return { tone: "none", label: "—", actionable: false };
+  const status = bySlot.get(slotId);
+  if (!status) return { tone: "none", label: "—", actionable: false };
+  if (status === "PENDING_REVIEW") {
+    return { tone: "pending", label: "待审批", actionable: true };
+  }
+  if (status === "APPROVED") {
+    return { tone: "approved", label: "已通过", actionable: true };
+  }
+  if (status === "REJECTED") {
+    return { tone: "rejected", label: "已驳回", actionable: true };
+  }
+  return { tone: "none", label: "未报单", actionable: false };
+}

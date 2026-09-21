@@ -1365,6 +1365,7 @@ export const gameDispatchListRowSchema: OpenApiSchema = object(
     "customerProfileId",
     "customerName",
     "playerName",
+    "slotId",
     "unitPriceFen",
     "estimatedAmountFen",
     "createdAt",
@@ -1384,6 +1385,12 @@ export const gameDispatchListRowSchema: OpenApiSchema = object(
       type: "string",
       nullable: true,
       description: "已选中的陪玩名；未选人为 null",
+    },
+    slotId: {
+      type: "string",
+      format: "uuid",
+      nullable: true,
+      description: "已选中的档位 id（order_slots.id）；未选人为 null",
     },
     unitPriceFen: {
       ...nonNegativeFen("档位单价（分/小时）"),

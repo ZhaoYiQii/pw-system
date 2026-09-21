@@ -111,6 +111,8 @@ export interface DispatchListRow {
   customerName: string;
   /** 已选中陪玩名；未选人为 null。 */
   playerName: string | null;
+  /** 已选中档位 id（`order_slots.id`）；未选人为 null。审核列据此精确映射报单队列。 */
+  slotId: string | null;
   /** 档位单价快照（分/小时）；未选人为 null。 */
   unitPriceFen: string | null;
   /** 按单价 × 时长估算的整额（分，向上取整，与结算同口径）；未选人为 null。 */
