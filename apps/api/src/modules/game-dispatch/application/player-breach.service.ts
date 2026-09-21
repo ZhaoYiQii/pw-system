@@ -22,13 +22,18 @@ export interface PlayerBreachInput {
 export interface PlayerBreachListQuery {
   orderId?: string;
   playerId?: string;
+  /** P3 / D3：按 createdAt 的时间范围（含边界），由校验层保证 from <= to。 */
+  from?: Date;
+  to?: Date;
+  /** P3 / D3：分页偏移；limit 默认 20、上限 100。 */
+  offset?: number;
   limit?: number;
 }
 
 export class PlayerBreachService {
   constructor(private readonly client: PrismaClient) {}
 
-  /** 违约记录台账（Task 5a）：按订单或陪玩过滤，默认最近 50 条。 */
+  /** 违约记录台账（Task 5a + P3 / D3）：按订单/陪玩/时间范围过滤，默认最近 20 条。 */
   async list(
     tenantId: string,
     query: PlayerBreachListQuery = {},
@@ -38,9 +43,18 @@ export class PlayerBreachService {
         tenantId,
         ...(query.orderId ? { orderId: query.orderId } : {}),
         ...(query.playerId ? { playerId: query.playerId } : {}),
+        ...(query.from || query.to
+          ? {
+              createdAt: {
+                ...(query.from ? { gte: query.from } : {}),
+                ...(query.to ? { lte: query.to } : {}),
+              },
+            }
+          : {}),
       },
       orderBy: { createdAt: "desc" },
-      take: Math.min(Math.max(query.limit ?? 50, 1), 100),
+      skip: Math.max(query.offset ?? 0, 0),
+      take: Math.min(Math.max(query.limit ?? 20, 1), 100),
     });
     const playerIds = Array.from(new Set(rows.map((r) => r.playerId)));
     const players = playerIds.length

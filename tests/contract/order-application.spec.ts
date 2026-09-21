@@ -181,7 +181,8 @@ describe("算价模型 Task 4 契约：报名大厅、我的报名、释放名�
     ]);
     expect(
       document.paths[BREACH_LIST_PATH]?.get?.parameters?.map((p) => p.name),
-    ).toEqual(["orderId", "playerId", "limit"]);
+      // P3 / D3：台账新增时间范围（from/to）与 offset 分页。
+    ).toEqual(["orderId", "playerId", "from", "to", "offset", "limit"]);
     expect(sdkSource).toContain("export const gameDispatchListBreaches =");
 
     // 派单详情的报名记录必须带 slotId，商家端才能渲染「释放名额」。

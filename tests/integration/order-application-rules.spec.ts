@@ -745,4 +745,109 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
       await client.slotEarning.count({ where: { tenantId, orderId } }),
     ).toBe(0);
   });
+
+  /**
+   * P3 / D3：违约台账的时间范围与分页（设计规格 §6）。
+   *
+   * 为了不受同文件其它用例产生的记录干扰，这里把本用例造出的 3 条记录统一回拨到
+   * 「3 天前 / 2 天前 / 1 天前」，并用 `to=<12 小时前>` 把时间窗口收在历史区间内。
+   */
+  it("P3 / D3：违约台账支持时间范围与分页（非法日期 400）", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const offsets = [3, 2, 1];
+    const players = ["p1", "p1", "p2"] as const;
+    const ids: string[] = [];
+
+    for (const [index, player] of players.entries()) {
+      const { orderId, lineId } = await publishedOrder();
+      await apply(playerTokens[player], orderId, lineId).expect(201);
+      const [applicationId] = await hireOwnerSelected(orderId, player);
+      const slot = await client.orderSlot.findFirstOrThrow({
+        where: { tenantId, applicationId },
+      });
+      const res = await req(csToken)
+        .post(`${DISPATCH}/orders/${orderId}/player-breaches`, {
+          playerId: playerIds[player],
+          orderSlotId: slot.id,
+          reason: `台账用例-${index}`,
+        })
+        .expect(201);
+      const id = (res.body as { data: { id: string } }).data.id;
+      ids.push(id);
+      await client.playerBreachRecord.update({
+        where: { id },
+        data: { createdAt: new Date(now - offsets[index]! * day) },
+      });
+    }
+
+    const iso = (ms: number) => new Date(ms).toISOString();
+
+    // 窗口覆盖全部 3 条（其它用例的记录都落在“现在”，被 to 排除）
+    const all = (
+      await req(csToken)
+        .get(
+          `${DISPATCH}/player-breaches?from=${encodeURIComponent(
+            iso(now - 4 * day),
+          )}&to=${encodeURIComponent(iso(now - 12 * 60 * 60 * 1000))}`,
+        )
+        .expect(200)
+    ).body.data as { id: string; createdAt: string }[];
+    expect(all.map((row) => row.id).sort()).toEqual([...ids].sort());
+    // 倒序：最近的在最前
+    expect(all[0]?.id).toBe(ids[2]);
+
+    // 只取「1 天前」那条
+    const narrowed = (
+      await req(csToken)
+        .get(
+          `${DISPATCH}/player-breaches?from=${encodeURIComponent(
+            iso(now - 36 * 60 * 60 * 1000),
+          )}&to=${encodeURIComponent(iso(now - 12 * 60 * 60 * 1000))}`,
+        )
+        .expect(200)
+    ).body.data as { id: string }[];
+    expect(narrowed.map((row) => row.id)).toEqual([ids[2]]);
+
+    // offset 分页：limit=1 逐页取出 3 条且不重复
+    const paged: string[] = [];
+    for (const offset of [0, 1, 2]) {
+      const page = (
+        await req(csToken)
+          .get(
+            `${DISPATCH}/player-breaches?to=${encodeURIComponent(
+              iso(now - 12 * 60 * 60 * 1000),
+            )}&limit=1&offset=${offset}`,
+          )
+          .expect(200)
+      ).body.data as { id: string }[];
+      expect(page).toHaveLength(1);
+      paged.push(page[0]!.id);
+    }
+    expect(paged).toEqual([ids[2], ids[1], ids[0]]);
+
+    // 非法日期与逆序区间都是受控 400
+    await req(csToken)
+      .get(`${DISPATCH}/player-breaches?from=not-a-date`)
+      .expect(400);
+    await req(csToken)
+      .get(
+        `${DISPATCH}/player-breaches?from=${encodeURIComponent(
+          iso(now),
+        )}&to=${encodeURIComponent(iso(now - day))}`,
+      )
+      .expect(400);
+
+    // 租户隔离：别家租户读同一时间窗口拿不到本租户的记录
+    const other = (
+      await req(otherOwnerToken)
+        .get(
+          `${DISPATCH}/player-breaches?from=${encodeURIComponent(
+            iso(now - 4 * day),
+          )}&to=${encodeURIComponent(iso(now - 12 * 60 * 60 * 1000))}`,
+        )
+        .expect(200)
+    ).body.data as { id: string }[];
+    expect(other).toHaveLength(0);
+  });
 });

@@ -10509,20 +10509,39 @@ paths:
       operationId: gameDispatch_listBreaches
       parameters:
         - name: orderId
-          required: true
+          required: false
           in: query
           schema:
             type: string
         - name: playerId
-          required: true
+          required: false
           in: query
           schema:
             type: string
+        - name: from
+          required: false
+          in: query
+          description: 起始时间（ISO 8601 带时区，含边界）
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: 结束时间（ISO 8601 带时区，含边界）
+          schema:
+            type: string
+        - name: offset
+          required: false
+          in: query
+          description: 分页偏移，默认 0
+          schema:
+            type: number
         - name: limit
-          required: true
+          required: false
           in: query
+          description: 每页条数 1–100，默认 20
           schema:
-            type: string
+            type: number
       responses:
         "200":
           description: ""
@@ -10612,7 +10631,7 @@ paths:
                     additionalProperties: true
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
-      summary: 违约记录台账（可按 orderId / playerId 过滤，默认最近 50 条）
+      summary: 违约记录台账（可按 orderId / playerId / 时间范围过滤，默认最近 20 条）
       tags: *a33
   /api/v1/tenant/game-dispatch/applications/{id}:
     delete:

@@ -38,6 +38,7 @@ export const MODULE_ICONS: Record<MerchantModuleId, ModuleIcon> = {
   customers: Users,
   players: User,
   "player-applications": ClipboardList,
+  breaches: ShieldAlert,
   catalog: BookOpen,
   pricing: BadgeDollarSign,
   finance: Wallet,

@@ -90,6 +90,15 @@ export const MERCHANT_MODULES = [
       "老板端申请成为陪玩的待审列表，审核通过后自动建档并开通陪玩端。",
     features: ["待审申请", "批准 / 拒绝", "审核后自动追加 PLAYER"],
   },
+  // P3 / D3：陪玩违约只读台账（时间范围 + 陪玩筛选、offset 分页）。
+  {
+    id: "breaches",
+    group: "records",
+    label: "陪玩违约",
+    kicker: "RECORDS / BREACHES",
+    description: "人工认定的放鸽子 / 未到场台账，只读；记录入口在订单详情。",
+    features: ["时间范围与陪玩筛选", "分页台账", "点进订单详情"],
+  },
   {
     id: "catalog",
     group: "records",
@@ -213,7 +222,12 @@ export const MERCHANT_NAV_DOMAINS = [
     id: "people",
     label: "客户陪玩",
     description: "客户、陪玩与门店人员",
-    activeModuleIds: ["customers", "players", "player-applications"],
+    activeModuleIds: [
+      "customers",
+      "players",
+      "player-applications",
+      "breaches",
+    ],
   },
   {
     id: "catalog",
@@ -575,6 +589,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "customers",
     "players",
     "player-applications",
+    "breaches",
     "catalog",
     "pricing",
     "finance",
@@ -596,6 +611,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "customers",
     "players",
     "player-applications",
+    "breaches",
     "catalog",
     "pricing",
     "finance",
@@ -614,6 +630,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "sessions",
     "customers",
     "players",
+    "breaches",
     "disputes",
     "live",
     "risk",

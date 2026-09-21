@@ -18,6 +18,7 @@ import { getMonitorModule } from "./monitor-data";
 import { MonitorModuleView } from "./monitor-view";
 import { PricingRulesModuleView } from "./pricing-rules-view";
 import { SettingsModuleView } from "./settings-view";
+import { BreachLedgerModuleView } from "./breach-ledger-view";
 
 export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
   if (!getMerchantModule(moduleId)) {
@@ -35,6 +36,9 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
       return record(moduleId, <PlayersModuleView />);
     case "player-applications":
       return record(moduleId, <PlayerApplicationsModuleView />);
+    case "breaches":
+      // P3 / D3：陪玩违约只读台账（新栈页面）。
+      return record(moduleId, <BreachLedgerModuleView />);
     case "catalog":
       return record(moduleId, <CatalogModuleView />);
     case "sessions":

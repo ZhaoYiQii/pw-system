@@ -10,8 +10,9 @@ import {
 } from "./modules";
 
 describe("merchant navigation and UI permission mock", () => {
-  it("keeps 19 registered modules across four roles", () => {
-    expect(MERCHANT_MODULES).toHaveLength(19);
+  it("keeps 20 registered modules across four roles", () => {
+    // P3 / D3 新增「陪玩违约」台账模块（records 组）。
+    expect(MERCHANT_MODULES).toHaveLength(20);
     expect(MERCHANT_ROLES).toEqual(["OWNER", "ADMIN", "CS", "FINANCE"]);
   });
 
@@ -23,9 +24,9 @@ describe("merchant navigation and UI permission mock", () => {
       ]),
     );
     expect(counts).toEqual({
-      OWNER: 19,
-      ADMIN: 17,
-      CS: 9,
+      OWNER: 20,
+      ADMIN: 18,
+      CS: 10,
       FINANCE: 11,
     });
   });

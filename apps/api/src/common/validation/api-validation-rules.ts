@@ -10,6 +10,12 @@ import { routeValidations } from "./validation-registry.js";
 const nonEmptyText = (label: string, max: number) =>
   z.string().trim().min(1).max(max, `${label} 超长`);
 
+/** P3 / D3：台账时间范围入参（ISO 8601 带时区 → Date）。 */
+const isoInstant = z
+  .string()
+  .datetime({ offset: true, message: "需为 ISO 8601 时间" })
+  .transform((value) => new Date(value));
+
 const nullableText = (label: string, max: number) =>
   z.string().trim().max(max, `${label} 超长`).nullable().optional();
 
@@ -965,14 +971,28 @@ routeValidations.set(
 );
 
 routeValidations.set("GET /api/v1/tenant/game-dispatch/player-breaches", {
-  query: z.strictObject({
-    orderId: z.string().uuid().optional(),
-    playerId: z.string().uuid().optional(),
-    limit: z
-      .string()
-      .regex(/^[1-9][0-9]*$/, "limit 需为正整数")
-      .transform(Number)
-      .pipe(z.number().int().min(1).max(100))
-      .optional(),
-  }),
+  // P3 / D3：新增时间范围（from/to）与 offset 分页；逆序区间直接 400。
+  query: z
+    .strictObject({
+      orderId: z.string().uuid().optional(),
+      playerId: z.string().uuid().optional(),
+      from: isoInstant.optional(),
+      to: isoInstant.optional(),
+      offset: z
+        .string()
+        .regex(/^[0-9]+$/, "offset 需为非负整数")
+        .transform(Number)
+        .pipe(z.number().int().min(0).max(100000))
+        .optional(),
+      limit: z
+        .string()
+        .regex(/^[1-9][0-9]*$/, "limit 需为正整数")
+        .transform(Number)
+        .pipe(z.number().int().min(1).max(100))
+        .optional(),
+    })
+    .refine((value) => !value.from || !value.to || value.from <= value.to, {
+      message: "from 不能晚于 to",
+      path: ["from"],
+    }),
 });

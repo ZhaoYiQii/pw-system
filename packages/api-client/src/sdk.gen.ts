@@ -571,9 +571,9 @@ export const gameDispatchRecordBreach = <ThrowOnError extends boolean = false>(o
 });
 
 /**
- * 违约记录台账（可按 orderId / playerId 过滤，默认最近 50 条）
+ * 违约记录台账（可按 orderId / playerId / 时间范围过滤，默认最近 20 条）
  */
-export const gameDispatchListBreaches = <ThrowOnError extends boolean = false>(options: Options<GameDispatchListBreachesData, ThrowOnError>): RequestResult<GameDispatchListBreachesResponses, GameDispatchListBreachesErrors, ThrowOnError> => (options.client ?? client).get<GameDispatchListBreachesResponses, GameDispatchListBreachesErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/player-breaches', ...options });
+export const gameDispatchListBreaches = <ThrowOnError extends boolean = false>(options?: Options<GameDispatchListBreachesData, ThrowOnError>): RequestResult<GameDispatchListBreachesResponses, GameDispatchListBreachesErrors, ThrowOnError> => (options?.client ?? client).get<GameDispatchListBreachesResponses, GameDispatchListBreachesErrors, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/player-breaches', ...options });
 
 export const gameDispatchStaffRemove = <ThrowOnError extends boolean = false>(options: Options<GameDispatchStaffRemoveData, ThrowOnError>): RequestResult<GameDispatchStaffRemoveResponses, unknown, ThrowOnError> => (options.client ?? client).delete<GameDispatchStaffRemoveResponses, unknown, ThrowOnError>({ url: '/api/v1/tenant/game-dispatch/applications/{id}', ...options });
 

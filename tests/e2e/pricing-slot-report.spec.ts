@@ -211,6 +211,45 @@ test.describe("算价模型：报单审批 / 释放名额 / 费用口径", () =>
     await expect(page.getByText("RELEASED").first()).toBeVisible();
   });
 
+  test("陪玩违约台账：只读列表 + 时间筛选（P3 / D3）", async ({ page }) => {
+    await loginAsOwner(page);
+    await page.goto("/merchant-console/breaches");
+
+    // 侧栏入口（新模块）与台账标题
+    await expect(
+      page.getByRole("link", { name: "陪玩违约" }).first(),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "陪玩违约" })).toBeVisible();
+
+    // 上一条用例刚记过违约：台账应能看到同一条事由
+    const ledger = page.getByTestId("breach-ledger");
+    await ledger.waitFor({ timeout: 20000 });
+    await expect(ledger.getByText("走查：约定时间未到场")).toBeVisible({
+      timeout: 20000,
+    });
+    await expect(ledger.getByText("查看订单").first()).toBeVisible();
+    await expect(ledger).toHaveScreenshot("breach-ledger.png", {
+      mask: [page.getByText(VOLATILE_TEXT)],
+    });
+
+    // 时间筛选：起始日期设为「明天」→ 空态；重置后记录回到列表
+    // 注意用「本地日期」算明天：toISOString 是 UTC，跨时区会算成今天。
+    const next = new Date();
+    next.setDate(next.getDate() + 1);
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const tomorrow = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(
+      next.getDate(),
+    )}`;
+    await page.getByLabel("起始日期").fill(tomorrow);
+    await expect(ledger.getByText("该筛选条件下没有违约记录。")).toBeVisible({
+      timeout: 20000,
+    });
+    await page.getByRole("button", { name: "重置筛选" }).click();
+    await expect(ledger.getByText("走查：约定时间未到场")).toBeVisible({
+      timeout: 20000,
+    });
+  });
+
   test("陪玩端 H5：未开通经典大厅也能报名（单价 + 报名入口）", async ({
     browser,
   }) => {

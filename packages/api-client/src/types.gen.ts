@@ -8285,10 +8285,25 @@ export type GameDispatchRecordBreachResponse = GameDispatchRecordBreachResponses
 export type GameDispatchListBreachesData = {
     body?: never;
     path?: never;
-    query: {
-        orderId: string;
-        playerId: string;
-        limit: string;
+    query?: {
+        orderId?: string;
+        playerId?: string;
+        /**
+         * 起始时间（ISO 8601 带时区，含边界）
+         */
+        from?: string;
+        /**
+         * 结束时间（ISO 8601 带时区，含边界）
+         */
+        to?: string;
+        /**
+         * 分页偏移，默认 0
+         */
+        offset?: number;
+        /**
+         * 每页条数 1–100，默认 20
+         */
+        limit?: number;
     };
     url: '/api/v1/tenant/game-dispatch/player-breaches';
 };

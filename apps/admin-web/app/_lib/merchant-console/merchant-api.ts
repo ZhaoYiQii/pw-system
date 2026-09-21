@@ -287,6 +287,17 @@ export interface PlayerRow {
   basePricePerHourFen: string;
 }
 
+/** P3 / D3：陪玩违约台账行（GET /player-breaches 返回项）。 */
+export interface PlayerBreachRow {
+  id: string;
+  playerId: string;
+  playerName: string;
+  orderId: string;
+  orderSlotId: string | null;
+  reason: string;
+  createdAt: string;
+}
+
 export interface PlayerDetail extends PlayerRow {
   skills: Array<{ id: string; gameName: string; title: string | null }>;
   availability: Array<{

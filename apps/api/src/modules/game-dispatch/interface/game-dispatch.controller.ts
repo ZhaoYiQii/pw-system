@@ -20,6 +20,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiBody,
+  ApiQuery,
   ApiConflictResponse,
 } from "@nestjs/swagger";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
@@ -499,7 +500,34 @@ export class GameDispatchController {
   @Permissions("gameDispatch.manage")
   @Get("player-breaches")
   @ApiOperation({
-    summary: "违约记录台账（可按 orderId / playerId 过滤，默认最近 50 条）",
+    summary:
+      "违约记录台账（可按 orderId / playerId / 时间范围过滤，默认最近 20 条）",
+  })
+  @ApiQuery({ name: "orderId", required: false, type: String })
+  @ApiQuery({ name: "playerId", required: false, type: String })
+  @ApiQuery({
+    name: "from",
+    required: false,
+    type: String,
+    description: "起始时间（ISO 8601 带时区，含边界）",
+  })
+  @ApiQuery({
+    name: "to",
+    required: false,
+    type: String,
+    description: "结束时间（ISO 8601 带时区，含边界）",
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    type: Number,
+    description: "分页偏移，默认 0",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: "每页条数 1–100，默认 20",
   })
   @ApiOkResponse({ schema: dataArraySchema(playerBreachItemSchema) as never })
   @ApiNotFoundResponse({ schema: genericTemplateErrorSchema as never })
@@ -507,17 +535,20 @@ export class GameDispatchController {
     @Req() req: AuthenticatedRequest,
     @Query("orderId") orderId?: string,
     @Query("playerId") playerId?: string,
+    @Query("from") from?: Date,
+    @Query("to") to?: Date,
+    @Query("offset") offset?: number,
     @Query("limit") limit?: string,
   ) {
     try {
-      const parsedLimit = Number(limit);
       return {
         data: await this.breaches.list(tenantIdOf(req), {
           ...(orderId ? { orderId } : {}),
           ...(playerId ? { playerId } : {}),
-          ...(Number.isFinite(parsedLimit) && parsedLimit > 0
-            ? { limit: parsedLimit }
-            : {}),
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
+          ...(offset !== undefined ? { offset: Number(offset) } : {}),
+          ...(limit !== undefined ? { limit: Number(limit) } : {}),
         }),
       };
     } catch (error) {
