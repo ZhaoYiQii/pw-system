@@ -728,6 +728,35 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
 
     await review(ownerToken, slotId, { approve: true }).expect(201);
 
+    // 审批通过后，订单中心列表的「申报 / 核定」与「等待 / 倒计时」两列要拿到真数据：
+    // 核定分钟来自场次（审批时按修正值覆盖），报单提交时间与场次状态用于算倒计时/等待。
+    const approvedList = (
+      await req(ownerToken).get(`${DISPATCH}?limit=100`).expect(200)
+    ).body as unknown as {
+      data: Array<{
+        orderId: string;
+        reviewedDurationMinutes?: number | null;
+        reportSubmittedAt?: string | null;
+        sessionStatus?: string | null;
+        settlementAmountFen?: string | null;
+      }>;
+    };
+    const approvedRow = approvedList.data.find(
+      (row) => row.orderId === orderId,
+    );
+    // 本用例申报 60 分钟、未修正 → 核定分钟等于申报值。
+    expect(approvedRow?.reviewedDurationMinutes).toBe(60);
+    expect(approvedRow?.reportSubmittedAt).not.toBeNull();
+    expect(approvedRow?.sessionStatus).toBe("ENDED");
+    // 核定金额取**本档位**的实收（不是按订单求和——按订单求会把历史单金额算进来，
+    // 我第一版就是这么错的：期望 7000 实得 5600）。这里与库里的该档位金额对齐。
+    const slotEarning = await client.slotEarning.findFirstOrThrow({
+      where: { tenantId, orderSlotId: slotId },
+    });
+    expect(approvedRow?.settlementAmountFen).toBe(
+      slotEarning.amountFen.toString(),
+    );
+
     // 全部生效档位都有已审批报单 → 发一条「可结算」通知，门店据此确认结算。
     await client.outboxEvent.findFirstOrThrow({
       where: {

@@ -687,37 +687,69 @@ export class GameDispatchService {
     const customerIds = Array.from(
       new Set(orders.map((o) => o.customerProfileId)),
     );
-    const [players, customers, games, lines] = await Promise.all([
-      playerIds.length
-        ? this.client.playerProfile.findMany({
-            where: { tenantId, id: { in: playerIds } },
-            select: { id: true, name: true },
-          })
-        : Promise.resolve([]),
-      customerIds.length
-        ? this.client.customerProfile.findMany({
-            where: { tenantId, id: { in: customerIds } },
-            select: { id: true, name: true },
-          })
-        : Promise.resolve([]),
-      // 列表「游戏 / 位置」列：游戏名取派单订单的 gameId，位置取该单第一个岗位行。
-      gameIds.length
-        ? this.client.game.findMany({
-            where: { tenantId, id: { in: gameIds } },
-            select: { id: true, name: true },
-          })
-        : Promise.resolve([]),
-      orderIds.length
-        ? this.client.gameDispatchLine.findMany({
-            where: { tenantId, orderId: { in: orderIds } },
-            orderBy: { sortOrder: "asc" },
-            select: { orderId: true, positionLabel: true },
-          })
-        : Promise.resolve([]),
-    ]);
+    const [players, customers, games, lines, slotSessions, slotEarnings] =
+      await Promise.all([
+        playerIds.length
+          ? this.client.playerProfile.findMany({
+              where: { tenantId, id: { in: playerIds } },
+              select: { id: true, name: true },
+            })
+          : Promise.resolve([]),
+        customerIds.length
+          ? this.client.customerProfile.findMany({
+              where: { tenantId, id: { in: customerIds } },
+              select: { id: true, name: true },
+            })
+          : Promise.resolve([]),
+        // 列表「游戏 / 位置」列：游戏名取派单订单的 gameId，位置取该单第一个岗位行。
+        gameIds.length
+          ? this.client.game.findMany({
+              where: { tenantId, id: { in: gameIds } },
+              select: { id: true, name: true },
+            })
+          : Promise.resolve([]),
+        orderIds.length
+          ? this.client.gameDispatchLine.findMany({
+              where: { tenantId, orderId: { in: orderIds } },
+              orderBy: { sortOrder: "asc" },
+              select: { orderId: true, positionLabel: true },
+            })
+          : Promise.resolve([]),
+        // 「申报 / 核定」与「等待 / 倒计时」两列：场次带核定分钟（审批时按修正值覆盖）、
+        // 证据计时、报单提交时间与场次状态；这两列此前只能显示占位。
+        orderIds.length
+          ? this.client.slotSession.findMany({
+              where: { tenantId, orderId: { in: orderIds } },
+              select: {
+                orderId: true,
+                status: true,
+                declaredDurationMinutes: true,
+                durationSeconds: true,
+                reportSubmittedAt: true,
+              },
+            })
+          : Promise.resolve([]),
+        // 「核定金额」：已核定档位的实收合计（有 SlotEarning 即已通过审批，与结算同源）。
+        orderIds.length
+          ? this.client.slotEarning.findMany({
+              where: { tenantId, orderId: { in: orderIds } },
+              select: { orderSlotId: true, amountFen: true },
+            })
+          : Promise.resolve([]),
+      ]);
     const playerNameById = new Map(players.map((p) => [p.id, p.name]));
     const customerNameById = new Map(customers.map((c) => [c.id, c.name]));
     const gameNameById = new Map(games.map((g) => [g.id, g.name]));
+    // 每单一条场次（一对一）：报单核定分钟、证据计时、提交时间与状态都从这里取。
+    const sessionByOrder = new Map(
+      slotSessions.map((session) => [session.orderId, session]),
+    );
+    // 核定金额按**档位**索引：列表行展示的是「这一档」的核定金额。
+    // （按订单求和会把它家历史单的金额算进来——实测踩过：期望 7000 得到 5600。）
+    const earningBySlot = new Map<string, bigint>();
+    for (const earning of slotEarnings) {
+      earningBySlot.set(earning.orderSlotId, earning.amountFen);
+    }
     const positionByOrder = new Map<string, string>();
     for (const line of lines) {
       // 只保留每单第一个岗位行（按 sortOrder 升序，先到先存）。
@@ -728,7 +760,9 @@ export class GameDispatchService {
     const mapped: DispatchListRow[] = rows.map((row) => {
       const order = orderById.get(row.orderId);
       const slot = slotByOrder.get(row.orderId);
+      const session = sessionByOrder.get(row.orderId);
       const unitPriceFen = slot ? slot.unitPriceFen : null;
+      const settledFen = slot ? earningBySlot.get(slot.id) : undefined;
       return {
         orderId: row.orderId,
         dispatchNo: row.dispatchNo,
@@ -747,6 +781,17 @@ export class GameDispatchService {
         positionLabel: positionByOrder.get(row.orderId) ?? null,
         /** 已选中档位 id；未选人为 null。审核列据此精确对应报单队列。 */
         slotId: slot ? slot.id : null,
+        /** 核定分钟（报单审批通过后的生效值）；未报单/未核定为 null。 */
+        reviewedDurationMinutes: session?.declaredDurationMinutes ?? null,
+        /** 报单提交时间；未报单为 null（「等待 / 倒计时」列据此算等待）。 */
+        reportSubmittedAt: session?.reportSubmittedAt?.toISOString() ?? null,
+        /** 场次状态（如 ENDED / IN_PROGRESS）；没有场次为 null。 */
+        sessionStatus: session?.status ?? null,
+        /** 报单证据计时（秒）；用于「申报 / 核定」列的差异提示。 */
+        sessionDurationSeconds: session?.durationSeconds ?? null,
+        /** 已核定金额合计（分）；未核定为 null（不显示 0 冒充）。 */
+        settlementAmountFen:
+          settledFen === undefined ? null : settledFen.toString(),
         unitPriceFen: unitPriceFen === null ? null : unitPriceFen.toString(),
         estimatedAmountFen:
           unitPriceFen === null
@@ -810,6 +855,41 @@ export class GameDispatchService {
     return {
       items: filtered.slice(offset, offset + limit),
       total: filtered.length,
+    };
+  }
+
+  /**
+   * 订单中心页头 KPI 的数字（与列表共用同一入口，避免前端为两个数字再打三个接口）：
+   * - `pendingReportCount`：待审批报单条数（`slot_sessions.report_submitted_at` 非空且未审批）；
+   * - `breachCount`：违约记录条数（人工认定台账的计数）；
+   * - `pendingSettlementAmountFen`：已核定档位实收合计（分，与结算同源）。
+   *
+   * 三条都是按租户聚合的只读计数，不参与筛选：KPI 表达的是「这家店当前的状态」。
+   */
+  async summary(tenantId: string): Promise<{
+    pendingReportCount: number;
+    breachCount: number;
+    pendingSettlementAmountFen: string;
+  }> {
+    const [pendingReportCount, breachCount, earnings] = await Promise.all([
+      this.client.slotSession.count({
+        where: {
+          tenantId,
+          reportSubmittedAt: { not: null },
+          reportReviewedAt: null,
+        },
+      }),
+      this.client.playerBreachRecord.count({ where: { tenantId } }),
+      this.client.slotEarning.findMany({
+        where: { tenantId },
+        select: { amountFen: true },
+      }),
+    ]);
+    const total = earnings.reduce((sum, row) => sum + row.amountFen, 0n);
+    return {
+      pendingReportCount,
+      breachCount,
+      pendingSettlementAmountFen: total.toString(),
     };
   }
 

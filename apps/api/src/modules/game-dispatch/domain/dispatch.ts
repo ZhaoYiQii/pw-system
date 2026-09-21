@@ -117,6 +117,16 @@ export interface DispatchListRow {
   positionLabel: string | null;
   /** 已选中档位 id（`order_slots.id`）；未选人为 null。审核列据此精确映射报单队列。 */
   slotId: string | null;
+  /** 核定分钟（报单审批通过后的生效值）；未报单 / 未核定为 null。 */
+  reviewedDurationMinutes: number | null;
+  /** 报单提交时间；未报单为 null（「等待 / 倒计时」列据此计算）。 */
+  reportSubmittedAt: string | null;
+  /** 场次状态（如 `ENDED` / `IN_PROGRESS`）；没有场次为 null。 */
+  sessionStatus: string | null;
+  /** 报单证据计时（秒，仅作对照）；无证据计时为 null。 */
+  sessionDurationSeconds: number | null;
+  /** 已核定金额合计（分，多档求和）；未核定为 null，不显示 0 冒充。 */
+  settlementAmountFen: string | null;
   /** 档位单价快照（分/小时）；未选人为 null。 */
   unitPriceFen: string | null;
   /** 按单价 × 时长估算的整额（分，向上取整，与结算同口径）；未选人为 null。 */

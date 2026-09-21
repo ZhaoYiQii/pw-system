@@ -9454,6 +9454,11 @@ paths:
                         - gameName
                         - positionLabel
                         - slotId
+                        - reviewedDurationMinutes
+                        - reportSubmittedAt
+                        - sessionStatus
+                        - sessionDurationSeconds
+                        - settlementAmountFen
                         - unitPriceFen
                         - estimatedAmountFen
                         - createdAt
@@ -9496,6 +9501,29 @@ paths:
                           format: uuid
                           nullable: true
                           description: 已选中的档位 id（order_slots.id）；未选人为 null
+                        reviewedDurationMinutes:
+                          type: integer
+                          nullable: true
+                          description: 核定分钟（报单审批通过后的生效值）；未报单/未核定为 null
+                        reportSubmittedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: 报单提交时间（未报单为 null）
+                        sessionStatus:
+                          type: string
+                          nullable: true
+                          description: 场次状态（如 ENDED / IN_PROGRESS）；没有场次为 null
+                        sessionDurationSeconds:
+                          type: integer
+                          nullable: true
+                          description: 报单证据计时（秒，仅作对照）；无证据计时为 null
+                        settlementAmountFen:
+                          type: string
+                          pattern: ^(?:0|[1-9][0-9]*)$
+                          example: "800"
+                          description: 已核定金额合计（分，多档求和）；未核定为 null
+                          nullable: true
                         unitPriceFen:
                           type: string
                           pattern: ^(?:0|[1-9][0-9]*)$
@@ -9521,6 +9549,43 @@ paths:
                 description: 派单列表页
       tags: &a33
         - GameDispatch
+  /api/v1/tenant/game-dispatch/summary:
+    get:
+      operationId: gameDispatch_summary
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - pendingReportCount
+                      - breachCount
+                      - pendingSettlementAmountFen
+                    properties:
+                      pendingReportCount:
+                        type: integer
+                        minimum: 0
+                        description: 待审批报单条数
+                      breachCount:
+                        type: integer
+                        minimum: 0
+                        description: 违约记录条数
+                      pendingSettlementAmountFen:
+                        type: string
+                        pattern: ^(?:0|[1-9][0-9]*)$
+                        example: "800"
+                        description: 已核定金额合计（十进制字符串分，>=0）
+                    description: 订单中心页头汇总
+      summary: 订单中心页头汇总（待审批报单 / 违约 / 已核定金额）
+      tags: *a33
   /api/v1/tenant/game-dispatch/orders:
     post:
       operationId: gameDispatch_createDraft

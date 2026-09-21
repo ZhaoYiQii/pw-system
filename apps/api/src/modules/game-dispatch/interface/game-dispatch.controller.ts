@@ -26,6 +26,7 @@ import {
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import {
   dataArraySchema,
+  dispatchSummarySchema,
   gameDispatchOrderViewSchema,
   gameDispatchListPageSchema,
   genericTemplateErrorSchema,
@@ -167,6 +168,21 @@ export class GameDispatchController {
       ...(parsedOffset === undefined ? {} : { offset: parsedOffset }),
     });
     return { data: page.items, total: page.total };
+  }
+
+  /**
+   * 订单中心页头 KPI 的汇总（待审批报单 / 违约 / 已核定金额合计）。
+   * 独立端点而不是塞进列表响应：这些数字是「这家店当前的状态」，不随筛选与分页变化。
+   */
+  @TenantScope()
+  @Permissions("gameDispatch.manage")
+  @Get("summary")
+  @ApiOperation({
+    summary: "订单中心页头汇总（待审批报单 / 违约 / 已核定金额）",
+  })
+  @ApiOkResponse({ schema: dispatchSummarySchema as never })
+  async summary(@Req() req: AuthenticatedRequest) {
+    return { data: await this.dispatch.summary(tenantIdOf(req)) };
   }
 
   @TenantScope()

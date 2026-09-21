@@ -54,6 +54,16 @@ interface GameDispatchListRow {
   /** 该单首个岗位名（与游戏名同列）。 */
   positionLabel: string | null;
   slotId: string | null;
+  /** 核定分钟（报单审批通过后的生效值）；未报单 / 未核定为 null（「申报 / 核定」列）。 */
+  reviewedDurationMinutes: number | null;
+  /** 报单提交时间（「等待 / 倒计时」列据此算等待时长）；未报单为 null。 */
+  reportSubmittedAt: string | null;
+  /** 场次状态（`ENDED` / `IN_PROGRESS` 等），决定这一列显示倒计时还是等待。 */
+  sessionStatus: string | null;
+  /** 报单证据计时（秒，仅作对照）。 */
+  sessionDurationSeconds: number | null;
+  /** 已核定金额（分，单档）；未核定为 null。 */
+  settlementAmountFen: string | null;
   unitPriceFen: string | null;
   estimatedAmountFen: string | null;
   createdAt: string;
@@ -175,6 +185,14 @@ interface DispatchListRowView extends DispatchListRow {
   startAt: string | null;
   /** 已选中档位 id；审核列据此精确映射报单状态。 */
   slotId: string | null;
+  /** 「申报 / 核定」列：核定分钟与证据计时（秒）都来自场次。 */
+  reviewedDurationMinutes: number | null;
+  sessionDurationSeconds: number | null;
+  /** 「等待 / 倒计时」列：报单提交时间 + 场次状态。 */
+  reportSubmittedAt: string | null;
+  sessionStatus: string | null;
+  /** 已核定金额（分，单档）；未核定为 null。 */
+  settlementAmountFen: string | null;
 }
 
 interface FilterState {
@@ -234,12 +252,54 @@ function formatWait(iso: string, now: number = Date.now()): string {
   return rest === 0 ? `${hours}h` : `${hours}h${rest}m`;
 }
 
+/**
+ * 「等待 / 倒计时」列的文案：
+ * - 已报单待审批 → 报单提交至今（最关心的排队量）；
+ * - 已结束服务 → 「已结束」；服务中 → 「进行中」；
+ * - 其余（未选人 / 报名中等）→ 创建至今。
+ * 不做假倒计时：真正的报名倒计时需要服务端给截止时间，本片先如实显示已发生的等待。
+ */
+function waitColumnText(row: DispatchListRowView, createdAt: string): string {
+  if (row.reportSubmittedAt) return `待审 ${formatWait(row.reportSubmittedAt)}`;
+  if (row.sessionStatus === "ENDED") return "已结束";
+  if (row.sessionStatus === "IN_PROGRESS") return "进行中";
+  return formatWait(createdAt);
+}
+
+/**
+ * 「申报 / 核定」列的差异提示（与审核台 `durationGap` 同阈值：10 分钟或申报的 15%）。
+ * 缺证据计时或未报单时不提示——不臆造对照。
+ */
+function gapChip(row: DispatchListRowView): string | null {
+  if (row.reviewedDurationMinutes === null) return null;
+  const evidenceSeconds = row.sessionDurationSeconds;
+  if (evidenceSeconds === null) return null;
+  const declared = row.reviewedDurationMinutes;
+  const evidenceMinutes = evidenceSeconds / 60;
+  const delta = declared - evidenceMinutes;
+  const threshold = Math.max(10, declared * 0.15);
+  if (Math.abs(delta) <= threshold) return null;
+  const evidenceText =
+    evidenceMinutes < 1
+      ? `${Math.round(evidenceMinutes * 60)} 秒`
+      : `${evidenceMinutes.toFixed(1)} 分`;
+  return `证据 ${evidenceText} · 差 ${delta > 0 ? "+" : ""}${delta.toFixed(0)}`;
+}
+
 function formatAmount(amountFen: string | null): string {
   if (amountFen === null) return "—";
   // 金额一律整数分；这里只做展示换算，不参与计算（平台费 = 0）。
   const fen = Number(amountFen);
   if (!Number.isFinite(fen)) return amountFen;
   return `${(fen / 100).toFixed(2)} 元`;
+}
+
+/** 汇总金额（分字符串）→ 「¥12.34」。缺失或非法显示 ¥—，不编 0。 */
+function formatFenToYuan(amountFen: string | null | undefined): string {
+  if (amountFen === null || amountFen === undefined) return "¥—";
+  const fen = Number(amountFen);
+  if (!Number.isFinite(fen)) return "¥—";
+  return `¥${(fen / 100).toFixed(2)}`;
 }
 
 function statusVariant(status: string) {
@@ -334,6 +394,19 @@ export function DispatchListView() {
     queryKey: ["merchant", "review", "queue", "PENDING_REVIEW"],
     queryFn: () => fetchReportQueue("PENDING_REVIEW"),
   });
+  /**
+   * 页头 KPI 的真实数字（独立汇总端点）：待审批报单 / 违约 / 已核定金额。
+   * 与列表共用同一租户聚合，不随筛选与分页变化。
+   */
+  const summaryQuery = useQuery({
+    queryKey: ["merchant", "dispatch", "summary"],
+    queryFn: () =>
+      apiFetch<{
+        pendingReportCount?: number;
+        breachCount?: number;
+        pendingSettlementAmountFen?: string;
+      }>("/api/v1/tenant/game-dispatch/summary"),
+  });
   const approvedReviewQuery = useQuery({
     queryKey: ["merchant", "review", "queue", "APPROVED"],
     queryFn: () => fetchReportQueue("APPROVED"),
@@ -381,6 +454,11 @@ export function DispatchListView() {
         amountFen: row.estimatedAmountFen,
         startAt: null,
         slotId: row.slotId,
+        reviewedDurationMinutes: row.reviewedDurationMinutes,
+        sessionDurationSeconds: row.sessionDurationSeconds,
+        reportSubmittedAt: row.reportSubmittedAt,
+        sessionStatus: row.sessionStatus,
+        settlementAmountFen: row.settlementAmountFen,
       })),
     [serverRows],
   );
@@ -624,13 +702,21 @@ export function DispatchListView() {
         />
         <KpiCard
           label="待审批报单"
-          value={`${pendingReviewCount}`}
+          value={`${summaryQuery.data?.pendingReportCount ?? pendingReviewCount}`}
           hint={pendingReviewCount > 0 ? "最久一条见审核台" : "暂无待审批"}
           href="/merchant-console/dispatch/audit"
           tone="warn"
         />
-        <KpiCard label="风险" value="—" hint="待接口：违约/异常口径" />
-        <KpiCard label="今晚待结算" value="—" hint="待接口：待核定金额" />
+        <KpiCard
+          label="风险"
+          value={`${summaryQuery.data?.breachCount ?? 0}`}
+          hint="违约记录（人工认定）"
+        />
+        <KpiCard
+          label="已核定金额"
+          value={formatFenToYuan(summaryQuery.data?.pendingSettlementAmountFen)}
+          hint="已核定档位合计"
+        />
       </section>
 
       {notice ? (
@@ -1281,18 +1367,35 @@ function GroupRows({
             {columnVisible(hiddenColumns, "customer") ? (
               <td className="text-xs">{row.customerName}</td>
             ) : null}
-            {/* 申报 / 核定：等待后端字段（原型第 7 列），先占位不编数字。 */}
+            {/*
+              「申报 / 核定」（原型第 7 列）：申报取订单时长，核定取场次里的生效分钟
+              （审批通过时按修正值覆盖）。未报单/未核定时显示「待核定」，不编数字；
+              有证据计时且差异超阈值时，附一个小胶囊提示对照（与审核台同一口径）。
+            */}
             <td className="pw-num">
               {row.durationText}
-              <span className="ml-1 text-muted-foreground">/ —</span>
+              <span className="text-muted-foreground">
+                {" / "}
+                {view.reviewedDurationMinutes === null
+                  ? "待核定"
+                  : `${view.reviewedDurationMinutes} 分钟`}
+              </span>
+              {gapChip(view) ? (
+                <span className="ml-1 rounded border border-[#eec9c9] bg-[color:var(--mc-red-2)] px-1 text-[11px] text-[color:var(--mc-red)]">
+                  {gapChip(view)}
+                </span>
+              ) : null}
             </td>
             {columnVisible(hiddenColumns, "amount") ? (
               <td className="pw-num text-right">
                 {formatAmount(view.amountFen)}
               </td>
             ) : null}
-            {/* 等待 / 倒计时：先按「创建至今」显示，后端补字段后再区分报名倒计时。 */}
-            <td className="pw-num">{formatWait(row.createdAt)}</td>
+            {/*
+              「等待 / 倒计时」（原型第 9 列）：待审批按「报单提交至今」，服务中/已结束
+              按场次状态给「进行中/已结束」，无场次则回落到「创建至今」。
+            */}
+            <td className="pw-num">{waitColumnText(view, row.createdAt)}</td>
             {columnVisible(hiddenColumns, "createdAt") ? (
               <td className="pw-num text-muted-foreground">
                 {timeOnly(row.createdAt)}

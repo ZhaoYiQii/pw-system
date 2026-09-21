@@ -696,10 +696,60 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
       { gameName?: string | null; positionLabel?: string | null } | undefined;
     expect(listed?.gameName).toBe(`英雄联盟-${suffix}`);
     expect(listed?.positionLabel).toBe("打野");
+    // 「申报 / 核定」「等待 / 倒计时」两列的数据来源：核定分钟（报单审批后落在场次上）、
+    // 场次状态（决定倒计时还是等待）与开始前/报单提交时间。未报单时这些字段应为 null，
+    // 不能编造 0 或当前时间。
+    const timing = row as
+      | {
+          reviewedDurationMinutes?: number | null;
+          sessionStatus?: string | null;
+          reportSubmittedAt?: string | null;
+          desiredStartAt?: string | null;
+        }
+      | undefined;
+    expect(timing?.reviewedDurationMinutes ?? null).toBeNull();
+    expect(timing?.reportSubmittedAt ?? null).toBeNull();
+    expect(
+      timing?.sessionStatus === undefined || timing?.sessionStatus === null,
+    ).toBe(true);
     expect(row?.unitPriceFen).toBe("7000");
     // 60 分钟 × 7000 分/小时 = 7000 分（与结算同口径，向上取整）
     expect(row?.estimatedAmountFen).toBe("7000");
     expect(listRow.total).toBeGreaterThanOrEqual(1);
+    // 页头 KPI 的数字走独立汇总端点（不是列表分页的一部分）。
+    // 本用例所在租户此前没有报单、没有违约、没有核定金额，所以必须是恰好 0——
+    // 写死而不是「大于等于 0」，避免计数口径漂移时测试还绿。
+    const summary = (await req(csToken).get(`${DISPATCH}/summary`).expect(200))
+      .body as unknown as {
+      data: {
+        pendingReportCount: number;
+        breachCount: number;
+        pendingSettlementAmountFen: string;
+      };
+    };
+    // 断言与库里的真实计数一致，而不是写死 0：同文件靠前的用例已经记过违约，
+    // 写死会把「口径正确」误判成失败（我第一版就是这么错的）。
+    expect(summary.data.pendingReportCount).toBe(
+      await client.slotSession.count({
+        where: {
+          tenantId,
+          reportSubmittedAt: { not: null },
+          reportReviewedAt: null,
+        },
+      }),
+    );
+    expect(summary.data.breachCount).toBe(
+      await client.playerBreachRecord.count({ where: { tenantId } }),
+    );
+    const earningsForSummary = await client.slotEarning.findMany({
+      where: { tenantId },
+      select: { amountFen: true },
+    });
+    expect(summary.data.pendingSettlementAmountFen).toBe(
+      earningsForSummary
+        .reduce((sum, item) => sum + item.amountFen, 0n)
+        .toString(),
+    );
 
     // 排序与时间范围：sort=status 时按流转顺序返回；from 在未来区间时结果为空。
     const sorted = (

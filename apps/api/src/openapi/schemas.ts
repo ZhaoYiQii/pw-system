@@ -1368,6 +1368,11 @@ export const gameDispatchListRowSchema: OpenApiSchema = object(
     "gameName",
     "positionLabel",
     "slotId",
+    "reviewedDurationMinutes",
+    "reportSubmittedAt",
+    "sessionStatus",
+    "sessionDurationSeconds",
+    "settlementAmountFen",
     "unitPriceFen",
     "estimatedAmountFen",
     "createdAt",
@@ -1404,6 +1409,27 @@ export const gameDispatchListRowSchema: OpenApiSchema = object(
       nullable: true,
       description: "已选中的档位 id（order_slots.id）；未选人为 null",
     },
+    reviewedDurationMinutes: {
+      type: "integer",
+      nullable: true,
+      description: "核定分钟（报单审批通过后的生效值）；未报单/未核定为 null",
+    },
+    reportSubmittedAt: dateTime("报单提交时间（未报单为 null）", true),
+    sessionStatus: {
+      type: "string",
+      nullable: true,
+      description: "场次状态（如 ENDED / IN_PROGRESS）；没有场次为 null",
+    },
+    sessionDurationSeconds: {
+      type: "integer",
+      nullable: true,
+      description: "报单证据计时（秒，仅作对照）；无证据计时为 null",
+    },
+    settlementAmountFen: {
+      ...nonNegativeFen("已核定金额"),
+      nullable: true,
+      description: "已核定金额合计（分，多档求和）；未核定为 null",
+    },
     unitPriceFen: {
       ...nonNegativeFen("档位单价（分/小时）"),
       nullable: true,
@@ -1418,6 +1444,19 @@ export const gameDispatchListRowSchema: OpenApiSchema = object(
     createdAt: dateTime("创建时间", false),
   },
   "派单列表行",
+);
+
+/** 订单中心页头汇总（KPI 数字的真实来源）。 */
+export const dispatchSummarySchema: OpenApiSchema = dataSchema(
+  object(
+    ["pendingReportCount", "breachCount", "pendingSettlementAmountFen"],
+    {
+      pendingReportCount: integer("待审批报单条数"),
+      breachCount: integer("违约记录条数"),
+      pendingSettlementAmountFen: nonNegativeFen("已核定金额合计"),
+    },
+    "订单中心页头汇总",
+  ),
 );
 
 /** 订单中心列表响应：保持 `{ data: [...] }` 形状，并带 `total` 分页元信息。 */
