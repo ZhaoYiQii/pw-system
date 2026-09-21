@@ -114,20 +114,22 @@ jobs:
             node work/phone-h5-server.mjs > "$RUNNER_TEMP/h5.log" 2>&1 &
 
           # 就绪探测：只看端口会骗人（旧进程占端口会让新进程静默失败），这里直接打接口与页面。
-          for i in $(seq 1 60); do
+          # 超时余量按 CI 冷启动给足：runner 上进程启动明显慢于本机（H5 曾实测约 31s 才 listen，
+          # 而当时窗口只有 30s，差 0.3s 就判失败），所以三个服务统一给 90s，并在末尾再校验一次。
+          for i in $(seq 1 90); do
             if curl -sf http://127.0.0.1:3300/api/v1/auth/login -o /dev/null -X POST \
                 -H 'content-type: application/json' \
                 -d '{"kind":"tenant","tenantCode":"c1","username":"player","password":"zcloud1024"}'; then
-              echo "api ready"; break
+              echo "api ready (${i}s)"; break
             fi
             sleep 1
           done
-          for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:3005/store/login -o /dev/null; then echo "admin ready"; break; fi
+          for i in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:3005/store/login -o /dev/null; then echo "admin ready (${i}s)"; break; fi
             sleep 1
           done
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:3101/ -o /dev/null; then echo "h5 ready"; break; fi
+          for i in $(seq 1 90); do
+            if curl -sf http://127.0.0.1:3101/ -o /dev/null; then echo "h5 ready (${i}s)"; break; fi
             sleep 1
           done
 
