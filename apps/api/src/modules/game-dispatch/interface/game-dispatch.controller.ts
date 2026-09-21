@@ -83,17 +83,41 @@ export class GameDispatchController {
     type: Number,
     description: "分页偏移，默认 0",
   })
+  @ApiQuery({
+    name: "from",
+    required: false,
+    type: String,
+    description: "创建时间起（ISO 8601，含边界）",
+  })
+  @ApiQuery({
+    name: "to",
+    required: false,
+    type: String,
+    description: "创建时间止（ISO 8601，含边界）",
+  })
+  @ApiQuery({
+    name: "sort",
+    required: false,
+    type: String,
+    description: "created_desc（默认）| created_asc | status",
+  })
   async list(
     @Req() req: AuthenticatedRequest,
     @Query("status") status?: string,
     @Query("limit") limit?: string,
     @Query("offset") offset?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("sort") sort?: string,
   ) {
     const parsedLimit = limit === undefined ? undefined : Number(limit);
     const parsedOffset = offset === undefined ? undefined : Number(offset);
     // 保留 `{ data: [...] }` 形状（既有前端与 E2E 依赖），额外返回分页元信息。
     const page = await this.dispatch.list(tenantIdOf(req), {
       ...(status ? { status } : {}),
+      ...(from ? { from } : {}),
+      ...(to ? { to } : {}),
+      ...(sort ? { sort } : {}),
       ...(parsedLimit === undefined ? {} : { limit: parsedLimit }),
       ...(parsedOffset === undefined ? {} : { offset: parsedOffset }),
     });

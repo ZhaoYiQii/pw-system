@@ -79,6 +79,26 @@ export function clampListOffset(offset: number | undefined): number {
   return Math.max(Math.trunc(offset), 0);
 }
 
+/** 列表排序键：创建时间倒序（默认）/ 正序 / 按订单状态流转顺序。 */
+export type DispatchListSort = "created_desc" | "created_asc" | "status";
+
+/** 状态流转顺序（与商家端页签一致）：不在表内的一律排最后。 */
+export const DISPATCH_STATUS_ORDER = [
+  "DRAFT",
+  "CONFIRMED",
+  "DISPATCHING",
+  "ASSIGNED",
+  "READY",
+  "IN_PROGRESS",
+  "PENDING_CONFIRMATION",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+
+export function normalizeListSort(sort: string | undefined): DispatchListSort {
+  return sort === "created_asc" || sort === "status" ? sort : "created_desc";
+}
+
 /** 报单状态（设计规格 §3.3）：未报单 / 待客服审批 / 已通过（已落金额）/ 已驳回。 */
 export type SlotReportStatus =
   "NOT_REPORTED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
@@ -541,10 +561,21 @@ export class GameDispatchService {
    */
   async list(
     tenantId: string,
-    query: { status?: string; limit?: number; offset?: number } = {},
+    query: {
+      status?: string;
+      /** 时间范围（含边界，ISO 字符串）；按派单创建时间过滤。 */
+      from?: string;
+      to?: string;
+      sort?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
   ): Promise<{ items: DispatchListRow[]; total: number }> {
     const limit = clampListLimit(query.limit);
     const offset = clampListOffset(query.offset);
+    const sort = normalizeListSort(query.sort);
+    const fromMs = query.from ? Date.parse(query.from) : Number.NaN;
+    const toMs = query.to ? Date.parse(query.to) : Number.NaN;
     const rows = await this.client.gameDispatchOrder.findMany({
       where: { tenantId },
       orderBy: { createdAt: "desc" },
@@ -623,9 +654,29 @@ export class GameDispatchService {
         createdAt: row.createdAt.toISOString(),
       };
     });
-    const filtered = query.status
-      ? mapped.filter((row) => row.status === query.status)
-      : mapped;
+    const statusIndex = new Map<string, number>(
+      DISPATCH_STATUS_ORDER.map((status, index) => [status as string, index]),
+    );
+    const filtered = mapped
+      .filter((row) => (query.status ? row.status === query.status : true))
+      .filter((row) => {
+        if (Number.isNaN(fromMs) && Number.isNaN(toMs)) return true;
+        const created = Date.parse(row.createdAt);
+        if (Number.isNaN(created)) return false;
+        if (!Number.isNaN(fromMs) && created < fromMs) return false;
+        if (!Number.isNaN(toMs) && created > toMs) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sort === "created_asc")
+          return a.createdAt.localeCompare(b.createdAt);
+        if (sort === "status") {
+          const ai = statusIndex.get(a.status) ?? Number.MAX_SAFE_INTEGER;
+          const bi = statusIndex.get(b.status) ?? Number.MAX_SAFE_INTEGER;
+          if (ai !== bi) return ai - bi;
+        }
+        return b.createdAt.localeCompare(a.createdAt);
+      });
     return {
       items: filtered.slice(offset, offset + limit),
       total: filtered.length,

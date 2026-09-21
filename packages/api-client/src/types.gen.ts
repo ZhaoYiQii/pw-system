@@ -7410,7 +7410,32 @@ export type CustomerGameTemplateCreateOrderResponse = CustomerGameTemplateCreate
 export type GameDispatchListData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * 按订单状态过滤
+         */
+        status?: string;
+        /**
+         * 每页条数 1–100，默认 20
+         */
+        limit?: number;
+        /**
+         * 分页偏移，默认 0
+         */
+        offset?: number;
+        /**
+         * 创建时间起（ISO 8601，含边界）
+         */
+        from?: string;
+        /**
+         * 创建时间止（ISO 8601，含边界）
+         */
+        to?: string;
+        /**
+         * created_desc（默认）| created_asc | status
+         */
+        sort?: string;
+    };
     url: '/api/v1/tenant/game-dispatch';
 };
 

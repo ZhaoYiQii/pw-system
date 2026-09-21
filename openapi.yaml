@@ -9360,7 +9360,43 @@ paths:
   /api/v1/tenant/game-dispatch:
     get:
       operationId: gameDispatch_list
-      parameters: []
+      parameters:
+        - name: status
+          required: false
+          in: query
+          description: 按订单状态过滤
+          schema:
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: 每页条数 1–100，默认 20
+          schema:
+            type: number
+        - name: offset
+          required: false
+          in: query
+          description: 分页偏移，默认 0
+          schema:
+            type: number
+        - name: from
+          required: false
+          in: query
+          description: 创建时间起（ISO 8601，含边界）
+          schema:
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: 创建时间止（ISO 8601，含边界）
+          schema:
+            type: string
+        - name: sort
+          required: false
+          in: query
+          description: created_desc（默认）| created_asc | status
+          schema:
+            type: string
       responses:
         "200":
           description: ""

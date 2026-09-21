@@ -686,6 +686,32 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
     expect(row?.estimatedAmountFen).toBe("7000");
     expect(listRow.total).toBeGreaterThanOrEqual(1);
 
+    // 排序与时间范围：sort=status 时按流转顺序返回；from 在未来区间时结果为空。
+    const sorted = (
+      await req(csToken).get(`${DISPATCH}?sort=status&limit=50`).expect(200)
+    ).body as unknown as { data: { status: string }[]; total: number };
+    const order = [
+      "DRAFT",
+      "CONFIRMED",
+      "DISPATCHING",
+      "ASSIGNED",
+      "READY",
+      "IN_PROGRESS",
+      "PENDING_CONFIRMATION",
+      "COMPLETED",
+      "CANCELLED",
+    ];
+    const indices = sorted.data.map((item) => order.indexOf(item.status));
+    expect(indices).toEqual([...indices].sort((a, b) => a - b));
+
+    const future = (
+      await req(csToken)
+        .get(`${DISPATCH}?from=2999-01-01T00:00:00.000Z`)
+        .expect(200)
+    ).body as unknown as { data: unknown[]; total: number };
+    expect(future.total).toBe(0);
+    expect(future.data).toEqual([]);
+
     await req(csToken)
       .post(`${DISPATCH}/orders/${orderId}/player-breaches`, {
         playerId: playerIds["p1"],
