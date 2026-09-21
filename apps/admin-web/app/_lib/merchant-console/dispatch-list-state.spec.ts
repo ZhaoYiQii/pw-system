@@ -8,13 +8,20 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCsv,
+  buildSelectedCsv,
+  buildSelectedCsvForColumns,
   clampPage,
   filterRows,
+  groupByPlayer,
+  normalizeListResponse,
   pageCount,
   paginate,
+  rangeStartIso,
+  RUSH_GAP_MINUTES,
   selectedSummary,
   sortRows,
   statusCounts,
+  tabCounts,
   toggleAllOnPage,
   toggleRow,
   type DispatchListRow,
@@ -188,5 +195,164 @@ describe("派单工作台列表状态（纯函数）", () => {
     expect(lines[0]).toBe("单号,类型,客户,时长,状态,创建时间");
     expect(lines[1]).toContain('"老""板"",甲"');
     expect(lines[1]?.startsWith("GD-x,GD,")).toBe(true);
+  });
+});
+
+describe("订单中心列表（Slice 1 新增纯逻辑）", () => {
+  it("页签计数：全部取服务端 total，状态取当前数据集分布，脏输入回落 0", () => {
+    const counts = tabCounts(
+      ROWS,
+      ["ALL", "DISPATCHING", "ASSIGNED", "COMPLETED"],
+      42,
+    );
+    expect(counts).toEqual({
+      ALL: 42,
+      DISPATCHING: 1,
+      ASSIGNED: 1,
+      COMPLETED: 0,
+    });
+    // 服务端 total 缺失/非法时不把 NaN 渲染到页签上
+    expect(tabCounts(ROWS, ["ALL"], Number.NaN)).toEqual({ ALL: 0 });
+    expect(tabCounts(ROWS, ["ALL"], -3)).toEqual({ ALL: 0 });
+  });
+
+  it("时间范围 → 服务端 from 参数：今天含 00:00，近 3 天含今天与前两天，全部为空", () => {
+    // NOW = 2026-09-21T21:30+08:00 → 本地当天 00:00 即 2026-09-20T16:00Z
+    expect(rangeStartIso("TODAY", NOW)).toBe("2026-09-20T16:00:00.000Z");
+    expect(rangeStartIso("LAST_3D", NOW)).toBe("2026-09-18T16:00:00.000Z");
+    expect(rangeStartIso("ALL", NOW)).toBeNull();
+  });
+
+  it("按陪玩分组：未选人单独一组，且不参与赶场判定", () => {
+    const groups = groupByPlayer([
+      row("a", "ASSIGNED", "2026-09-21T20:00:00+08:00", {
+        playerName: "阿一",
+      }),
+      row("b", "ASSIGNED", "2026-09-21T19:00:00+08:00", {
+        playerName: "阿一",
+      }),
+      row("c", "DRAFT", "2026-09-21T18:00:00+08:00", { playerName: null }),
+      row("d", "DRAFT", "2026-09-21T17:00:00+08:00"),
+    ]);
+    expect(groups.map((group) => group.playerName)).toEqual(["阿一", null]);
+    expect(groups[0]?.rows.map((item) => item.key)).toEqual(["a", "b"]);
+    expect(groups[1]?.rows.map((item) => item.key)).toEqual(["c", "d"]);
+    expect(groups.every((group) => group.rushKeys.length === 0)).toBe(true);
+  });
+
+  it("赶场提示：同陪玩两单间隔小于阈值标警示", () => {
+    expect(RUSH_GAP_MINUTES).toBe(60);
+    // 阿一：20:00 开单 90 分钟（到 21:30），下一单 22:00 → 间隔 30 分钟 < 60 → 双标
+    const groups = groupByPlayer([
+      row("a", "ASSIGNED", "2026-09-21T10:00:00+08:00", {
+        playerName: "阿一",
+        startAt: "2026-09-21T20:00:00+08:00",
+        durationMinutes: 90,
+      }),
+      row("b", "ASSIGNED", "2026-09-21T10:10:00+08:00", {
+        playerName: "阿一",
+        startAt: "2026-09-21T22:00:00+08:00",
+        durationMinutes: 60,
+      }),
+      // 阿二：两单间隔 3 小时 → 不标
+      row("c", "ASSIGNED", "2026-09-21T10:20:00+08:00", {
+        playerName: "阿二",
+        startAt: "2026-09-21T20:00:00+08:00",
+        durationMinutes: 60,
+      }),
+      row("d", "ASSIGNED", "2026-09-21T10:30:00+08:00", {
+        playerName: "阿二",
+        startAt: "2026-09-21T23:30:00+08:00",
+        durationMinutes: 60,
+      }),
+    ]);
+    const a = groups.find((group) => group.playerName === "阿一");
+    const b = groups.find((group) => group.playerName === "阿二");
+    expect(a?.rushKeys.sort()).toEqual(["a", "b"]);
+    expect(b?.rushKeys).toEqual([]);
+  });
+
+  it("赶场提示：缺时间信息的行照常分组但不标警示（不臆造时间）", () => {
+    const groups = groupByPlayer([
+      row("a", "ASSIGNED", "2026-09-21T10:00:00+08:00", {
+        playerName: "阿一",
+        startAt: "2026-09-21T20:00:00+08:00",
+      }),
+      row("b", "ASSIGNED", "2026-09-21T10:10:00+08:00", {
+        playerName: "阿一",
+        startAt: "2026-09-21T20:30:00+08:00",
+        durationMinutes: 30,
+      }),
+    ]);
+    expect(groups[0]?.rows).toHaveLength(2);
+    expect(groups[0]?.rushKeys).toEqual([]);
+  });
+
+  it("按选中导出：只含选中行、保持列表顺序、空选中返回 null", () => {
+    const rows = [
+      row("a", "DISPATCHING", "2026-09-21T20:00:00+08:00"),
+      row("b", "ASSIGNED", "2026-09-21T19:00:00+08:00"),
+      row("c", "CANCELLED", "2026-09-21T18:00:00+08:00"),
+    ];
+    expect(buildSelectedCsv(rows, new Set())).toBeNull();
+    // 只有别的页的 key 被选中，当前数据集里没有可导出的行
+    expect(buildSelectedCsv(rows, new Set(["z"]))).toBeNull();
+    // 勾选顺序是 c,a，导出仍按列表顺序 a,c（与屏幕所见一致）
+    const csv = buildSelectedCsv(rows, new Set(["c", "a"]));
+    const lines = csv?.split("\n") ?? [];
+    expect(lines).toHaveLength(3);
+    expect(lines[1]?.startsWith("GD-a,")).toBe(true);
+    expect(lines[2]?.startsWith("GD-c,")).toBe(true);
+  });
+
+  it("自定义列导出：列由调用方给，转义与选中过滤沿用同一实现", () => {
+    const rows = [
+      row("a", "DISPATCHING", "2026-09-21T20:00:00+08:00", {
+        playerName: "阿一",
+      }),
+      row("b", "ASSIGNED", "2026-09-21T19:00:00+08:00", {
+        playerName: "阿二",
+      }),
+    ];
+    const csv = buildSelectedCsvForColumns(
+      ["单号", "客户", "陪玩", "状态"],
+      rows,
+      new Set(["b"]),
+      (item) => [
+        item.no,
+        item.customerName,
+        item.playerName ?? "未选人",
+        item.status,
+      ],
+    );
+    expect(csv?.split("\n")).toEqual([
+      "单号,客户,陪玩,状态",
+      "GD-b,老板b,阿二,ASSIGNED",
+    ]);
+    expect(
+      buildSelectedCsvForColumns(["单号"], rows, new Set(), () => ["x"]),
+    ).toBeNull();
+  });
+
+  it("列表响应形状兜底：{data,total} 与「只剩数组」两种形状都能读出总数", () => {
+    // 约定形状
+    expect(
+      normalizeListResponse({ data: [{ key: "a" }, { key: "b" }], total: 9 }),
+    ).toEqual({ rows: [{ key: "a" }, { key: "b" }], total: 9 });
+    // 取数层只交出 data 数组时，total 回落到长度（不把页面变成假空）
+    expect(normalizeListResponse([{ key: "a" }])).toEqual({
+      rows: [{ key: "a" }],
+      total: 1,
+    });
+    // 脏输入
+    expect(normalizeListResponse(null)).toEqual({ rows: [], total: 0 });
+    expect(normalizeListResponse({ total: 3 })).toEqual({
+      rows: [],
+      total: 3,
+    });
+    expect(normalizeListResponse({ data: [{ a: 1 }], total: "x" })).toEqual({
+      rows: [{ a: 1 }],
+      total: 1,
+    });
   });
 });
