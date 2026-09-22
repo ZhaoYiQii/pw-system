@@ -1829,30 +1829,74 @@ export class GameDispatchService {
       take: 50,
       select: { id: true, orderNo: true },
     });
-    const out: PlayerHallOrderView[] = [];
-    for (const order of orders) {
-      const gd = await this.client.gameDispatchOrder.findFirst({
-        where: { tenantId, orderId: order.id },
-      });
-      if (!gd) continue;
-      const round = await this.client.gameDispatchRound.findFirst({
+    if (orders.length === 0) return [];
+    const orderIds = orders.map((order) => order.id);
+    const now = new Date();
+
+    // 批量取派单 / 开放轮次 / 位置行：原实现每单串行 4 次查询（50 单≈200 次往返），
+    // 这里按 orderId in (...) 一次取回后再在内存里按单分组，字段与产出顺序保持不变。
+    const [dispatchOrders, openRounds, allLines] = await Promise.all([
+      this.client.gameDispatchOrder.findMany({
+        where: { tenantId, orderId: { in: orderIds } },
+      }),
+      this.client.gameDispatchRound.findMany({
         where: {
           tenantId,
-          orderId: order.id,
+          orderId: { in: orderIds },
           status: "OPEN",
-          closesAt: { gt: new Date() },
+          closesAt: { gt: now },
         },
         orderBy: { roundNo: "desc" },
-      });
-      if (!round) continue;
-      const lines = await this.client.gameDispatchLine.findMany({
-        where: { tenantId, orderId: order.id },
+      }),
+      this.client.gameDispatchLine.findMany({
+        where: { tenantId, orderId: { in: orderIds } },
         orderBy: { sortOrder: "asc" },
-      });
-      const applications = await this.client.gameDispatchApplication.findMany({
-        where: { tenantId, roundId: round.id },
-        select: { id: true, lineId: true, playerId: true, status: true },
-      });
+      }),
+    ]);
+
+    const gdByOrder = new Map(dispatchOrders.map((gd) => [gd.orderId, gd]));
+    // 与「每单 findFirst(orderBy: roundNo desc)」等价：全局按轮次号降序后，每单第一次出现即最大轮次。
+    const roundByOrder = new Map<string, (typeof openRounds)[number]>();
+    for (const round of openRounds) {
+      if (!roundByOrder.has(round.orderId))
+        roundByOrder.set(round.orderId, round);
+    }
+    const linesByOrder = new Map<string, typeof allLines>();
+    for (const line of allLines) {
+      const bucket = linesByOrder.get(line.orderId);
+      if (bucket) bucket.push(line);
+      else linesByOrder.set(line.orderId, [line]);
+    }
+
+    const roundIds = Array.from(roundByOrder.values()).map((round) => round.id);
+    const allApplications =
+      roundIds.length === 0
+        ? []
+        : await this.client.gameDispatchApplication.findMany({
+            where: { tenantId, roundId: { in: roundIds } },
+            select: {
+              id: true,
+              lineId: true,
+              playerId: true,
+              status: true,
+              roundId: true,
+            },
+          });
+    const applicationsByRound = new Map<string, typeof allApplications>();
+    for (const application of allApplications) {
+      const bucket = applicationsByRound.get(application.roundId);
+      if (bucket) bucket.push(application);
+      else applicationsByRound.set(application.roundId, [application]);
+    }
+
+    const out: PlayerHallOrderView[] = [];
+    for (const order of orders) {
+      const gd = gdByOrder.get(order.id);
+      if (!gd) continue;
+      const round = roundByOrder.get(order.id);
+      if (!round) continue;
+      const lines = linesByOrder.get(order.id) ?? [];
+      const applications = applicationsByRound.get(round.id) ?? [];
       const myPrice = await this.unitPriceByPlayer(tenantId, gd, [player.id]);
       out.push({
         orderId: order.id,
@@ -1897,30 +1941,63 @@ export class GameDispatchService {
       orderBy: { createdAt: "desc" },
       take: 100,
     });
-    const out: PlayerApplicationView[] = [];
-    for (const application of applications) {
-      const order = await this.client.order.findFirst({
-        where: { tenantId, id: application.orderId },
-        select: { orderNo: true, status: true },
-      });
-      const gd = await this.client.gameDispatchOrder.findFirst({
-        where: { tenantId, orderId: application.orderId },
-        select: { dispatchNo: true },
-      });
-      const slot = await this.client.orderSlot.findFirst({
+    if (applications.length === 0) return [];
+    const orderIds = Array.from(
+      new Set(applications.map((application) => application.orderId)),
+    );
+    const applicationIds = applications.map((application) => application.id);
+
+    // 批量取订单 / 派单 / 档位：原实现每行串行 5 次查询（其中 gameDispatchOrder 被查两遍：
+    // 一次只取 dispatchNo、一次取全行算价），100 行最多 500 次往返。改为 in (...) 一次取回后再分组。
+    const [orderRows, gdRows, slotRows] = await Promise.all([
+      this.client.order.findMany({
+        where: { tenantId, id: { in: orderIds } },
+        select: { id: true, orderNo: true, status: true },
+      }),
+      this.client.gameDispatchOrder.findMany({
+        where: { tenantId, orderId: { in: orderIds } },
+      }),
+      this.client.orderSlot.findMany({
         where: {
           tenantId,
-          applicationId: application.id,
+          applicationId: { in: applicationIds },
           status: { not: "RELEASED" },
         },
-        select: { id: true, unitPriceFen: true },
-      });
-      const gdRow = await this.client.gameDispatchOrder.findFirst({
-        where: { tenantId, orderId: application.orderId },
-      });
-      const priceByPlayer = gdRow
-        ? await this.unitPriceByPlayer(tenantId, gdRow, [player.id])
-        : new Map<string, string | null>();
+        select: { id: true, applicationId: true, unitPriceFen: true },
+        // 同一报名理论上只应有一个未释放档位；固定按创建时间取最早的，避免结果不确定。
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+    const orderById = new Map(orderRows.map((order) => [order.id, order]));
+    const gdByOrderId = new Map(gdRows.map((gd) => [gd.orderId, gd]));
+    const slotByApplicationId = new Map<string, (typeof slotRows)[number]>();
+    for (const slot of slotRows) {
+      if (!slotByApplicationId.has(slot.applicationId))
+        slotByApplicationId.set(slot.applicationId, slot);
+    }
+
+    // 实时单价只依赖 (该单的派单上下文, 本陪玩)：同一订单的多行报名共用一次计算。
+    const priceByOrderId = new Map<string, string | null>();
+    const priceForOrder = async (orderId: string): Promise<string | null> => {
+      if (priceByOrderId.has(orderId))
+        return priceByOrderId.get(orderId) ?? null;
+      const gdRow = gdByOrderId.get(orderId);
+      const price = gdRow
+        ? ((await this.unitPriceByPlayer(tenantId, gdRow, [player.id])).get(
+            player.id,
+          ) ?? null)
+        : null;
+      priceByOrderId.set(orderId, price);
+      return price;
+    };
+
+    const out: PlayerApplicationView[] = [];
+    for (const application of applications) {
+      const order = orderById.get(application.orderId);
+      const gd = gdByOrderId.get(application.orderId);
+      // 必须归一成 null：下面 canWithdraw 用 `slot === null` 判断，Map 未命中是 undefined。
+      const slot = slotByApplicationId.get(application.id) ?? null;
+      const price = await priceForOrder(application.orderId);
       out.push({
         applicationId: application.id,
         orderId: application.orderId,
@@ -1937,7 +2014,7 @@ export class GameDispatchService {
         unitPriceFen:
           slot?.unitPriceFen !== undefined
             ? slot.unitPriceFen.toString()
-            : (priceByPlayer.get(player.id) ?? null),
+            : price,
       });
     }
     return out;

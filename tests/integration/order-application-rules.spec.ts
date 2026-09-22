@@ -56,6 +56,13 @@ interface MyApplication {
   canWithdraw: boolean;
   unitPriceFen: string | null;
 }
+/** 「我的报名」在基础字段之外还会回派单号/订单号/行 id/创建时间（README 的读路径契约）。 */
+interface MyApplicationFull extends MyApplication {
+  dispatchNo: string;
+  orderNo: string;
+  lineId: string;
+  createdAt: string;
+}
 interface ReleaseView {
   slotId: string;
   orderId: string;
@@ -390,6 +397,112 @@ describe("算价模型 Task 4：报名锁定、释放名额与违约记录", () 
       where: { tenantId, id: applicationId },
     });
     expect(reApplied.status).toBe("APPLIED");
+  });
+
+  it("大厅读路径：多单聚合的字段、计数与顺序（批量查询改造的安全网）", async () => {
+    const earlier = await publishedOrder();
+    // 拉开创建时间，保证「按 createdAt desc」的顺序可判定。
+    await new Promise((r) => setTimeout(r, 5));
+    const later = await publishedOrder();
+    await apply(playerTokens["p1"], earlier.orderId, earlier.lineId).expect(
+      201,
+    );
+    await apply(playerTokens["p2"], earlier.orderId, earlier.lineId).expect(
+      201,
+    );
+
+    const hall = (
+      await req(playerTokens["p1"]).get(`${DISPATCH}/player/hall`).expect(200)
+    ).body.data as HallOrder[];
+
+    const indexEarlier = hall.findIndex((o) => o.orderId === earlier.orderId);
+    const indexLater = hall.findIndex((o) => o.orderId === later.orderId);
+    expect(indexEarlier).toBeGreaterThanOrEqual(0);
+    expect(indexLater).toBeGreaterThanOrEqual(0);
+    // 后建的单排在前面（原实现按 createdAt desc 逐单产出，批量聚合后必须一致）。
+    expect(indexLater).toBeLessThan(indexEarlier);
+
+    const row = hall[indexEarlier];
+    // 订单级字段取自该单自己的派单记录与当前开放的轮次。
+    expect(row.orderNo).toMatch(/^GDO/);
+    expect(row.dispatchNo).toMatch(/^GD/);
+    expect(row.durationMinutes).toBe(60);
+    expect(row.roundClosesAt).not.toBeNull();
+    // 单价＝陪玩兜底底价 6000 + rank=钻石 1000，不乘时长。
+    expect(row.unitPriceFen).toBe("7000");
+
+    // 行级：两人都已报名 → appliedCount=2，且 p1 能看到自己的那条。
+    const line = row.lines.find((l) => l.lineId === earlier.lineId);
+    expect(line?.positionLabel).toBe("打野");
+    expect(line?.requiredCount).toBe(1);
+    expect(line?.appliedCount).toBe(2);
+    expect(line?.myApplicationId).not.toBeNull();
+    expect(line?.myApplicationStatus).toBe("APPLIED");
+
+    // 同一行在 p2 视角：计数一致，「我的报名」是 p2 自己那一条。
+    const lineForP2 = (
+      (await req(playerTokens["p2"]).get(`${DISPATCH}/player/hall`).expect(200))
+        .body.data as HallOrder[]
+    )
+      .find((o) => o.orderId === earlier.orderId)
+      ?.lines.find((l) => l.lineId === earlier.lineId);
+    expect(lineForP2?.appliedCount).toBe(2);
+    expect(lineForP2?.myApplicationId).not.toBeNull();
+    expect(lineForP2?.myApplicationId).not.toBe(line?.myApplicationId);
+  });
+
+  it("我的报名读路径：多单聚合的字段、价格与顺序（批量查询改造的安全网）", async () => {
+    const first = await publishedOrder();
+    await new Promise((r) => setTimeout(r, 5));
+    const second = await publishedOrder();
+    const appliedFirst = await apply(
+      playerTokens["p1"],
+      first.orderId,
+      first.lineId,
+    ).expect(201);
+    // 拉开报名时间，保证「按 createdAt desc」的顺序可判定。
+    await new Promise((r) => setTimeout(r, 5));
+    const appliedSecond = await apply(
+      playerTokens["p1"],
+      second.orderId,
+      second.lineId,
+    ).expect(201);
+    await apply(playerTokens["p2"], first.orderId, first.lineId).expect(201);
+
+    const mine = (
+      await req(playerTokens["p1"])
+        .get(`${DISPATCH}/player/applications`)
+        .expect(200)
+    ).body.data as MyApplicationFull[];
+
+    const rows = mine.filter(
+      (a) => a.orderId === first.orderId || a.orderId === second.orderId,
+    );
+    expect(rows).toHaveLength(2);
+    // 后报名的排在前面（原实现按 createdAt desc 逐行产出，批量聚合后必须一致）。
+    expect(rows[0]?.orderId).toBe(second.orderId);
+    expect(rows[1]?.orderId).toBe(first.orderId);
+    expect(rows[0]?.applicationId).toBe(
+      (appliedSecond.body as { data: { id: string } }).data.id,
+    );
+    expect(rows[1]?.applicationId).toBe(
+      (appliedFirst.body as { data: { id: string } }).data.id,
+    );
+
+    for (const row of rows) {
+      // 订单侧字段来自该单自己的订单行与派单记录。
+      expect(row.orderNo).toMatch(/^GDO/);
+      expect(row.dispatchNo).toMatch(/^GD/);
+      expect(row.orderStatus).toBe("DISPATCHING");
+      expect(row.positionLabel).toBe("打野");
+      expect(row.lineId).toBeTruthy();
+      expect(row.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      // 未选中：无档位、可自助取消，单价按规则库实时算（6000 底价 + 钻石 1000）。
+      expect(row.status).toBe("APPLIED");
+      expect(row.slotId).toBeNull();
+      expect(row.canWithdraw).toBe(true);
+      expect(row.unitPriceFen).toBe("7000");
+    }
   });
 
   it("选中后自助取消返回受控 409（APPLICATION_LOCKED），档位与报名保持不变", async () => {
