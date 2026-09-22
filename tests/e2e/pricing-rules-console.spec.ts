@@ -2,7 +2,7 @@
  * 算价模型 Task 2（商家端「算价模型」维护页）+ Task 5 §3.4（老板端单价）的走查用例。
  *
  * 夹具/环境：同 pricing-slot-report.spec.ts（先跑 work/s5c-walkthrough-seed.mjs scenario 造
- * 走查门店 s5cwalk；商家端建议生产构建启动；缺夹具时整组 skip）。
+ * 走查门店 s5cwalk；商家端建议生产构建启动；缺夹具时整组失败（不再静默 skip））。
  */
 import {
   expect,
@@ -48,10 +48,11 @@ async function fixtureReady(): Promise<boolean> {
 
 test.describe("算价模型：商家端维护页与老板端单价", () => {
   test.beforeAll(async () => {
-    test.skip(
-      !(await fixtureReady()),
-      "缺少走查夹具：先运行 work/s5c-walkthrough-seed.mjs scenario",
-    );
+    // 缺夹具必须响亮失败：静默 skip 会让「这组压根没跑」看起来像绿。
+    if (!(await fixtureReady()))
+      throw new Error(
+        "缺少走查夹具：先运行 work/s5c-walkthrough-seed.mjs scenario 再造一次夹具（缺夹具不再静默 skip）",
+      );
   });
 
   test("商家端「算价模型」页：加价规则与陪玩底价（含来源标注）", async ({

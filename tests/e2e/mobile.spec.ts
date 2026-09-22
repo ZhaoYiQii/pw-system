@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 const PASSWORD = "zcloud1024";
-const TENANT_CODE = "c1";
+/** 门店 code 可用 E2E_TENANT_CODE 覆盖，默认沿用历史的 c1（该店只在 dev 库存在）。 */
+const TENANT_CODE = process.env.E2E_TENANT_CODE ?? "c1";
 
 /**
  * H5 账号密码登录（陪玩端 / 老板端共用同一套表单）。

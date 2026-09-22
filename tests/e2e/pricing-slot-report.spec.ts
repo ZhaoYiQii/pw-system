@@ -1,7 +1,7 @@
 /**
  * 算价模型 Task 5：报单/审批/释放名额与费用口径的走查用例（含视觉基线）。
  *
- * 夹具（必须先生成，否则整组用例 skipped）：
+ * 夹具（必须先生成，否则整组用例失败而不是 skip）：
  *   DATABASE_URL=postgresql://pw:pw_dev_only@127.0.0.1:5433/pw_saas_s2_task2_20260916?schema=public \
  *   API_BASE=http://127.0.0.1:3300 node work/s5c-walkthrough-seed.mjs scenario
  * 环境：
@@ -138,11 +138,12 @@ async function loginAsOwner(page: Page): Promise<void> {
 
 test.describe("算价模型：报单审批 / 释放名额 / 费用口径", () => {
   test.beforeAll(async () => {
+    // 缺夹具必须响亮失败：静默 skip 会让「这组压根没跑」看起来像绿。
     const fixture = await discoverFixture();
-    test.skip(
-      fixture === null,
-      "缺少走查夹具：先运行 work/s5c-walkthrough-seed.mjs scenario",
-    );
+    if (fixture === null)
+      throw new Error(
+        "缺少走查夹具：先运行 work/s5c-walkthrough-seed.mjs scenario 再造一次夹具（缺夹具不再静默 skip）",
+      );
   });
 
   test("派单详情：未备齐时不给结算入口，单价与人数口径正确", async ({
