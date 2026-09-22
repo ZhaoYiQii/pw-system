@@ -324,6 +324,75 @@ export class WechatPayPartnerClient {
   }
 
   /**
+   * 申请交易账单（官方 partner/4012739068）：返回 SHA1 摘要与 5 分钟有效的下载地址。
+   * 注意：官方「次日 9 点开始生成前一天账单，建议 10 点后获取」。
+   */
+  async requestTradeBill(input: {
+    billDate: string;
+    subMchid?: string;
+    billType?: "ALL" | "SUCCESS" | "REFUND";
+  }): Promise<{ hashType: string; hashValue: string; downloadUrl: string }> {
+    const params = new URLSearchParams({
+      bill_date: input.billDate,
+      bill_type: input.billType ?? "ALL",
+    });
+    if (input.subMchid) params.set("sub_mchid", input.subMchid);
+    const response = (await this.request(
+      "GET",
+      `/v3/bill/tradebill?${params.toString()}`,
+      "",
+    )) as { hash_type?: string; hash_value?: string; download_url?: string };
+    if (!response.download_url || !response.hash_value) {
+      throw new WechatPayError(
+        "EmptyResponse",
+        200,
+        "账单应答缺少 download_url/hash_value",
+      );
+    }
+    return {
+      hashType: response.hash_type ?? "SHA1",
+      hashValue: response.hash_value,
+      downloadUrl: response.download_url,
+    };
+  }
+
+  /**
+   * 下载账单文件正文。官方（partner/4012085421）：对 download_url 也按 V3 规则签名，
+   * 但**响应的请求头里没有签名，跳过验签**；完整性靠调用方比对 SHA1。
+   */
+  async downloadBillText(downloadUrl: string): Promise<string> {
+    const url = new URL(downloadUrl);
+    const urlPath = `${url.pathname}${url.search}`;
+    const timestamp = this.now();
+    const nonce = randomBytes(16).toString("hex").toUpperCase();
+    const authorization = buildAuthorizationHeader({
+      spMchid: this.config.spMchid,
+      merchantSerialNo: this.config.merchantSerialNo,
+      privateKeyPem: this.config.privateKeyPem,
+      method: "GET",
+      urlPath,
+      body: "",
+      timestamp,
+      nonce,
+    });
+    const response = await this.fetchImpl(downloadUrl, {
+      method: "GET",
+      headers: { accept: "*/*", authorization, "user-agent": "pw-saas/1.0" },
+      body: "",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const text = await response.text();
+    if (response.status >= 400) {
+      throw new WechatPayError(
+        "BillDownloadFailed",
+        response.status,
+        text.slice(0, 200),
+      );
+    }
+    return text;
+  }
+
+  /**
    * 前端调起支付参数。签名串为 `appId\ntimeStamp\nnonceStr\npackage\n`（官方「JSAPI调起支付」）。
    * 注意 `appId` 必须与下单时的 `sp_appid`、实际调起的公众号一致。
    */
@@ -402,7 +471,7 @@ export class WechatPayPartnerClient {
   }
 
   private async request(
-    method: "POST",
+    method: "GET" | "POST",
     urlPath: string,
     body: string,
   ): Promise<unknown> {
@@ -463,6 +532,11 @@ function safeJson(text: string): Record<string, unknown> | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** 账单文件完整性：官方 hash_type 固定 SHA1，下载后应按此比对。 */
+export function sha1Hex(text: string): string {
+  return createHash("sha1").update(text, "utf8").digest("hex");
 }
 
 /** 便于日志/审计：对请求体做指纹，避免把包含 openid 的原文写进日志。 */
