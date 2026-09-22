@@ -13,6 +13,10 @@ import {
   type PaymentSetupStatus,
 } from "../domain/payment-setup.js";
 import {
+  buildIndividualApplymentPayload,
+  type IndividualIntakeInput,
+} from "../domain/applyment-payload.js";
+import {
   PaymentSetupInputError,
   WechatPayDisabledError,
 } from "../domain/payments.errors.js";
@@ -79,6 +83,54 @@ export class TenantPaymentSetupService {
       tenantId: input.tenantId,
       subMchid,
       operatorAccountId: input.operatorAccountId,
+    });
+    return toView(account);
+  }
+
+  /**
+   * 提交进件资料（个体户）：**本地校验 → 加密 → 调微信 → 才落库**。
+   *
+   * 官方两条口径决定了这里的守卫：
+   * - 同一 `business_code` 重提会**覆盖**原申请单，所以只在"被驳回/编辑中/已作废"时才允许重提；
+   *   进行中的申请单重提会被微信判 `PROCESSING`，本地直接挡住、给出可读原因；
+   * - 已经 ACTIVE 的门店不必也不能再进件。
+   */
+  async submitIntake(input: {
+    tenantId: string;
+    operatorAccountId: string;
+    intake: IndividualIntakeInput;
+  }): Promise<PaymentSetupView> {
+    if (!this.client) throw new WechatPayDisabledError();
+    const client = this.client;
+    const existing = await this.repository.findAccount(input.tenantId);
+    if (existing?.status === "ACTIVE") {
+      throw new PaymentSetupInputError(
+        "门店已完成开户、可以收款了，无需再次提交进件",
+      );
+    }
+    const providerState = existing?.providerState ?? null;
+    // 只有"从没提交过"或"上一次被驳回/编辑中/已作废"才允许提交。
+    // 注意 providerState === null 不能算可重提：我们刚提交完还没刷新时它就是 null，
+    // 那正是"进行中"——真库测试抓到过这个口子会让同一张申请单被提交两次。
+    const resubmittable =
+      !existing?.applyNo ||
+      providerState === "APPLYMENT_STATE_REJECTED" ||
+      providerState === "APPLYMENT_STATE_EDITTING" ||
+      providerState === "APPLYMENT_STATE_CANCELED";
+    if (existing?.applyNo && !resubmittable) {
+      throw new PaymentSetupInputError(
+        "已有一张进行中的进件申请单，请先点刷新查看进度（被驳回才可用同一编号重提）",
+      );
+    }
+    const payload = buildIndividualApplymentPayload(input.intake);
+    const { applymentId, businessCode } = await client.submitApplyment(payload);
+    const account = await this.repository.recordSubmittedApplyment({
+      tenantId: input.tenantId,
+      businessCode,
+      applyNo: String(applymentId),
+      submittedAt: this.now(),
+      operatorAccountId: input.operatorAccountId,
+      summary: `提交进件申请单 business_code=${businessCode}，applyment_id=${applymentId}`,
     });
     return toView(account);
   }

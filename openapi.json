@@ -17510,6 +17510,20 @@
           "TenantPaymentSetup"
         ]
       }
+    },
+    "/api/v1/tenant/payments/account/applyment": {
+      "post": {
+        "operationId": "tenantPaymentSetup_submitIntake",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantPaymentSetup"
+        ]
+      }
     }
   },
   "info": {

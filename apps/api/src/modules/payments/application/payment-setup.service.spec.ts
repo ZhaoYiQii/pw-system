@@ -52,6 +52,16 @@ function repositoryStub(options: {
       calls.push({ kind: "bind", ...input });
       return options.applied ?? { ...ACCOUNT, subMchid: input.subMchid };
     },
+    recordSubmittedApplyment: async (input) => {
+      calls.push({ kind: "submit", ...input });
+      return (
+        options.applied ?? {
+          ...ACCOUNT,
+          applyNo: input.applyNo,
+          status: "APPLYING",
+        }
+      );
+    },
     applyProviderStatus: async (input) => {
       calls.push({ kind: "apply", ...input });
       return { account: options.applied ?? ACCOUNT, changed: true };

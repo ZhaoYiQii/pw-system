@@ -35,6 +35,18 @@ export interface PaymentSetupRepository {
     operatorAccountId: string;
   }): Promise<PaymentAccountRecord>;
   /**
+   * 落"已提交进件"：业务申请编号 + 微信申请单号 + 提交时间，状态转 APPLYING 并写审计。
+   * **只在微信返回 applyment_id 之后调用**——失败时库里不该出现"看起来提交过"的痕。
+   */
+  recordSubmittedApplyment(input: {
+    tenantId: string;
+    businessCode: string;
+    applyNo: string;
+    submittedAt: Date;
+    operatorAccountId: string;
+    summary: string;
+  }): Promise<PaymentAccountRecord>;
+  /**
    * 落微信侧查询结果：状态、子商户号、签约链接、驳回详情、同步时间；
    * `changed=false` 表示与库里一致（不重复写审计）。
    */

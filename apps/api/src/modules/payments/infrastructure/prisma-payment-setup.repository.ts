@@ -70,6 +70,56 @@ export class PrismaPaymentSetupRepository implements PaymentSetupRepository {
     );
   }
 
+  async recordSubmittedApplyment(input: {
+    tenantId: string;
+    businessCode: string;
+    applyNo: string;
+    submittedAt: Date;
+    operatorAccountId: string;
+    summary: string;
+  }): Promise<PaymentAccountRecord> {
+    return withTenantContext(
+      this.runtime,
+      input.tenantId,
+      async (tx: DbTransaction) => {
+        const existing = await tx.tenantPaymentAccount.findFirst({
+          where: { tenantId: input.tenantId },
+        });
+        // 提交后微信侧状态未知 → 清空上一次的查询结果（provider_state / sign_url），等刷新再填，
+        // 避免把过期状态当成当前状态展示。rejectDetail 有意保留：老板要照着上次的驳回原因改资料。
+        const data = {
+          businessCode: input.businessCode,
+          applyNo: input.applyNo,
+          status: "APPLYING",
+          submittedAt: input.submittedAt,
+          providerState: null,
+          providerStateMsg: null,
+          signUrl: null,
+        };
+        const row = existing
+          ? await tx.tenantPaymentAccount.update({
+              where: { id: existing.id },
+              data,
+            })
+          : await tx.tenantPaymentAccount.create({
+              data: { tenantId: input.tenantId, ...data },
+            });
+        await tx.auditLog.create({
+          data: {
+            tenantId: input.tenantId,
+            actorType: "tenant_account",
+            actorId: input.operatorAccountId,
+            action: "payment.setup.submit",
+            resourceType: "tenant_payment_account",
+            resourceId: row.id,
+            summary: input.summary,
+          },
+        });
+        return toRecord(row);
+      },
+    );
+  }
+
   async applyProviderStatus(input: {
     tenantId: string;
     status: string;

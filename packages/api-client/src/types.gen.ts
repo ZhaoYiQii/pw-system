@@ -9772,3 +9772,14 @@ export type TenantPaymentSetupRefreshData = {
 export type TenantPaymentSetupRefreshResponses = {
     201: unknown;
 };
+
+export type TenantPaymentSetupSubmitIntakeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/payments/account/applyment';
+};
+
+export type TenantPaymentSetupSubmitIntakeResponses = {
+    201: unknown;
+};

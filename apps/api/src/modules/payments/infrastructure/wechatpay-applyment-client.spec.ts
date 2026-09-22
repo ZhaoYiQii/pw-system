@@ -168,7 +168,10 @@ describe("S4-5b：进件敏感字段加密与提交", () => {
           url,
           method: init.method,
           headers: init.headers,
-          body: init.body,
+          body:
+            typeof init.body === "string"
+              ? init.body
+              : init.body.toString("utf8"),
         });
         return {
           status: 200,

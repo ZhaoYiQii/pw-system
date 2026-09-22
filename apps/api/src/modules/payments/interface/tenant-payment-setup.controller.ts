@@ -11,6 +11,10 @@ import {
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { WechatPayError } from "../infrastructure/wechatpay-partner.client.js";
+import {
+  IntakeValidationError,
+  type IndividualIntakeInput,
+} from "../domain/applyment-payload.js";
 import { TenantPaymentSetupService } from "../application/payment-setup.service.js";
 import {
   PaymentSetupInputError,
@@ -78,12 +82,43 @@ export class TenantPaymentSetupController {
     }
   }
 
-  /** 错误映射集中一处：400 入参 / 502 微信侧失败 / 503 支付未启用。 */
+  @TenantScope()
+  @Permissions("tenant.manage")
+  @Post("applyment")
+  async submitIntake(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, unknown>,
+  ) {
+    const operatorAccountId = operatorOf(req);
+    try {
+      return {
+        data: await this.setup.submitIntake({
+          tenantId: tenantIdOf(req),
+          operatorAccountId,
+          intake: readIntake(body),
+        }),
+      };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  /** 错误映射集中一处：400 入参（含字段校验）/ 502 微信侧失败 / 503 未启用或缺公钥。 */
   private rethrow(error: unknown): never {
-    if (error instanceof PaymentSetupInputError) {
+    if (
+      error instanceof PaymentSetupInputError ||
+      error instanceof IntakeValidationError
+    ) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
     if (error instanceof WechatPayDisabledError) {
+      throw new HttpException(error.message, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+    if (
+      error instanceof WechatPayError &&
+      error.code === "MISSING_PUBLIC_KEY"
+    ) {
+      // 配置缺失属于"服务没准备好"，不是微信侧故障
       throw new HttpException(error.message, HttpStatus.SERVICE_UNAVAILABLE);
     }
     if (error instanceof WechatPayError) {
@@ -109,4 +144,33 @@ function operatorOf(req: AuthenticatedRequest): string {
   if (!id)
     throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
   return id;
+}
+
+/** 请求体 → 进件资料（非字符串一律当空串，具体必填校验交给领域层点名到字段）。 */
+function readIntake(body: Record<string, unknown>): IndividualIntakeInput {
+  const text = (value: unknown): string =>
+    typeof value === "string" ? value : "";
+  return {
+    tenantCode: text(body.tenantCode),
+    spMchid: text(body.spMchid),
+    contactName: text(body.contactName),
+    mobilePhone: text(body.mobilePhone),
+    contactEmail: text(body.contactEmail),
+    licenseNumber: text(body.licenseNumber),
+    merchantName: text(body.merchantName),
+    legalPerson: text(body.legalPerson),
+    licenseCopyMediaId: text(body.licenseCopyMediaId),
+    idCardName: text(body.idCardName),
+    idCardNumber: text(body.idCardNumber),
+    cardPeriodBegin: text(body.cardPeriodBegin),
+    cardPeriodEnd: text(body.cardPeriodEnd),
+    idCardCopyMediaId: text(body.idCardCopyMediaId),
+    idCardNationalMediaId: text(body.idCardNationalMediaId),
+    accountName: text(body.accountName),
+    accountBank: text(body.accountBank),
+    accountNumber: text(body.accountNumber),
+    ...(typeof body.bankAddressCode === "string"
+      ? { bankAddressCode: body.bankAddressCode }
+      : {}),
+  };
 }
