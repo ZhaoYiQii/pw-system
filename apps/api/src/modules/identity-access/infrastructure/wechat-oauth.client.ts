@@ -130,6 +130,11 @@ export class WechatOauthClient {
     private readonly fetchImpl: FetchLike = (url, init) => fetch(url, init),
   ) {}
 
+  /** 「跳去微信授权」的地址；`state` 由 wechat-state 签名生成。 */
+  authorizeUrl(state: string): string {
+    return buildWechatAuthorizeUrl(this.config, state);
+  }
+
   /** `code` 换 `openid`（服务端持 AppSecret；浏览器只拿得到 code）。 */
   async exchangeCode(code: string): Promise<WechatIdentity> {
     if (!code) throw new WechatOauthError(41008, "code 为空");

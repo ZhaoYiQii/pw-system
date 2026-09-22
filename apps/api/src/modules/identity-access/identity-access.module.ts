@@ -23,10 +23,21 @@ import {
   resolveTencentSmsConfig,
   TencentSmsProvider,
 } from "./infrastructure/tencent-sms.provider.js";
+import {
+  resolveWechatOauthConfig,
+  WechatOauthClient,
+} from "./infrastructure/wechat-oauth.client.js";
+import { WechatStateService } from "./infrastructure/wechat-state.js";
+import {
+  WechatAuthService,
+  type WechatLoginRuntime,
+} from "./application/wechat-auth.service.js";
+import { WechatAuthController } from "./interface/wechat-auth.controller.js";
 
 export const AUTH_PLATFORM_CLIENT = "AUTH_PLATFORM_CLIENT";
 export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
 export const SMS_PROVIDER = "SMS_PROVIDER";
+export const WECHAT_LOGIN = "WECHAT_LOGIN";
 
 /**
  * 短信通道装配（与 `wallet.module.ts` 的 `resolvePaymentProvider` 同范式）。
@@ -54,6 +65,21 @@ export function resolveSmsProvider(): SmsProvider {
   return new MockSmsProvider(new Logger("SmsProvider"));
 }
 
+/**
+ * 微信登录运行态。**默认关闭**：未显式 `WECHAT_LOGIN_ENABLED=true` 时端点返回 503，
+ * 这样没有公众号凭证的部署不会被新门禁打崩；一旦启用就要求变量齐全，缺项启动即失败。
+ */
+export function resolveWechatLogin(): WechatLoginRuntime {
+  if (process.env.WECHAT_LOGIN_ENABLED !== "true") return { enabled: false };
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET is not configured");
+  return {
+    enabled: true,
+    client: new WechatOauthClient(resolveWechatOauthConfig()),
+    state: new WechatStateService(secret),
+  };
+}
+
 @Module({
   imports: [EntitlementsModule],
   controllers: [
@@ -61,11 +87,19 @@ export function resolveSmsProvider(): SmsProvider {
     MeController,
     TenantAccountsController,
     PhoneVerificationController,
+    WechatAuthController,
   ],
   providers: [
     {
       provide: SMS_PROVIDER,
       useFactory: resolveSmsProvider,
+    },
+    { provide: WECHAT_LOGIN, useFactory: resolveWechatLogin },
+    {
+      provide: WechatAuthService,
+      useFactory: (runtime: WechatLoginRuntime, auth: AuthService) =>
+        new WechatAuthService(runtime, auth),
+      inject: [WECHAT_LOGIN, AuthService],
     },
     {
       provide: AUTH_PLATFORM_CLIENT,

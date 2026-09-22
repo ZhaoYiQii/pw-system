@@ -105,46 +105,46 @@ Scope and non-goals:
 - 全仓**没有** openid/unionid/授权代码；`.env.example` 里的 `WECHAT_APP_ID` / `WECHAT_APP_SECRET` 目前没有任何消费者。
 - H5 侧：`apiAdapter` 带 `credentials: "include"` + Bearer；`phoneLogin()` 把 `accessToken` 写 localStorage、`csrfToken` 另存（`features/customer-ui/session.ts:25`）；客户登录 UI 在 `pages/customer/home/index.tsx`。
 
-**两个必然的落库变更**
+**落库变更**
 
 1. `TenantAccount.wechat_openid String?` + `@@unique([tenantId, wechatOpenid])`：公众号身份键。openid 是 app 级唯一，单公众号足够；将来做小程序/多公众号需要 unionid 时再升级成独立 `wechat_identities` 表（迁移是机械的）。
-2. 新表 `wechat_login_requests`（租户级 RLS）：`id / tenantId / openid / ticketHash(unique) / returnTo / status(PENDING_PHONE|CONSUMED) / expiresAt / consumedAt / createdAt`。
-   **为什么必须有**：首次登录是「已授权（拿到 openid）但还不算账号」的中间态，必须在服务端短期保存；用一次性票据把它交给 H5，**不能把 openid 或 token 放进 URL**。用 DB 行而不是「带回浏览器的签名 bindToken」：票据单次消费 + 服务端可作废，绑定这种会改变账号归属的操作值得更硬的保证。
+2. `wechat_login_requests`（租户级 RLS）：**在当前 A′ 口径下没有被使用**（见下）——它是 S3a-2 按当时 B 口径建的中间态表。S3c 一并处理：删掉（空表，无数据影响），或明确保留给「强制绑定手机号」模式；不留悬空结构。
 
-**推荐流程（B 口径：首次绑手机号）**
+**已定口径：A′（微信优先、手机号后补）** —— 用户 2026-09-23 决定
 
 ```
 H5 点「微信登录」
  → GET /api/v1/auth/wechat/authorize?tenantCode=..&returnTo=..   (302 到微信)
-     redirect_uri = WECHAT_OAUTH_REDIRECT_URI（**H5 域名的入口页**，见下方口径）
+     redirect_uri = WECHAT_OAUTH_REDIRECT_URI（H5 域名的入口页）
      state = 签名短期 JWT {tenantCode, returnTo}，10 分钟过期
  → 微信授权页 → 微信 302 回 H5：GET https://<h5>/?wechat_login=1&code=..&state=..
- → H5 入口页发现 code+state：POST /api/v1/auth/wechat/login { code, state }
-     服务端：验 state → 用 AppSecret 把 code 换 openid
-     ├ openid 已绑定账号 → 直接签发与手机号登录**同构**的会话（refresh cookie + access token + csrf）
-     └ 未绑定          → 返回 { needPhone: true, bindTicket }（票据行 PENDING_PHONE，60 秒）
-        → H5 走已有短信码流程：POST /api/v1/auth/wechat/bind-phone { bindTicket, phone, code }
-           consumeCode（复用 phone-verification）→ 按 phone_hash 找/建账号 → 绑 openid → 发会话
+ → H5 入口页发现 code+state：POST /api/v1/auth/wechat/login { tenantCode, code, state }
+     服务端：验 state（含 tenantCode 一致性）→ 用 AppSecret 把 code 换 openid
+     → 按 (tenantId, openid) 找账号：有就直接发；**没有就用 openid 建号并直接发会话**
+        （与手机号登录同构：refresh cookie + access token + csrf）
+ → 手机号改为「登录后补绑」（S3c）：已登录状态下用短信码绑定，不在登录链路上
 ```
 
 **为什么不在 API 侧做回调（2026-09-22 修订）**：原设计是 `redirect_uri` 指到 API 的 `/wechat/callback` 再 302 回 H5 带票据。改成 H5 入口页收 code 后，**只需要在公众号后台配 H5 一个网页授权域名**（API 域名不必也在白名单里），少一个端点、少一次跳转；而且 Taro H5 是 hash 路由，把 code 交给 API 的回调再拼 fragment 容易踩「code 落在 # 之后」的坑。代价是 `code` 会经过浏览器地址栏——这是 OAuth 的常态，且 code 单次消费、5 分钟失效。
 
-**为什么首次要绑手机号（要你确认的一点）**：一台门店只能有一条「人」的记录。先微信后手机号、先手机号后微信，都必须落到同一个账号；只认 openid 不绑手机，同一个人会得到两个账号（phoneHash 一个、openid 一个），订单与钱包会分裂——这是数据一致性风险，不是 UI 取舍。代价是首次多一步（一条短信），并且我们的手机号通道已经就位（S2）。
+**为什么 H5 里拿不到手机号（用户问过，记下来）**：微信的「手机号一键获取」是**小程序**能力（`button open-type="getPhoneNumber"`），公众号网页授权只能拿 openid/unionid/昵称头像。运营商那套「本机号码一键登录」是第三方号码认证服务（按次收费），不在本期。另：**JSAPI 支付只需要 openid**，所以 A′ 不阻塞下单支付——这正是短信资质还在审核时也能先跑试运营的原因。
 
-若选 A（openid 即账号、不绑手机）：实现更少，但要接受上面的分裂风险，且手机号登录时必须做账号合并，总工作量反而比 B 大。
+**A′ 的代价（明确记录，不假装没有）**：同一个人「先手机号登录、后微信登录」时会得到第二个账号（openid 账号），订单/钱包会分裂。S3c 的补绑流程收敛它：补绑时若该手机号已有账号且未绑 openid → 把 openid 绑到那个账号；已绑别的 openid → 409 冲突。试运营客户量小，必要时门店人工核对。
 
 **安全口径**
 
 - `state`：jose 签名 JWT（已是依赖），10 分钟过期，绑定 `tenantCode + returnTo + nonce`；`returnTo` 只接受**站内相对路径**（`//evil.com`、`https://…`、含反斜杠与控制字符的一律回退 `/`），杜绝开放重定向。
 - 授权 scope 默认用 `snsapi_base`（静默拿 openid，用户无感，进 H5 即可自动登录）；将来若要显示昵称头像再上 `snsapi_userinfo`（会多一次用户确认）。这条我没在本机验证过，第一次真实调用时确认。
-- 微信 `code` 只能用一次（微信侧保证，5 分钟）；我们换到 openid 后立刻落 PENDING_PHONE 票据行，消费一次即作废。
-- `bindTicket`：32 字节随机、只存 hash、单次消费、60 秒过期。
+- 微信 `code` 只能用一次（微信侧保证，5 分钟）；换到 openid 后立刻建号/发会话，没有可重放的中间态（A′ 口径）。
 - AppSecret 只在服务端，且**任何错误信息与日志都不带请求 URL**（微信要求把 appsecret 放在查询串，URL 一旦进日志就是密钥泄漏）；传输层错误原文进错误信息前会把 appsecret 替换成 `***`；日志对 openid 只留首尾各 4 位。
 
 **本机可验证 vs 需资质**
 
 - 可验证（本机）：authorize 的 302 与 state 结构；state 伪造/过期/跨 audience 混用；脏 `returnTo` 回退；code→openid 交换与全部错误码分类（stub 客户端）；密钥不出现在错误信息里；票据单次消费与过期；绑定冲突（openid 已绑 A 却要绑 B）；重复绑定幂等。
-- 需资质：真实授权页、真实 code 交换、网页授权域名校验。判据：回调能拿到 openid 并签发会话；失败时微信返回 `40029 invalid code` / `redirect_uri 域名与后台配置不一致`。
+- 需资质（真人走一遍）：有效 appid/secret + 公众号后台「网页授权域名」配好 + 一个真人微信。判据：能拿到 openid 并签发会话；失败时微信返回 `40029 invalid code` / `redirect_uri 与后台配置不一致`。
+  **已经提前拿到一部分**（2026-09-23）：用假 appid 起真实进程打 `/wechat/login`，请求**真的到达 `api.weixin.qq.com`**，微信返回 `40013 invalid appid`（带 rid），服务端按 permanent 映射成 400 且不发会话。也就是说**请求拼装与错误映射在真实链路上是通的**，缺的只是有效凭证。
+- 方法备注（值得记住）：**沙箱内没有外网，提权运行的进程有外网**。凡是要打外部 API 的验证（微信/腾讯云），都用「提权起进程 + 探针脚本」；在沙箱内直接 `curl` 会拿到 `exit 7`，容易误判成「对方挂了」。
+- 方法备注 2：**启动常驻子进程的脚本不要用管道接输出**（`script.ps1 | Select-Object -Last N`）。子进程会继承管道写端，脚本早就跑完了、命令却永远不返回（2026-09-23 踩到，3300 实际已重启成功）。改用「整条命令输出重定向到文件 + 事后单独读文件」，或让脚本自己写日志。
 
 **切片**
 
@@ -155,9 +155,12 @@ H5 点「微信登录」
   验收：三库 `migrate deploy` + `migrate status` → **37 migrations / Database schema is up to date**；`prisma validate` 通过；`typecheck`（全仓 + tests）0；全量单测 422 passed / 1 skipped；lint 0；format:check 0。
   **RLS 有数据实证**（`audit/s3a2-rls-check.mjs`，在一次性库上插 1 行夹具再删掉）：`rls_enabled/rls_forced = true/true`、两条策略齐备；运行时角色**无租户上下文 = 0 行**、**本租户 = 1 行**、**异租户 = 0 行**；夹具删除后表回到 0 行。这正是我在旧表上做不到的那一步（那两个表是空的，证不了）。
   **未在本片注册 provider**：client/state 目前没有消费者，而生产 compose 还没有 `WECHAT_*` 变量——现在注册会让现有部署启动即崩（缺凭证门禁）。按 S1b-1 的「没有消费者不加接口」口径，注册连带 compose/env 一起放到 **S3b**（那时端点在用它们，门禁才有意义）。
-- **S3b**：端点（authorize 302 / login / bind-phone）+ 票据生命周期 + 单测与 stub 端到端。
-- **S3c**：首绑手机号规则（复用 `consumeCode`）+ 冲突与幂等（openid 已绑 A 要绑 B、手机号已有账号要绑 openid）。
-- **S3d**：H5 接入（`pages/customer/home` 加「微信登录」+ 入口页识别 code/state + 首绑页 + 文案），含 H5 单测与走查。
+- **S3b（已完成，2026-09-23）**：端点 `GET /api/v1/auth/wechat/authorize`（302）与 `POST /api/v1/auth/wechat/login`（换会话）；`WechatAuthService` 编排；会话 cookie 逻辑抽到 `interface/auth-cookies.ts` 供登录/微信登录共用（行为不变：refresh cookie `httpOnly + lax + path=/api/v1/auth`，CSRF 失败仍 403）。
+  开关 `WECHAT_LOGIN_ENABLED`：**默认关闭**（端点返回 503），避免没有公众号凭证的部署被新门禁打崩；置 `true` 即要求 3 个变量齐全，缺项启动失败。
+  验收：`wechat-auth.service.spec.ts` 8 passed；`identity-access.module.spec.ts` 10 passed（新增默认关闭 / 开启缺凭证 / 缺 SESSION_SECRET / 齐全四例）；全量单测 434 passed / 1 skipped；typecheck（全仓 + tests）0；lint 0；format:check 0。
+  **运行期实证**（`audit/s3b-runtime-check.mjs`，真实 dist + 真实 HTTP，6 项全 PASS）：未开开关 → `503 微信登录未启用`；开启 → `302` 且 Location 指向 `open.weixin.qq.com/connect/oauth2/authorize`（含 appid、`scope=snsapi_base`、state）；伪造 state → 400；state 与门店不一致 → 400；合法 state + 假 code → 微信真实返回 `40013`，服务端 400 且**不发会话**（不假成功），原始错误码进服务端日志。
+- **S3c**：手机号补绑（已登录状态，复用 `consumeCode`）+ 合并规则（手机号已有账号且未绑 openid → 绑过去；已绑别的 openid → 409），并决定 `wechat_login_requests` 删还是留。
+- **S3d**：H5 接入（`pages/customer/home` 加「微信登录」+ 入口页识别 code/state + 个人中心补绑手机号 + 文案），含 H5 单测与走查。
 
 ### S3.5 补齐租户表 RLS（S3 之后、S4 之前；用户已确认按此顺序）
 

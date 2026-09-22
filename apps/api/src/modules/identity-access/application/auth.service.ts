@@ -4,11 +4,12 @@ import {
   InvalidRefreshTokenError,
   TenantInactiveError,
 } from "../domain/errors.js";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { encryptPhone } from "../../../common/pii/phone.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
 import type { RoleKey } from "../domain/roles.js";
 import { hashPassword, verifyPassword } from "../infrastructure/password.js";
+import { maskOpenid } from "../infrastructure/wechat-oauth.client.js";
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
@@ -161,6 +162,47 @@ export class AuthService {
       resourceType: "tenant_account",
       resourceId: bundle.principal.sub,
       summary: `手机号登录/注册成功：${account.username}`,
+    });
+    return bundle;
+  }
+
+  /**
+   * S3（A′ 口径）：微信登录即建号——首次不需要手机号，短信资质到位前也能先跑通试运营。
+   * 账号身份键是 (tenantId, wechatOpenid)；手机号可在登录后补绑（S3c）。
+   */
+  async wechatCustomerLogin(
+    tenantId: string,
+    openid: string,
+  ): Promise<SessionBundle> {
+    let account = await this.repository.findTenantAccountByOpenid(
+      tenantId,
+      openid,
+    );
+    if (!account) {
+      const randomPassword = randomBytes(18).toString("base64url");
+      const passwordHash = await hashPassword(randomPassword);
+      account = await this.repository.registerWechatCustomer(tenantId, {
+        // 用 openid 的哈希前缀当用户名：确定且不会撞车，也不把 openid 明文写进用户名
+        username: `w${createHash("sha256").update(openid).digest("hex").slice(0, 16)}`,
+        passwordHash,
+        wechatOpenid: openid,
+        displayName: "微信用户",
+      });
+    }
+    if (account.tenantStatus !== "ACTIVE") throw new TenantInactiveError();
+    if (account.status !== "ACTIVE") throw new AccountDisabledError();
+    if (!account.roles.includes("CUSTOMER")) {
+      throw new InvalidCredentialsError();
+    }
+    const bundle = await this.issue(this.tenantPrincipal(account, "CUSTOMER"));
+    await this.repository.recordAudit({
+      tenantId: account.tenantId,
+      actorType: "tenant_account",
+      actorId: bundle.principal.sub,
+      action: "auth.wechat_login",
+      resourceType: "tenant_account",
+      resourceId: bundle.principal.sub,
+      summary: `微信登录成功：${account.username} openid=${maskOpenid(openid)}`,
     });
     return bundle;
   }

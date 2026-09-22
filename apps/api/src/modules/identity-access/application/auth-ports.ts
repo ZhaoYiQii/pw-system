@@ -24,6 +24,14 @@ export interface RegisterPhoneCustomerInput {
   displayName: string;
 }
 
+/** S3：微信优先口径下建号只需要 openid（手机号后补）。 */
+export interface RegisterWechatCustomerInput {
+  username: string;
+  passwordHash: string;
+  wechatOpenid: string;
+  displayName: string;
+}
+
 export interface RefreshSessionRecord {
   id: string;
   subjectType: string;
@@ -69,6 +77,14 @@ export interface AuthRepository {
   registerPhoneCustomer(
     tenantId: string,
     input: RegisterPhoneCustomerInput,
+  ): Promise<TenantAccountRecord>;
+  findTenantAccountByOpenid(
+    tenantId: string,
+    openid: string,
+  ): Promise<TenantAccountRecord | null>;
+  registerWechatCustomer(
+    tenantId: string,
+    input: RegisterWechatCustomerInput,
   ): Promise<TenantAccountRecord>;
   findTenantAccountById(
     accountId: string,

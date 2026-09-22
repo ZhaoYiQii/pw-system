@@ -7,7 +7,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { MockSmsProvider } from "./infrastructure/mock-sms.provider.js";
 import { TencentSmsProvider } from "./infrastructure/tencent-sms.provider.js";
-import { resolveSmsProvider } from "./identity-access.module.js";
+import { WechatOauthClient } from "./infrastructure/wechat-oauth.client.js";
+import { WechatStateService } from "./infrastructure/wechat-state.js";
+import {
+  resolveSmsProvider,
+  resolveWechatLogin,
+} from "./identity-access.module.js";
 
 const ENV_KEYS = [
   "SMS_PROVIDER",
@@ -18,8 +23,15 @@ const ENV_KEYS = [
   "TENCENT_SMS_SDK_APP_ID",
   "TENCENT_SMS_SIGN_NAME",
   "TENCENT_SMS_TEMPLATE_ID",
+  "WECHAT_LOGIN_ENABLED",
+  "WECHAT_APP_ID",
+  "WECHAT_APP_SECRET",
+  "WECHAT_OAUTH_REDIRECT_URI",
+  "SESSION_SECRET",
 ] as const;
 type EnvKey = (typeof ENV_KEYS)[number];
+
+const SECRET = "test-secret-0123456789-0123456789-0123456789";
 
 const original = Object.fromEntries(
   ENV_KEYS.map((key) => [key, process.env[key]]),
@@ -82,5 +94,40 @@ describe("S2：短信通道选择与生产门禁", () => {
     useTencentEnv();
     process.env.NODE_ENV = "production";
     expect(resolveSmsProvider()).toBeInstanceOf(TencentSmsProvider);
+  });
+
+  it("微信登录默认关闭：未设 WECHAT_LOGIN_ENABLED 时返回 disabled，且不要求公众号凭证", () => {
+    clear(ENV_KEYS);
+    expect(resolveWechatLogin()).toEqual({ enabled: false });
+  });
+
+  it("微信登录开启但缺凭证时启动即失败，并点名变量", () => {
+    clear(ENV_KEYS);
+    process.env.WECHAT_LOGIN_ENABLED = "true";
+    process.env.SESSION_SECRET = SECRET;
+    expect(() => resolveWechatLogin()).toThrowError(/WECHAT_APP_ID/);
+  });
+
+  it("微信登录开启但缺 SESSION_SECRET 时失败（state 没有签名密钥）", () => {
+    clear(ENV_KEYS);
+    process.env.WECHAT_LOGIN_ENABLED = "true";
+    delete process.env.SESSION_SECRET;
+    expect(() => resolveWechatLogin()).toThrowError(/SESSION_SECRET/);
+  });
+
+  it("微信登录开启且变量齐全时给出可用的 client 与 state", () => {
+    clear(ENV_KEYS);
+    process.env.WECHAT_LOGIN_ENABLED = "true";
+    process.env.SESSION_SECRET = SECRET;
+    process.env.WECHAT_APP_ID = "wx1234567890abcdef";
+    process.env.WECHAT_APP_SECRET = "secret";
+    process.env.WECHAT_OAUTH_REDIRECT_URI =
+      "https://h5.example.com/?wechat_login=1";
+    const runtime = resolveWechatLogin();
+    expect(runtime.enabled).toBe(true);
+    if (runtime.enabled) {
+      expect(runtime.client).toBeInstanceOf(WechatOauthClient);
+      expect(runtime.state).toBeInstanceOf(WechatStateService);
+    }
   });
 });

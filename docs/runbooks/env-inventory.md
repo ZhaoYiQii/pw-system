@@ -27,6 +27,9 @@
 | `TENCENT_SMS_SECRET_ID` / `TENCENT_SMS_SECRET_KEY` | `SMS_PROVIDER=tencent` 时必填 | `infrastructure/tencent-sms.provider.ts` | 无 | 缺失 → 启动失败（`腾讯云短信缺少必需环境变量：…`） |
 | `TENCENT_SMS_SDK_APP_ID` / `TENCENT_SMS_SIGN_NAME` / `TENCENT_SMS_TEMPLATE_ID` | `SMS_PROVIDER=tencent` 时必填 | 同上 | 无 | 同上 |
 | `TENCENT_SMS_REGION` / `TENCENT_SMS_ENDPOINT` | 可选 | 同上 | `ap-guangzhou` / `sms.tencentcloudapi.com` | 内网或专线部署时覆盖 endpoint |
+| `WECHAT_LOGIN_ENABLED` | 可选 | `identity-access.module.ts` | 关闭 | 未置 `true` → 微信登录端点返回 503（没有公众号凭证的部署照样能启动） |
+| `WECHAT_APP_ID` / `WECHAT_APP_SECRET` | 启用微信登录时必填 | `infrastructure/wechat-oauth.client.ts` | 无 | 缺失 → 启动失败（`微信网页授权缺少必需环境变量：…`） |
+| `WECHAT_OAUTH_REDIRECT_URI` | 启用微信登录时必填 | 同上 | 无 | 必须落在公众号后台「网页授权域名」下；生产强制 https（微信不接受 http 回调） |
 | `ADMIN_WEB_ORIGIN` | 建议 | `main.ts` CORS 白名单 | 空 = 关闭 CORS | 未配置时浏览器端登录会被 CORS 拦 |
 | `H5_ORIGIN` | 建议 | `main.ts` CORS 白名单 | 同上 | 同上 |
 | `EVIDENCE_ROOT` | 建议 | `slot-session.controller.ts` 等 | `<cwd>/data/evidence` | 生产建议 `/app/data/evidence`（挂卷，否则证据文件落在容器可写层） |

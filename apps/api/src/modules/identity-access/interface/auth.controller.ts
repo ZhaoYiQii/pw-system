@@ -10,7 +10,6 @@ import {
   Res,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { randomBytes } from "node:crypto";
 import { AuthService } from "../application/auth.service.js";
 import { PhoneVerificationService } from "../application/phone-verification.service.js";
 import {
@@ -33,11 +32,15 @@ import {
   TenantInactiveError,
 } from "../domain/errors.js";
 import type { Scope } from "../domain/principal.js";
-import { REFRESH_TOKEN_TTL_SECONDS } from "../infrastructure/tokens.js";
+import {
+  REFRESH_COOKIE,
+  clearRefreshCookie,
+  readCookie,
+  requireCsrf,
+  setCsrfCookie,
+  setRefreshCookie,
+} from "./auth-cookies.js";
 
-const REFRESH_COOKIE = "pw_refresh";
-const CSRF_COOKIE = "pw_csrf";
-const REFRESH_COOKIE_PATH = "/api/v1/auth";
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 5;
 
@@ -65,56 +68,6 @@ function tenantIdOf(req: AuthenticatedRequest): string {
   if (!id)
     throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
   return id;
-}
-
-function readCookie(req: Request, name: string): string | undefined {
-  const header = req.headers.cookie;
-  if (!header) return undefined;
-  for (const part of header.split(";")) {
-    const idx = part.indexOf("=");
-    if (idx === -1) continue;
-    const key = part.slice(0, idx).trim();
-    if (key === name) return part.slice(idx + 1).trim();
-  }
-  return undefined;
-}
-
-function setRefreshCookie(res: Response, token: string): void {
-  res.cookie(REFRESH_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: REFRESH_COOKIE_PATH,
-    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
-  });
-}
-
-function setCsrfCookie(res: Response): string {
-  const token = randomBytes(24).toString("base64url");
-  res.cookie(CSRF_COOKIE, token, {
-    httpOnly: false,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
-  });
-  return token;
-}
-
-function requireCsrf(req: Request): void {
-  const cookieToken = readCookie(req, CSRF_COOKIE);
-  const headerToken = req.headers["x-csrf-token"];
-  if (
-    !cookieToken ||
-    typeof headerToken !== "string" ||
-    cookieToken !== headerToken
-  ) {
-    throw new HttpException("CSRF token mismatch", HttpStatus.FORBIDDEN);
-  }
-}
-
-function clearRefreshCookie(res: Response): void {
-  res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
 }
 
 function originAllowed(req: Request): boolean {
