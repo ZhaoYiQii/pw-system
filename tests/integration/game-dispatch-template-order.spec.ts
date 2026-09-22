@@ -686,6 +686,41 @@ describe("S4 新建派单：模板读取与创建", () => {
       .expect(400);
   });
 
+  it("请求体不符已发布契约时在 API 边界 400，并指明出错字段", async () => {
+    // 契约 tests/contract/game-dispatch-template-order-v2.spec.ts 已要求 5 个必填字段、
+    // 且只接受这些字段；边界校验必须与契约一致，非法值/缺字段都要在进入服务前被拒。
+    const badUuid = await request(app.getHttpServer())
+      .post("/api/v1/tenant/game-dispatch/template-orders")
+      .set({
+        authorization: `Bearer ${ownerToken}`,
+        "idempotency-key": `k-${suffix}-badbody`,
+      })
+      .send(orderBody({ gameId: "not-a-uuid" }))
+      .expect(400);
+    expect(
+      (badUuid.body as { fieldErrors?: Record<string, string[]> }).fieldErrors
+        ?.gameId,
+    ).toBeDefined();
+
+    const missingField = await request(app.getHttpServer())
+      .post("/api/v1/tenant/game-dispatch/template-orders")
+      .set({
+        authorization: `Bearer ${ownerToken}`,
+        "idempotency-key": `k-${suffix}-missingfield`,
+      })
+      .send({
+        gameId,
+        templateId: main.templateId,
+        templateVersionId: main.versionId,
+        values: {},
+      })
+      .expect(400);
+    expect(
+      (missingField.body as { fieldErrors?: Record<string, string[]> })
+        .fieldErrors?.customerProfileId,
+    ).toBeDefined();
+  });
+
   it("模板归档后拒绝创建，且客户端伪造人数或价格被拒 422", async () => {
     const template = await createPublishedTemplate(
       ownerToken,
