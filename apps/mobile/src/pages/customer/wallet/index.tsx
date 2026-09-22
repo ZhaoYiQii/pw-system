@@ -13,6 +13,11 @@ import {
   customerLogin,
   resolveTenantCode,
 } from "../../../features/customer-ui/session";
+import {
+  currentPayReadiness,
+  payWithWechat,
+} from "../../../features/wechat-pay/pay-flow";
+import { parseJsapiPayParams } from "../../../features/wechat-pay/wechat-pay";
 
 interface WalletEntry {
   id: string;
@@ -108,16 +113,38 @@ export default function WalletPage() {
     setBusy(true);
     setMsg(null);
     try {
-      const updated = await apiAdapter.request<WalletView>(
-        "/api/v1/boss/wallet/recharge",
-        { method: "POST", token, body: { amountFen } },
-      );
-      setWallet(updated);
-      setMsg({ tone: "success", text: "充值成功（本地模拟支付）。" });
+      // S4-6a：真实微信支付（JSAPI）。后端用**门店子商户号**下单，所以先下单拿调起参数。
+      const prepay = await apiAdapter.request<{
+        outTradeNo: string;
+        payParams: unknown;
+      }>("/api/v1/payments/wechatpay/prepay", {
+        method: "POST",
+        token,
+        body: { amountFen },
+      });
+      const params = parseJsapiPayParams(prepay.payParams);
+      const outcome = await payWithWechat(params);
+      if (outcome === "CANCELLED") {
+        setMsg({ tone: "error", text: "已取消支付。" });
+        return;
+      }
+      if (outcome === "FAILED") {
+        setMsg({ tone: "error", text: "支付未完成，请重试。" });
+        return;
+      }
+      // PAID：钱已付，但余额要等微信回调入账（S4-6b 结果页负责轮询）——这里刷新一次余额
+      await load(token);
+      setMsg({ tone: "success", text: "支付成功，余额已更新。" });
     } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      // 后端会把"门店没开通 / 客户没授权"讲清楚（409/503），直接透给用户
+      const readiness = currentPayReadiness({
+        payEnabled: !/503|未启用|尚未开通/.test(text),
+        payerBound: !/授权/.test(text),
+      });
       setMsg({
         tone: "error",
-        text: error instanceof Error ? error.message : String(error),
+        text: readiness.ready ? text : readiness.message,
       });
     } finally {
       setBusy(false);
