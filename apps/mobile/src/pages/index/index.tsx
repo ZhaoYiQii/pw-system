@@ -3,6 +3,11 @@ import Taro, { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { tenantLocator } from "@platform-locator";
 import { runtimeConfig } from "@platform-runtime-config";
+import {
+  completeWechatLogin,
+  readWechatCallback,
+  withoutWechatParams,
+} from "../../features/wechat-login";
 import type { ResolvedTenantInfo } from "../../platform/contracts/tenant-locator";
 import type { StorefrontInfo } from "../../platform/contracts/runtime-config";
 import "./index.css";
@@ -13,6 +18,7 @@ const FALLBACK_ACCENT = "#fa8c16";
 export default function Index() {
   const [info, setInfo] = useState<ResolvedTenantInfo | null>(null);
   const [storefront, setStorefront] = useState<StorefrontInfo | null>(null);
+  const [wechatError, setWechatError] = useState("");
 
   const load = async () => {
     setInfo(null);
@@ -25,8 +31,40 @@ export default function Index() {
     }
   };
 
+  /**
+   * S3d：微信授权回跳就落在这个页面（redirect_uri = H5 首页 ?wechat_login=1&code=..&state=..）。
+   * 换会话成功后把地址栏参数清掉，避免刷新时重放已消费的 code。
+   */
+  const boot = async () => {
+    const search = typeof location !== "undefined" ? location.search : "";
+    const callback = readWechatCallback(search);
+    if (callback) {
+      try {
+        const resolved = await tenantLocator.resolveTenant();
+        if (resolved.state !== "ok" || !resolved.tenant?.code) {
+          throw new Error("当前域名未绑定门店，无法完成微信登录");
+        }
+        const result = await completeWechatLogin(
+          resolved.tenant.code,
+          callback.code,
+          callback.state,
+        );
+        if (typeof history !== "undefined" && typeof location !== "undefined") {
+          history.replaceState(null, "", withoutWechatParams(location.href));
+        }
+        if (result.returnTo.startsWith("/pages/")) {
+          await Taro.redirectTo({ url: result.returnTo });
+          return;
+        }
+      } catch (error) {
+        setWechatError(error instanceof Error ? error.message : String(error));
+      }
+    }
+    await load();
+  };
+
   useLoad(() => {
-    void load();
+    void boot();
   });
 
   const primaryColor =
@@ -136,6 +174,21 @@ export default function Index() {
           <Text>门店加载失败，请检查网络后重试。</Text>
           <Button className="retry-btn" onClick={() => void load()}>
             重试
+          </Button>
+        </View>
+      ) : null}
+
+      {wechatError ? (
+        <View className="portal-unavailable">
+          <Text>微信登录失败：{wechatError}</Text>
+          <Button
+            className="retry-btn"
+            onClick={() => {
+              setWechatError("");
+              void load();
+            }}
+          >
+            返回门店首页
           </Button>
         </View>
       ) : null}

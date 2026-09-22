@@ -145,6 +145,8 @@ export function CustomerPhoneLoginCard({
   onCode,
   onSend,
   onLogin,
+  showWechatLogin = false,
+  onWechatLogin,
 }: {
   tenantCode: string;
   phone: string;
@@ -157,6 +159,9 @@ export function CustomerPhoneLoginCard({
   onCode: (value: string) => void;
   onSend: () => void;
   onLogin: () => void;
+  /** S3d：只用于按钮显隐（微信内置浏览器嗅探），不参与任何安全判断。 */
+  showWechatLogin?: boolean;
+  onWechatLogin?: () => void;
 }) {
   return (
     <View className="cu-card cu-login-card">
@@ -209,6 +214,14 @@ export function CustomerPhoneLoginCard({
       >
         {busy ? "正在登录…" : "登录老板端"}
       </Button>
+      {showWechatLogin && onWechatLogin ? (
+        <Button
+          className="cu-button cu-button-outline cu-button-full"
+          onClick={onWechatLogin}
+        >
+          微信一键登录
+        </Button>
+      ) : null}
       <Text className="cu-footnote">
         首次登录会自动创建本店老板账号与客户档案。
       </Text>

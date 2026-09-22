@@ -3,15 +3,7 @@ import type {
   TenantLocatorAdapter,
 } from "../contracts/tenant-locator";
 import { resolveLocatorParam } from "../../features/tenant-locator/locator";
-
-function apiBase(): string {
-  // H5 运行时无 Node `process`；仅在存在时读取，避免 ReferenceError。
-  const configured =
-    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
-  if (configured) return configured;
-  if (typeof location !== "undefined") return location.origin;
-  return "";
-}
+import { apiBase } from "./api-base";
 
 /** H5：按当前域名（已验证域名）调用公开解析接口（主规格 8.1 host 来源）。 */
 export const tenantLocator: TenantLocatorAdapter = {

@@ -1,12 +1,5 @@
 import type { ApiAdapter, ApiInit } from "../contracts/api-transport";
-
-function apiBase(): string {
-  const configured =
-    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
-  if (configured) return configured;
-  if (typeof location !== "undefined") return location.origin;
-  return "";
-}
+import { apiBase } from "./api-base";
 
 /** H5 API 传输：Bearer + JSON + 同源 cookie；401 抛可辨识错误由页面登出。 */
 export const apiAdapter: ApiAdapter = {

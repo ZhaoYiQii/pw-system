@@ -1,13 +1,6 @@
 import type { IdentityAdapter, IdentitySession } from "../contracts/identity";
 import { session } from "./session-store";
-
-function apiBase(): string {
-  const configured =
-    typeof process !== "undefined" ? process.env?.TARO_APP_API_BASE : undefined;
-  if (configured) return configured;
-  if (typeof location !== "undefined") return location.origin;
-  return "";
-}
+import { apiBase } from "./api-base";
 
 /** H5 账号登录适配（HttpOnly refresh cookie + CSRF 双提交，主规格 16.1）。 */
 export const identityAdapter: IdentityAdapter = {

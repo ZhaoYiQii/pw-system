@@ -15,6 +15,10 @@ import {
   resolveTenantCode,
   sendPhoneCode,
 } from "../../../features/customer-ui/session";
+import {
+  isWechatBrowser,
+  startWechatAuthorize,
+} from "../../../features/wechat-login";
 
 interface CustomerMe {
   id: string;
@@ -129,6 +133,14 @@ export default function CustomerHomePage() {
             onCode={setCode}
             onSend={() => void sendCode()}
             onLogin={() => void login()}
+            showWechatLogin={isWechatBrowser(
+              typeof navigator !== "undefined"
+                ? navigator.userAgent
+                : undefined,
+            )}
+            onWechatLogin={() =>
+              startWechatAuthorize(tenantCode, "/pages/customer/home/index")
+            }
           />
         </>
       ) : null}
