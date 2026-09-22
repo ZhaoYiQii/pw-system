@@ -1,9 +1,11 @@
 import {
+  constants,
   createCipheriv,
   createDecipheriv,
   createHash,
   createSign,
   createVerify,
+  publicEncrypt,
   randomBytes,
 } from "node:crypto";
 
@@ -52,6 +54,9 @@ export interface WechatPayPartnerConfig {
   notifyUrl: string;
   apiBase: string;
   verifiers: WechatPayVerifier[];
+  // S4-5：微信支付公钥（上送敏感字段加密用，官方 4013059044）。与 verifiers 里那份是同一把公钥，
+  // 单独拎出来是因为它还有"取公钥 ID 填 Wechatpay-Serial"的用途；未配置时提交进件会明确失败。
+  publicKey?: { publicKeyId: string; publicKeyPem: string } | null;
 }
 
 /** 缺任一必需变量 → **启动期**报错并点名（沿用 S1a/S2/S3 的 fail-closed 口径）。 */
@@ -81,11 +86,12 @@ export function loadWechatPayPartnerConfig(input: {
       publicKeyPem: input.readFile(env.WXPAY_PLATFORM_CERT_PATH),
     });
   }
+  let publicKey: { publicKeyId: string; publicKeyPem: string } | null = null;
   if (env.WXPAY_PUBLIC_KEY_PATH && env.WXPAY_PUBLIC_KEY_ID) {
-    verifiers.push({
-      serialNo: env.WXPAY_PUBLIC_KEY_ID,
-      publicKeyPem: input.readFile(env.WXPAY_PUBLIC_KEY_PATH),
-    });
+    const publicKeyPem = input.readFile(env.WXPAY_PUBLIC_KEY_PATH);
+    verifiers.push({ serialNo: env.WXPAY_PUBLIC_KEY_ID, publicKeyPem });
+    // S4-5：同一份微信支付公钥还用于上送敏感字段加密（官方 4013059044）
+    publicKey = { publicKeyId: env.WXPAY_PUBLIC_KEY_ID, publicKeyPem };
   }
   return {
     spMchid: env.WXPAY_SP_MCHID as string,
@@ -96,6 +102,7 @@ export function loadWechatPayPartnerConfig(input: {
     notifyUrl: env.WXPAY_NOTIFY_URL as string,
     apiBase: env.WXPAY_API_BASE ?? DEFAULT_API_BASE,
     verifiers,
+    publicKey,
   };
 }
 
@@ -480,6 +487,50 @@ export class WechatPayPartnerClient {
   }
 
   /**
+   * 提交进件申请单（官方 partner/4012719997）。
+   *
+   * 两个环节是官方硬要求，一个都不能省：
+   * 1. 15 个敏感字段必须先用**微信支付公钥**做 RSA-OAEP 加密（官方 4013059044），否则微信直接拒；
+   * 2. 请求头必须带 `Wechatpay-Serial: <微信支付公钥 ID>`，微信靠它挑私钥解密。
+   *
+   * `business_code` 由调用方给（服务商自定义、同服务商下唯一；被驳回后用**同一编号**重提即覆盖原申请单）。
+   * 没配公钥时**直接抛错**，绝不把法人证件/银行账号明文发出去。
+   */
+  async submitApplyment(
+    payload: Record<string, unknown>,
+  ): Promise<{ applymentId: number; businessCode: string }> {
+    const key = this.config.publicKey ?? null;
+    if (!key) {
+      throw new WechatPayError(
+        "MISSING_PUBLIC_KEY",
+        0,
+        "未配置微信支付公钥（WXPAY_PUBLIC_KEY_ID + WXPAY_PUBLIC_KEY_PATH），拒绝明文上送进件资料",
+      );
+    }
+    const businessCode =
+      typeof payload.business_code === "string" ? payload.business_code : "";
+    const body = JSON.stringify(
+      encryptSensitiveFields(payload, (plaintext) =>
+        rsaEncryptOaep(key.publicKeyPem, plaintext),
+      ),
+    );
+    const response = (await this.request(
+      "POST",
+      "/v3/applyment4sub/applyment/",
+      body,
+      { "Wechatpay-Serial": key.publicKeyId },
+    )) as { applyment_id?: number };
+    if (typeof response.applyment_id !== "number") {
+      throw new WechatPayError(
+        "EmptyResponse",
+        200,
+        "提交进件应答缺少 applyment_id",
+      );
+    }
+    return { applymentId: response.applyment_id, businessCode };
+  }
+
+  /**
    * 前端调起支付参数。签名串为 `appId\ntimeStamp\nnonceStr\npackage\n`（官方「JSAPI调起支付」）。
    * 注意 `appId` 必须与下单时的 `sp_appid`、实际调起的公众号一致。
    */
@@ -561,6 +612,7 @@ export class WechatPayPartnerClient {
     method: "GET" | "POST",
     urlPath: string,
     body: string,
+    extraHeaders: Record<string, string> = {},
   ): Promise<unknown> {
     const timestamp = this.now();
     const nonce = randomBytes(16).toString("hex").toUpperCase();
@@ -583,6 +635,7 @@ export class WechatPayPartnerClient {
           "content-type": "application/json",
           authorization,
           "user-agent": "pw-saas/1.0",
+          ...extraHeaders,
         },
         body,
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -619,6 +672,78 @@ function safeJson(text: string): Record<string, unknown> | undefined {
   } catch {
     return undefined;
   }
+}
+
+// S4-5：敏感信息加密（官方「微信支付公钥加密敏感信息指引」partner/4013059044）。
+//
+// 官方原文要点：算法是 RSAES-OAEP（Node.js 用 RSA_PKCS1_OAEP_PADDING，与 Java 的
+// RSA/ECB/OAEPWithSHA-1AndMGF1Padding 等价），输出 Base64；请求头 Wechatpay-Serial
+// 要填微信支付公钥 ID。OAEP + SHA-1 + 2048 位密钥下明文上限 214 字节——
+// 超长会直接抛错，绝不静默截断或降级。
+export function rsaEncryptOaep(
+  publicKeyPem: string,
+  plaintext: string,
+): string {
+  return publicEncrypt(
+    { key: publicKeyPem, padding: constants.RSA_PKCS1_OAEP_PADDING },
+    Buffer.from(plaintext, "utf8"),
+  ).toString("base64");
+}
+
+// 官方标注"需要使用微信支付公钥加密"的全部字段路径（提交申请单 partner/4012719997 逐个字段标注，
+// 与加密指引 4013059044 一致）：15 条，含 UBO 数组里的证件字段与结算账户。
+export const SENSITIVE_FIELD_PATHS = [
+  "contact_info.contact_name",
+  "contact_info.contact_id_number",
+  "contact_info.mobile_phone",
+  "contact_info.contact_email",
+  "subject_info.identity_info.id_card_info.id_card_name",
+  "subject_info.identity_info.id_card_info.id_card_number",
+  "subject_info.identity_info.id_card_info.id_card_address",
+  "subject_info.identity_info.id_doc_info.id_doc_name",
+  "subject_info.identity_info.id_doc_info.id_doc_number",
+  "subject_info.identity_info.id_doc_info.id_doc_address",
+  "subject_info.ubo_info_list.ubo_id_doc_name",
+  "subject_info.ubo_info_list.ubo_id_doc_number",
+  "subject_info.ubo_info_list.ubo_id_doc_address",
+  "bank_account_info.account_name",
+  "bank_account_info.account_number",
+] as const;
+
+// 按路径清单就地加密敏感字段（返回新对象，不改入参）。
+// 规则：字段不存在或不是非空字符串就跳过（选填项没传，绝不自造字段）；数组逐元素处理。
+export function encryptSensitiveFields(
+  payload: Record<string, unknown>,
+  encrypt: (plaintext: string) => string,
+): Record<string, unknown> {
+  const clone = structuredClone(payload) as Record<string, unknown>;
+  for (const path of SENSITIVE_FIELD_PATHS) {
+    encryptAtPath(clone, path.split("."), encrypt);
+  }
+  return clone;
+}
+
+function encryptAtPath(
+  node: unknown,
+  segments: string[],
+  encrypt: (plaintext: string) => string,
+): void {
+  if (node === null || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) encryptAtPath(item, segments, encrypt);
+    return;
+  }
+  const [head, ...rest] = segments;
+  if (!head) return;
+  const holder = node as Record<string, unknown>;
+  const value = holder[head];
+  if (rest.length === 0) {
+    if (typeof value === "string" && value.length > 0) {
+      holder[head] = encrypt(value);
+    }
+    return;
+  }
+  encryptAtPath(value, rest, encrypt);
 }
 
 /** 账单文件完整性：官方 hash_type 固定 SHA1，下载后应按此比对。 */
