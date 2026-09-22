@@ -30,18 +30,18 @@ model Tenant {
   updatedAt DateTime     @updatedAt @map("updated_at")
   version   Int          @default(1)
 
-  domains      TenantDomain[]
-  appBindings  TenantAppBinding[]
-  accounts      TenantAccount[]
-  accountRoles  TenantAccountRole[]
-  phoneVerificationCodes PhoneVerificationCode[]
-  playerApplications PlayerApplication[]
-  configVersions TenantConfigVersion[]
-  entitlements   TenantEntitlement[]
-  wechatLoginStates  WechatLoginState[]
-  paymentAccount     TenantPaymentAccount?
-  paymentRefunds     PaymentRefund[]
-  reconciliationStatements ReconciliationStatement[]
+  domains                   TenantDomain[]
+  appBindings               TenantAppBinding[]
+  accounts                  TenantAccount[]
+  accountRoles              TenantAccountRole[]
+  phoneVerificationCodes    PhoneVerificationCode[]
+  playerApplications        PlayerApplication[]
+  configVersions            TenantConfigVersion[]
+  entitlements              TenantEntitlement[]
+  wechatLoginStates         WechatLoginState[]
+  paymentAccount            TenantPaymentAccount?
+  paymentRefunds            PaymentRefund[]
+  reconciliationStatements  ReconciliationStatement[]
   reconciliationDifferences ReconciliationDifference[]
 
   @@map("tenants")
@@ -133,17 +133,17 @@ enum PlatformGrantStatus {
 /// 平台跨租户临时授权（P-B2b）：仅向平台运营开放指定门店的限时只读访问。
 /// 平台级表，不启用租户 RLS；每次创建/撤销均写 platform_audit_events。
 model PlatformAccessGrant {
-  id                         String               @id @default(uuid()) @db.Uuid
-  grantorPlatformAccountId   String               @map("grantor_platform_account_id") @db.Uuid
-  granteePlatformAccountId   String               @map("grantee_platform_account_id") @db.Uuid
-  tenantId                   String               @map("tenant_id") @db.Uuid
-  reason                     String
-  scope                      String               @default("read")
-  status                     PlatformGrantStatus  @default(ACTIVE)
-  expiresAt                  DateTime             @map("expires_at")
-  revokedAt                  DateTime?            @map("revoked_at")
-  revokedBy                  String?              @map("revoked_by") @db.Uuid
-  createdAt                  DateTime             @default(now()) @map("created_at")
+  id                       String              @id @default(uuid()) @db.Uuid
+  grantorPlatformAccountId String              @map("grantor_platform_account_id") @db.Uuid
+  granteePlatformAccountId String              @map("grantee_platform_account_id") @db.Uuid
+  tenantId                 String              @map("tenant_id") @db.Uuid
+  reason                   String
+  scope                    String              @default("read")
+  status                   PlatformGrantStatus @default(ACTIVE)
+  expiresAt                DateTime            @map("expires_at")
+  revokedAt                DateTime?           @map("revoked_at")
+  revokedBy                String?             @map("revoked_by") @db.Uuid
+  createdAt                DateTime            @default(now()) @map("created_at")
 
   @@index([granteePlatformAccountId, status])
   @@index([tenantId, status])
@@ -166,7 +166,7 @@ model TenantAccount {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   version      Int           @default(1)
 
-  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   roles  TenantAccountRole[]
 
   @@unique([tenantId, username])
@@ -178,16 +178,16 @@ model TenantAccount {
 
 /// 手机号短信验证码（P-1）。租户级资源，启用 RLS；只保存哈希与尾号。
 model PhoneVerificationCode {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  phoneHash String   @map("phone_hash")
-  phoneTail String   @map("phone_tail")
-  scene     String   @default("register_login")
-  codeHash  String   @map("code_hash")
-  attempts  Int      @default(0)
-  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  phoneHash  String    @map("phone_hash")
+  phoneTail  String    @map("phone_tail")
+  scene      String    @default("register_login")
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
   consumedAt DateTime? @map("consumed_at") @db.Timestamptz
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -235,14 +235,14 @@ model PlayerApplication {
 
 /// 门店账号-角色。租户级资源，启用 RLS。
 model TenantAccountRole {
-  id              String       @id @default(uuid()) @db.Uuid
-  tenantId        String       @map("tenant_id") @db.Uuid
-  tenantAccountId String       @map("tenant_account_id") @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  tenantAccountId String   @map("tenant_account_id") @db.Uuid
   role            RoleKey
-  createdAt       DateTime     @default(now()) @map("created_at")
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  tenantAccount TenantAccount  @relation(fields: [tenantAccountId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenantAccount TenantAccount @relation(fields: [tenantAccountId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, tenantAccountId, role])
   @@index([tenantAccountId])
@@ -275,13 +275,13 @@ enum ConfigVersionStatus {
 
 /// 门店配置版本（tenant-config v1，JSON 由 @pw/config-schema 校验）。租户级 RLS。
 model TenantConfigVersion {
-  id        String               @id @default(uuid()) @db.Uuid
-  tenantId  String               @map("tenant_id") @db.Uuid
+  id        String              @id @default(uuid()) @db.Uuid
+  tenantId  String              @map("tenant_id") @db.Uuid
   version   Int
   config    Json
-  status    ConfigVersionStatus  @default(ACTIVE)
-  createdBy String?              @map("created_by") @db.Uuid
-  createdAt DateTime             @default(now()) @map("created_at")
+  status    ConfigVersionStatus @default(ACTIVE)
+  createdBy String?             @map("created_by") @db.Uuid
+  createdAt DateTime            @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -322,13 +322,13 @@ model CustomerProfile {
   tenantId        String       @map("tenant_id") @db.Uuid
   tenantAccountId String?      @map("tenant_account_id") @db.Uuid
   name            String
-  mobileEnc  String? @map("mobile_enc")
-  mobileHash String? @map("mobile_hash")
-  remark    String?
-  status    ActiveStatus @default(ACTIVE)
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
-  version   Int          @default(1)
+  mobileEnc       String?      @map("mobile_enc")
+  mobileHash      String?      @map("mobile_hash")
+  remark          String?
+  status          ActiveStatus @default(ACTIVE)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  version         Int          @default(1)
 
   @@unique([tenantId, mobileHash])
   @@unique([tenantId, tenantAccountId])
@@ -337,19 +337,19 @@ model CustomerProfile {
 }
 
 model PlayerProfile {
-  id              String       @id @default(uuid()) @db.Uuid
-  tenantId        String       @map("tenant_id") @db.Uuid
-  tenantAccountId String?      @map("tenant_account_id") @db.Uuid
-  name            String
-  mobileEnc       String?  @map("mobile_enc")
-  mobileHash      String?  @map("mobile_hash")
-  intro           String?
-  status          ActiveStatus @default(ACTIVE)
-  acceptingOrders Boolean      @default(true) @map("accepting_orders")
-  basePricePerHourFen BigInt   @default(0) @map("base_price_per_hour_fen") @db.BigInt
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
-  version         Int          @default(1)
+  id                  String       @id @default(uuid()) @db.Uuid
+  tenantId            String       @map("tenant_id") @db.Uuid
+  tenantAccountId     String?      @map("tenant_account_id") @db.Uuid
+  name                String
+  mobileEnc           String?      @map("mobile_enc")
+  mobileHash          String?      @map("mobile_hash")
+  intro               String?
+  status              ActiveStatus @default(ACTIVE)
+  acceptingOrders     Boolean      @default(true) @map("accepting_orders")
+  basePricePerHourFen BigInt       @default(0) @map("base_price_per_hour_fen") @db.BigInt
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  version             Int          @default(1)
 
   @@unique([tenantId, mobileHash])
   @@unique([tenantId, tenantAccountId])
@@ -358,13 +358,13 @@ model PlayerProfile {
 }
 
 model Game {
-  id        String       @id @default(uuid()) @db.Uuid
-  tenantId  String       @map("tenant_id") @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
   name      String
-  enabled   Boolean      @default(true)
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
-  version   Int          @default(1)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
 
   @@unique([tenantId, name])
   @@unique([tenantId, id], map: "games_tenant_id_id_key")
@@ -388,16 +388,16 @@ model GameRegion {
 }
 
 model ServiceProduct {
-  id            String       @id @default(uuid()) @db.Uuid
-  tenantId      String       @map("tenant_id") @db.Uuid
-  gameId        String       @map("game_id") @db.Uuid
-  gameRegionId  String?      @map("game_region_id") @db.Uuid
-  name          String
-  description   String?
-  enabled       Boolean      @default(true)
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
-  version       Int          @default(1)
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  gameId       String   @map("game_id") @db.Uuid
+  gameRegionId String?  @map("game_region_id") @db.Uuid
+  name         String
+  description  String?
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  version      Int      @default(1)
 
   @@unique([tenantId, gameId, name])
   @@index([tenantId, gameId])
@@ -406,16 +406,16 @@ model ServiceProduct {
 }
 
 model PricingRule {
-  id                String    @id @default(uuid()) @db.Uuid
-  tenantId          String    @map("tenant_id") @db.Uuid
-  serviceProductId  String    @map("service_product_id") @db.Uuid
-  durationSeconds   Int       @map("duration_seconds")
-  priceFen          BigInt    @map("price_fen") @db.BigInt
-  playerCostFen     BigInt    @default(0) @map("player_cost_fen") @db.BigInt
-  enabled           Boolean   @default(true)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  version           Int       @default(1)
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  serviceProductId String   @map("service_product_id") @db.Uuid
+  durationSeconds  Int      @map("duration_seconds")
+  priceFen         BigInt   @map("price_fen") @db.BigInt
+  playerCostFen    BigInt   @default(0) @map("player_cost_fen") @db.BigInt
+  enabled          Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  version          Int      @default(1)
 
   @@unique([tenantId, serviceProductId, durationSeconds])
   @@index([tenantId, serviceProductId])
@@ -472,17 +472,17 @@ enum OrderStatus {
 }
 
 model Order {
-  id                 String      @id @default(uuid()) @db.Uuid
-  tenantId           String      @map("tenant_id") @db.Uuid
-  orderNo            String      @map("order_no")
-  customerProfileId  String      @map("customer_profile_id") @db.Uuid
-  scheduledStartAt   DateTime?   @map("scheduled_start_at") @db.Timestamptz
-  status             OrderStatus @default(DRAFT)
-  processType        String      @default("CLASSIC") @map("process_type")
-  remark             String?
-  version            Int         @default(1)
-  createdAt          DateTime    @default(now()) @map("created_at")
-  updatedAt          DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(uuid()) @db.Uuid
+  tenantId          String      @map("tenant_id") @db.Uuid
+  orderNo           String      @map("order_no")
+  customerProfileId String      @map("customer_profile_id") @db.Uuid
+  scheduledStartAt  DateTime?   @map("scheduled_start_at") @db.Timestamptz
+  status            OrderStatus @default(DRAFT)
+  processType       String      @default("CLASSIC") @map("process_type")
+  remark            String?
+  version           Int         @default(1)
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
   @@unique([tenantId, orderNo])
   @@index([tenantId, status, createdAt])
@@ -491,21 +491,21 @@ model Order {
 }
 
 model OrderRequirement {
-  id               String   @id @default(uuid()) @db.Uuid
-  tenantId         String   @map("tenant_id") @db.Uuid
-  orderId          String   @map("order_id") @db.Uuid
-  gameId           String?  @map("game_id") @db.Uuid
-  serviceProductId String?  @map("service_product_id") @db.Uuid
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  orderId          String    @map("order_id") @db.Uuid
+  gameId           String?   @map("game_id") @db.Uuid
+  serviceProductId String?   @map("service_product_id") @db.Uuid
   gender           String?
   description      String
   desiredStartAt   DateTime? @map("desired_start_at") @db.Timestamptz
-  durationSeconds  Int?     @map("duration_seconds")
-  minBudgetFen     BigInt?  @map("min_budget_fen") @db.BigInt
-  maxBudgetFen     BigInt?  @map("max_budget_fen") @db.BigInt
+  durationSeconds  Int?      @map("duration_seconds")
+  minBudgetFen     BigInt?   @map("min_budget_fen") @db.BigInt
+  maxBudgetFen     BigInt?   @map("max_budget_fen") @db.BigInt
   note             String?
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  version          Int      @default(1)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
 
   @@unique([tenantId, orderId])
   @@index([tenantId, orderId])
@@ -553,18 +553,18 @@ model OrderEvent {
 
 /// Outbox：业务事务内写入，Worker 提交后消费（幂等按 eventId/aggregateId）。
 model OutboxEvent {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenantId      String?  @map("tenant_id") @db.Uuid
-  aggregateType String   @map("aggregate_type")
-  aggregateId   String   @map("aggregate_id")
-  eventType     String   @map("event_type")
-  payload       Json     @default("{}")
-  status        String   @default("PENDING")
-  availableAt   DateTime @default(now()) @map("available_at")
-  attempts      Int      @default(0)
-  lastError     String?  @map("last_error")
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String?   @map("tenant_id") @db.Uuid
+  aggregateType String    @map("aggregate_type")
+  aggregateId   String    @map("aggregate_id")
+  eventType     String    @map("event_type")
+  payload       Json      @default("{}")
+  status        String    @default("PENDING")
+  availableAt   DateTime  @default(now()) @map("available_at")
+  attempts      Int       @default(0)
+  lastError     String?   @map("last_error")
   processedAt   DateTime? @map("processed_at") @db.Timestamptz
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   @@index([status, availableAt])
   @@map("outbox_events")
@@ -572,14 +572,14 @@ model OutboxEvent {
 
 /// 幂等记录：写接口重复提交返回同一业务结果。
 model IdempotencyRecord {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenantId      String   @map("tenant_id") @db.Uuid
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
   idempotencyKey String   @map("idempotency_key")
-  operation     String
-  entityType    String?  @map("entity_type")
-  entityId      String?  @map("entity_id")
-  responseJson  Json?    @map("response_json")
-  createdAt     DateTime @default(now()) @map("created_at")
+  operation      String
+  entityType     String?  @map("entity_type")
+  entityId       String?  @map("entity_id")
+  responseJson   Json?    @map("response_json")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@unique([tenantId, idempotencyKey, operation])
   @@index([tenantId, entityType, entityId])
@@ -604,15 +604,15 @@ enum PublicationStatus {
 }
 
 model DispatchPublication {
-  id          String             @id @default(uuid()) @db.Uuid
-  tenantId    String             @map("tenant_id") @db.Uuid
-  orderId     String             @map("order_id") @db.Uuid
-  status      PublicationStatus  @default(OPEN)
-  publishedAt DateTime           @default(now()) @map("published_at")
-  closedAt    DateTime?          @map("closed_at") @db.Timestamptz
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  version     Int                @default(1)
+  id          String            @id @default(uuid()) @db.Uuid
+  tenantId    String            @map("tenant_id") @db.Uuid
+  orderId     String            @map("order_id") @db.Uuid
+  status      PublicationStatus @default(OPEN)
+  publishedAt DateTime          @default(now()) @map("published_at")
+  closedAt    DateTime?         @map("closed_at") @db.Timestamptz
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  version     Int               @default(1)
 
   @@unique([tenantId, orderId])
   @@index([tenantId, status, publishedAt])
@@ -671,19 +671,19 @@ enum AdjustmentStatus {
 }
 
 model ServiceSession {
-  id                 String        @id @default(uuid()) @db.Uuid
-  tenantId           String        @map("tenant_id") @db.Uuid
-  orderId            String        @map("order_id") @db.Uuid
-  playerId           String        @map("player_id") @db.Uuid
-  assignmentId       String?       @map("assignment_id") @db.Uuid
-  scheduledStartAt   DateTime?     @map("scheduled_start_at") @db.Timestamptz
-  startedAt          DateTime?     @map("started_at") @db.Timestamptz
-  endedAt            DateTime?     @map("ended_at") @db.Timestamptz
-  durationSeconds    Int?          @map("duration_seconds")
-  status             SessionStatus @default(SCHEDULED)
-  version            Int           @default(1)
-  createdAt          DateTime      @default(now()) @map("created_at")
-  updatedAt          DateTime      @updatedAt @map("updated_at")
+  id               String        @id @default(uuid()) @db.Uuid
+  tenantId         String        @map("tenant_id") @db.Uuid
+  orderId          String        @map("order_id") @db.Uuid
+  playerId         String        @map("player_id") @db.Uuid
+  assignmentId     String?       @map("assignment_id") @db.Uuid
+  scheduledStartAt DateTime?     @map("scheduled_start_at") @db.Timestamptz
+  startedAt        DateTime?     @map("started_at") @db.Timestamptz
+  endedAt          DateTime?     @map("ended_at") @db.Timestamptz
+  durationSeconds  Int?          @map("duration_seconds")
+  status           SessionStatus @default(SCHEDULED)
+  version          Int           @default(1)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   @@unique([tenantId, orderId])
   @@index([tenantId, playerId, status])
@@ -707,18 +707,18 @@ model SessionEvent {
 }
 
 model SessionAdjustment {
-  id                        String           @id @default(uuid()) @db.Uuid
-  tenantId                  String           @map("tenant_id") @db.Uuid
-  sessionId                 String           @map("session_id") @db.Uuid
-  originalDurationSeconds   Int              @map("original_duration_seconds")
-  requestedDurationSeconds  Int              @map("requested_duration_seconds")
-  reason                    String
-  status                    AdjustmentStatus @default(PENDING)
-  requestedBy               String?          @map("requested_by") @db.Uuid
-  reviewedBy                String?          @map("reviewed_by") @db.Uuid
-  reviewComment             String?          @map("review_comment")
-  createdAt                 DateTime         @default(now()) @map("created_at")
-  updatedAt                 DateTime         @updatedAt @map("updated_at")
+  id                       String           @id @default(uuid()) @db.Uuid
+  tenantId                 String           @map("tenant_id") @db.Uuid
+  sessionId                String           @map("session_id") @db.Uuid
+  originalDurationSeconds  Int              @map("original_duration_seconds")
+  requestedDurationSeconds Int              @map("requested_duration_seconds")
+  reason                   String
+  status                   AdjustmentStatus @default(PENDING)
+  requestedBy              String?          @map("requested_by") @db.Uuid
+  reviewedBy               String?          @map("reviewed_by") @db.Uuid
+  reviewComment            String?          @map("review_comment")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
 
   @@index([tenantId, sessionId, status])
   @@map("session_adjustments")
@@ -808,15 +808,15 @@ model LedgerEntry {
 
 /// 陪玩应收：每订单一条；进入批次后状态流转。
 model Earning {
-  id          String        @id @default(uuid()) @db.Uuid
-  tenantId    String        @map("tenant_id") @db.Uuid
-  playerId    String        @map("player_id") @db.Uuid
-  orderId     String        @map("order_id") @db.Uuid
-  amountFen   BigInt        @map("amount_fen") @db.BigInt
-  status      EarningStatus @default(PENDING)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-  version     Int           @default(1)
+  id        String        @id @default(uuid()) @db.Uuid
+  tenantId  String        @map("tenant_id") @db.Uuid
+  playerId  String        @map("player_id") @db.Uuid
+  orderId   String        @map("order_id") @db.Uuid
+  amountFen BigInt        @map("amount_fen") @db.BigInt
+  status    EarningStatus @default(PENDING)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  version   Int           @default(1)
 
   @@unique([tenantId, orderId])
   @@index([tenantId, playerId, status])
@@ -824,19 +824,19 @@ model Earning {
 }
 
 model SettlementBatch {
-  id            String      @id @default(uuid()) @db.Uuid
-  tenantId      String      @map("tenant_id") @db.Uuid
-  batchNo       String      @map("batch_no")
-  status        BatchStatus @default(DRAFT)
-  totalAmountFen BigInt     @map("total_amount_fen") @db.BigInt
-  createdBy     String?     @map("created_by") @db.Uuid
-  reviewedBy    String?     @map("reviewed_by") @db.Uuid
-  approvedBy    String?     @map("approved_by") @db.Uuid
-  paidBy        String?     @map("paid_by") @db.Uuid
-  remark        String?
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
-  version       Int         @default(1)
+  id             String      @id @default(uuid()) @db.Uuid
+  tenantId       String      @map("tenant_id") @db.Uuid
+  batchNo        String      @map("batch_no")
+  status         BatchStatus @default(DRAFT)
+  totalAmountFen BigInt      @map("total_amount_fen") @db.BigInt
+  createdBy      String?     @map("created_by") @db.Uuid
+  reviewedBy     String?     @map("reviewed_by") @db.Uuid
+  approvedBy     String?     @map("approved_by") @db.Uuid
+  paidBy         String?     @map("paid_by") @db.Uuid
+  remark         String?
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  version        Int         @default(1)
 
   @@unique([tenantId, batchNo])
   @@index([tenantId, status, createdAt])
@@ -879,14 +879,14 @@ model ManualPaymentRecord {
 
 // ===== Slice 8：分成费率规则（可后台调整，bp=基点 1/10000）=====
 model FinanceRateRule {
-  id             String   @id @default(uuid()) @db.Uuid
-  tenantId       String   @unique @map("tenant_id") @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @unique @map("tenant_id") @db.Uuid
   /// ADR-0004（2026-09-21 批准）：本版平台费置 0，公式不变。
-  platformFeeBp  Int      @default(0) @map("platform_fee_bp")
-  storeCutBp     Int      @default(2000) @map("store_cut_bp")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  version        Int      @default(1)
+  platformFeeBp Int      @default(0) @map("platform_fee_bp")
+  storeCutBp    Int      @default(2000) @map("store_cut_bp")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  version       Int      @default(1)
 
   @@map("finance_rate_rules")
 }
@@ -900,20 +900,20 @@ enum DisputeStatus {
 }
 
 model Dispute {
-  id             String        @id @default(uuid()) @db.Uuid
-  tenantId       String        @map("tenant_id") @db.Uuid
-  orderId        String        @map("order_id") @db.Uuid
-  earningId      String?       @map("earning_id") @db.Uuid
-  playerId       String        @map("player_id") @db.Uuid
-  customerProfileId String     @map("customer_profile_id") @db.Uuid
-  reason         String
-  status         DisputeStatus @default(OPEN)
-  openedBy       String?       @map("opened_by") @db.Uuid
-  resolvedBy     String?       @map("resolved_by") @db.Uuid
-  resolution     String?
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  version        Int           @default(1)
+  id                String        @id @default(uuid()) @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
+  orderId           String        @map("order_id") @db.Uuid
+  earningId         String?       @map("earning_id") @db.Uuid
+  playerId          String        @map("player_id") @db.Uuid
+  customerProfileId String        @map("customer_profile_id") @db.Uuid
+  reason            String
+  status            DisputeStatus @default(OPEN)
+  openedBy          String?       @map("opened_by") @db.Uuid
+  resolvedBy        String?       @map("resolved_by") @db.Uuid
+  resolution        String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  version           Int           @default(1)
 
   @@index([tenantId, earningId, status])
   @@index([tenantId, orderId])
@@ -955,18 +955,18 @@ model NotificationDelivery {
   id            String    @id @default(uuid()) @db.Uuid
   tenantId      String?   @map("tenant_id") @db.Uuid
   outboxEventId String?   @unique @map("outbox_event_id") @db.Uuid
-  recipientType String?  @map("recipient_type")
-  recipientId  String?   @map("recipient_id")
-  channel      String
-  title        String?
-  content      String
-  readAt       DateTime?  @map("read_at") @db.Timestamptz
-  status       String    @default("PENDING")
-  attempts     Int       @default(0)
-  nextRetryAt  DateTime? @map("next_retry_at") @db.Timestamptz
-  lastError    String?   @map("last_error")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  recipientType String?   @map("recipient_type")
+  recipientId   String?   @map("recipient_id")
+  channel       String
+  title         String?
+  content       String
+  readAt        DateTime? @map("read_at") @db.Timestamptz
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextRetryAt   DateTime? @map("next_retry_at") @db.Timestamptz
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@index([status, nextRetryAt])
   @@map("notification_deliveries")
@@ -976,29 +976,29 @@ model NotificationDelivery {
 // ai_suggestions 结构化受限；生产无授权 provider 时 unavailable（不伪装）；可审计与人工采纳。
 
 model AiRun {
-  id           String   @id @default(uuid()) @db.Uuid
-  tenantId     String   @map("tenant_id") @db.Uuid
-  runType      String   @map("run_type")
-  provider     String   @default("deterministic")
-  modelVersion String   @map("model_version")
-  promptVersion String  @map("prompt_version")
-  status       String   @default("SUCCESS")
-  requestedBy  String?  @map("requested_by") @db.Uuid
-  createdAt    DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  runType       String   @map("run_type")
+  provider      String   @default("deterministic")
+  modelVersion  String   @map("model_version")
+  promptVersion String   @map("prompt_version")
+  status        String   @default("SUCCESS")
+  requestedBy   String?  @map("requested_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, createdAt])
   @@map("ai_runs")
 }
 
 model AiSuggestion {
-  id            String  @id @default(uuid()) @db.Uuid
-  tenantId      String  @map("tenant_id") @db.Uuid
-  runId         String  @map("run_id") @db.Uuid
-  suggestionType String @map("suggestion_type")
-  payload       Json
-  confidenceBp  Int     @map("confidence_bp")
-  status        String  @default("SUGGESTED")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  runId          String   @map("run_id") @db.Uuid
+  suggestionType String   @map("suggestion_type")
+  payload        Json
+  confidenceBp   Int      @map("confidence_bp")
+  status         String   @default("SUGGESTED")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, runId])
   @@map("ai_suggestions")
@@ -1006,15 +1006,15 @@ model AiSuggestion {
 
 // ===== Slice 11：SaaS 运营、套餐与门店开通（主规格 11.1/ADR-005）=====
 model TenantSubscription {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  packageCode String   @map("package_code")
-  status      String   @default("ACTIVE")
-  startsAt    DateTime @default(now()) @map("starts_at") @db.Timestamptz
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  packageCode String    @map("package_code")
+  status      String    @default("ACTIVE")
+  startsAt    DateTime  @default(now()) @map("starts_at") @db.Timestamptz
   endsAt      DateTime? @map("ends_at") @db.Timestamptz
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  version     Int      @default(1)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  version     Int       @default(1)
 
   @@index([tenantId, status])
   @@map("tenant_subscriptions")
@@ -1044,19 +1044,19 @@ enum GameDispatchTemplateSemanticRole {
 }
 
 model GameDispatchTemplate {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
+  id                     String                     @id @default(uuid()) @db.Uuid
+  tenantId               String                     @map("tenant_id") @db.Uuid
   gameId                 String?                    @map("game_id") @db.Uuid
-  name      String
+  name                   String
   normalizedName         String                     @default(dbgenerated("lower(regexp_replace(btrim(name), '\\s+', ' ', 'g'))")) @map("normalized_name")
   description            String?
   status                 GameDispatchTemplateStatus @default(DRAFT)
-  enabled   Boolean  @default(true)
+  enabled                Boolean                    @default(true)
   activeVersionId        String?                    @map("active_version_id") @db.Uuid
   revision               Int                        @default(1)
   isDefault              Boolean                    @default(false) @map("is_default")
   lastUsedAt             DateTime?                  @map("last_used_at")
-  copyLines Json     @map("copy_lines")
+  copyLines              Json                       @map("copy_lines")
   blockLabels            Json                       @default("{}") @map("block_labels")
   draftConfigJson        Json?                      @map("draft_config_json")
   draftSchemaVersion     Int?                       @map("draft_schema_version")
@@ -1065,9 +1065,9 @@ model GameDispatchTemplate {
   createdBy              String?                    @map("created_by") @db.Uuid
   updatedBy              String?                    @map("updated_by") @db.Uuid
   archivedAt             DateTime?                  @map("archived_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  version   Int      @default(1)
+  createdAt              DateTime                   @default(now()) @map("created_at")
+  updatedAt              DateTime                   @updatedAt @map("updated_at")
+  version                Int                        @default(1)
 
   @@unique([tenantId, id], map: "gd_templates_tenant_id_id_key")
   @@index([tenantId, enabled])
@@ -1077,24 +1077,24 @@ model GameDispatchTemplate {
 }
 
 model GameDispatchTemplateField {
-  id         String  @id @default(uuid()) @db.Uuid
-  tenantId   String  @map("tenant_id") @db.Uuid
-  templateId String  @map("template_id") @db.Uuid
+  id             String                           @id @default(uuid()) @db.Uuid
+  tenantId       String                           @map("tenant_id") @db.Uuid
+  templateId     String                           @map("template_id") @db.Uuid
   sectionId      String?                          @map("section_id") @db.Uuid
-  fieldKey   String  @map("field_key")
-  label      String
-  fieldType  String  @map("field_type")
+  fieldKey       String                           @map("field_key")
+  label          String
+  fieldType      String                           @map("field_type")
   semanticRole   GameDispatchTemplateSemanticRole @default(CUSTOM) @map("semantic_role")
-  required   Boolean @default(false)
-  options    Json    @default("[]")
-  placeholder String?
+  required       Boolean                          @default(false)
+  options        Json                             @default("[]")
+  placeholder    String?
   colSpan        Int                              @default(1) @map("col_span")
   rowBreakBefore Boolean                          @default(false) @map("row_break_before")
-  sortOrder  Int     @map("sort_order")
-  enabled    Boolean @default(true)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  version    Int     @default(1)
+  sortOrder      Int                              @map("sort_order")
+  enabled        Boolean                          @default(true)
+  createdAt      DateTime                         @default(now()) @map("created_at")
+  updatedAt      DateTime                         @updatedAt @map("updated_at")
+  version        Int                              @default(1)
 
   @@unique([tenantId, templateId, fieldKey])
   @@index([tenantId, templateId, sortOrder])
@@ -1156,15 +1156,15 @@ model GameDispatchPosition {
 }
 
 model GameDispatchRankRule {
-  id          String  @id @default(uuid()) @db.Uuid
-  tenantId    String  @map("tenant_id") @db.Uuid
-  templateId  String  @map("template_id") @db.Uuid
-  rankLabel   String  @map("rank_label")
-  addPriceFen BigInt  @map("add_price_fen") @db.BigInt
-  sortOrder   Int     @map("sort_order")
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  rankLabel   String   @map("rank_label")
+  addPriceFen BigInt   @map("add_price_fen") @db.BigInt
+  sortOrder   Int      @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  version     Int     @default(1)
+  version     Int      @default(1)
 
   @@unique([tenantId, templateId, rankLabel])
   @@index([tenantId, templateId, sortOrder])
@@ -1231,23 +1231,23 @@ model GamePricingRuleItem {
 }
 
 model GameDispatchTemplateSnapshot {
-  id           String   @id @default(uuid()) @db.Uuid
-  tenantId     String   @map("tenant_id") @db.Uuid
-  orderId      String   @map("order_id") @db.Uuid
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  orderId           String   @map("order_id") @db.Uuid
   gameId            String?  @map("game_id") @db.Uuid
-  templateId   String?  @map("template_id") @db.Uuid
+  templateId        String?  @map("template_id") @db.Uuid
   templateVersionId String?  @map("template_version_id") @db.Uuid
-  templateName String   @map("template_name")
-  fieldsJson   Json     @map("fields_json")
+  templateName      String   @map("template_name")
+  fieldsJson        Json     @map("fields_json")
   sectionsJson      Json     @default("[]") @map("sections_json")
-  positionsJson Json    @map("positions_json")
-  rankRulesJson Json    @map("rank_rules_json")
-  copyLinesJson Json    @map("copy_lines_json")
+  positionsJson     Json     @map("positions_json")
+  rankRulesJson     Json     @map("rank_rules_json")
+  copyLinesJson     Json     @map("copy_lines_json")
   configJson        Json?    @map("config_json")
   schemaVersion     Int?     @map("schema_version")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  version      Int      @default(1)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  version           Int      @default(1)
 
   @@unique([tenantId, orderId])
   @@index([tenantId, templateId])
@@ -1280,16 +1280,16 @@ model GameDispatchOrder {
 }
 
 model GameDispatchLine {
-  id                String   @id @default(uuid()) @db.Uuid
-  tenantId          String   @map("tenant_id") @db.Uuid
-  dispatchOrderId   String   @map("dispatch_order_id") @db.Uuid
-  orderId           String   @map("order_id") @db.Uuid
-  positionLabel     String   @map("position_label")
-  requiredCount     Int      @map("required_count")
-  sortOrder         Int      @map("sort_order")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  version           Int      @default(1)
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  dispatchOrderId String   @map("dispatch_order_id") @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  positionLabel   String   @map("position_label")
+  requiredCount   Int      @map("required_count")
+  sortOrder       Int      @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  version         Int      @default(1)
 
   @@unique([tenantId, dispatchOrderId, positionLabel])
   @@index([tenantId, orderId, sortOrder])
@@ -1315,18 +1315,18 @@ model GameDispatchRound {
 }
 
 model GameDispatchApplication {
-  id            String    @id @default(uuid()) @db.Uuid
-  tenantId      String    @map("tenant_id") @db.Uuid
-  roundId       String    @map("round_id") @db.Uuid
-  lineId        String    @map("line_id") @db.Uuid
-  orderId       String    @map("order_id") @db.Uuid
-  playerId      String    @map("player_id") @db.Uuid
-  positionLabel String    @map("position_label")
-  status        String    @default("APPLIED")
-  playerNote    String?   @map("player_note")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  version       Int       @default(1)
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  roundId       String   @map("round_id") @db.Uuid
+  lineId        String   @map("line_id") @db.Uuid
+  orderId       String   @map("order_id") @db.Uuid
+  playerId      String   @map("player_id") @db.Uuid
+  positionLabel String   @map("position_label")
+  status        String   @default("APPLIED")
+  playerNote    String?  @map("player_note")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  version       Int      @default(1)
 
   @@unique([tenantId, roundId, lineId, playerId])
   @@index([tenantId, orderId, lineId, status])
@@ -1336,20 +1336,20 @@ model GameDispatchApplication {
 }
 
 model OrderSlot {
-  id               String    @id @default(uuid()) @db.Uuid
-  tenantId         String    @map("tenant_id") @db.Uuid
-  orderId          String    @map("order_id") @db.Uuid
-  dispatchOrderId  String    @map("dispatch_order_id") @db.Uuid
-  lineId           String    @map("line_id") @db.Uuid
-  applicationId    String    @map("application_id") @db.Uuid
-  playerId         String    @map("player_id") @db.Uuid
-  positionLabel    String    @map("position_label")
-  unitPriceFen     BigInt    @map("unit_price_fen") @db.BigInt
-  status           String    @default("SELECTED")
-  createdBy        String?   @map("created_by") @db.Uuid
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  version          Int       @default(1)
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  dispatchOrderId String   @map("dispatch_order_id") @db.Uuid
+  lineId          String   @map("line_id") @db.Uuid
+  applicationId   String   @map("application_id") @db.Uuid
+  playerId        String   @map("player_id") @db.Uuid
+  positionLabel   String   @map("position_label")
+  unitPriceFen    BigInt   @map("unit_price_fen") @db.BigInt
+  status          String   @default("SELECTED")
+  createdBy       String?  @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  version         Int      @default(1)
 
   @@unique([tenantId, applicationId])
   @@unique([tenantId, orderId, playerId])
@@ -1425,20 +1425,33 @@ model PaymentOrder {
 
 /// S4：门店作为服务商模式下的子商户。租户级资源，启用 RLS（不 FORCE）。
 model TenantPaymentAccount {
-  id           String    @id @default(uuid()) @db.Uuid
-  tenantId     String    @unique @map("tenant_id") @db.Uuid
-  subMchid     String?   @map("sub_mchid")
-  subAppid     String?   @map("sub_appid")
-  applyNo      String?   @map("apply_no")
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @unique @map("tenant_id") @db.Uuid
+  subMchid         String?   @map("sub_mchid")
+  subAppid         String?   @map("sub_appid")
+  applyNo          String?   @map("apply_no")
+  /// S4-5：服务商自定义业务申请编号（数字/字母/下划线；驳回后用同一编号重提即覆盖原申请单）
+  businessCode     String?   @map("business_code")
   /// APPLYING | PENDING_CONFIRM | ACTIVE | SUSPENDED
-  status       String    @default("APPLYING")
-  lastSyncedAt DateTime? @map("last_synced_at") @db.Timestamptz
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  version      Int       @default(1)
+  status           String    @default("APPLYING")
+  /// S4-5：微信原始申请单状态 APPLYMENT_STATE_*（8 种）与状态描述，用于排障与显示
+  providerState    String?   @map("provider_state")
+  providerStateMsg String?   @map("provider_state_msg")
+  /// S4-5：开户意愿确认状态 AUTHORIZE_STATE_*（能不能收款的判据之一）
+  authorizeState   String?   @map("authorize_state")
+  /// S4-5：驳回原因详情（微信 audit_detail 原样留存）
+  rejectDetail     Json?     @map("reject_detail")
+  /// S4-5：超级管理员签约链接（老板扫码完成账户验证与签约）
+  signUrl          String?   @map("sign_url")
+  submittedAt      DateTime? @map("submitted_at") @db.Timestamptz
+  lastSyncedAt     DateTime? @map("last_synced_at") @db.Timestamptz
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  @@unique([businessCode])
   @@map("tenant_payment_accounts")
 }
 
@@ -1484,16 +1497,16 @@ model WebhookInbox {
 
 /// S4：对账账单文件。租户级资源，启用 RLS（不 FORCE）。
 model ReconciliationStatement {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  subMchid    String   @map("sub_mchid")
-  billType    String   @default("TRADE") @map("bill_type")
-  billDate    DateTime @map("bill_date") @db.Date
-  fileSha256  String   @map("file_sha256")
-  totalCount  Int      @default(0) @map("total_count")
-  totalFen    BigInt   @default(0) @map("total_fen") @db.BigInt
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  subMchid     String   @map("sub_mchid")
+  billType     String   @default("TRADE") @map("bill_type")
+  billDate     DateTime @map("bill_date") @db.Date
+  fileSha256   String   @map("file_sha256")
+  totalCount   Int      @default(0) @map("total_count")
+  totalFen     BigInt   @default(0) @map("total_fen") @db.BigInt
   downloadedAt DateTime @default(now()) @map("downloaded_at") @db.Timestamptz
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1520,14 +1533,14 @@ model ReconciliationDifference {
 }
 
 model SlotSession {
-  id               String    @id @default(uuid()) @db.Uuid
-  tenantId         String    @map("tenant_id") @db.Uuid
-  orderSlotId      String    @map("order_slot_id") @db.Uuid
-  orderId          String    @map("order_id") @db.Uuid
-  playerId         String    @map("player_id") @db.Uuid
-  startedAt        DateTime? @map("started_at") @db.Timestamptz
-  endedAt          DateTime? @map("ended_at") @db.Timestamptz
-  durationSeconds  Int?      @map("duration_seconds")
+  id                      String    @id @default(uuid()) @db.Uuid
+  tenantId                String    @map("tenant_id") @db.Uuid
+  orderSlotId             String    @map("order_slot_id") @db.Uuid
+  orderId                 String    @map("order_id") @db.Uuid
+  playerId                String    @map("player_id") @db.Uuid
+  startedAt               DateTime? @map("started_at") @db.Timestamptz
+  endedAt                 DateTime? @map("ended_at") @db.Timestamptz
+  durationSeconds         Int?      @map("duration_seconds")
   /// 算价模型 Task 3（设计规格 §3.3）：陪玩报单申报的总时长（分钟，15–1440）；null = 尚未报单。
   declaredDurationMinutes Int?      @map("declared_duration_minutes")
   /// 报单与客服审批留痕；审批修正时长时原始申报值同时写入 audit_logs。
@@ -1535,10 +1548,10 @@ model SlotSession {
   reportReviewedAt        DateTime? @map("report_reviewed_at") @db.Timestamptz
   reportReviewedBy        String?   @map("report_reviewed_by") @db.Uuid
   reportReviewNote        String?   @map("report_review_note")
-  status           String    @default("NOT_STARTED")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  version          Int       @default(1)
+  status                  String    @default("NOT_STARTED")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  version                 Int       @default(1)
 
   @@unique([tenantId, orderSlotId])
   @@index([tenantId, orderId])
@@ -1566,17 +1579,17 @@ model SlotEvidence {
 }
 
 model SlotEarning {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenantId      String   @map("tenant_id") @db.Uuid
-  orderSlotId   String   @map("order_slot_id") @db.Uuid
-  orderId       String   @map("order_id") @db.Uuid
-  playerId      String   @map("player_id") @db.Uuid
-  amountFen     BigInt   @map("amount_fen") @db.BigInt
-  status        String   @default("PENDING")
-  detailJson    Json     @default("{}") @map("detail_json")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  version       Int      @default(1)
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  orderSlotId String   @map("order_slot_id") @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  playerId    String   @map("player_id") @db.Uuid
+  amountFen   BigInt   @map("amount_fen") @db.BigInt
+  status      String   @default("PENDING")
+  detailJson  Json     @default("{}") @map("detail_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  version     Int      @default(1)
 
   @@unique([tenantId, orderSlotId])
   @@index([tenantId, orderId])

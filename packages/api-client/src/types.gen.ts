@@ -9739,3 +9739,36 @@ export type WechatPayRefundRegisterManualData = {
 export type WechatPayRefundRegisterManualResponses = {
     201: unknown;
 };
+
+export type TenantPaymentSetupGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/payments/account';
+};
+
+export type TenantPaymentSetupGetResponses = {
+    200: unknown;
+};
+
+export type TenantPaymentSetupBindData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/payments/account/bind';
+};
+
+export type TenantPaymentSetupBindResponses = {
+    201: unknown;
+};
+
+export type TenantPaymentSetupRefreshData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/payments/account/refresh';
+};
+
+export type TenantPaymentSetupRefreshResponses = {
+    201: unknown;
+};

@@ -69,3 +69,11 @@ export class RefundInsufficientBalanceError extends Error {
     this.name = "RefundInsufficientBalanceError";
   }
 }
+
+/** S4-5：门店支付设置入参问题（子商户号格式 / 还没有账户记录 / 缺申请单号）→ 400。 */
+export class PaymentSetupInputError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "PaymentSetupInputError";
+  }
+}

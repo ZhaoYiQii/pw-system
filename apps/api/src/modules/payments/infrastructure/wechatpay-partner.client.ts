@@ -250,6 +250,24 @@ export type FetchLike = (
   },
 ) => Promise<{ status: number; text(): Promise<string> }>;
 
+/** S4-5：进件申请单状态（官方 partner/4012697052）。 */
+export interface ApplymentStatus {
+  businessCode: string;
+  applymentId: number;
+  /** 只有「待签约 / 开通权限中 / 已完成」三种状态才返回。 */
+  subMchid: string | null;
+  /** 超级管理员签约链接：老板扫码完成账户验证与签约。 */
+  signUrl: string | null;
+  applymentState: string;
+  applymentStateMsg: string;
+  /** 仅被驳回时返回；微信的 snake_case 字段名在这里就转成驼峰，落库与出参同形。 */
+  auditDetail: Array<{
+    field: string | null;
+    fieldName: string | null;
+    rejectReason: string | null;
+  }>;
+}
+
 export interface JsapiPrepayInput {
   subMchid: string;
   spOpenid: string;
@@ -390,6 +408,75 @@ export class WechatPayPartnerClient {
       );
     }
     return text;
+  }
+
+  /**
+   * 查询进件申请单状态（官方 partner/4012697052，GET 无 body，但仍按 V3 规则签名）。
+   * 关键字段：`sub_mchid`（只有待签约/开通权限中/已完成才返回）、`sign_url`（超管签约链接）、
+   * `applyment_state`（8 种）、`audit_detail`（仅被驳回时返回驳回原因）。
+   */
+  async queryApplyment(applymentId: string | number): Promise<ApplymentStatus> {
+    const response = (await this.request(
+      "GET",
+      `/v3/applyment4sub/applyment/applyment_id/${encodeURIComponent(
+        String(applymentId),
+      )}`,
+      "",
+    )) as {
+      business_code?: string;
+      applyment_id?: number;
+      sub_mchid?: string;
+      sign_url?: string;
+      applyment_state?: string;
+      applyment_state_msg?: string;
+      audit_detail?: Array<{
+        field?: string;
+        field_name?: string;
+        reject_reason?: string;
+      }>;
+    };
+    if (!response.applyment_state) {
+      throw new WechatPayError(
+        "EmptyResponse",
+        200,
+        "进件查询应答缺少 applyment_state",
+      );
+    }
+    return {
+      businessCode: response.business_code ?? "",
+      applymentId: response.applyment_id ?? 0,
+      subMchid: response.sub_mchid ?? null,
+      signUrl: response.sign_url ?? null,
+      applymentState: response.applyment_state,
+      applymentStateMsg: response.applyment_state_msg ?? "",
+      auditDetail: (response.audit_detail ?? []).map((item) => ({
+        field: item.field ?? null,
+        fieldName: item.field_name ?? null,
+        rejectReason: item.reject_reason ?? null,
+      })),
+    };
+  }
+
+  /**
+   * 查询特约商户开户意愿确认状态（官方 partner/4012467549）。
+   * 只有 `AUTHORIZE_STATE_AUTHORIZED` 才算完成——官方原文：它是"商户正常使用支付、结算等功能的必要前提"。
+   */
+  async getAuthorizeState(subMchid: string): Promise<string> {
+    const response = (await this.request(
+      "GET",
+      `/v3/apply4subject/applyment/merchants/${encodeURIComponent(
+        subMchid,
+      )}/state`,
+      "",
+    )) as { authorize_state?: string };
+    if (!response.authorize_state) {
+      throw new WechatPayError(
+        "EmptyResponse",
+        200,
+        "开户意愿确认应答缺少 authorize_state",
+      );
+    }
+    return response.authorize_state;
   }
 
   /**

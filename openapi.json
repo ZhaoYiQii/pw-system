@@ -17468,6 +17468,48 @@
           "WechatPayRefund"
         ]
       }
+    },
+    "/api/v1/tenant/payments/account": {
+      "get": {
+        "operationId": "tenantPaymentSetup_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantPaymentSetup"
+        ]
+      }
+    },
+    "/api/v1/tenant/payments/account/bind": {
+      "post": {
+        "operationId": "tenantPaymentSetup_bind",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantPaymentSetup"
+        ]
+      }
+    },
+    "/api/v1/tenant/payments/account/refresh": {
+      "post": {
+        "operationId": "tenantPaymentSetup_refresh",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantPaymentSetup"
+        ]
+      }
     }
   },
   "info": {

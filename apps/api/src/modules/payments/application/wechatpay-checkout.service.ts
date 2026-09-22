@@ -4,6 +4,7 @@ import type {
   JsapiPayParams,
   WechatPayPartnerClient,
 } from "../infrastructure/wechatpay-partner.client.js";
+import { canAcceptPayment } from "../domain/payment-setup.js";
 import {
   PrepayInputError,
   TenantPaymentNotReadyError,
@@ -55,7 +56,8 @@ export class WechatPayCheckoutService {
     if (!payment?.subMchid) {
       throw new TenantPaymentNotReadyError("门店尚未完成微信支付进件");
     }
-    if (payment.status !== "ACTIVE") {
+    // 门禁判据与门店支付设置页共用同一个函数，避免"后台显示可收款、下单却拒绝"这类口径漂移
+    if (!canAcceptPayment(payment.subMchid, payment.status)) {
       throw new TenantPaymentNotReadyError(
         `门店微信支付未就绪（当前状态 ${payment.status}）`,
       );

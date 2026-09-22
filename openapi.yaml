@@ -4006,7 +4006,7 @@ paths:
                                       minLength: 1
                                       maxLength: 50
                                       description: 旧价格规则名称
-                                    priceDeltaFen: &a40
+                                    priceDeltaFen: &a41
                                       type: string
                                       pattern: ^(?:0|[1-9][0-9]*)$
                                       example: "1000"
@@ -12545,6 +12545,31 @@ paths:
           description: ""
       tags:
         - WechatPayRefund
+  /api/v1/tenant/payments/account:
+    get:
+      operationId: tenantPaymentSetup_get
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a40
+        - TenantPaymentSetup
+  /api/v1/tenant/payments/account/bind:
+    post:
+      operationId: tenantPaymentSetup_bind
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a40
+  /api/v1/tenant/payments/account/refresh:
+    post:
+      operationId: tenantPaymentSetup_refresh
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a40
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。
@@ -12665,7 +12690,7 @@ components:
         options:
           type: array
           maxItems: 100
-          items: &a41
+          items: &a42
             type: object
             required:
               - value
@@ -12680,7 +12705,7 @@ components:
                 minLength: 1
                 maxLength: 50
                 description: 选项名称
-              priceDeltaFen: *a40
+              priceDeltaFen: *a41
             description: 选择项（含可选加价）
           description: 选择项（选择类字段必须至少一个）
         aggregationPolicy:
@@ -12807,7 +12832,7 @@ components:
               options:
                 type: array
                 maxItems: 100
-                items: *a41
+                items: *a42
                 description: 单选列的选项
             description: 可重复表格列
           description: 表格列（最多 10 列）
