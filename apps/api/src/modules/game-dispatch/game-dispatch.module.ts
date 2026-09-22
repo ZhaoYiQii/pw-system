@@ -19,10 +19,12 @@ import { SlotSessionController } from "./interface/slot-session.controller.js";
 import { GameTemplateController } from "./interface/game-template.controller.js";
 import { GenericGameTemplateController } from "./interface/generic-game-template.controller.js";
 import { CustomerGameTemplateController } from "./interface/customer-game-template.controller.js";
+import { StorageModule } from "../../common/storage/storage.module.js";
 
 export const GAME_DISPATCH_DB_CLIENT = "GAME_DISPATCH_DB_CLIENT";
 
 @Module({
+  imports: [StorageModule],
   controllers: [
     GameTemplateController,
     GenericGameTemplateController,

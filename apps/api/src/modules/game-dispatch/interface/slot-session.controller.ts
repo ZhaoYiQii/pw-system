@@ -1,6 +1,4 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   BadRequestException,
   Controller,
@@ -16,6 +14,8 @@ import {
 } from "@nestjs/common";
 import type { Request } from "express";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
+import { STORAGE_PROVIDER } from "../../../common/storage/storage.module.js";
+import type { StorageProvider } from "../../../common/storage/storage-provider.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { GameDispatchService } from "../application/game-dispatch.service.js";
 import { mapGameDispatchError } from "./game-dispatch-error.mapper.js";
@@ -59,17 +59,13 @@ function detect(bytes: Buffer): { mime: string; ext: string } | null {
   return null;
 }
 
-function rootDir(): string {
-  return (
-    process.env.EVIDENCE_ROOT ?? path.join(process.cwd(), "data", "evidence")
-  );
-}
-
 @Controller("api/v1/tenant/game-dispatch")
 export class SlotSessionController {
   constructor(
     @Inject(GameDispatchService)
     private readonly dispatch: GameDispatchService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storage: StorageProvider,
   ) {}
 
   private tenantIdOf(req: AuthenticatedRequest): string {
@@ -220,26 +216,16 @@ export class SlotSessionController {
         "仅支持真实 JPEG/PNG/WebP 图片或 MP4/WebM 视频",
       );
     const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const key = path.join(
-      tenantId,
-      "slots",
-      slotId,
-      `${randomUUID()}${detected.ext}`,
-    );
-    const dir = path.join(rootDir(), path.dirname(key));
-    const full = path.join(rootDir(), key);
-    await mkdir(dir, { recursive: true });
-    await writeFile(full, bytes, { flag: "wx" }).catch(async (error) => {
-      await unlink(full).catch(() => undefined);
-      throw error;
-    });
+    // key 用正斜杠拼接（对象存储的 key 形态），不再依赖平台路径分隔符
+    const key = `${tenantId}/slots/${slotId}/${randomUUID()}${detected.ext}`;
+    await this.storage.put(key, bytes, { mimeType: detected.mime });
     try {
       const row = await this.dispatch.addSlotEvidence(
         tenantId,
         req.principal?.sub ?? "",
         slotId,
         {
-          objectKey: key.replace(/\\/g, "/"),
+          objectKey: key,
           originalName: String(fileNameHeader ?? "evidence").slice(0, 120),
           mimeType: detected.mime,
           sizeBytes: bytes.length,
@@ -257,7 +243,7 @@ export class SlotSessionController {
         },
       };
     } catch (error) {
-      await unlink(full).catch(() => undefined);
+      await this.storage.remove(key).catch(() => undefined);
       this.mapError(error);
     }
   }
