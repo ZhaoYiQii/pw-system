@@ -29,6 +29,7 @@ import { PlatformAccountsModule } from "./modules/platform-accounts/platform-acc
 import { GameDispatchModule } from "./modules/game-dispatch/game-dispatch.module.js";
 import { WalletModule } from "./modules/wallet/wallet.module.js";
 import { ReportingModule } from "./modules/reporting/reporting.module.js";
+import { PaymentsModule } from "./modules/payments/payments.module.js";
 import { PlayerApplicationsModule } from "./modules/player-applications/player-applications.module.js";
 
 @Module({
@@ -56,6 +57,7 @@ import { PlayerApplicationsModule } from "./modules/player-applications/player-a
     WalletModule,
     ReportingModule,
     PlayerApplicationsModule,
+    PaymentsModule,
   ],
   providers: [
     HealthService,
