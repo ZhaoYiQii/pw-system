@@ -426,23 +426,27 @@ export async function copyTemplate(
   }
 }
 
-async function runRevisionAction(
-  action: (args: {
-    path: { id: string };
-    body: { expectedRevision: number };
-    throwOnError: true;
-  }) => Promise<{ data: unknown }>,
+/** 版本类动作（setDefault / archive / unarchive）共用的入参与响应信封形状。 */
+interface RevisionActionOptions {
+  path: { id: string };
+  body: { expectedRevision: number };
+  throwOnError: true;
+}
+
+async function runRevisionAction<Result>(
+  action: (args: RevisionActionOptions) => Promise<{
+    data: { data: Result };
+  }>,
   id: string,
   expectedRevision: number,
-): Promise<unknown> {
+): Promise<Result> {
   try {
     const result = await action({
       path: { id },
       body: { expectedRevision },
       throwOnError: true,
     });
-    const body = result.data as { data: unknown };
-    return body.data;
+    return result.data.data;
   } catch (error) {
     throw toTemplateApiError(error);
   }
@@ -452,33 +456,33 @@ export async function setDefaultTemplate(
   id: string,
   expectedRevision: number,
 ): Promise<TemplateDefaultView> {
-  return (await runRevisionAction(
-    genericGameTemplateSetDefault as never,
+  return runRevisionAction<TemplateDefaultView>(
+    genericGameTemplateSetDefault,
     id,
     expectedRevision,
-  )) as TemplateDefaultView;
+  );
 }
 
 export async function archiveTemplate(
   id: string,
   expectedRevision: number,
 ): Promise<TemplateArchivedView> {
-  return (await runRevisionAction(
-    genericGameTemplateArchive as never,
+  return runRevisionAction<TemplateArchivedView>(
+    genericGameTemplateArchive,
     id,
     expectedRevision,
-  )) as TemplateArchivedView;
+  );
 }
 
 export async function unarchiveTemplate(
   id: string,
   expectedRevision: number,
 ): Promise<TemplateUnarchivedView> {
-  return (await runRevisionAction(
-    genericGameTemplateUnarchive as never,
+  return runRevisionAction<TemplateUnarchivedView>(
+    genericGameTemplateUnarchive,
     id,
     expectedRevision,
-  )) as TemplateUnarchivedView;
+  );
 }
 
 export async function deleteTemplate(
