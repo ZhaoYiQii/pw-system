@@ -180,6 +180,21 @@ export class SlotSessionController {
     evidenceType: string | undefined,
   ) {
     const tenantId = this.tenantIdOf(req);
+    // 全局 body-parser（express.json / urlencoded）只接管这两类 Content-Type，
+    // 并且会把请求流读到 end；此后 IncomingMessage 的 data/end 不再触发，
+    // 若仍按文件流等待就会永远挂住连接（客户端拿到超时而不是错误）。
+    // 该端点只接受二进制体，因此在读取文件流之前先明确拒绝。
+    const contentType = String(req.headers["content-type"] ?? "").toLowerCase();
+    if (
+      req.readableEnded ||
+      contentType.includes("application/json") ||
+      contentType.includes("application/x-www-form-urlencoded")
+    ) {
+      throw new HttpException(
+        "该端点只接受二进制请求体（image/png、image/jpeg、image/webp、video/mp4、video/webm），不接受 application/json",
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+      );
+    }
     const resolvedEvidenceType = resolveEvidenceType(evidenceType);
     const bytes = await new Promise<Buffer>((resolvePromise, rejectPromise) => {
       const chunks: Buffer[] = [];

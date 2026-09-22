@@ -15,6 +15,7 @@ const TITLES: Record<number, string> = {
   [HttpStatus.FORBIDDEN]: "Forbidden",
   [HttpStatus.NOT_FOUND]: "Not Found",
   [HttpStatus.CONFLICT]: "Conflict",
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: "Unsupported Media Type",
   [HttpStatus.TOO_MANY_REQUESTS]: "Too Many Requests",
   [HttpStatus.SERVICE_UNAVAILABLE]: "Service Unavailable",
   [HttpStatus.INTERNAL_SERVER_ERROR]: "Internal Server Error",

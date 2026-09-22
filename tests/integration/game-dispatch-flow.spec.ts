@@ -356,6 +356,27 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     expect(slots.every((s) => s.unitPriceFen === BigInt(7000))).toBe(true);
   });
 
+  it("上传证据：请求体声明 JSON 时迅速拒绝 415，不挂起连接", async () => {
+    // 这是传输层行为：不看槽位是否存在，都必须在读取文件流之前被拒。
+    // 故意用一个形状合法但不存在的槽位 id，避免依赖其它用例先建单（顺序无关）。
+    const unrelatedSlotId = "00000000-0000-4000-8000-000000000000";
+    // 全局 body-parser 会把 JSON 体先读完，之后 IncomingMessage 的 data/end 不再触发；
+    // 若按文件流等待就会永远挂住，所以这里用 2 秒上限把「挂起」变成可判定的失败。
+    const settled = await Promise.race([
+      request(app.getHttpServer())
+        .post(
+          `/api/v1/tenant/game-dispatch/slots/${unrelatedSlotId}/session/evidence`,
+        )
+        .set("authorization", `Bearer ${playerTokens.p1}`)
+        .set("content-type", "application/json")
+        .send({ evidenceType: "START" }),
+      new Promise<"hung">((resolve) => setTimeout(() => resolve("hung"), 2000)),
+    ]);
+
+    expect(settled).not.toBe("hung");
+    expect((settled as { status: number }).status).toBe(415);
+  });
+
   it("被指派陪玩可开始档位、上传证据并结束", async () => {
     const player = await client.playerProfile.findFirst({
       where: { tenantId, name: "阿一" },
