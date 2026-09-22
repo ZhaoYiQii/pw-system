@@ -79,6 +79,11 @@ jobs:
           DATABASE_URL: postgresql://pw:pw_ci@localhost:5432/pw_ci?schema=public
         run: pnpm db:migrate:check
       - run: pnpm format:check
+
+      # E2E 不进 CI（需 3005+3101 服务、Edge 通道与走查夹具；视觉基线只有 win32，接 Linux CI 会全红）。
+      # 只做 --list 解析门禁：不启浏览器，但能挡住 spec 的 import/语法/夹具常量被改坏却无人发现。
+      - name: E2E 用例可解析（--list，不启浏览器）
+        run: node node_modules/@playwright/test/cli.js test --list
       - run: pnpm openapi:check
       - run: pnpm build
       - run: pnpm build:h5
