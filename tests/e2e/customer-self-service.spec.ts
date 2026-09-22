@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext } from "@playwright/test";
+import { tenantCode } from "./tenant-code";
 
 /**
  * 客户自助下单 v2 跨入口 E2E（设计规格 §7）：客户在 H5 下单 → 客服在商家端按 CS 端口看到该单。
@@ -13,7 +14,7 @@ import type { APIRequestContext } from "@playwright/test";
  * 租户与 owner 账号来自 work/s3-e2e-seed.mjs。
  */
 const PW = "zcloud1024";
-const TENANT_CODE = process.env.S3_E2E_TENANT_CODE ?? "s3e2e";
+const TENANT_CODE = tenantCode("S3", "s3e2e");
 const H5_ORIGIN = process.env.H5_ORIGIN ?? "http://localhost:3101";
 const API_ORIGIN = process.env.E2E_API_ORIGIN ?? "http://localhost:3100";
 

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { tenantCode } from "./tenant-code";
 
 const PASSWORD = "zcloud1024";
 
@@ -6,10 +7,10 @@ const PASSWORD = "zcloud1024";
  * S3 模板管理 E2E：夹具由 work/s3-e2e-seed.mjs 在授权的一次性测试库上创建，
  * 只跑带 "S3 模板管理" 前缀的用例（其它用例依赖开发库种子数据）。
  */
-const S3_TENANT_CODE = process.env.S3_E2E_TENANT_CODE ?? "s3e2e";
+const S3_TENANT_CODE = tenantCode("S3", "s3e2e");
 const S3_PASSWORD = process.env.S3_E2E_PASSWORD ?? "zcloud1024";
-/** 开发库种子门店 code；可用 E2E_TENANT_CODE 覆盖，默认沿用历史的 c1。 */
-const DEV_TENANT_CODE = process.env.E2E_TENANT_CODE ?? "c1";
+/** 开发库种子门店 code；统一走 tenantCode()，默认沿用历史的 c1。 */
+const DEV_TENANT_CODE = tenantCode("DEV", "c1");
 
 async function loginAsS3Owner(page: import("@playwright/test").Page) {
   await page.goto("/store/login");
@@ -813,7 +814,7 @@ test.describe("S3 模板管理主路径（真实本地 API）", () => {
 
 /* ------------------------------------------------------------------ S4 */
 
-const S4_TENANT_CODE = process.env.S4_E2E_TENANT_CODE ?? "s4e2e";
+const S4_TENANT_CODE = tenantCode("S4", "s4e2e");
 const S4_PASSWORD = process.env.S4_E2E_PASSWORD ?? "zcloud1024";
 /**
  * API 源：夹具通过真实 HTTP 建立（建游戏/模板/发布）。

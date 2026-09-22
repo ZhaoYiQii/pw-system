@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { tenantCode } from "./tenant-code";
 
 const PASSWORD = "zcloud1024";
-/** 门店 code 可用 E2E_TENANT_CODE 覆盖，默认沿用历史的 c1（该店只在 dev 库存在）。 */
-const TENANT_CODE = process.env.E2E_TENANT_CODE ?? "c1";
+/** 门店 code 统一走 tenantCode()：DEV_E2E_TENANT_CODE > E2E_TENANT_CODE > 默认 c1（c1 只在 dev 库存在）。 */
+const TENANT_CODE = tenantCode("DEV", "c1");
 
 test("平台管理员可登录总览并进入门店管理", async ({ page }) => {
   await page.goto("/login");

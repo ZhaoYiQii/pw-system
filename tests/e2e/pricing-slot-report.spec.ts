@@ -18,8 +18,9 @@ import {
   type APIRequestContext,
   type Page,
 } from "@playwright/test";
+import { tenantCode } from "./tenant-code";
 
-const TENANT_CODE = process.env.W5_TENANT_CODE ?? "s5cwalk";
+const TENANT_CODE = tenantCode("W5", "s5cwalk");
 const PASSWORD = process.env.W5_PASSWORD ?? "zcloud1024";
 const API_BASE = process.env.API_BASE ?? "http://127.0.0.1:3300";
 const H5_ORIGIN = process.env.H5_ORIGIN ?? "http://127.0.0.1:3101";
