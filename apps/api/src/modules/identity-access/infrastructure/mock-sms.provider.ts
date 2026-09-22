@@ -12,6 +12,7 @@ export class MockSmsProvider implements SmsProvider {
   constructor(private readonly logger: { log(message: string): void }) {}
 
   async sendCode(input: SendSmsCodeInput): Promise<void> {
+    // 有意只打尾号：mock 是开发用的，不该把完整号码写进日志
     this.logger.log(
       `[mock-sms] tenant=${input.tenantId} tail=${input.phoneTail} scene=${input.scene} code=${input.code}`,
     );

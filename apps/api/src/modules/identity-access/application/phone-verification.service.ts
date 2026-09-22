@@ -94,6 +94,8 @@ export class PhoneVerificationService {
 
       await this.sms.sendCode({
         tenantId,
+        // 完整号码只交给通道用于投递；审计与日志仍只写尾号
+        mobile: phone,
         phoneTail: tail,
         scene,
         code,
