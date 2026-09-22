@@ -38,6 +38,7 @@ model Tenant {
   playerApplications PlayerApplication[]
   configVersions TenantConfigVersion[]
   entitlements   TenantEntitlement[]
+  wechatLoginRequests WechatLoginRequest[]
 
   @@map("tenants")
 }
@@ -154,6 +155,8 @@ model TenantAccount {
   passwordHash String        @map("password_hash")
   phoneEnc     String?       @map("phone_enc")
   phoneHash    String?       @map("phone_hash")
+  /// S3：公众号网页授权的 openid（单公众号场景下 app 级唯一；将来做小程序/多公众号上 unionid 时再拆表）
+  wechatOpenid String?       @map("wechat_openid")
   status       AccountStatus @default(ACTIVE)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
@@ -164,6 +167,7 @@ model TenantAccount {
 
   @@unique([tenantId, username])
   @@unique([tenantId, phoneHash])
+  @@unique([tenantId, wechatOpenid])
   @@index([tenantId])
   @@map("tenant_accounts")
 }
@@ -185,6 +189,27 @@ model PhoneVerificationCode {
 
   @@index([tenantId, phoneHash, createdAt])
   @@map("phone_verification_codes")
+}
+
+/// S3：微信网页授权的一次性票据。租户级资源，启用 RLS（按 tenant_id）。
+/// 用途：首次微信登录时「已授权拿到 openid、但还没绑定手机号」的中间态；
+/// 只存票据哈希（明文票据只在响应里出现一次），60 秒过期、单次消费。
+model WechatLoginRequest {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  openid     String
+  ticketHash String    @unique @map("ticket_hash")
+  returnTo   String    @map("return_to")
+  status     String    @default("PENDING_PHONE")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, openid, createdAt])
+  @@index([expiresAt])
+  @@map("wechat_login_requests")
 }
 
 /// 陪玩申请（P-3）：已注册 CUSTOMER 向门店申请追加 PLAYER 能力；门店审核后建档并追加角色。

@@ -151,10 +151,26 @@ H5 点「微信登录」
 - **S3a-1（已完成，无 DB 依赖）**：`infrastructure/wechat-oauth.client.ts`（配置门禁 / authorize URL / code→openid / errcode 分类 / 密钥脱敏 / openid 掩码）+ `infrastructure/wechat-state.ts`（state 签名校验 + `returnTo` 白名单）。
   验收：`wechat-oauth.client.spec.ts` 12 passed、`wechat-state.spec.ts` 8 passed；`typecheck`（api）0；全量单测 422 passed / 1 skipped。
   两处真实红→绿：① 我最初的断言是「错误信息不含主机名」（过严，主机名不是秘密），红 → 改成钉「密钥不出现在错误信息里」并给实现加脱敏，绿；② tsc 抓到我在 spec 里用 `.catch(e => e as Error)` 导致联合类型，红 → 改成 try/catch 收敛，绿。
-- **S3a-2**：迁移（openid 列 + `wechat_login_requests` 表 + RLS 策略）+ 把 client/state 注册进模块（工厂 + 缺凭证启动即失败的本机实测）。
+- **S3a-2（已完成，2026-09-23）**：`TenantAccount.wechatOpenid`（+ `unique(tenantId, wechatOpenid)`）与 `WechatLoginRequest`（表 `wechat_login_requests`，租户级 RLS）落库，迁移 `20260923100000_wechat_login`。
+  验收：三库 `migrate deploy` + `migrate status` → **37 migrations / Database schema is up to date**；`prisma validate` 通过；`typecheck`（全仓 + tests）0；全量单测 422 passed / 1 skipped；lint 0；format:check 0。
+  **RLS 有数据实证**（`audit/s3a2-rls-check.mjs`，在一次性库上插 1 行夹具再删掉）：`rls_enabled/rls_forced = true/true`、两条策略齐备；运行时角色**无租户上下文 = 0 行**、**本租户 = 1 行**、**异租户 = 0 行**；夹具删除后表回到 0 行。这正是我在旧表上做不到的那一步（那两个表是空的，证不了）。
+  **未在本片注册 provider**：client/state 目前没有消费者，而生产 compose 还没有 `WECHAT_*` 变量——现在注册会让现有部署启动即崩（缺凭证门禁）。按 S1b-1 的「没有消费者不加接口」口径，注册连带 compose/env 一起放到 **S3b**（那时端点在用它们，门禁才有意义）。
 - **S3b**：端点（authorize 302 / login / bind-phone）+ 票据生命周期 + 单测与 stub 端到端。
 - **S3c**：首绑手机号规则（复用 `consumeCode`）+ 冲突与幂等（openid 已绑 A 要绑 B、手机号已有账号要绑 openid）。
 - **S3d**：H5 接入（`pages/customer/home` 加「微信登录」+ 入口页识别 code/state + 首绑页 + 文案），含 H5 单测与走查。
+
+### S3.5 补齐租户表 RLS（S3 之后、S4 之前；用户已确认按此顺序）
+
+**问题（已核，2026-09-23）**：`phone_verification_codes` 与 `player_applications` 带 `tenant_id` 却**没有** `ENABLE ROW LEVEL SECURITY`、也没有策略；`schema.prisma:171` 对前者写着「租户级资源，启用 RLS」，属注释与实现不一致。（另两张 `refresh_sessions` / `platform_access_grants` 是设计如此，不动。）
+
+**为什么单独一片**：应用侧目前都带 `tenantId` 过滤，所以这是纵深防御缺口而非已证实泄漏；但要下结论必须**先审计代码路径**（`player_applications` 还被 `game-dispatch.service.ts` 引用），再动数据库——两件事混在一片里既不好验收也不好回滚。
+
+**切片内容与验收**：
+
+1. 代码审计：列出两张表的全部读写点，确认每条路径都在租户上下文内（`withTenantContext` / 显式 `tenantId`），把跨租户查询路径（若有）先修掉。
+2. 迁移：`ENABLE + FORCE ROW LEVEL SECURITY` + `tenant_isolation_platform` / `tenant_isolation_runtime` 两条策略 + 显式 `GRANT`（口径照 `20260906000100_tenancy`），用到三库。
+3. 验收：按 `audit/s3a2-rls-check.mjs` 的同一套方法在**有数据**的库上证「无租户上下文 = 0 / 本租户 = N / 异租户 = 0」；由于这两张表当前是空的，**必须先造夹具**，不可以拿「0 行」当证据。
+4. 同步把 `schema.prisma` 注释与实现对齐（对的就是注释，若决定不启用 RLS 则改注释）。
 
 **开工前要你确认 4 件事**：① 公众号是否**已认证、且是服务号**——网页授权本身认证号即可，但 **S4 微信支付 JSAPI 只支持服务号/小程序**，所以服务号是硬要求（服务号/订阅号的具体权限差异我按官方文档执行，不在本机臆断）；② 「网页授权域名」是否已配置为 H5 的备案域名；③ 商户号与公众号是否同一主体/已关联（S4 前置）；④ 首次微信登录是否要求绑手机号（推荐要求）。
 
