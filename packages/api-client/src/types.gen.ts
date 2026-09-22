@@ -577,6 +577,17 @@ export type MeTenantMeResponses = {
     200: unknown;
 };
 
+export type MeBindPhoneData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/me/phone';
+};
+
+export type MeBindPhoneResponses = {
+    201: unknown;
+};
+
 export type TenantAccountsListData = {
     body?: never;
     path?: never;
@@ -633,6 +644,28 @@ export type PhoneVerificationSendCodeData = {
 };
 
 export type PhoneVerificationSendCodeResponses = {
+    201: unknown;
+};
+
+export type WechatAuthAuthorizeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/wechat/authorize';
+};
+
+export type WechatAuthAuthorizeResponses = {
+    200: unknown;
+};
+
+export type WechatAuthLoginData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/wechat/login';
+};
+
+export type WechatAuthLoginResponses = {
     201: unknown;
 };
 

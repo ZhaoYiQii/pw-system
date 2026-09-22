@@ -232,6 +232,14 @@ paths:
         "200":
           description: ""
       tags: *a6
+  /api/v1/tenant/me/phone:
+    post:
+      operationId: me_bindPhone
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a6
   /api/v1/tenant/accounts:
     get:
       operationId: tenantAccounts_list
@@ -283,6 +291,23 @@ paths:
           description: ""
       tags:
         - PhoneVerification
+  /api/v1/auth/wechat/authorize:
+    get:
+      operationId: wechatAuth_authorize
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags: &a8
+        - WechatAuth
+  /api/v1/auth/wechat/login:
+    post:
+      operationId: wechatAuth_login
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a8
   /api/v1/tenant/features:
     get:
       operationId: entitlements_listTenantFeatures
@@ -290,7 +315,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a8
+      tags: &a9
         - Entitlements
   /api/v1/tenant/subscription:
     get:
@@ -299,7 +324,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a8
+      tags: *a9
   /api/v1/tenant/addon/{featureKey}:
     get:
       operationId: entitlements_addonCapability
@@ -312,7 +337,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a8
+      tags: *a9
   /api/v1/platform/tenants/{tenantId}/entitlements:
     get:
       operationId: entitlements_listEntitlements
@@ -325,7 +350,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a8
+      tags: *a9
     post:
       operationId: entitlements_setEntitlement
       parameters:
@@ -337,7 +362,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a8
+      tags: *a9
   /api/v1/tenant/config:
     get:
       operationId: tenantConfig_get
@@ -345,7 +370,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a9
+      tags: &a10
         - TenantConfig
     post:
       operationId: tenantConfig_save
@@ -353,7 +378,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a9
+      tags: *a10
   /api/v1/tenant/config/rollback:
     post:
       operationId: tenantConfig_rollback
@@ -361,7 +386,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a9
+      tags: *a10
   /api/v1/tenant/config/versions:
     get:
       operationId: tenantConfig_versions
@@ -369,7 +394,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a9
+      tags: *a10
   /api/v1/public/storefront/config:
     get:
       operationId: storefrontConfig_getConfig
@@ -386,7 +411,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a10
+      tags: &a11
         - Customers
     post:
       operationId: customers_create
@@ -394,7 +419,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a10
+      tags: *a11
   /api/v1/tenant/customers/{id}:
     get:
       operationId: customers_get
@@ -407,7 +432,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a10
+      tags: *a11
     patch:
       operationId: customers_update
       parameters:
@@ -419,7 +444,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a10
+      tags: *a11
     delete:
       operationId: customers_remove
       parameters:
@@ -431,7 +456,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a10
+      tags: *a11
   /api/v1/tenant/customers/{id}/account:
     get:
       operationId: customers_account
@@ -444,7 +469,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a10
+      tags: *a11
     post:
       operationId: customers_bind
       parameters:
@@ -456,7 +481,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a10
+      tags: *a11
   /api/v1/tenant/customers/{id}/orders:
     get:
       operationId: customers_orders
@@ -469,7 +494,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a10
+      tags: *a11
   /api/v1/tenant/customer/me:
     get:
       operationId: customerSelf_me
@@ -477,7 +502,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a11
+      tags: &a12
         - CustomerSelf
   /api/v1/tenant/customer/catalog:
     get:
@@ -486,7 +511,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/customer/orders:
     get:
       operationId: customerSelf_myOrders
@@ -690,7 +715,7 @@ paths:
                                 nullable: false
                                 description: 发生时间
                       description: 订单视图（金额字段为十进制字符串分）
-      tags: *a11
+      tags: *a12
     post:
       operationId: customerSelf_createOrder
       parameters: []
@@ -891,7 +916,7 @@ paths:
                               nullable: false
                               description: 发生时间
                     description: 订单视图（金额字段为十进制字符串分）
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/customer/orders/{orderId}/complete:
     post:
       operationId: customerSelf_confirmComplete
@@ -926,7 +951,7 @@ paths:
                         example: "800"
                         description: 陪玩分成（十进制字符串分，>=0）
                     description: 订单核算结果
-      tags: *a11
+      tags: *a12
   /api/v1/tenant/orders:
     get:
       operationId: orders_list
@@ -1130,7 +1155,7 @@ paths:
                                 nullable: false
                                 description: 发生时间
                       description: 订单视图（金额字段为十进制字符串分）
-      tags: &a12
+      tags: &a13
         - Orders
     post:
       operationId: orders_create
@@ -1332,7 +1357,7 @@ paths:
                               nullable: false
                               description: 发生时间
                     description: 订单视图（金额字段为十进制字符串分）
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/orders/{id}:
     get:
       operationId: orders_get
@@ -1539,7 +1564,7 @@ paths:
                               nullable: false
                               description: 发生时间
                     description: 订单视图（金额字段为十进制字符串分）
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/orders/{id}/confirm:
     post:
       operationId: orders_confirm
@@ -1746,7 +1771,7 @@ paths:
                               nullable: false
                               description: 发生时间
                     description: 订单视图（金额字段为十进制字符串分）
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/orders/{id}/cancel:
     post:
       operationId: orders_cancel
@@ -1953,7 +1978,7 @@ paths:
                               nullable: false
                               description: 发生时间
                     description: 订单视图（金额字段为十进制字符串分）
-      tags: *a12
+      tags: *a13
   /api/v1/tenant/orders/{id}/staff-confirm:
     post:
       operationId: orders_staffConfirm
@@ -1988,7 +2013,7 @@ paths:
                         example: "800"
                         description: 陪玩分成（十进制字符串分，>=0）
                     description: 订单核算结果
-      tags: *a12
+      tags: *a13
   /api/v1/platform/tenants/{tenantId}/finance-rules:
     get:
       operationId: platformFinance_get
@@ -2001,7 +2026,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a13
+      tags: &a14
         - PlatformFinance
     patch:
       operationId: platformFinance_set
@@ -2014,7 +2039,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a13
+      tags: *a14
   /api/v1/tenant/finance-rules:
     get:
       operationId: tenantFinance_get
@@ -2043,7 +2068,7 @@ paths:
                         type: integer
                         minimum: 0
                         description: 门店抽成 bp
-      tags: &a14
+      tags: &a15
         - TenantFinance
   /api/v1/tenant/finance-rules/store-cut:
     post:
@@ -2052,7 +2077,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/finance-rules/split-preview:
     post:
       operationId: tenantFinance_preview
@@ -2105,7 +2130,7 @@ paths:
                         example: "800"
                         description: 陪玩到手（十进制字符串分，>=0）
                     description: 分账试算结果
-      tags: *a14
+      tags: *a15
   /api/v1/tenant/orders/{orderId}/accounting:
     post:
       operationId: accounting_accounting
@@ -2179,7 +2204,7 @@ paths:
                         example: "800"
                         description: 已支付金额（十进制字符串分，>=0）
                     description: 陪玩财务汇总
-      tags: &a15
+      tags: &a16
         - PlayerFinance
   /api/v1/tenant/player/income:
     get:
@@ -2188,7 +2213,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a15
+      tags: *a16
   /api/v1/tenant/settlements:
     get:
       operationId: settlements_list
@@ -2196,7 +2221,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a16
+      tags: &a17
         - Settlements
     post:
       operationId: settlements_create
@@ -2204,7 +2229,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/earnings:
     get:
       operationId: settlements_listEarnings
@@ -2212,7 +2237,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/ledger:
     get:
       operationId: settlements_financeLedger
@@ -2220,7 +2245,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/{id}:
     get:
       operationId: settlements_detail
@@ -2233,7 +2258,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/{id}/items:
     post:
       operationId: settlements_addItems
@@ -2246,7 +2271,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/{id}/review:
     post:
       operationId: settlements_review
@@ -2259,7 +2284,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/{id}/approve:
     post:
       operationId: settlements_approve
@@ -2272,7 +2297,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/{id}/pay:
     post:
       operationId: settlements_pay
@@ -2285,7 +2310,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/settlements/{id}/void:
     post:
       operationId: settlements_voidBatch
@@ -2298,7 +2323,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a16
+      tags: *a17
   /api/v1/tenant/players:
     get:
       operationId: players_list
@@ -2306,7 +2331,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a17
+      tags: &a18
         - Players
     post:
       operationId: players_create
@@ -2314,7 +2339,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/players/{id}:
     get:
       operationId: players_get
@@ -2327,7 +2352,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a17
+      tags: *a18
     patch:
       operationId: players_update
       parameters:
@@ -2339,7 +2364,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a17
+      tags: *a18
     delete:
       operationId: players_remove
       parameters:
@@ -2351,7 +2376,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/players/{id}/account:
     get:
       operationId: players_account
@@ -2364,7 +2389,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a17
+      tags: *a18
     post:
       operationId: players_bind
       parameters:
@@ -2376,7 +2401,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/players/{id}/skills:
     post:
       operationId: players_addSkill
@@ -2389,7 +2414,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/players/{id}/skills/{skillId}:
     delete:
       operationId: players_removeSkill
@@ -2407,7 +2432,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/players/{id}/availability:
     post:
       operationId: players_addAvailability
@@ -2420,7 +2445,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/players/{id}/availability/{availabilityId}:
     delete:
       operationId: players_removeAvailability
@@ -2438,7 +2463,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a17
+      tags: *a18
   /api/v1/tenant/player/me:
     get:
       operationId: playerSelf_me
@@ -2446,7 +2471,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a18
+      tags: &a19
         - PlayerSelf
     patch:
       operationId: playerSelf_updateMe
@@ -2454,7 +2479,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/player/availability:
     post:
       operationId: playerSelf_addAvailability
@@ -2462,7 +2487,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/player/availability/{availabilityId}:
     delete:
       operationId: playerSelf_removeAvailability
@@ -2475,7 +2500,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a19
   /api/v1/tenant/catalog/games:
     get:
       operationId: catalog_listGames
@@ -2483,7 +2508,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a19
+      tags: &a20
         - Catalog
     post:
       operationId: catalog_createGame
@@ -2491,7 +2516,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/games/{id}:
     patch:
       operationId: catalog_updateGame
@@ -2504,7 +2529,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
     delete:
       operationId: catalog_removeGame
       parameters:
@@ -2516,7 +2541,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/regions:
     get:
       operationId: catalog_listRegions
@@ -2524,7 +2549,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/games/{gameId}/regions:
     post:
       operationId: catalog_createRegion
@@ -2537,7 +2562,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/regions/{id}:
     patch:
       operationId: catalog_updateRegion
@@ -2550,7 +2575,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
     delete:
       operationId: catalog_removeRegion
       parameters:
@@ -2562,7 +2587,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/products:
     get:
       operationId: catalog_listProducts
@@ -2570,14 +2595,14 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
     post:
       operationId: catalog_createProduct
       parameters: []
       responses:
         "201":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/products/{id}:
     patch:
       operationId: catalog_updateProduct
@@ -2590,7 +2615,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
     delete:
       operationId: catalog_removeProduct
       parameters:
@@ -2602,7 +2627,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/products/{productId}/pricing:
     get:
       operationId: catalog_listRules
@@ -2674,7 +2699,7 @@ paths:
                           nullable: false
                           description: 更新时间
                       description: 价格规则（金额字段为十进制字符串分）
-      tags: *a19
+      tags: *a20
     post:
       operationId: catalog_createRule
       parameters:
@@ -2771,7 +2796,7 @@ paths:
                         nullable: false
                         description: 更新时间
                     description: 价格规则（金额字段为十进制字符串分）
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/catalog/pricing/{id}:
     patch:
       operationId: catalog_updateRule
@@ -2867,7 +2892,7 @@ paths:
                         nullable: false
                         description: 更新时间
                     description: 价格规则（金额字段为十进制字符串分）
-      tags: *a19
+      tags: *a20
     delete:
       operationId: catalog_removeRule
       parameters:
@@ -2879,7 +2904,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a20
   /api/v1/tenant/orders/{id}/publish:
     post:
       operationId: dispatchAdmin_publish
@@ -2892,7 +2917,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a20
+      tags: &a21
         - DispatchAdmin
   /api/v1/tenant/orders/{id}/applications:
     get:
@@ -2906,7 +2931,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a21
   /api/v1/tenant/orders/{id}/applications/{applicationId}/shortlist:
     post:
       operationId: dispatchAdmin_shortlist
@@ -2924,7 +2949,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a21
   /api/v1/tenant/orders/{id}/assignment:
     post:
       operationId: dispatchAdmin_assign
@@ -2937,7 +2962,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a21
   /api/v1/tenant/player/order-hall:
     get:
       operationId: dispatchPlayer_hall
@@ -2994,7 +3019,7 @@ paths:
                           nullable: false
                           description: 创建时间
                       description: 接单大厅订单
-      tags: &a21
+      tags: &a22
         - DispatchPlayer
   /api/v1/tenant/player/applications:
     get:
@@ -3003,7 +3028,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a21
+      tags: *a22
   /api/v1/tenant/player/orders/{orderId}/applications:
     post:
       operationId: dispatchPlayer_apply
@@ -3016,7 +3041,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a21
+      tags: *a22
   /api/v1/tenant/customer/orders/{orderId}/applications:
     get:
       operationId: dispatchCustomer_candidates
@@ -3029,7 +3054,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a22
+      tags: &a23
         - DispatchCustomer
   /api/v1/tenant/customer/orders/{orderId}/assignment:
     post:
@@ -3043,7 +3068,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a22
+      tags: *a23
   /api/v1/tenant/sessions:
     get:
       operationId: sessions_list
@@ -3051,7 +3076,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a23
+      tags: &a24
         - Sessions
   /api/v1/tenant/sessions/{sessionId}:
     get:
@@ -3065,7 +3090,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/tenant/orders/{orderId}/session:
     get:
       operationId: sessions_session
@@ -3078,7 +3103,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/tenant/orders/{orderId}/session/start:
     post:
       operationId: sessions_start
@@ -3091,7 +3116,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/tenant/orders/{orderId}/session/end:
     post:
       operationId: sessions_end
@@ -3104,7 +3129,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/tenant/sessions/{sessionId}/adjustments:
     post:
       operationId: sessions_adjust
@@ -3117,7 +3142,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/tenant/sessions/{sessionId}/adjustments/{adjustmentId}/review:
     post:
       operationId: sessions_review
@@ -3135,7 +3160,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a24
   /api/v1/tenant/sessions/{sessionId}/evidence:
     post:
       operationId: evidence_upload
@@ -3153,7 +3178,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a24
+      tags: &a25
         - Evidence
   /api/v1/tenant/sessions/{sessionId}/capture:
     post:
@@ -3172,7 +3197,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a24
+      tags: *a25
   /api/v1/tenant/evidence/{id}:
     get:
       operationId: evidence_download
@@ -3185,7 +3210,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a24
+      tags: *a25
   /api/v1/tenant/slot-evidence/{id}:
     get:
       operationId: evidence_downloadSlotEvidence
@@ -3198,7 +3223,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a24
+      tags: *a25
   /api/v1/tenant/disputes:
     get:
       operationId: disputes_listAll
@@ -3206,7 +3231,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a25
+      tags: &a26
         - Disputes
   /api/v1/tenant/disputes/{disputeId}:
     get:
@@ -3220,7 +3245,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a25
+      tags: *a26
   /api/v1/tenant/orders/{orderId}/disputes:
     get:
       operationId: disputes_list
@@ -3233,7 +3258,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a25
+      tags: *a26
     post:
       operationId: disputes_open
       parameters:
@@ -3245,7 +3270,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a25
+      tags: *a26
   /api/v1/tenant/player/disputes:
     get:
       operationId: disputes_playerMine
@@ -3253,7 +3278,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a25
+      tags: *a26
   /api/v1/tenant/customer/disputes:
     get:
       operationId: disputes_customerMine
@@ -3261,7 +3286,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a25
+      tags: *a26
   /api/v1/tenant/disputes/{disputeId}/resolve:
     post:
       operationId: disputes_resolve
@@ -3274,7 +3299,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a25
+      tags: *a26
   /api/v1/tenant/notifications:
     get:
       operationId: notifications_list
@@ -3282,7 +3307,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a26
+      tags: &a27
         - Notifications
   /api/v1/tenant/notifications/unread-count:
     get:
@@ -3291,7 +3316,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a26
+      tags: *a27
   /api/v1/tenant/notifications/{id}/read:
     post:
       operationId: notifications_markRead
@@ -3304,7 +3329,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a26
+      tags: *a27
   /api/v1/tenant/notifications/read-all:
     post:
       operationId: notifications_markAllRead
@@ -3312,7 +3337,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a26
+      tags: *a27
   /api/v1/tenant/ai/capabilities:
     get:
       operationId: ai_capabilities
@@ -3320,7 +3345,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a27
+      tags: &a28
         - Ai
   /api/v1/tenant/ai/parse-requirement:
     post:
@@ -3329,7 +3354,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a27
+      tags: *a28
   /api/v1/tenant/ai/orders/{orderId}/recommendations:
     get:
       operationId: ai_recommend
@@ -3342,7 +3367,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a27
+      tags: *a28
   /api/v1/platform/packages:
     get:
       operationId: platformBilling_packages
@@ -3350,7 +3375,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a28
+      tags: &a29
         - PlatformBilling
   /api/v1/platform/onboarding/tenants:
     post:
@@ -3359,7 +3384,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a28
+      tags: *a29
   /api/v1/platform/tenants/{tenantId}/package:
     post:
       operationId: platformBilling_assign
@@ -3372,7 +3397,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a28
+      tags: *a29
   /api/v1/platform/tenants/{tenantId}/activate:
     post:
       operationId: platformBilling_activate
@@ -3385,7 +3410,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a28
+      tags: *a29
   /api/v1/platform/subscriptions/{subscriptionId}/renew:
     post:
       operationId: platformBilling_renew
@@ -3398,7 +3423,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a28
+      tags: *a29
   /api/v1/platform/overview:
     get:
       operationId: platformOps_overview
@@ -3406,7 +3431,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a29
+      tags: &a30
         - PlatformOps
   /api/v1/platform/subscriptions:
     get:
@@ -3415,7 +3440,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a29
+      tags: *a30
   /api/v1/platform/tenants/{tenantId}/detail:
     get:
       operationId: platformOps_tenantDetail
@@ -3428,7 +3453,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a29
+      tags: *a30
   /api/v1/tenant/game-templates:
     get:
       operationId: gameTemplate_list
@@ -3436,7 +3461,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a30
+      tags: &a31
         - GameTemplate
     post:
       operationId: gameTemplate_create
@@ -3444,7 +3469,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a30
+      tags: *a31
   /api/v1/tenant/game-templates/{id}:
     get:
       operationId: gameTemplate_get
@@ -3457,7 +3482,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a30
+      tags: *a31
     patch:
       operationId: gameTemplate_update
       parameters:
@@ -3469,7 +3494,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a30
+      tags: *a31
     delete:
       operationId: gameTemplate_remove
       parameters:
@@ -3481,7 +3506,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a30
+      tags: *a31
   /api/v1/tenant/game-templates/{id}/copy:
     post:
       operationId: gameTemplate_copy
@@ -3494,7 +3519,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a30
+      tags: *a31
   /api/v1/tenant/game-dispatch-templates:
     get:
       operationId: genericGameTemplate_list
@@ -3734,7 +3759,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 模板摘要列表（游标分页，不含 config）
-      tags: &a31
+      tags: &a32
         - 通用派单模板（S2）
         - 通用派单模板（S2）
     post:
@@ -3981,7 +4006,7 @@ paths:
                                       minLength: 1
                                       maxLength: 50
                                       description: 旧价格规则名称
-                                    priceDeltaFen: &a39
+                                    priceDeltaFen: &a40
                                       type: string
                                       pattern: ^(?:0|[1-9][0-9]*)$
                                       example: "1000"
@@ -4184,7 +4209,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 创建模板（生成最小有效 v2 草稿）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/published:
     get:
       operationId: genericGameTemplate_listPublished
@@ -4320,7 +4345,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 该游戏可派单的模板（未归档且有生效版本，默认优先）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/versions/{versionId}/form:
     get:
       operationId: genericGameTemplate_getVersionForm
@@ -4595,7 +4620,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 锁定发布版本的派单表单配置
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/draft:
     get:
       operationId: genericGameTemplate_getDraft
@@ -4951,7 +4976,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 读取草稿与生效版本摘要
-      tags: *a31
+      tags: *a32
     patch:
       operationId: genericGameTemplate_saveDraft
       parameters:
@@ -5416,7 +5441,7 @@ paths:
                     description: 校验失败明细
                 description: 配置校验失败（422）
       summary: 整份保存草稿（expectedRevision 乐观锁）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/publish:
     post:
       operationId: genericGameTemplate_publish
@@ -5958,7 +5983,7 @@ paths:
                     description: 校验失败明细
                 description: 配置校验失败（422）
       summary: 发布当前草稿为不可变版本
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/versions:
     get:
       operationId: genericGameTemplate_listVersions
@@ -6158,7 +6183,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 版本历史（游标分页，只返回摘要）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/restore:
     post:
       operationId: genericGameTemplate_restore
@@ -6669,7 +6694,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 把历史 v2 版本还原为草稿（不直接上线）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/copy:
     post:
       operationId: genericGameTemplate_copy
@@ -7156,7 +7181,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 复制当前草稿到同租户目标游戏（独立 DRAFT）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/default:
     post:
       operationId: genericGameTemplate_setDefault
@@ -7621,7 +7646,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 设为该游戏默认模板（同游戏唯一）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/archive:
     post:
       operationId: genericGameTemplate_archive
@@ -8049,7 +8074,7 @@ paths:
                     description: 修订冲突明细
                 description: 修订冲突（409）
       summary: 归档模板（保留草稿/版本/历史）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}/unarchive:
     post:
       operationId: genericGameTemplate_unarchive
@@ -8477,7 +8502,7 @@ paths:
                     description: 修订冲突明细
                 description: 修订冲突（409）
       summary: 取消归档（按 activeVersionId 恢复状态）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch-templates/{id}:
     delete:
       operationId: genericGameTemplate_remove
@@ -8645,7 +8670,7 @@ paths:
                     description: 删除受限明细
                 description: 删除受限（409，应改为归档）
       summary: 删除未发布且无引用的模板（否则应归档）
-      tags: *a31
+      tags: *a32
   /api/v1/tenant/game-dispatch/customer/games:
     get:
       operationId: customerGameTemplate_listGames
@@ -8715,7 +8740,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：该店可下单的游戏（至少一个已发布模板）
-      tags: &a32
+      tags: &a33
         - CustomerGameTemplate
   /api/v1/tenant/game-dispatch/customer/published:
     get:
@@ -8852,7 +8877,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：该游戏可下单的模板（未归档且有生效版本）
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/versions/{versionId}/form:
     get:
       operationId: customerGameTemplate_getVersionForm
@@ -9090,7 +9115,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：按 CUSTOMER 端口过滤后的发布表单
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch/customer/template-orders:
     post:
       description: 请求体不含 customerProfileId——客户档案由登录身份推导；同一 Idempotency-Key 重试会回放首次结果。
@@ -9356,7 +9381,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：客户自助下单（人数与价格由服务端按快照计算）
-      tags: *a32
+      tags: *a33
   /api/v1/tenant/game-dispatch:
     get:
       operationId: gameDispatch_list
@@ -9547,7 +9572,7 @@ paths:
                     minimum: 0
                     description: 当前筛选条件下的总条数
                 description: 派单列表页
-      tags: &a33
+      tags: &a34
         - GameDispatch
   /api/v1/tenant/game-dispatch/summary:
     get:
@@ -9585,7 +9610,7 @@ paths:
                         description: 已核定金额合计（十进制字符串分，>=0）
                     description: 订单中心页头汇总
       summary: 订单中心页头汇总（待审批报单 / 违约 / 已核定金额）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders:
     post:
       operationId: gameDispatch_createDraft
@@ -9593,7 +9618,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/customer/orders:
     post:
       operationId: gameDispatch_customerCreateDraft
@@ -9601,7 +9626,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/customer/templates:
     get:
       operationId: gameDispatch_customerTemplates
@@ -9609,7 +9634,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/customer/templates/{id}:
     get:
       operationId: gameDispatch_customerTemplate
@@ -9622,7 +9647,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}:
     get:
       operationId: gameDispatch_view
@@ -9935,7 +9960,7 @@ paths:
                     additionalProperties: true
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/applications:
     get:
       operationId: gameDispatch_applications
@@ -9948,7 +9973,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/player/orders/{orderId}/signup:
     get:
       operationId: gameDispatch_playerSignup
@@ -9961,7 +9986,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/customer/orders/{orderId}/select:
     get:
       operationId: gameDispatch_customerSelect
@@ -9974,7 +9999,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/customer/orders/{orderId}/assignment:
     post:
       operationId: gameDispatch_customerAssign
@@ -9987,7 +10012,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/copy-text:
     get:
       operationId: gameDispatch_copy
@@ -10000,7 +10025,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/publish:
     post:
       operationId: gameDispatch_publish
@@ -10013,7 +10038,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/confirm-settlement:
     post:
       operationId: gameDispatch_confirmSettlement
@@ -10026,7 +10051,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/lines/{lineId}/applications:
     post:
       operationId: gameDispatch_apply
@@ -10044,7 +10069,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/applications/{id}/withdraw:
     post:
       operationId: gameDispatch_withdraw
@@ -10057,7 +10082,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/player/hall:
     get:
       operationId: gameDispatch_playerHall
@@ -10229,7 +10254,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 陪玩端报名大厅（含每个位置行的报名情况与我的报名）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/player/applications:
     get:
       operationId: gameDispatch_playerApplications
@@ -10383,7 +10408,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 陪玩端我的报名与选中档位（含是否可自助取消）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/slots/{slotId}/release:
     post:
       operationId: gameDispatch_releaseSlot
@@ -10564,7 +10589,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 商家释放名额（档位置 RELEASED、订单回到报名阶段并重开一轮）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/player-breaches:
     post:
       operationId: gameDispatch_recordBreach
@@ -10723,7 +10748,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 记录陪玩违约（写库 + 审计 + 通知老板）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/player-breaches:
     get:
       operationId: gameDispatch_listBreaches
@@ -10852,7 +10877,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 违约记录台账（可按 orderId / playerId / 时间范围过滤，默认最近 20 条）
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/applications/{id}:
     delete:
       operationId: gameDispatch_staffRemove
@@ -10865,7 +10890,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/orders/{orderId}/assignment:
     post:
       operationId: gameDispatch_assign
@@ -10915,7 +10940,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a33
+      tags: *a34
   /api/v1/tenant/game-dispatch/template-orders:
     post:
       description: 同一 Idempotency-Key 重试会回放首次结果；同键不同请求体返回 422；模板归档后返回 409 TEMPLATE_ARCHIVED。
@@ -11376,7 +11401,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 读取某游戏的加价规则库
-      tags: &a34
+      tags: &a35
         - 算价模型（S6）
     put:
       description: 命中键为「字段标识=选项值」，如 mode=ranked；本版只接受 SURCHARGE。
@@ -11570,7 +11595,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 整表替换某游戏的加价规则（PUT 语义，金额为分字符串）
-      tags: *a34
+      tags: *a35
   /api/v1/tenant/game-pricing/players/{playerId}/games/{gameId}/base:
     get:
       operationId: pricingRules_getPlayerGamePrice
@@ -11671,7 +11696,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 读取陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时用哪个价）
-      tags: *a34
+      tags: *a35
     put:
       operationId: pricingRules_putPlayerGamePrice
       parameters:
@@ -11829,7 +11854,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 设置陪玩在某游戏的底价（分/小时）
-      tags: *a34
+      tags: *a35
   /api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots:
     get:
       operationId: slotSession_serviceSlots
@@ -11842,7 +11867,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a35
+      tags: &a36
         - SlotSession
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/start:
     post:
@@ -11856,7 +11881,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a35
+      tags: *a36
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/end:
     post:
       operationId: slotSession_end
@@ -11869,7 +11894,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a35
+      tags: *a36
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence:
     post:
       operationId: slotSession_evidence
@@ -11892,7 +11917,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a35
+      tags: *a36
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/capture:
     post:
       operationId: slotSession_capture
@@ -11915,7 +11940,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a35
+      tags: *a36
   /api/v1/tenant/game-dispatch/slots/{slotId}/report:
     post:
       description: 申报时长 15–1440 分钟；须先上传 REPORT_START/REPORT_END 两张截图；报单不产生金额。
@@ -12184,7 +12209,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 陪玩结束服务后报单（申报总时长，截图走证据通道）
-      tags: &a36
+      tags: &a37
         - 算价模型（S6）
   /api/v1/tenant/game-dispatch/slots/{slotId}/report/review:
     post:
@@ -12424,7 +12449,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客服审批报单（可人工修正时长，写审计留痕）
-      tags: *a36
+      tags: *a37
   /api/v1/boss/wallet:
     get:
       operationId: wallet_get
@@ -12432,7 +12457,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a37
+      tags: &a38
         - Wallet
   /api/v1/boss/wallet/recharge:
     post:
@@ -12441,7 +12466,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a37
+      tags: *a38
   /api/v1/tenant/dashboard/summary:
     get:
       operationId: dashboardSummary_summary
@@ -12458,7 +12483,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a38
+      tags: &a39
         - PlayerApplications
     get:
       operationId: playerApplications_list
@@ -12466,7 +12491,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a38
+      tags: *a39
   /api/v1/tenant/player-applications/{id}/approve:
     post:
       operationId: playerApplications_approve
@@ -12479,7 +12504,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a38
+      tags: *a39
   /api/v1/tenant/player-applications/{id}/reject:
     post:
       operationId: playerApplications_reject
@@ -12492,7 +12517,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a38
+      tags: *a39
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。
@@ -12613,7 +12638,7 @@ components:
         options:
           type: array
           maxItems: 100
-          items: &a40
+          items: &a41
             type: object
             required:
               - value
@@ -12628,7 +12653,7 @@ components:
                 minLength: 1
                 maxLength: 50
                 description: 选项名称
-              priceDeltaFen: *a39
+              priceDeltaFen: *a40
             description: 选择项（含可选加价）
           description: 选择项（选择类字段必须至少一个）
         aggregationPolicy:
@@ -12755,7 +12780,7 @@ components:
               options:
                 type: array
                 maxItems: 100
-                items: *a40
+                items: *a41
                 description: 单选列的选项
             description: 可重复表格列
           description: 表格列（最多 10 列）
