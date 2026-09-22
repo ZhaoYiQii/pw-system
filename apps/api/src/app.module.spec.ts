@@ -18,8 +18,12 @@ describe("AppModule (health endpoint)", () => {
       expect(response.body).toMatchObject({
         status: "ok",
         service: "api",
-        checks: { database: "up", redis: "skipped" },
+        checks: { database: "up" },
       });
+      // redis 取决于是否配置 REDIS_URL（本机无、CI 有）：不锁死 skipped，只要求是合法状态。
+      expect(["up", "down", "skipped"]).toContain(
+        (response.body as { checks?: { redis?: string } }).checks?.redis,
+      );
     } finally {
       await app.close();
     }
