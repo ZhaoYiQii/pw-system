@@ -9729,6 +9729,19 @@ export type WechatPayCheckoutPrepayResponses = {
     201: unknown;
 };
 
+export type WechatPayCheckoutOrderStatusData = {
+    body?: never;
+    path: {
+        outTradeNo: string;
+    };
+    query?: never;
+    url: '/api/v1/payments/wechatpay/orders/{outTradeNo}';
+};
+
+export type WechatPayCheckoutOrderStatusResponses = {
+    200: unknown;
+};
+
 export type WechatPayRefundRegisterManualData = {
     body?: never;
     path?: never;

@@ -63,6 +63,8 @@ function harness(
     attachPrepayId: async (_tenantId, orderId, prepayId) => {
       attached.push({ orderId, prepayId });
     },
+    // S4-6a 新增的端口方法：本夹具只测下单，这里给不参与断言的最小实现
+    findCustomerPaymentOrder: async () => null,
   };
   const client = new WechatPayPartnerClient(config, async (url, init) => {
     // FetchLike 的 body 是 string | Buffer（媒体上传走二进制）；这里断言的是 JSON 下单接口

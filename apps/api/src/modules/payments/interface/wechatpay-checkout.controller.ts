@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Get,
   HttpException,
   HttpStatus,
   Inject,
+  Param,
   Post,
   Req,
 } from "@nestjs/common";
@@ -80,6 +82,42 @@ export class WechatPayCheckoutController {
       }
       if (error instanceof PrepayInputError) {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * S4-6a：支付结果页轮询用——客户查**自己**的支付单状态。
+   * 不需要微信凭证（本地状态就是回调的结果）；跨客户查不到（仓储按租户+客户档案过滤）。
+   */
+  @TenantScope()
+  @Get("orders/:outTradeNo")
+  async orderStatus(
+    @Req() req: AuthenticatedRequest,
+    @Param("outTradeNo") outTradeNo: string,
+  ) {
+    const tenantId = req.principal?.tenantId;
+    const accountId = req.principal?.sub;
+    if (!tenantId || !accountId) {
+      throw new HttpException(
+        "tenant context missing",
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    if (req.principal?.role !== "CUSTOMER") {
+      throw new HttpException("需要老板身份", HttpStatus.FORBIDDEN);
+    }
+    try {
+      const status = await this.checkout.getOrderStatus({
+        tenantId,
+        customerAccountId: accountId,
+        outTradeNo,
+      });
+      return { data: status };
+    } catch (error) {
+      if (error instanceof PrepayInputError) {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
       }
       throw error;
     }

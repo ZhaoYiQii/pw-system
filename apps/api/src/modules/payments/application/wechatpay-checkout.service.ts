@@ -92,6 +92,45 @@ export class WechatPayCheckoutService {
       payParams: client.buildJsapiPayParams({ prepayId }),
     };
   }
+
+  /**
+   * S4-6a：查支付单状态（支付结果页轮询用，**零凭证也要能用**）。
+   *
+   * 为什么不受 `client` 为空影响：入账是回调异步做的，客户问"我付成功了没"这件事
+   * 完全读本地库就够（本地状态就是回调的结果）。所以这里刻意**不要求微信凭证**，
+   * 否则未启用支付的部署连"这笔失败了吗"都答不了。
+   */
+  async getOrderStatus(input: {
+    tenantId: string;
+    customerAccountId: string;
+    outTradeNo: string;
+  }): Promise<{
+    outTradeNo: string;
+    status: string;
+    amountFen: string;
+    paidAt: string | null;
+    credited: boolean;
+  }> {
+    const payer = await this.repository.findCustomerPayerIdentity(
+      input.tenantId,
+      input.customerAccountId,
+    );
+    if (!payer) throw new PrepayInputError("客户档案不存在");
+    const order = await this.repository.findCustomerPaymentOrder({
+      tenantId: input.tenantId,
+      customerProfileId: payer.customerProfileId,
+      outNo: input.outTradeNo,
+    });
+    if (!order) throw new PrepayInputError("支付单不存在");
+    return {
+      outTradeNo: order.outNo,
+      status: order.status,
+      amountFen: order.amountFen.toString(),
+      paidAt: order.paidAt?.toISOString() ?? null,
+      // credited = 回调已把它变成 SUCCESS（余额已入账），前端据此显示"到账"
+      credited: order.status === "SUCCESS",
+    };
+  }
 }
 
 /** 商户单号：字母数字混合；微信只要求同商户号下唯一，这里靠时间戳+随机保证。 */

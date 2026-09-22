@@ -289,6 +289,38 @@ export class PrismaPaymentsRepository
     );
   }
 
+  async findCustomerPaymentOrder(input: {
+    tenantId: string;
+    customerProfileId: string;
+    outNo: string;
+  }): Promise<{
+    outNo: string;
+    status: string;
+    amountFen: bigint;
+    paidAt: Date | null;
+  } | null> {
+    return withTenantContext(
+      this.runtime,
+      input.tenantId,
+      async (tx: DbTransaction) => {
+        const row = await tx.paymentOrder.findFirst({
+          where: {
+            tenantId: input.tenantId,
+            customerProfileId: input.customerProfileId,
+            outNo: input.outNo,
+          },
+          select: {
+            outNo: true,
+            status: true,
+            amountFen: true,
+            paidAt: true,
+          },
+        });
+        return row ?? null;
+      },
+    );
+  }
+
   async attachPrepayId(
     tenantId: string,
     orderId: string,

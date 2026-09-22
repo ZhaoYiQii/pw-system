@@ -18,6 +18,20 @@ export interface PayerIdentityRecord {
 }
 
 export interface CheckoutRepository {
+  /**
+   * S4-6a：客户查**自己**的支付单（支付结果页轮询用）。
+   * 必须同时匹配租户 + 客户档案：只按单号查会让别的客户读到别人的支付记录。
+   */
+  findCustomerPaymentOrder(input: {
+    tenantId: string;
+    customerProfileId: string;
+    outNo: string;
+  }): Promise<{
+    outNo: string;
+    status: string;
+    amountFen: bigint;
+    paidAt: Date | null;
+  } | null>;
   findTenantPaymentAccount(
     tenantId: string,
   ): Promise<TenantPaymentAccountRecord | null>;
