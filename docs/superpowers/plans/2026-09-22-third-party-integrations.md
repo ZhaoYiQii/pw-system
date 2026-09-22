@@ -97,11 +97,66 @@ Scope and non-goals:
    看起来像后端坏了——2026-09-22 实测踩到，故改用 node fetch 探针）。
    预期：HTTP 200 且响应体**没有 `debugCode`**（带 `debugCode` = 还在走 mock），手机收到短信。
 
-### S3 公众号网页授权 + 微信登录（S4 前置）
+### S3 公众号网页授权 + 微信登录（S4 前置）—— 设计已定，待资质确认后开工
 
-- 新增授权入口与回调：`/api/v1/auth/wechat/authorize` → 微信授权页 → 回调换 `openid` → 绑定/创建账号 → 签发与手机号登录**同构**的会话。
-- 落库：账号需记录 `openid`（含唯一约束与租户隔离）。
-- 验收：单测（state 防重放、绑定冲突、已绑定直接登录）+ 本地 harness 模拟微信返回；真实授权需资质。
+事实基础（已核，2026-09-22）：
+
+- 现有客户登录是「短信码 → 按 `phone_hash` 找/建 `TenantAccount` → 发 `CUSTOMER` 会话」（`auth.service.ts:130` `phoneCustomerLogin`）；账号身份键是 `(tenantId, username)` 与 `(tenantId, phoneHash)`（`schema.prisma:150`）。
+- 全仓**没有** openid/unionid/授权代码；`.env.example` 里的 `WECHAT_APP_ID` / `WECHAT_APP_SECRET` 目前没有任何消费者。
+- H5 侧：`apiAdapter` 带 `credentials: "include"` + Bearer；`phoneLogin()` 把 `accessToken` 写 localStorage、`csrfToken` 另存（`features/customer-ui/session.ts:25`）；客户登录 UI 在 `pages/customer/home/index.tsx`。
+
+**两个必然的落库变更**
+
+1. `TenantAccount.wechat_openid String?` + `@@unique([tenantId, wechatOpenid])`：公众号身份键。openid 是 app 级唯一，单公众号足够；将来做小程序/多公众号需要 unionid 时再升级成独立 `wechat_identities` 表（迁移是机械的）。
+2. 新表 `wechat_login_requests`（租户级 RLS）：`id / tenantId / openid / ticketHash(unique) / returnTo / status(PENDING_PHONE|CONSUMED) / expiresAt / consumedAt / createdAt`。
+   **为什么必须有**：首次登录是「已授权（拿到 openid）但还不算账号」的中间态，必须在服务端短期保存；用一次性票据把它交给 H5，**不能把 openid 或 token 放进 URL**。用 DB 行而不是「带回浏览器的签名 bindToken」：票据单次消费 + 服务端可作废，绑定这种会改变账号归属的操作值得更硬的保证。
+
+**推荐流程（B 口径：首次绑手机号）**
+
+```
+H5 点「微信登录」
+ → GET /api/v1/auth/wechat/authorize?tenantCode=..&returnTo=..   (302 到微信)
+     redirect_uri = WECHAT_OAUTH_REDIRECT_URI（**H5 域名的入口页**，见下方口径）
+     state = 签名短期 JWT {tenantCode, returnTo}，10 分钟过期
+ → 微信授权页 → 微信 302 回 H5：GET https://<h5>/?wechat_login=1&code=..&state=..
+ → H5 入口页发现 code+state：POST /api/v1/auth/wechat/login { code, state }
+     服务端：验 state → 用 AppSecret 把 code 换 openid
+     ├ openid 已绑定账号 → 直接签发与手机号登录**同构**的会话（refresh cookie + access token + csrf）
+     └ 未绑定          → 返回 { needPhone: true, bindTicket }（票据行 PENDING_PHONE，60 秒）
+        → H5 走已有短信码流程：POST /api/v1/auth/wechat/bind-phone { bindTicket, phone, code }
+           consumeCode（复用 phone-verification）→ 按 phone_hash 找/建账号 → 绑 openid → 发会话
+```
+
+**为什么不在 API 侧做回调（2026-09-22 修订）**：原设计是 `redirect_uri` 指到 API 的 `/wechat/callback` 再 302 回 H5 带票据。改成 H5 入口页收 code 后，**只需要在公众号后台配 H5 一个网页授权域名**（API 域名不必也在白名单里），少一个端点、少一次跳转；而且 Taro H5 是 hash 路由，把 code 交给 API 的回调再拼 fragment 容易踩「code 落在 # 之后」的坑。代价是 `code` 会经过浏览器地址栏——这是 OAuth 的常态，且 code 单次消费、5 分钟失效。
+
+**为什么首次要绑手机号（要你确认的一点）**：一台门店只能有一条「人」的记录。先微信后手机号、先手机号后微信，都必须落到同一个账号；只认 openid 不绑手机，同一个人会得到两个账号（phoneHash 一个、openid 一个），订单与钱包会分裂——这是数据一致性风险，不是 UI 取舍。代价是首次多一步（一条短信），并且我们的手机号通道已经就位（S2）。
+
+若选 A（openid 即账号、不绑手机）：实现更少，但要接受上面的分裂风险，且手机号登录时必须做账号合并，总工作量反而比 B 大。
+
+**安全口径**
+
+- `state`：jose 签名 JWT（已是依赖），10 分钟过期，绑定 `tenantCode + returnTo + nonce`；`returnTo` 只接受**站内相对路径**（`//evil.com`、`https://…`、含反斜杠与控制字符的一律回退 `/`），杜绝开放重定向。
+- 授权 scope 默认用 `snsapi_base`（静默拿 openid，用户无感，进 H5 即可自动登录）；将来若要显示昵称头像再上 `snsapi_userinfo`（会多一次用户确认）。这条我没在本机验证过，第一次真实调用时确认。
+- 微信 `code` 只能用一次（微信侧保证，5 分钟）；我们换到 openid 后立刻落 PENDING_PHONE 票据行，消费一次即作废。
+- `bindTicket`：32 字节随机、只存 hash、单次消费、60 秒过期。
+- AppSecret 只在服务端，且**任何错误信息与日志都不带请求 URL**（微信要求把 appsecret 放在查询串，URL 一旦进日志就是密钥泄漏）；传输层错误原文进错误信息前会把 appsecret 替换成 `***`；日志对 openid 只留首尾各 4 位。
+
+**本机可验证 vs 需资质**
+
+- 可验证（本机）：authorize 的 302 与 state 结构；state 伪造/过期/跨 audience 混用；脏 `returnTo` 回退；code→openid 交换与全部错误码分类（stub 客户端）；密钥不出现在错误信息里；票据单次消费与过期；绑定冲突（openid 已绑 A 却要绑 B）；重复绑定幂等。
+- 需资质：真实授权页、真实 code 交换、网页授权域名校验。判据：回调能拿到 openid 并签发会话；失败时微信返回 `40029 invalid code` / `redirect_uri 域名与后台配置不一致`。
+
+**切片**
+
+- **S3a-1（已完成，无 DB 依赖）**：`infrastructure/wechat-oauth.client.ts`（配置门禁 / authorize URL / code→openid / errcode 分类 / 密钥脱敏 / openid 掩码）+ `infrastructure/wechat-state.ts`（state 签名校验 + `returnTo` 白名单）。
+  验收：`wechat-oauth.client.spec.ts` 12 passed、`wechat-state.spec.ts` 8 passed；`typecheck`（api）0；全量单测 422 passed / 1 skipped。
+  两处真实红→绿：① 我最初的断言是「错误信息不含主机名」（过严，主机名不是秘密），红 → 改成钉「密钥不出现在错误信息里」并给实现加脱敏，绿；② tsc 抓到我在 spec 里用 `.catch(e => e as Error)` 导致联合类型，红 → 改成 try/catch 收敛，绿。
+- **S3a-2**：迁移（openid 列 + `wechat_login_requests` 表 + RLS 策略）+ 把 client/state 注册进模块（工厂 + 缺凭证启动即失败的本机实测）。
+- **S3b**：端点（authorize 302 / login / bind-phone）+ 票据生命周期 + 单测与 stub 端到端。
+- **S3c**：首绑手机号规则（复用 `consumeCode`）+ 冲突与幂等（openid 已绑 A 要绑 B、手机号已有账号要绑 openid）。
+- **S3d**：H5 接入（`pages/customer/home` 加「微信登录」+ 入口页识别 code/state + 首绑页 + 文案），含 H5 单测与走查。
+
+**开工前要你确认 4 件事**：① 公众号是否**已认证、且是服务号**——网页授权本身认证号即可，但 **S4 微信支付 JSAPI 只支持服务号/小程序**，所以服务号是硬要求（服务号/订阅号的具体权限差异我按官方文档执行，不在本机臆断）；② 「网页授权域名」是否已配置为 H5 的备案域名；③ 商户号与公众号是否同一主体/已关联（S4 前置）；④ 首次微信登录是否要求绑手机号（推荐要求）。
 
 ### S4 微信支付 JSAPI
 
@@ -131,3 +186,31 @@ Scope and non-goals:
 - `lint` / `typecheck` / `format:check` / `openapi:check`（涉及契约时）的退出码；
 - 涉及凭证的片：明确列出「本机已验证」与「需真实凭证才能验证」两部分，后者不得写成已通过；
 - 提交与推送分别授权。
+
+## 顺带发现（S3 侦察时撞见，本轮未修，等你决定要不要单独切片）
+
+**租户表 RLS 覆盖不完整**（2026-09-22，只在一次性测试库 `pw_saas_s2_task2_20260916` 上核过）。
+
+证据 1（目录层）：带 `tenant_id` 但缺 `tenant_isolation_runtime` 策略的表有 4 张，其中 4 张连 RLS 都没开
+（复跑：`$env:PLATFORM_DATABASE_URL=...; node audit/q.mjs audit/rls-audit.sql`）：
+
+| 表                         | rls_enabled | rls_forced | policy_count |
+| -------------------------- | ----------- | ---------- | ------------ |
+| `phone_verification_codes` | false       | false      | 0            |
+| `player_applications`      | false       | false      | 0            |
+| `refresh_sessions`         | false       | false      | 0            |
+| `platform_access_grants`   | false       | false      | 0            |
+
+- `refresh_sessions` / `platform_access_grants` 属**设计如此**：`schema.prisma:227` 注释写明「非租户业务表…不启用 RLS；运行时角色可读写（登录/刷新流程）」——登录/刷新本来就发生在租户上下文之前。
+- `phone_verification_codes`（`schema.prisma:171` 注释写的是「租户级资源，**启用 RLS**」）与 `player_applications` 则是**注释与实现不一致**：`20260910040000_phone_verification_p1/migration.sql` 只建表建索引，没有 `ENABLE ROW LEVEL SECURITY`，也没有策略；全仓也没有「按 tenant_id 列自动补策略」的兜底循环（`rg "information_schema|FOR .* IN|EXECUTE format"` 在 migrations 下 0 命中）。
+
+证据 2（运行时角色行为）：用 `pw_runtime` 在不设 `app.tenant_id` 的情况下数行数
+（`node audit/q.mjs audit/rls-runtime-check.sql`，对照 owner 侧行数 `audit/rls-rowcounts.sql`）：
+
+- `tenant_accounts`：owner 50 行 → 运行时可见 **0**（策略生效，对照组，说明这套探测方法有效）
+- `refresh_sessions`：owner 4509 行 → 运行时可见 **4509**（与「设计如此」一致）
+- `phone_verification_codes` / `player_applications`：owner 侧各 **0 行** → **这两个表的跨租户可读性未被证实**，缺策略这条目前只有目录层证据（`pg_class` / `pg_policy`）支撑。
+
+影响与定级：属**纵深防御缺口**，不是已证实的数据泄漏（应用侧目前都带 `tenantId` 过滤，如 `phone-verification.service.ts` 的 `withTenantContext`）。但 `player_applications` 同时被 `game-dispatch.service.ts` 引用，要定级必须先做代码审计（确认没有跨租户查询路径），再补 `ENABLE + FORCE RLS + 两条策略`，并在**有数据**的库上验证「无租户上下文 → 0 行」。**本轮的结论仅到「策略缺失属实 + 影响未定」这一层。**
+
+另外核过、**不成立**的一条：`refresh_sessions` 4509 行并非「过期行堆积」——`expires_at` 全部在未来（最早 2026-09-29，`audit/refresh-sessions-retention.sql`），是这轮反复登录测试留下的正常会话。
