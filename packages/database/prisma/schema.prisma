@@ -39,6 +39,10 @@ model Tenant {
   configVersions TenantConfigVersion[]
   entitlements   TenantEntitlement[]
   wechatLoginStates  WechatLoginState[]
+  paymentAccount     TenantPaymentAccount?
+  paymentRefunds     PaymentRefund[]
+  reconciliationStatements ReconciliationStatement[]
+  reconciliationDifferences ReconciliationDifference[]
 
   @@map("tenants")
 }
@@ -1400,6 +1404,14 @@ model PaymentOrder {
   amountFen         BigInt    @map("amount_fen") @db.BigInt
   provider          String    @default("mock")
   providerRef       String?   @map("provider_ref")
+  /// S4：服务商模式下的商户标识（下单时写入，便于对账与排障）
+  spMchid           String?   @map("sp_mchid")
+  subMchid          String?   @map("sub_mchid")
+  prepayId          String?   @map("prepay_id")
+  transactionId     String?   @map("transaction_id")
+  /// payer 标识（sp_openid）：属个人信息，加密存储，明文不落库、不进日志
+  payerOpenidEnc    String?   @map("payer_openid_enc")
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz
   status            String    @default("PENDING")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -1407,7 +1419,104 @@ model PaymentOrder {
 
   @@unique([tenantId, outNo])
   @@index([tenantId, customerProfileId, status])
+  @@index([tenantId, transactionId])
   @@map("payment_orders")
+}
+
+/// S4：门店作为服务商模式下的子商户。租户级资源，启用 RLS（不 FORCE）。
+model TenantPaymentAccount {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @unique @map("tenant_id") @db.Uuid
+  subMchid     String?   @map("sub_mchid")
+  subAppid     String?   @map("sub_appid")
+  applyNo      String?   @map("apply_no")
+  /// APPLYING | PENDING_CONFIRM | ACTIVE | SUSPENDED
+  status       String    @default("APPLYING")
+  lastSyncedAt DateTime? @map("last_synced_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  version      Int       @default(1)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@map("tenant_payment_accounts")
+}
+
+/// S4：退款单。租户级资源，启用 RLS（不 FORCE）。
+model PaymentRefund {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  paymentOrderId String    @map("payment_order_id") @db.Uuid
+  outRefundNo    String    @map("out_refund_no")
+  amountFen      BigInt    @map("amount_fen") @db.BigInt
+  status         String    @default("CREATED")
+  refundId       String?   @map("refund_id")
+  reason         String?
+  succeededAt    DateTime? @map("succeeded_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  version        Int       @default(1)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, outRefundNo])
+  @@index([tenantId, paymentOrderId])
+  @@map("payment_refunds")
+}
+
+/// S4：回调收件箱。**预认证表，故意不启用 RLS**（解密前不知道租户，同 refresh_sessions 口径）。
+/// 微信要求 5 秒内验签并应答且最多重试 15 次 → 先落库再应答，避免丢单。
+model WebhookInbox {
+  id                String    @id @default(uuid()) @db.Uuid
+  provider          String    @default("wechatpay_partner")
+  eventId           String    @map("event_id")
+  eventType         String?   @map("event_type")
+  headers           Json
+  rawBody           String    @map("raw_body")
+  signatureVerified Boolean   @default(false) @map("signature_verified")
+  processedAt       DateTime? @map("processed_at") @db.Timestamptz
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@unique([provider, eventId])
+  @@index([processedAt])
+  @@map("webhook_inbox")
+}
+
+/// S4：对账账单文件。租户级资源，启用 RLS（不 FORCE）。
+model ReconciliationStatement {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  subMchid    String   @map("sub_mchid")
+  billType    String   @default("TRADE") @map("bill_type")
+  billDate    DateTime @map("bill_date") @db.Date
+  fileSha256  String   @map("file_sha256")
+  totalCount  Int      @default(0) @map("total_count")
+  totalFen    BigInt   @default(0) @map("total_fen") @db.BigInt
+  downloadedAt DateTime @default(now()) @map("downloaded_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, billType, billDate, subMchid])
+  @@map("reconciliation_statements")
+}
+
+/// S4：对账差异。租户级资源，启用 RLS（不 FORCE）。
+model ReconciliationDifference {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  statementId    String?   @map("statement_id") @db.Uuid
+  paymentOrderId String?   @map("payment_order_id") @db.Uuid
+  kind           String
+  amountFen      BigInt?   @map("amount_fen") @db.BigInt
+  detail         String?
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, kind, createdAt])
+  @@map("reconciliation_differences")
 }
 
 model SlotSession {
