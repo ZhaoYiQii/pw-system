@@ -53,7 +53,9 @@ export default defineConfig<"webpack5">(async (merge) => {
       828: 1.81 / 2,
     },
     sourceRoot: "src",
-    outputRoot: "dist",
+    // H5 与 weapp 必须输出到不同目录：共用同一个 dist 时，后跑的 build:weapp 会把 H5 产物整份
+    // 覆盖掉（H5 静态服务会拿到小程序产物 → 浏览器白屏，而 curl 仍是 200）。
+    outputRoot: process.env.TARO_ENV === "weapp" ? "dist-weapp" : "dist",
     plugins: [],
     defineConstants: {},
     framework: "react",

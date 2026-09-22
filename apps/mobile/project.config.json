@@ -1,5 +1,5 @@
 {
-  "miniprogramRoot": "./dist",
+  "miniprogramRoot": "./dist-weapp",
   "projectname": "pw-mobile",
   "description": "陪玩门店多租户 SaaS 移动端（H5 / 微信小程序同源）",
   "appid": "touristappid",

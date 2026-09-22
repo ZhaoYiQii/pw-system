@@ -10,6 +10,7 @@ coverage/
 
 # Taro outputs
 apps/mobile/dist/
+apps/mobile/dist-weapp/
 
 # Local configuration and secrets
 .env

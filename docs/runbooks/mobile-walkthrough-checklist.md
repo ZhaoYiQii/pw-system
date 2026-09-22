@@ -46,11 +46,11 @@
 
 ## 一之二、本机自动化 H5 E2E（Playwright，跑在 3101）
 
-真机走查之前先跑这一层：它覆盖「H5 能登录、能下单、商家端能看到该单」的链路，**改了 H5 代码后一定要跑**——`apps/mobile/dist` 是 H5 与 weapp 共用产物，跑过 `build:weapp` 后必须重建 H5，否则这里会直接红。
+真机走查之前先跑这一层：它覆盖「H5 能登录、能下单、商家端能看到该单」的链路，**改了 H5 代码后一定要跑**。2026-09-22 起 H5 与 weapp 分目录输出（H5=`apps/mobile/dist`、weapp=`apps/mobile/dist-weapp`），`build:weapp` 不再覆盖 H5 产物；但改完 H5 代码仍需重建 H5 才会反映到本层用例。
 
 前置：`apps/mobile/dist` 必须是当前 H5 产物（`corepack pnpm build:h5`）。H5 产物按**同源** `/api` 调用后端，所以本地必须靠 `phone-h5-server.mjs` 反代，不能用 `file://` 或别的静态服务器。
 
-1. 陪玩端 / 老板端两条用例（dev 库 `pw_saas`，H5 反代 3300）：
+1. 陪玩端 / 老板端两条用例（夹具门店 `c1` **只存在于 dev 库 `pw_saas`**，所以 3300 这个 API 必须连 `pw_saas`，H5 反代到它；若 3300 连的是一次性测试库，本组用例会在登录处红）：
 
    ```powershell
    $env:PHONE_H5_PORT='3101'; $env:PHONE_API_PORT='3300'

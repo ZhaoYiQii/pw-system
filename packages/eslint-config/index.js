@@ -8,6 +8,7 @@ export default tseslint.config(
       "**/.turbo/**",
       "**/.next/**",
       "**/dist/**",
+      "**/dist-weapp/**",
       "**/lib/**",
       "**/coverage/**",
       "packages/api-client/src/**",
