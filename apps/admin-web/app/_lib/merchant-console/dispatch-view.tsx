@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ApiError } from "../api";
+import { fenToYuanText } from "../money";
 import { NewOrderButton } from "./new-order-dialog";
 import {
   buildSelectedCsvForColumns,
@@ -289,17 +290,22 @@ function gapChip(row: DispatchListRowView): string | null {
 function formatAmount(amountFen: string | null): string {
   if (amountFen === null) return "—";
   // 金额一律整数分；这里只做展示换算，不参与计算（平台费 = 0）。
-  const fen = Number(amountFen);
-  if (!Number.isFinite(fen)) return amountFen;
-  return `${(fen / 100).toFixed(2)} 元`;
+  // 用 money.ts 的 BigInt 实现，避免浮点（AGENTS：金额禁止 JavaScript 浮点）。
+  if (!/^\d+$/.test(amountFen)) return amountFen;
+  return `${fenToYuanText(amountFen)} 元`;
 }
 
 /** 汇总金额（分字符串）→ 「¥12.34」。缺失或非法显示 ¥—，不编 0。 */
 function formatFenToYuan(amountFen: string | null | undefined): string {
   if (amountFen === null || amountFen === undefined) return "¥—";
-  const fen = Number(amountFen);
-  if (!Number.isFinite(fen)) return "¥—";
-  return `¥${(fen / 100).toFixed(2)}`;
+  if (!/^\d+$/.test(amountFen)) return "¥—";
+  return `¥${fenToYuanText(amountFen)}`;
+}
+
+/** 分 → CSV 单元格：缺失或非法留空，绝不写 0（避免把「没数据」导成「0 元」）。 */
+function fenCellForCsv(amountFen: string | null): string {
+  if (amountFen === null || !/^\d+$/.test(amountFen)) return "";
+  return fenToYuanText(amountFen);
 }
 
 function statusVariant(status: string) {
@@ -647,7 +653,7 @@ export function DispatchListView() {
         row.customerName,
         row.playerName ?? "未选人",
         row.durationText,
-        row.amountFen === null ? "" : (Number(row.amountFen) / 100).toFixed(2),
+        fenCellForCsv(row.amountFen),
         row.startAt ? formatDateTime(row.startAt) : "",
         formatDateTime(row.createdAt),
       ],
