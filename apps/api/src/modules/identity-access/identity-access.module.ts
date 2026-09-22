@@ -19,16 +19,28 @@ import { EntitlementsModule } from "../entitlements/entitlements.module.js";
 import { Logger } from "@nestjs/common";
 import type { SmsProvider } from "./domain/sms-provider.js";
 import { MockSmsProvider } from "./infrastructure/mock-sms.provider.js";
+import {
+  resolveTencentSmsConfig,
+  TencentSmsProvider,
+} from "./infrastructure/tencent-sms.provider.js";
 
 export const AUTH_PLATFORM_CLIENT = "AUTH_PLATFORM_CLIENT";
 export const AUTH_RUNTIME_CLIENT = "AUTH_RUNTIME_CLIENT";
 export const SMS_PROVIDER = "SMS_PROVIDER";
 
-function resolveSmsProvider(): SmsProvider {
+/**
+ * 短信通道装配（与 `wallet.module.ts` 的 `resolvePaymentProvider` 同范式）。
+ * 导出以便单测直接钉住两条硬规则：**未知值不退回 mock**、**缺凭证启动即失败**。
+ */
+export function resolveSmsProvider(): SmsProvider {
   const provider = process.env.SMS_PROVIDER ?? "mock";
+  if (provider === "tencent") {
+    // 缺任一 TENCENT_SMS_* 会在这里抛出并点名变量，不允许带着半配置启动
+    return new TencentSmsProvider(resolveTencentSmsConfig());
+  }
   if (provider !== "mock") {
     throw new Error(
-      "SMS_PROVIDER only supports mock until real provider is implemented (P-5)",
+      `SMS_PROVIDER 不支持：${provider}（可选 mock | tencent；见 docs/runbooks/env-inventory.md）`,
     );
   }
   if (

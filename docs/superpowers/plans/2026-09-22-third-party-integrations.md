@@ -29,7 +29,7 @@ Scope and non-goals:
 | 2   | 公众号「网页授权域名」是否已配置为该备案域名                           | 授权回跳                      | 待确认                                              |
 | 3   | **商户号 + APIv3 密钥 + 商户私钥证书**（apiclient_key.pem / 平台证书） | JSAPI 下单、回调验签/解密     | 待确认具体形态                                      |
 | 4   | 商户号与公众号是否**同一主体/已关联**                                  | 用 openid 调 JSAPI 支付的前提 | 待确认                                              |
-| 5   | 短信服务商与密钥（阿里云/腾讯云/云片…）                                | 验证码                        | 待选定                                              |
+| 5   | 短信服务商与密钥（**已选腾讯云**）                                     | 验证码                        | 已选定；资质/签名/模板过审中（S2 本体已完工）       |
 | 6   | 对象存储服务商与密钥（阿里 OSS / 腾讯 COS…）                           | 证据文件                      | 待选定                                              |
 
 > 注：**没有 1–4 就无法落地微信支付**。若公众号还没有，S3/S4 只能先做代码与本地 harness，联调要等资质。
@@ -58,11 +58,44 @@ Scope and non-goals:
 **关键设计约束（已定）**：`STORAGE_PROVIDER` 采用「未知值 → 启动报错」，但**不得**在生产对 `local` 硬失败——现有 `container-smoke` 与生产 compose 正使用本地存储（`EVIDENCE_ROOT=/app/data/evidence`），硬失败会打红 CI 与部署；因此生产选 `local` 时只 **warn**（提示多实例或容器重启会丢文件）。
 **不在本片加 `signedUrl()`**：本地实现给不出签名 URL、对象存储尚未接入，加了就是没有消费者的空接口；S5 需要时再按 ADR 扩展。
 
-### S2 真实短信（选定服务商后）
+### S2 真实短信（腾讯云）—— 本体已完成；真实送达待凭证
 
-- 新增 `adapter`：REST 调用 + `node:crypto` 签名（阿里云 RPC 签名 / 腾讯云 TC3，按选定服务商实现）。
-- 复用既有 `SMS_PROVIDER` token；mock 保持 dev-only。
-- 验收：单测（签名向量 + 错误映射 + 重试）；真实送达需你提供密钥后由你或服务器执行。
+**S2-0（已完成）**：`SendSmsCodeInput` 补 `mobile`（真实通道必须拿到号码才能投递，原来只有 `phoneTail`）；`SmsProviderKind` 加 `tencent`。
+
+**S2-本体（已完成）**：`apps/api/src/modules/identity-access/infrastructure/tencent-sms.provider.ts`——TC3-HMAC-SHA256 签名用 `node:crypto` 手写、HTTP 用内置 `fetch`（**不引入腾讯云 SDK**，不扩大供应链面）；装配进 `identity-access.module.ts` 的 `resolveSmsProvider()`（`mock | tencent`，未知值抛错且**不退回 mock**，`tencent` 缺凭证**启动即失败并点名变量**）。
+
+设计决定两条（写在这里以免下次重复讨论）：
+
+1. **不要「模板参数名」**：腾讯云 `TemplateParamSet` 是字符串数组、按位置取值，请求里没有参数名字段。本 adapter 只支持**单变量验证码模板**，固定传 `[code]`。若过审模板含多个变量，第一次真实调用会报 `FailedOperation.TemplateParamSetNotMatchTemplate` 一类错误——那种情况下再按模板实际变量数扩展。
+2. **同步调用带 5s 超时**：验证码在登录链路上，卡住会一直占着用户请求。超时/网络失败/返回体非 JSON 都归一成 `TencentSmsError`（`kind=retryable`），原始原因进 message，不留「堆栈看不懂的 500」。
+
+验收证据（本机可复跑）：
+
+- `apps/api/src/modules/identity-access/infrastructure/tencent-sms.provider.spec.ts`：**13 passed**——缺变量点名、默认值、E.164 转换、错误分类、请求拼装、签名对同输入稳定（换密钥/换时间必变）、成功路径、API 级错误、单号失败、网络失败、超时、非 JSON 响应。
+  **红先绿证据**：初版 spec 把注入的时钟写成数字而非函数 → `Test Files 1 failed / Tests 3 failed | 6 passed`，报 `TypeError: this.now is not a function`；修正注入后 13 passed。
+- `apps/api/src/modules/identity-access/identity-access.module.spec.ts`：**6 passed**——默认 mock、tencent 齐全、缺凭证点名、未知值不退回 mock、生产+mock 未放行、生产+tencent 放行。
+  注：这 6 条是**改动后补的回归锚点**，不是红先绿；改动前该分支直接抛 `SMS_PROVIDER only supports mock until real provider is implemented (P-5)`（可 `git show 16a1599:apps/api/src/modules/identity-access/identity-access.module.ts` 复核），故这些用例在改动前必然红。
+- **启动期实测（跑真实 `dist`，不是单测）**：`audit/s2-startup-guard.mjs`
+  - 负向：`NODE_ENV=production` + `SMS_PROVIDER=tencent` + 清空 5 个 `TENCENT_SMS_*` → 退出码 **1**、错误行点名**全部 5 个**变量、3399 端口**从未监听**；
+  - 正向对照（同环境、变量填假值）→ `/health` **200**。这一条是必须的：否则「进程挂了」可能是别的原因（本仓库踩过「启动慢 vs 产物缺失」的假结论）。
+- `typecheck`（api）与 `typecheck:tests` 退出码 0；全量单测 **402 passed / 1 skipped**；`lint` 0；`format:check` 0。
+- 配置面同步：`docker-compose.prod.yml` 的 `api` 与 `pw-init` 都传入 6 个腾讯云变量（`pw-init` 会走身份模块；`worker` 不装配短信通道，保持不传）；`infra/docker/env.prod.example`、`.env.example`、`docs/runbooks/env-inventory.md` 同步。
+
+**未验证（不得当成已通过）**：TC3 签名的正确性、真实送达、模板变量个数是否匹配。
+判据：签名错 → `AuthFailure.SignatureFailure`；模板变量数不匹配 → `FailedOperation.TemplateParamSetNotMatchTemplate` 一类；频控/额度 → `LimitExceeded.*`。
+**第一次真实调用之前，签名只能算「按文档实现」。**
+
+真实送达步骤（过审后由你或服务器执行）：
+
+1. 写 `D:\pw system\.env.sms.local`（实测 `git check-ignore -v .env.sms.local` → `.gitignore:17:.env.*`，不会入库）：
+   `SMS_PROVIDER=tencent` / `TENCENT_SMS_SECRET_ID` / `TENCENT_SMS_SECRET_KEY` / `TENCENT_SMS_SDK_APP_ID` / `TENCENT_SMS_SIGN_NAME` / `TENCENT_SMS_TEMPLATE_ID` / `TENCENT_SMS_REGION=ap-guangzhou`。
+2. `corepack pnpm --filter @pw/api build`，然后用 `restart-3300-sms.ps1`（读 `.env.sms.local` 覆盖这 6 个变量后起 3300）。
+   本片用到的本地脚本都在 `C:\Users\Listener\.codex\visualizations\2026\09\21\01a0c64c-b07c-75a0-86de-4021dbd26c26\audit\`
+   （沙箱可写区，不进仓库）：`restart-3300-sms.ps1`、`probe-send-code.mjs`、`probe-login.mjs`、`s2-startup-guard.mjs`。
+3. 发一发：`node <audit>\probe-send-code.mjs s5cwalk 1xxxxxxxxxx`（**不要用 PowerShell 里的
+   `curl.exe -d "{...}"`**：PS 5.1 会吃掉内层双引号，请求体变成非法 JSON，端点回 400「tenantCode/phone 必填」，
+   看起来像后端坏了——2026-09-22 实测踩到，故改用 node fetch 探针）。
+   预期：HTTP 200 且响应体**没有 `debugCode`**（带 `debugCode` = 还在走 mock），手机收到短信。
 
 ### S3 公众号网页授权 + 微信登录（S4 前置）
 

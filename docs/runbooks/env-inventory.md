@@ -22,8 +22,11 @@
 | `PII_MASTER_KEY` | **生产必填** | `common/pii/phone.ts` | 本地可由 `SESSION_SECRET` 派生 | 生产缺失 → `PII_MASTER_KEY is required in production`；非 32 字节 base64 → `PII_MASTER_KEY must be 32 bytes base64` |
 | `PAYMENT_PROVIDER` | **必填** | `wallet/wallet.module.ts` | 无 | 未配置 → 抛错（当前仅实现 `mock`） |
 | `ALLOW_MOCK_PAYMENT` | 生产演示必填 | `wallet/wallet.module.ts` | 无 | 生产且 `!== "true"` → `mock payment is not allowed in production` |
-| `SMS_PROVIDER` | 可选 | `identity-access.module.ts` | `mock` | 只支持 `mock`，其他值抛错 |
-| `ALLOW_MOCK_SMS` | 生产演示必填 | `identity-access.module.ts` | 无 | 生产且 `!== "true"` → `mock sms is not allowed in production` |
+| `SMS_PROVIDER` | 可选 | `identity-access.module.ts` | `mock` | 可选 `mock` \| `tencent`；未知值抛错且**不退回 mock**；`tencent` 缺凭证 → 启动失败并点名变量 |
+| `ALLOW_MOCK_SMS` | 生产演示必填 | `identity-access.module.ts` | 无 | 生产且 `!== "true"` → `mock sms is not allowed in production`（只对 `mock` 生效，`tencent` 不需要） |
+| `TENCENT_SMS_SECRET_ID` / `TENCENT_SMS_SECRET_KEY` | `SMS_PROVIDER=tencent` 时必填 | `infrastructure/tencent-sms.provider.ts` | 无 | 缺失 → 启动失败（`腾讯云短信缺少必需环境变量：…`） |
+| `TENCENT_SMS_SDK_APP_ID` / `TENCENT_SMS_SIGN_NAME` / `TENCENT_SMS_TEMPLATE_ID` | `SMS_PROVIDER=tencent` 时必填 | 同上 | 无 | 同上 |
+| `TENCENT_SMS_REGION` / `TENCENT_SMS_ENDPOINT` | 可选 | 同上 | `ap-guangzhou` / `sms.tencentcloudapi.com` | 内网或专线部署时覆盖 endpoint |
 | `ADMIN_WEB_ORIGIN` | 建议 | `main.ts` CORS 白名单 | 空 = 关闭 CORS | 未配置时浏览器端登录会被 CORS 拦 |
 | `H5_ORIGIN` | 建议 | `main.ts` CORS 白名单 | 同上 | 同上 |
 | `EVIDENCE_ROOT` | 建议 | `slot-session.controller.ts` 等 | `<cwd>/data/evidence` | 生产建议 `/app/data/evidence`（挂卷，否则证据文件落在容器可写层） |
@@ -74,5 +77,6 @@
 | 首次部署缺 `pw` 角色引导 | 迁移 `20260906000100_tenancy` 内 `ALTER DEFAULT PRIVILEGES FOR ROLE pw` 报 `role "pw" does not exist`（P3018 / 42704），迁移中断 | **已修**：新增 `infra/docker/bootstrap-owner.sql`，写入手册第 2 步 |
 | owner=pw_saas 时运行时授权缺失 | 64 张带 `tenant_isolation_runtime` 策略的表只有 2 张对 `pw_runtime` 可读（本地 owner=pw 时是 64/64，本地看不出来） | **已修**：新增 `infra/docker/grant-runtime.sql`（幂等），手册第 5 步执行后 64/64 |
 | 迁移给 `pw_runtime` 的是硬编码开发口令 | 不改口令时 api 登录 500（凭据无效） | **已入手册**：第 4 步 `ALTER ROLE pw_runtime`，冒烟实测必需 |
-| 生产对象存储 / 托管 PostgreSQL / 真实支付短信 Provider / 生产主机本身 | 当前形态仍是本机 Postgres + 本地卷存证据 + mock 支付 | 后续项（runbook 已登记待办，本轮未验证） |
+| 生产对象存储 / 托管 PostgreSQL / 真实支付 Provider / 生产主机本身 | 当前形态仍是本机 Postgres + 本地卷存证据 + mock 支付 | 后续项（runbook 已登记待办，本轮未验证） |
+| 真实短信通道 | 代码侧已完成（`SMS_PROVIDER=tencent` + TC3 签名 adapter + compose/env 模板带齐变量） | **代码侧完成**；真实送达需资质与密钥，本机未验证（S2） |
 | CI 不构建镜像、不起容器 | 上述三个容器缺陷 CI 全都拦不住 | 未处理（待决定是否新增 CI 容器冒烟 job） |

@@ -67,6 +67,14 @@ services:
       # 默认 fail-closed；演示部署在 .env 里显式 ALLOW_MOCK_SMS=true（与 mock 支付同口径）。
       SMS_PROVIDER: ${SMS_PROVIDER:-mock}
       ALLOW_MOCK_SMS: ${ALLOW_MOCK_SMS:-false}
+      # S2 真实短信：SMS_PROVIDER=tencent 时下面六项缺一不可（缺项 api 启动即失败并点名变量）；
+      # SMS_PROVIDER=mock 时留空无害。worker 不装配短信通道，故只在 api 与 pw-init 侧传。
+      TENCENT_SMS_SECRET_ID: ${TENCENT_SMS_SECRET_ID:-}
+      TENCENT_SMS_SECRET_KEY: ${TENCENT_SMS_SECRET_KEY:-}
+      TENCENT_SMS_SDK_APP_ID: ${TENCENT_SMS_SDK_APP_ID:-}
+      TENCENT_SMS_SIGN_NAME: ${TENCENT_SMS_SIGN_NAME:-}
+      TENCENT_SMS_TEMPLATE_ID: ${TENCENT_SMS_TEMPLATE_ID:-}
+      TENCENT_SMS_REGION: ${TENCENT_SMS_REGION:-ap-guangzhou}
     volumes:
       - evidence:/app/data/evidence
     ports:
@@ -170,6 +178,13 @@ services:
       # 种子脚本会走身份模块，与 api 同口径带上 SMS 开关
       SMS_PROVIDER: ${SMS_PROVIDER:-mock}
       ALLOW_MOCK_SMS: ${ALLOW_MOCK_SMS:-false}
+      # 与 api 同口径：SMS_PROVIDER=tencent 时缺任一项这里也会启动失败
+      TENCENT_SMS_SECRET_ID: ${TENCENT_SMS_SECRET_ID:-}
+      TENCENT_SMS_SECRET_KEY: ${TENCENT_SMS_SECRET_KEY:-}
+      TENCENT_SMS_SDK_APP_ID: ${TENCENT_SMS_SDK_APP_ID:-}
+      TENCENT_SMS_SIGN_NAME: ${TENCENT_SMS_SIGN_NAME:-}
+      TENCENT_SMS_TEMPLATE_ID: ${TENCENT_SMS_TEMPLATE_ID:-}
+      TENCENT_SMS_REGION: ${TENCENT_SMS_REGION:-ap-guangzhou}
       DISPATCH_ROUND_WINDOW_MS: ${DISPATCH_ROUND_WINDOW_MS:-600000}
     volumes:
       - evidence:/app/data/evidence
