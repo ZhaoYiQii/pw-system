@@ -44,10 +44,19 @@ Scope and non-goals:
 
 ### S1 provider 装配层（不依赖任何凭证，可立即开工）
 
-- 把支付的 DI token 从具体类 `MockPaymentProvider` 改为接口 `PaymentProvider`（与短信模块同构）。
-- 为**对象存储**与**对外通知**新建接口 + DI token + 环境变量选择 + 生产硬失败门禁（`STORAGE_PROVIDER` / `NOTIFY_PROVIDER`）。
-- 统一**配置校验**：所选 provider 缺必需配置时，启动抛错并直接点出缺失变量名（不是运行到一半才 500）。
-- 验收：`pnpm --filter @pw/api test` 聚焦用例 + `tsc` + 起服务实测「生产 + mock provider → 启动失败、错误信息含变量名」；现有集成套件保持绿。
+**S1a（已完成）**：支付的 DI token 从具体类 `MockPaymentProvider` 改为字符串 token `PAYMENT_PROVIDER` + 工厂返回接口 `PaymentProvider`，与短信模块同构，并导出 `resolvePaymentProvider` 以便测试。
+验收证据：`wallet.module.spec.ts` 5 条（未配置→点名 `PAYMENT_PROVIDER`；未知通道→不退回 mock；生产+mock 未放行→点名 `ALLOW_MOCK_PAYMENT`；生产显式放行→可用；非生产→默认 mock）；`tsc -p apps/api` 0；全量单测 56 files / 379 passed；**启动期实测**：`NODE_ENV=production` + `PAYMENT_PROVIDER=mock` 且未设 `ALLOW_MOCK_PAYMENT` → 退出码 1、错误行含 `ALLOW_MOCK_PAYMENT`、端口从未监听。
+
+**S1b（对象存储抽象，待实施）**——拆两片，避免一次改动过大：
+
+- **S1b-1**：新增 `StorageProvider` 接口（`kind` / `put(key, bytes, {mimeType})` / `read(key)` / `remove(key)`）+ 本地实现 + 共享 `StorageModule`（导出 token 供两个 feature module 复用）；把 `slot-session.controller.ts` 的写入与失败清理改走 provider。
+  现状足迹：`slot-session.controller.ts:62-66` 自有 `rootDir()`；`:229-233` `mkdir` + `writeFile({flag:"wx"})` + 失败 `unlink`；`:260` 失败 `unlink`。
+  验收：单测（put/read/remove 往返、未知 provider 启动报错、生产 local 告警）+ `tsc` + 起服务上传证据仍 201。
+- **S1b-2**：`evidence.controller.ts` 的写入与**两个下载端点**改走 provider（现状：`:85-89` 自有 `rootDir()`；`:210-214` / `:246` 写入与清理；`:276-285`、`:310-313` 两处 `readFile` + 手写 header）。
+  验收：单测 + 起服务下载同一份证据仍 200 且字节一致。
+
+**关键设计约束（已定）**：`STORAGE_PROVIDER` 采用「未知值 → 启动报错」，但**不得**在生产对 `local` 硬失败——现有 `container-smoke` 与生产 compose 正使用本地存储（`EVIDENCE_ROOT=/app/data/evidence`），硬失败会打红 CI 与部署；因此生产选 `local` 时只 **warn**（提示多实例或容器重启会丢文件）。
+**不在本片加 `signedUrl()`**：本地实现给不出签名 URL、对象存储尚未接入，加了就是没有消费者的空接口；S5 需要时再按 ADR 扩展。
 
 ### S2 真实短信（选定服务商后）
 
