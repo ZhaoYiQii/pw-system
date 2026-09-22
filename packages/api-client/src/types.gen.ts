@@ -9728,3 +9728,14 @@ export type WechatPayCheckoutPrepayData = {
 export type WechatPayCheckoutPrepayResponses = {
     201: unknown;
 };
+
+export type WechatPayRefundRegisterManualData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/payments/refunds/manual';
+};
+
+export type WechatPayRefundRegisterManualResponses = {
+    201: unknown;
+};

@@ -71,6 +71,8 @@ interface OrderHistoryRow {
 const WALLET_TYPE_TEXT: Record<string, string> = {
   RECHARGE: "充值",
   DEDUCT: "消费扣款",
+  // S4-4：人工退款登记写出的流水类型（金额仍为正，方向由类型决定）
+  REFUND: "退款",
 };
 
 const ORDER_STATUS_TEXT: Record<string, string> = {

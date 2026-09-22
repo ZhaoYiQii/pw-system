@@ -26,7 +26,9 @@ import {
  * - `STATUS_MISMATCH`：微信已支付、本地状态还不是 SUCCESS（回调没处理成功）
  * - `MISSING_WECHAT`：本地标记成功、账单里没有（要么账单延迟，要么本地被改过）
  *
- * 退款行本片**不参与**分类（留给 S4-4 退款对账），避免把同一笔订单的退款行当成支付行。
+ * 退款行本片**不参与**分类，避免把同一笔订单的退款行当成支付行。
+ * S4-4 的人工退款登记只写 `payment_refunds`、**不改 `payment_orders.status`**，
+ * 所以本分类逻辑对退款无感知：支付行照旧按 SUCCESS 比对。
  */
 
 export type ReconcileOutcome = "reconciled" | "already" | "not_ready";

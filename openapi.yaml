@@ -12536,6 +12536,15 @@ paths:
           description: ""
       tags:
         - WechatPayCheckout
+  /api/v1/payments/refunds/manual:
+    post:
+      operationId: wechatPayRefund_registerManual
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags:
+        - WechatPayRefund
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

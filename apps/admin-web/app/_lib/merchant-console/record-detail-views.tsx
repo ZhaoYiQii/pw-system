@@ -858,7 +858,11 @@ function BackLink({ href, label }: { href: string; label: string }) {
 }
 
 function walletTypeLabel(type: string): string {
-  return type === "RECHARGE" ? "充值" : type === "DEDUCT" ? "消费扣款" : type;
+  if (type === "RECHARGE") return "充值";
+  if (type === "DEDUCT") return "消费扣款";
+  // S4-4：人工退款登记写出的流水类型
+  if (type === "REFUND") return "退款";
+  return type;
 }
 
 function durationLabel(seconds: number | null): string {

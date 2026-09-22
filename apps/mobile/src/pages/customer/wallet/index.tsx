@@ -17,7 +17,7 @@ import {
 interface WalletEntry {
   id: string;
   txNo: string;
-  type: "RECHARGE" | "DEDUCT";
+  type: "RECHARGE" | "DEDUCT" | "REFUND";
   amountFen: string;
   balanceAfterFen: string;
   reason: string | null;
@@ -28,6 +28,13 @@ interface WalletView {
   bossNo: string;
   balanceFen: string;
   entries: WalletEntry[];
+}
+
+/** 钱包流水文案：S4-4 起还有 REFUND（人工退款登记，金额仍为正、方向由类型决定）。 */
+function walletTypeText(type: WalletEntry["type"]): string {
+  if (type === "RECHARGE") return "充值";
+  if (type === "REFUND") return "退款";
+  return "扣费";
 }
 
 export default function WalletPage() {
@@ -172,7 +179,7 @@ export default function WalletPage() {
             {wallet.entries.slice(0, 20).map((entry) => (
               <View className="cu-money-line" key={entry.id}>
                 <View>
-                  <Text>{entry.type === "RECHARGE" ? "充值" : "扣费"}</Text>
+                  <Text>{walletTypeText(entry.type)}</Text>
                   {entry.reason ? (
                     <Text className="cu-meta">{entry.reason}</Text>
                   ) : null}

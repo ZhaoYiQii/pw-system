@@ -10,6 +10,7 @@ import {
 import { TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { WechatPayCheckoutService } from "../application/wechatpay-checkout.service.js";
+import { parseAmountFen } from "../domain/amount.js";
 import {
   PrepayInputError,
   TenantPaymentNotReadyError,
@@ -83,17 +84,4 @@ export class WechatPayCheckoutController {
       throw error;
     }
   }
-}
-
-/** 金额一律整数分；接受字符串或数字，拒绝小数、负数与超范围。 */
-function parseAmountFen(value: unknown): bigint | null {
-  if (typeof value === "bigint") return value > 0n ? value : null;
-  if (typeof value === "number") {
-    return Number.isSafeInteger(value) && value > 0 ? BigInt(value) : null;
-  }
-  if (typeof value === "string" && /^[0-9]+$/.test(value.trim())) {
-    const parsed = BigInt(value.trim());
-    return parsed > 0n ? parsed : null;
-  }
-  return null;
 }

@@ -17454,6 +17454,20 @@
           "WechatPayCheckout"
         ]
       }
+    },
+    "/api/v1/payments/refunds/manual": {
+      "post": {
+        "operationId": "wechatPayRefund_registerManual",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WechatPayRefund"
+        ]
+      }
     }
   },
   "info": {

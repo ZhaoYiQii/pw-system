@@ -45,3 +45,27 @@ export class WechatPayerNotBoundError extends Error {
     this.name = "WechatPayerNotBoundError";
   }
 }
+
+/** S4-4：人工退款登记入参问题（金额非法 / 缺单号 / 缺原因 / 单号不存在）→ 400。 */
+export class RefundInputError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "RefundInputError";
+  }
+}
+
+/** 支付单状态不允许退款（未支付 / 已全额退款 / 超过可退余额）→ 409。 */
+export class RefundNotAllowedError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "RefundNotAllowedError";
+  }
+}
+
+/** 客户钱包余额不足，扣不动这笔退款 → 409（必须人工核对，绝不把余额扣成负数）。 */
+export class RefundInsufficientBalanceError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "RefundInsufficientBalanceError";
+  }
+}
