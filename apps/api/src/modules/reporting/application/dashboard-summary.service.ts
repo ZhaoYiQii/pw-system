@@ -7,6 +7,14 @@ import {
   type RiskFeedItem,
 } from "../domain/dashboard-summary.js";
 
+/**
+ * 报表「今日」日界的时区口径。
+ *
+ * 现状（2026-09-22 核对三个库）：`tenants.timezone` 全部是 `Asia/Shanghai`，
+ * 所以这里写常量与真实数据一致，不是「读不到配置」的降级。
+ * 支持多时区（按租户切日界）需要先做产品决策，已登记在 docs/DEVELOPMENT_BACKLOG.md；
+ * 改这里之前请先确认该前提仍然成立。
+ */
 const STORE_TZ = "Asia/Shanghai";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
