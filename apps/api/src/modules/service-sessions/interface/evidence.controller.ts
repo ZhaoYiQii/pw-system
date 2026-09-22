@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { STORAGE_PROVIDER } from "../../../common/storage/storage.module.js";
+import type { StorageProvider } from "../../../common/storage/storage-provider.js";
 import {
   BadRequestException,
   Controller,
@@ -82,12 +83,6 @@ const MIME_BY_MAGIC: Array<{
   },
 ];
 
-function rootDir(): string {
-  return (
-    process.env.EVIDENCE_ROOT ?? path.join(process.cwd(), "data", "evidence")
-  );
-}
-
 function sanitizeName(name: string): string {
   const base = path
     .basename(String(name ?? "evidence"))
@@ -103,6 +98,8 @@ export class EvidenceController {
     private readonly repo: PrismaSessionsRepository,
     @Inject(PlayersService) private readonly players: PlayersService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storage: StorageProvider,
   ) {}
 
   private tenantIdOf(req: AuthenticatedRequest): string {
@@ -207,16 +204,12 @@ export class EvidenceController {
       String(new Date().getUTCMonth() + 1).padStart(2, "0"),
       `${randomUUID()}${detected.ext}`,
     );
-    const dir = path.join(rootDir(), path.dirname(key));
-    const full = path.join(rootDir(), key);
-    await mkdir(dir, { recursive: true });
-    await writeFile(full, bytes, { flag: "wx" }).catch(async (error) => {
-      await unlink(full).catch(() => undefined);
-      throw error;
-    });
+    // key 统一成对象存储的形态（正斜杠）；put / remove / 落库都用同一个值
+    const objectKey = key.replace(/\\/g, "/");
+    await this.storage.put(objectKey, bytes, { mimeType: detected.mime });
     try {
       const created = await this.repo.createEvidence(tenantId, sessionId, {
-        objectKey: key.replace(/\\/g, "/"),
+        objectKey,
         originalName,
         mimeType: detected.mime,
         sizeBytes: bytes.length,
@@ -236,14 +229,14 @@ export class EvidenceController {
       return {
         data: {
           id: created.id,
-          objectKey: key.replace(/\\/g, "/"),
+          objectKey,
           mimeType: detected.mime,
           sizeBytes: bytes.length,
           sha256,
         },
       };
     } catch (error) {
-      await unlink(full).catch(() => undefined);
+      await this.storage.remove(objectKey).catch(() => undefined);
       throw error;
     }
   }
@@ -273,9 +266,8 @@ export class EvidenceController {
       if (!me || !s || me.id !== s.playerId)
         throw new ForbiddenException("无权限下载");
     }
-    const full = path.join(rootDir(), ev.objectKey);
     try {
-      const data = await readFile(full);
+      const data = await this.storage.read(ev.objectKey);
       res.setHeader("content-type", ev.mimeType);
       res.setHeader("content-length", String(data.length));
       res.setHeader(
@@ -307,9 +299,8 @@ export class EvidenceController {
     }
     const ev = await this.repo.findSlotEvidence(tenantId, id);
     if (!ev) throw new NotFoundException("证据不存在");
-    const full = path.join(rootDir(), ev.objectKey);
     try {
-      const data = await readFile(full);
+      const data = await this.storage.read(ev.objectKey);
       res.setHeader("content-type", ev.mimeType);
       res.setHeader("content-length", String(data.length));
       res.setHeader(

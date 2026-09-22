@@ -5,11 +5,12 @@ import { PrismaSessionsRepository } from "./infrastructure/prisma-sessions.repos
 import { SessionsController } from "./interface/sessions.controller.js";
 import { EvidenceController } from "./interface/evidence.controller.js";
 import { PlayersModule } from "../players/players.module.js";
+import { StorageModule } from "../../common/storage/storage.module.js";
 
 export const SESSIONS_DB_CLIENT = "SESSIONS_DB_CLIENT";
 
 @Module({
-  imports: [PlayersModule],
+  imports: [PlayersModule, StorageModule],
   controllers: [SessionsController, EvidenceController],
   providers: [
     {
