@@ -26,6 +26,13 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+export class PhoneAlreadyBoundError extends Error {
+  constructor() {
+    super("该手机号已绑定其他账号，请联系门店处理");
+    this.name = "PhoneAlreadyBoundError";
+  }
+}
+
 export class InvalidRefreshTokenError extends Error {
   constructor() {
     super("invalid or expired refresh token");

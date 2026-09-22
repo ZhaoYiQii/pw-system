@@ -6,6 +6,7 @@ import type {
   NewRefreshSession,
   PlatformAccountRecord,
   RefreshSessionRecord,
+  BindPhoneInput,
   NewWechatLoginState,
   RegisterPhoneCustomerInput,
   RegisterWechatCustomerInput,
@@ -37,6 +38,7 @@ function mapTenant(row: {
   passwordHash: string;
   status: string;
   roles: { role: string }[];
+  wechatOpenid?: string | null;
 }): TenantAccountRecord {
   return {
     id: row.id,
@@ -46,6 +48,7 @@ function mapTenant(row: {
     passwordHash: row.passwordHash,
     status: row.status as TenantAccountRecord["status"],
     roles: row.roles.map((r) => r.role),
+    wechatOpenid: row.wechatOpenid ?? null,
   };
 }
 
@@ -99,6 +102,7 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: row.passwordHash,
           status: row.status,
           roles: row.roles,
+          wechatOpenid: row.wechatOpenid,
         });
       },
     );
@@ -133,6 +137,8 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: row.passwordHash,
           status: row.status,
           roles: row.roles,
+          // S3c-2：补绑/合并要看这个字段判断冲突，漏映射会让冲突规则失效（E2E 抓到过）
+          wechatOpenid: row.wechatOpenid,
         });
       },
     );
@@ -178,6 +184,7 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: account.passwordHash,
           status: account.status,
           roles: account.roles,
+          wechatOpenid: account.wechatOpenid,
         });
       },
     );
@@ -204,6 +211,7 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: row.passwordHash,
           status: row.status,
           roles: row.roles,
+          wechatOpenid: row.wechatOpenid,
         });
       },
     );
@@ -246,6 +254,60 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: account.passwordHash,
           status: account.status,
           roles: account.roles,
+          wechatOpenid: account.wechatOpenid,
+        });
+      },
+    );
+  }
+
+  /** 补绑手机号：账号表与客户档案一起改，避免后台看到两处号码不一致。 */
+  async setAccountPhone(
+    tenantId: string,
+    accountId: string,
+    input: BindPhoneInput,
+  ): Promise<void> {
+    await withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        await tx.tenantAccount.update({
+          where: { id: accountId },
+          data: { phoneEnc: input.phoneEnc, phoneHash: input.phoneHash },
+        });
+        await tx.customerProfile.updateMany({
+          where: { tenantId, tenantAccountId: accountId },
+          data: { mobileEnc: input.phoneEnc, mobileHash: input.phoneHash },
+        });
+      },
+    );
+  }
+
+  /**
+   * 迁移 openid：先清源、后写目标（同一事务）。
+   * 顺序不能反——(tenant_id, wechat_openid) 是唯一索引，先写目标会撞上源那一行。
+   */
+  async transferWechatOpenid(
+    tenantId: string,
+    input: { fromAccountId: string; toAccountId: string },
+  ): Promise<void> {
+    await withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const from = await tx.tenantAccount.findUnique({
+          where: { id: input.fromAccountId },
+          select: { wechatOpenid: true },
+        });
+        if (!from?.wechatOpenid) {
+          throw new Error("source account has no wechat openid to transfer");
+        }
+        await tx.tenantAccount.update({
+          where: { id: input.fromAccountId },
+          data: { wechatOpenid: null },
+        });
+        await tx.tenantAccount.update({
+          where: { id: input.toAccountId },
+          data: { wechatOpenid: from.wechatOpenid },
         });
       },
     );
@@ -314,6 +376,7 @@ export class PrismaAuthRepository implements AuthRepository {
           passwordHash: row.passwordHash,
           status: row.status,
           roles: row.roles,
+          wechatOpenid: row.wechatOpenid,
         });
       },
     );

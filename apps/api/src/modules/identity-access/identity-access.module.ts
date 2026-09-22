@@ -134,9 +134,12 @@ export function resolveWechatLogin(): WechatLoginRuntime {
     },
     {
       provide: AuthService,
-      useFactory: (repo: PrismaAuthRepository, tokens: TokenService) =>
-        new AuthService(repo, tokens),
-      inject: [PrismaAuthRepository, TokenService],
+      useFactory: (
+        repo: PrismaAuthRepository,
+        tokens: TokenService,
+        phoneVerification: PhoneVerificationService,
+      ) => new AuthService(repo, tokens, phoneVerification),
+      inject: [PrismaAuthRepository, TokenService, PhoneVerificationService],
     },
     {
       provide: TenantAccountsService,

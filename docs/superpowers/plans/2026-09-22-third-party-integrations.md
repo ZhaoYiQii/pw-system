@@ -164,8 +164,18 @@ H5 点「微信登录」
 - **S3c-1（已完成，2026-09-23）**：按官方 state 约束重做授权状态：`wechat-state.ts` 只留 `createStateToken()`（32 位十六进制）/`hashStateToken()`/`isValidStateToken()`/`sanitizeReturnTo()`；新增预认证表 `wechat_login_states`（只存哈希、单次消费、10 分钟过期），迁移 `20260923120000_wechat_login_state` **删掉**已无用的空表 `wechat_login_requests`。
   验收：`wechat-state.spec.ts` 6 passed、`wechat-auth.service.spec.ts` 9 passed（含 state 不可重放、过期、格式非法、跨门店）；`identity-access.module.spec.ts` 9 passed（去掉已不成立的 SESSION_SECRET 断言）；全量单测 432 passed / 1 skipped；typecheck（全仓 + tests）0；lint 0；format:check 0。
   红→绿两处：① tsc 抓到 spec 里 `[...map.values()][0]` 可能 undefined（`noUncheckedIndexedAccess`）；② 新用例「state 属于别的门店」一开始红——我的 stub 对任何门店 code 都返回同一租户，等于没测到，改成如实映射后绿。
-- **S3c-2**：手机号补绑（已登录状态，复用 `consumeCode`）+ 合并规则（手机号已有账号且未绑 openid → 绑过去；已绑别的 openid → 409）。手机号通道未接入也能验：走 mock provider 的 debugCode。
-- **S3d**：H5 接入（`pages/customer/home` 加「微信登录」+ 入口页识别 code/state + 个人中心补绑手机号 + 文案），含 H5 单测与走查。
+- **S3c-2（已完成，2026-09-23）**：`POST /api/v1/tenant/me/phone`（已登录态补绑手机号，复用 `consumeCode`）与合并规则：号码没人用 → 挂到当前账号；号码是自己的 → 幂等；号码属于另一个**客户**账号且未绑微信 → 把 openid 迁过去并**换发那个账号的会话**；号码已绑别的微信 / 目标不是客户 / 当前账号没有 openid → 409（不静默合并）。顺序是先验证码、后写库：验证失败一行都不写。
+  验收：`auth-phone-binding.spec.ts` 8 passed；集成测试 **51 files / 251 tests passed**（真库，含登录/刷新/租户隔离）；运行期 E2E `audit/bind-phone-runtime-check.mjs` 全 PASS（真实 HTTP + 真库 + mock 短信：409 冲突、合并后 openid 迁移且源账号清空、换发出的新会话可用、重复补绑幂等）。
+  **E2E 抓到一个单测抓不到的真 bug**：`findTenantAccountByPhoneHash` 没把 `wechatOpenid` 映射出来，于是「号码已绑别的微信 → 409」这条规则永远不触发（单测里 stub 自带该字段，所以全绿）。已修 4 处映射。教训：**仓储的字段映射只有 DB 级测试/E2E 守得住**，单测 stub 补不上。
+  另一个真实疏漏：S3c-2 改了 `AuthService` 构造签名，`tests/integration/auth.spec.ts` 的 `new AuthService(repo, tokens)` 直接编译不过——是 `typecheck:tests` 抓到的，不是 CI 事后才发现。
+- **S3c-3（待做，小片）**：给仓储映射补 DB 级测试（放 `tests/integration`），别让这类 bug 只能靠 E2E 兜底。
+- **S3d（已完成，2026-09-23）**：H5 接入。
+  - `apps/mobile/src/features/wechat-login/callback.ts`（纯逻辑：微信内置浏览器嗅探 / 读 `code+state` / 拼授权地址 / 清理地址栏）与 `index.ts`（整页跳授权、用 code 换会话并落 `accessToken`+`csrf`）；
+  - 客户首页登录卡片加「微信一键登录」（**仅微信 UA 显示**）；H5 入口页启动时识别 `?wechat_login=1&code&state` → 换会话 → 跳 `returnTo`，并清掉地址栏参数（防刷新时重放已消费的 code）；
+  - 顺手把三份重复的 `apiBase()` 收敛到 `platform/h5/api-base.ts`：授权跳转与登录请求必须是同一个基址，漂移会极难查。
+  - **官方口径**：微信文档没有规定「微信内置浏览器」的判定方式，所以 UA 嗅探只用于按钮显隐，不参与安全判断（结论仍由服务端 state + code 校验决定）。
+  - 验收：H5 单测 4 passed；`typecheck`（mobile）0；**真实构建 H5 成功**（30s，只有一条 webpack 上游 deprecation）；浏览器实证 3/3 PASS（微信 UA 出现按钮、桌面 UA 不出现、带 `code&state` 打开首页会走回调分支并显示失败原因）。
+- **S3d-2（等短信通道开通）**：个人中心「补绑手机号」入口（后端 `POST /api/v1/tenant/me/phone` 已就位）。短信未开通前不显示入口，避免用户点了报错。
 
 ### S3.5 补齐租户表 RLS（S3 之后、S4 之前；用户已确认按此顺序）
 

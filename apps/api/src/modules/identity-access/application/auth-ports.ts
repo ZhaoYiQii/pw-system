@@ -14,6 +14,8 @@ export interface TenantAccountRecord {
   passwordHash: string;
   status: "ACTIVE" | "DISABLED";
   roles: readonly string[];
+  /** S3c-2：补绑/合并需要知道当前账号是否已经绑了微信。 */
+  wechatOpenid?: string | null;
 }
 
 export interface RegisterPhoneCustomerInput {
@@ -39,6 +41,11 @@ export interface WechatLoginStateRecord {
   returnTo: string;
   expiresAt: Date;
   consumedAt: Date | null;
+}
+
+export interface BindPhoneInput {
+  phoneEnc: string;
+  phoneHash: string;
 }
 
 export interface NewWechatLoginState {
@@ -102,6 +109,16 @@ export interface AuthRepository {
     tenantId: string,
     input: RegisterWechatCustomerInput,
   ): Promise<TenantAccountRecord>;
+  setAccountPhone(
+    tenantId: string,
+    accountId: string,
+    input: BindPhoneInput,
+  ): Promise<void>;
+  /** 把 openid 从 from 迁到 to，并清空 from（(tenantId, wechatOpenid) 唯一约束要求）。 */
+  transferWechatOpenid(
+    tenantId: string,
+    input: { fromAccountId: string; toAccountId: string },
+  ): Promise<void>;
   createWechatLoginState(input: NewWechatLoginState): Promise<void>;
   consumeWechatLoginState(
     stateHash: string,

@@ -3,6 +3,7 @@ import { AuthService } from "../../apps/api/src/modules/identity-access/applicat
 import { PrismaAuthRepository } from "../../apps/api/src/modules/identity-access/infrastructure/auth.repository.js";
 import { hashPassword } from "../../apps/api/src/modules/identity-access/infrastructure/password.js";
 import { TokenService } from "../../apps/api/src/modules/identity-access/infrastructure/tokens.js";
+import { PhoneVerificationService } from "../../apps/api/src/modules/identity-access/application/phone-verification.service.js";
 import {
   AccountDisabledError,
   InvalidCredentialsError,
@@ -36,7 +37,13 @@ describe("identity-access (login / refresh / logout / audience)", () => {
     runtimeClient = createDatabaseClient(envOrThrow("PW_TEST_RUNTIME_URL"));
     repo = new PrismaAuthRepository(client, runtimeClient);
     tokens = new TokenService(SECRET);
-    service = new AuthService(repo, tokens);
+    // S3c-2 起 AuthService 多了一个手机号补绑依赖；本文件只覆盖登录/刷新/登出，
+    // 所以给一个不会被调用到的 provider 桩（不发短信）。
+    const phoneVerification = new PhoneVerificationService(runtimeClient, {
+      kind: "mock" as const,
+      sendCode: async () => undefined,
+    });
+    service = new AuthService(repo, tokens, phoneVerification);
 
     const adminHash = await hashPassword(PW);
     await client.platformAccount.create({

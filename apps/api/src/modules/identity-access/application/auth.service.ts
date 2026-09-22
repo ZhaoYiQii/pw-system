@@ -2,8 +2,10 @@ import {
   AccountDisabledError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
+  PhoneAlreadyBoundError,
   TenantInactiveError,
 } from "../domain/errors.js";
+import type { PhoneVerificationService } from "./phone-verification.service.js";
 import { createHash, randomBytes } from "node:crypto";
 import { encryptPhone } from "../../../common/pii/phone.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
@@ -32,6 +34,7 @@ export class AuthService {
   constructor(
     private readonly repository: AuthRepository,
     private readonly tokens: TokenService,
+    private readonly phoneVerification: PhoneVerificationService,
   ) {}
 
   private platformPrincipal(account: PlatformAccountRecord): AccessPrincipal {
@@ -205,6 +208,98 @@ export class AuthService {
       summary: `微信登录成功：${account.username} openid=${maskOpenid(openid)}`,
     });
     return bundle;
+  }
+
+  /**
+   * S3c-2：把已验证的手机号挂到**当前登录账号**上（A′ 口径下手机号是后补的）。
+   *
+   * 规则（都是为了让「一个人一个账号」）：
+   * - 号码没人用 → 直接挂上，当前会话继续有效；
+   * - 号码就是自己的 → 幂等；
+   * - 号码属于另一个客户账号且那个账号没绑微信 → 把 openid 迁过去，并**换发那个账号的会话**
+   *   （否则用户会留在没有订单的空账号里）；
+   * - 号码属于另一个账号且已绑别的微信、或目标不是客户 → 拒绝（409），不做静默合并。
+   *
+   * 先验证短信码再动数据：验证失败时一行都不写。
+   */
+  async bindPhone(input: {
+    tenantId: string;
+    accountId: string;
+    phone: string;
+    code: string;
+  }): Promise<{
+    phoneTail: string;
+    merged: boolean;
+    session: SessionBundle | null;
+  }> {
+    const phoneCipher = encryptPhone(input.tenantId, input.phone);
+    await this.phoneVerification.consumeCode(
+      input.tenantId,
+      input.phone,
+      input.code,
+      "register_login",
+    );
+    const account = await this.repository.findTenantAccountById(
+      input.accountId,
+      input.tenantId,
+    );
+    if (!account) throw new InvalidCredentialsError();
+    if (account.tenantStatus !== "ACTIVE") throw new TenantInactiveError();
+    if (account.status !== "ACTIVE") throw new AccountDisabledError();
+
+    const phoneTail = input.phone.slice(-4);
+    const existing = await this.repository.findTenantAccountByPhoneHash(
+      input.tenantId,
+      phoneCipher.mobileHash,
+    );
+    if (!existing) {
+      await this.repository.setAccountPhone(input.tenantId, input.accountId, {
+        phoneEnc: phoneCipher.mobileEnc,
+        phoneHash: phoneCipher.mobileHash,
+      });
+      await this.repository.recordAudit({
+        tenantId: input.tenantId,
+        actorType: "tenant_account",
+        actorId: input.accountId,
+        action: "auth.bind_phone",
+        resourceType: "tenant_account",
+        resourceId: input.accountId,
+        summary: `补绑手机号成功 phone_tail=****${phoneTail}`,
+      });
+      return { phoneTail, merged: false, session: null };
+    }
+    if (existing.id === input.accountId) {
+      return { phoneTail, merged: false, session: null };
+    }
+
+    const callerOpenid = account.wechatOpenid ?? null;
+    if (
+      existing.wechatOpenid ||
+      !callerOpenid ||
+      !existing.roles.includes("CUSTOMER")
+    ) {
+      throw new PhoneAlreadyBoundError();
+    }
+    await this.repository.transferWechatOpenid(input.tenantId, {
+      fromAccountId: input.accountId,
+      toAccountId: existing.id,
+    });
+    const session = await this.issue(
+      this.tenantPrincipal(
+        { ...existing, wechatOpenid: callerOpenid },
+        "CUSTOMER",
+      ),
+    );
+    await this.repository.recordAudit({
+      tenantId: input.tenantId,
+      actorType: "tenant_account",
+      actorId: session.principal.sub,
+      action: "auth.bind_phone_merged",
+      resourceType: "tenant_account",
+      resourceId: existing.id,
+      summary: `补绑手机号时合并到已有账号 ${existing.username} phone_tail=****${phoneTail}`,
+    });
+    return { phoneTail, merged: true, session };
   }
 
   async switchTenantContext(
