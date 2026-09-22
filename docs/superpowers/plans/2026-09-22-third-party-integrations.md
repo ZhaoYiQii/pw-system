@@ -179,16 +179,53 @@ H5 点「微信登录」
 
 ### S3.5 补齐租户表 RLS（S3 之后、S4 之前；用户已确认按此顺序）
 
+**S7 前置实验（已完成，2026-09-23）——本片的结论就是从这里来的**
+
+做法：新建一次性库 `pw_prodshape_20260923` + 非 super 的 owner 角色 `pw_saas`（跑完已删库删角色），
+用三种身份读同一张 `RLS + FORCE` 表（脚本 `audit/prodshape-rls-check.mjs`）：
+
+| 身份                                                    | 读 `customer_profiles`（RLS=true, FORCE=true） |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| superuser `pw`（**= 生产 `POSTGRES_USER` 的实际形态**） | **1 行**                                       |
+| 非 super、非 bypass 的**表 owner**（`pw_saas`）         | **0 行（静默，不报错）**                       |
+| `pw_runtime` 无租户上下文                               | 0 行                                           |
+| `pw_runtime` 带租户上下文                               | 1 行                                           |
+
+**结论：现在生产能跑，靠的是「`POSTGRES_USER` 是 superuser」这个巧合，不是设计保证。**
+受影响的是 `orders` / `service_sessions` / `tenant_domains` / `audit_logs` / `customer_profiles`
+（全部 `RLS + FORCE`，策略只 `TO pw` 与 `TO pw_runtime`）；而 owner 连接（`PLATFORM_DATABASE_URL`）
+是**故意**用来全局扫描的：`background/worker.ts:76/179/195`（自动关单、自动确认）、
+`platform-billing.service.ts:55`（域名占用检查）、`auth.repository.ts:425`（审计写入）——
+`background/bootstrap.ts:16` 的注释也明说「表 owner 全量权限」。
+一旦有人把 `POSTGRES_USER` 收紧成非 super（常见的安全整改），这些路径会**静默失效**
+（扫不到行、不报错），表现为「自动关单/自动确认不执行、域名可被重复占用」。
+
+**顺带核过（worker 多实例）**：自动关单路径**并发安全**——`worker.ts:88` 行锁
+（`SELECT ... FOR UPDATE`）+ `:96` 复核状态 + `:110` 条件更新 + `:118` 计数为 0 即放弃，
+两个实例不会重复关单。自动确认路径依赖 `ledger.completeAccounting` 的内部幂等
+（`:212` 注释亦如此说明），**本次没有逐行核过** → 标「部分验证」，第二个实例上线前补并发测试。
+
 **问题（已核，2026-09-23）**：`phone_verification_codes` 与 `player_applications` 带 `tenant_id` 却**没有** `ENABLE ROW LEVEL SECURITY`、也没有策略；`schema.prisma:171` 对前者写着「租户级资源，启用 RLS」，属注释与实现不一致。（另两张 `refresh_sessions` / `platform_access_grants` 是设计如此，不动。）
 
 **为什么单独一片**：应用侧目前都带 `tenantId` 过滤，所以这是纵深防御缺口而非已证实泄漏；但要下结论必须**先审计代码路径**（`player_applications` 还被 `game-dispatch.service.ts` 引用），再动数据库——两件事混在一片里既不好验收也不好回滚。
 
 **切片内容与验收**：
 
-1. 代码审计：列出两张表的全部读写点，确认每条路径都在租户上下文内（`withTenantContext` / 显式 `tenantId`），把跨租户查询路径（若有）先修掉。
-2. 迁移：`ENABLE + FORCE ROW LEVEL SECURITY` + `tenant_isolation_platform` / `tenant_isolation_runtime` 两条策略 + 显式 `GRANT`（口径照 `20260906000100_tenancy`），用到三库。
-3. 验收：按 `audit/s3a2-rls-check.mjs` 的同一套方法在**有数据**的库上证「无租户上下文 = 0 / 本租户 = N / 异租户 = 0」；由于这两张表当前是空的，**必须先造夹具**，不可以拿「0 行」当证据。
-4. 同步把 `schema.prisma` 注释与实现对齐（对的就是注释，若决定不启用 RLS 则改注释）。
+按上面实验的结论，**推荐方案 A**（改动小、与角色名/super 无关，且让代码里已写明的假设成真）：
+
+1. 对 `orders` / `service_sessions` / `tenant_domains` / `audit_logs` / `customer_profiles`
+   等表**去掉 `FORCE ROW LEVEL SECURITY`**（保留 `ENABLE` 与两条策略）：这样「表 owner 全量」
+   成为 PostgreSQL 的既定语义，与 owner 叫什么、是不是 super 无关；非 owner 角色照旧受策略约束。
+2. 给 `phone_verification_codes` / `player_applications` 补 `ENABLE ROW LEVEL SECURITY`
+   - `tenant_isolation_platform` / `tenant_isolation_runtime` 两条策略 + 显式 `GRANT`
+     （口径照 `20260906000100_tenancy`），用到三库。
+3. 代码审计（本次只做了 owner 依赖面的定位，未逐条走完）：确认那 5 处 owner 全局扫描
+   （worker 3 处、platform-billing 1 处、audit 写入 1 处）在去掉 FORCE 后语义不变。
+4. 部署手册加自检：owner 连接读一张租户表必须 >0 行；做完第 1 步后再把 prod 的
+   `POSTGRES_USER` 收紧成非 super 是安全的（建议项——应用主连接是超级用户本身就是安全债）。
+5. 验收：用 `audit/prodshape-rls-check.mjs` 同一套三身份脚本复验，要求
+   **非 super 的表 owner 也能读到 N 行**，且 runtime 仍是「无上下文 0 / 本租户 N / 异租户 0」。
+6. 同步把 `schema.prisma` 注释与实现对齐。
 
 **S3.5 必须一并核实的疑点（2026-09-23 发现，未验证）**：现有租户表的策略都是 `CREATE POLICY ... TO pw`（本地 owner 就是 `pw`），但**生产 owner 是 `pw_saas`**，而这些表又设了 `FORCE ROW LEVEL SECURITY`。`FORCE` 的意义是「连表 owner 也受策略约束」，那么在生产的 owner 连接上，`TO pw` 的策略**不匹配 `pw_saas`**——owner 可能读不到自己的表。本机（owner=pw）永远测不出这个差异，必须在生产同构的库里、用 `pw_saas` 角色实测一次（例如用 `grant-runtime.sql` 那套 fresh DB 流程）。这条会决定 S3.5 是「补策略」还是「先修策略的 TO 子句」。
 
