@@ -2,7 +2,7 @@
 
 - 校对日期：2026-09-11
 - 用途：只保留“仍未完成 / 仍有效 / 已批准待实施”的项；已完成项移入第五节归档摘要。
-- 证据基准：`master` @ `d2731e0`（2026-09-20，PR #3 squash 合并后）；工作树已无未提交改动，历史切片证据回查 git log `cce1ca0..3692450`。
+- 证据基准：`master` @ `141e677`（基准 commit 于 2026-09-22 复核，条目内容仍为 2026-09-11 校对）；工作树另有 3 个未跟踪的本地临时脚本 `work/*.mjs`（`work/audit-endpoint-coverage.mjs`、`work/make-demo-shots.mjs`、`work/point-evidence-to-demo.mjs`），历史切片证据回查 git log `cce1ca0..3692450`。
 - 范围决策备注：C5 采用 Redis 共享限流 + DB Outbox（事务内写入/退避/死信/重放）覆盖队列语义，按 2026-09-07 记录**不引入 BullMQ**；weapp 开发继续暂缓（等主程序完成后处理）。
 
 状态图例：
