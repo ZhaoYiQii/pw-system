@@ -1,6 +1,8 @@
 import { createDatabaseClient } from "@pw/database";
 import { readFileSync } from "node:fs";
 import { WechatPayNotificationService } from "../modules/payments/application/wechatpay-notification.service.js";
+import { WechatPayReconciliationService } from "../modules/payments/application/wechatpay-reconciliation.service.js";
+import { PrismaReconciliationRepository } from "../modules/payments/infrastructure/prisma-reconciliation.repository.js";
 import { PrismaPaymentsRepository } from "../modules/payments/infrastructure/prisma-payments.repository.js";
 import {
   WechatPayPartnerClient,
@@ -58,6 +60,7 @@ async function bootstrap(): Promise<void> {
   // S4-2b：微信支付回调消费者。默认关闭；开启时要求 WXPAY_* 齐全，缺项**直接抛错**
   // （与 api 侧同一门禁语义，避免「以为开了其实没配全」）。
   let notifications: BackgroundTickOptions["notifications"];
+  let reconciliation: BackgroundTickOptions["reconciliation"];
   if (process.env.WXPAY_ENABLED === "true") {
     const partnerClient = new WechatPayPartnerClient(
       loadWechatPayPartnerConfig({
@@ -66,6 +69,10 @@ async function bootstrap(): Promise<void> {
     );
     notifications = new WechatPayNotificationService(
       new PrismaPaymentsRepository(client, runtimeClient),
+      partnerClient,
+    );
+    reconciliation = new WechatPayReconciliationService(
+      new PrismaReconciliationRepository(client, runtimeClient),
       partnerClient,
     );
     console.log("[worker] 微信支付回调消费：已启用");
@@ -79,6 +86,7 @@ async function bootstrap(): Promise<void> {
       : 15 * 60 * 1000,
     noApplicationTimeoutMs,
     ...(notifications ? { notifications } : {}),
+    ...(reconciliation ? { reconciliation } : {}),
   };
   let running = false;
 
@@ -92,7 +100,9 @@ async function bootstrap(): Promise<void> {
         result.subscriptionsExpired > 0 ||
         result.autoConfirmed > 0 ||
         result.wechatPayProcessed > 0 ||
-        result.wechatPayFailed > 0
+        result.wechatPayFailed > 0 ||
+        result.reconciled > 0 ||
+        result.reconcileFailed > 0
       ) {
         console.log(
           JSON.stringify({
@@ -103,6 +113,8 @@ async function bootstrap(): Promise<void> {
             autoConfirmed: result.autoConfirmed,
             wechatPayProcessed: result.wechatPayProcessed,
             wechatPayFailed: result.wechatPayFailed,
+            reconciled: result.reconciled,
+            reconcileFailed: result.reconcileFailed,
           }),
         );
       }

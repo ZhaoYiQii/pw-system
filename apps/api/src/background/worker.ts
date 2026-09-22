@@ -16,6 +16,15 @@ export interface BackgroundTickOptions {
    * 传 0 或负数即关闭该规则；不传表示不启用（由 bootstrap 显式注入默认值）。
    */
   noApplicationTimeoutMs?: number;
+  /** S4-3b：每日对账（未启用时不传；内部自带「北京 10 点后才拉账单」的门槛）。 */
+  reconciliation?: {
+    reconcileDue(limit?: number): Promise<{
+      checked: number;
+      reconciled: number;
+      skipped: number;
+      failed: number;
+    }>;
+  };
   /** S4-2b：微信支付回调消费者（未启用时不传，worker 照常跑）。 */
   notifications?: {
     processPending(limit?: number): Promise<{
@@ -36,6 +45,10 @@ export interface BackgroundTickResult {
   wechatPayProcessed: number;
   /** S4-2b：本次 tick 处理失败（留在收件箱重试）的回调数。 */
   wechatPayFailed: number;
+  /** S4-3b：本次 tick 真正完成对账的门店数。 */
+  reconciled: number;
+  /** S4-3b：本次 tick 对账失败的门店数。 */
+  reconcileFailed: number;
 }
 
 /** 单个后台 tick：订阅到期回收 + Outbox 定时消费（含租约回收/退避/死信）。 */
@@ -67,6 +80,10 @@ export async function runBackgroundTick(
   const payments = options.notifications
     ? await options.notifications.processPending(options.batchSize ?? 20)
     : { processed: 0, skipped: 0, failed: 0 };
+  // S4-3b：每日对账（北京时间 10 点前不动作；账单未生成会安静跳过）
+  const reconciliation = options.reconciliation
+    ? await options.reconciliation.reconcileDue()
+    : { checked: 0, reconciled: 0, skipped: 0, failed: 0 };
   return {
     subscriptionsExpired,
     outboxProcessed,
@@ -74,6 +91,8 @@ export async function runBackgroundTick(
     autoClosed,
     wechatPayProcessed: payments.processed,
     wechatPayFailed: payments.failed,
+    reconciled: reconciliation.reconciled,
+    reconcileFailed: reconciliation.failed,
   };
 }
 

@@ -123,9 +123,11 @@ describe("R4 worker tick（Outbox 消费 + 订阅到期回收）", () => {
       autoConfirmed: 0,
       // 算价模型 Task 4：本 tick 没有配置无人报名关单窗口，故为 0。
       autoClosed: 0,
-      // S4-2b：本次 tick 未接入微信支付消费者，故两项均为 0。
+      // S4-2b/S4-3b：本 tick 未接入微信支付消费者与对账，故四项均为 0。
       wechatPayProcessed: 0,
       wechatPayFailed: 0,
+      reconciled: 0,
+      reconcileFailed: 0,
     });
     const sub = await client.tenantSubscription.findFirstOrThrow({
       where: { tenantId },
