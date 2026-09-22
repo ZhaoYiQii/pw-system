@@ -1,4 +1,11 @@
 import { createDatabaseClient } from "@pw/database";
+import { readFileSync } from "node:fs";
+import { WechatPayNotificationService } from "../modules/payments/application/wechatpay-notification.service.js";
+import { PrismaPaymentsRepository } from "../modules/payments/infrastructure/prisma-payments.repository.js";
+import {
+  WechatPayPartnerClient,
+  loadWechatPayPartnerConfig,
+} from "../modules/payments/infrastructure/wechatpay-partner.client.js";
 import { tenantGuarded } from "../common/database/tenant-guard.js";
 import { LedgerService } from "../modules/ledger/application/ledger.service.js";
 import { PrismaLedgerRepository } from "../modules/ledger/infrastructure/prisma-ledger.repository.js";
@@ -48,12 +55,30 @@ async function bootstrap(): Promise<void> {
   console.log(
     `[worker] 报名窗口 ${resolveRoundWindowMs(process.env)}ms，无人报名关单窗口 ${noApplicationTimeoutMs}ms（0=关闭）`,
   );
+  // S4-2b：微信支付回调消费者。默认关闭；开启时要求 WXPAY_* 齐全，缺项**直接抛错**
+  // （与 api 侧同一门禁语义，避免「以为开了其实没配全」）。
+  let notifications: BackgroundTickOptions["notifications"];
+  if (process.env.WXPAY_ENABLED === "true") {
+    const partnerClient = new WechatPayPartnerClient(
+      loadWechatPayPartnerConfig({
+        readFile: (path) => readFileSync(path, "utf8"),
+      }),
+    );
+    notifications = new WechatPayNotificationService(
+      new PrismaPaymentsRepository(client, runtimeClient),
+      partnerClient,
+    );
+    console.log("[worker] 微信支付回调消费：已启用");
+  } else {
+    console.log("[worker] 微信支付回调消费：未启用（WXPAY_ENABLED != true）");
+  }
   const tickOptions: BackgroundTickOptions = {
     ledger,
     confirmTimeoutMs: Number.isFinite(confirmTimeoutMs)
       ? confirmTimeoutMs
       : 15 * 60 * 1000,
     noApplicationTimeoutMs,
+    ...(notifications ? { notifications } : {}),
   };
   let running = false;
 
@@ -65,7 +90,9 @@ async function bootstrap(): Promise<void> {
       if (
         result.outboxProcessed > 0 ||
         result.subscriptionsExpired > 0 ||
-        result.autoConfirmed > 0
+        result.autoConfirmed > 0 ||
+        result.wechatPayProcessed > 0 ||
+        result.wechatPayFailed > 0
       ) {
         console.log(
           JSON.stringify({
@@ -74,6 +101,8 @@ async function bootstrap(): Promise<void> {
             outboxProcessed: result.outboxProcessed,
             subscriptionsExpired: result.subscriptionsExpired,
             autoConfirmed: result.autoConfirmed,
+            wechatPayProcessed: result.wechatPayProcessed,
+            wechatPayFailed: result.wechatPayFailed,
           }),
         );
       }

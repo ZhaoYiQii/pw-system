@@ -16,6 +16,14 @@ export interface BackgroundTickOptions {
    * 传 0 或负数即关闭该规则；不传表示不启用（由 bootstrap 显式注入默认值）。
    */
   noApplicationTimeoutMs?: number;
+  /** S4-2b：微信支付回调消费者（未启用时不传，worker 照常跑）。 */
+  notifications?: {
+    processPending(limit?: number): Promise<{
+      processed: number;
+      skipped: number;
+      failed: number;
+    }>;
+  };
 }
 
 export interface BackgroundTickResult {
@@ -24,6 +32,10 @@ export interface BackgroundTickResult {
   autoConfirmed: number;
   /** 本次 tick 因「无人报名超时」自动关闭的订单数。 */
   autoClosed: number;
+  /** S4-2b：本次 tick 真正入账的微信支付回调数。 */
+  wechatPayProcessed: number;
+  /** S4-2b：本次 tick 处理失败（留在收件箱重试）的回调数。 */
+  wechatPayFailed: number;
 }
 
 /** 单个后台 tick：订阅到期回收 + Outbox 定时消费（含租约回收/退避/死信）。 */
@@ -50,7 +62,19 @@ export async function runBackgroundTick(
     options.batchSize ?? 50,
     options.tenantId,
   );
-  return { subscriptionsExpired, outboxProcessed, autoConfirmed, autoClosed };
+  // S4-2b：消费微信支付回调。验签与落库已在 HTTP 入口完成（5 秒预算），
+  // 这里做解密、金额校验与入账；失败的行留在收件箱，下轮重试。
+  const payments = options.notifications
+    ? await options.notifications.processPending(options.batchSize ?? 20)
+    : { processed: 0, skipped: 0, failed: 0 };
+  return {
+    subscriptionsExpired,
+    outboxProcessed,
+    autoConfirmed,
+    autoClosed,
+    wechatPayProcessed: payments.processed,
+    wechatPayFailed: payments.failed,
+  };
 }
 
 /** 系统自动确认的固定 actor（表 actor_id 为 UUID 列，不能用文字串）。 */
