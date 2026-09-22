@@ -8,7 +8,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { MockSmsProvider } from "./infrastructure/mock-sms.provider.js";
 import { TencentSmsProvider } from "./infrastructure/tencent-sms.provider.js";
 import { WechatOauthClient } from "./infrastructure/wechat-oauth.client.js";
-import { WechatStateService } from "./infrastructure/wechat-state.js";
 import {
   resolveSmsProvider,
   resolveWechatLogin,
@@ -108,14 +107,7 @@ describe("S2：短信通道选择与生产门禁", () => {
     expect(() => resolveWechatLogin()).toThrowError(/WECHAT_APP_ID/);
   });
 
-  it("微信登录开启但缺 SESSION_SECRET 时失败（state 没有签名密钥）", () => {
-    clear(ENV_KEYS);
-    process.env.WECHAT_LOGIN_ENABLED = "true";
-    delete process.env.SESSION_SECRET;
-    expect(() => resolveWechatLogin()).toThrowError(/SESSION_SECRET/);
-  });
-
-  it("微信登录开启且变量齐全时给出可用的 client 与 state", () => {
+  it("微信登录开启且变量齐全时给出可用的 client", () => {
     clear(ENV_KEYS);
     process.env.WECHAT_LOGIN_ENABLED = "true";
     process.env.SESSION_SECRET = SECRET;
@@ -127,7 +119,6 @@ describe("S2：短信通道选择与生产门禁", () => {
     expect(runtime.enabled).toBe(true);
     if (runtime.enabled) {
       expect(runtime.client).toBeInstanceOf(WechatOauthClient);
-      expect(runtime.state).toBeInstanceOf(WechatStateService);
     }
   });
 });

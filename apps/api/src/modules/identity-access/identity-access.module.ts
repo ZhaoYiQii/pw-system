@@ -27,7 +27,6 @@ import {
   resolveWechatOauthConfig,
   WechatOauthClient,
 } from "./infrastructure/wechat-oauth.client.js";
-import { WechatStateService } from "./infrastructure/wechat-state.js";
 import {
   WechatAuthService,
   type WechatLoginRuntime,
@@ -71,12 +70,9 @@ export function resolveSmsProvider(): SmsProvider {
  */
 export function resolveWechatLogin(): WechatLoginRuntime {
   if (process.env.WECHAT_LOGIN_ENABLED !== "true") return { enabled: false };
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not configured");
   return {
     enabled: true,
     client: new WechatOauthClient(resolveWechatOauthConfig()),
-    state: new WechatStateService(secret),
   };
 }
 
@@ -97,9 +93,12 @@ export function resolveWechatLogin(): WechatLoginRuntime {
     { provide: WECHAT_LOGIN, useFactory: resolveWechatLogin },
     {
       provide: WechatAuthService,
-      useFactory: (runtime: WechatLoginRuntime, auth: AuthService) =>
-        new WechatAuthService(runtime, auth),
-      inject: [WECHAT_LOGIN, AuthService],
+      useFactory: (
+        runtime: WechatLoginRuntime,
+        auth: AuthService,
+        repository: PrismaAuthRepository,
+      ) => new WechatAuthService(runtime, auth, repository),
+      inject: [WECHAT_LOGIN, AuthService, PrismaAuthRepository],
     },
     {
       provide: AUTH_PLATFORM_CLIENT,

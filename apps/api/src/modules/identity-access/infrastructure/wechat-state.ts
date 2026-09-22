@@ -1,24 +1,36 @@
-import { randomBytes } from "node:crypto";
-import { jwtVerify, SignJWT } from "jose";
+import { createHash, randomBytes } from "node:crypto";
 
 /**
- * 微信授权跳转的 `state`（防伪造 / 防换租户 / 防开放重定向）。
+ * 微信授权 `state` 的生成与校验。
  *
- * 用与访问令牌**同一套密钥但不同 audience** 签名的短期 JWT：
- * 拿 state 当访问令牌用（或反之）都会验签失败，不需要额外配置密钥。
+ * **为什么不是「签名 JWT 装 payload」**（2026-09-23 按官方文档修正）：
+ * 微信《网页授权》参数表对 state 的要求是「填写 a-zA-Z0-9 的参数值，**最多 128 字节**」；
+ * HS256 JWT 长度约 250+ 字符且含 `-`/`_`，不满足。改成业界常见的
+ * 「**不透明随机 state + 服务端短期记录**」：state 只是 32 位十六进制随机串，
+ * tenantCode / returnTo 存在 `wechat_login_states`（单次消费、10 分钟过期）。
+ *
+ * 来源：https://developers.weixin.qq.com/doc/service/guide/h5/auth.html（参数说明表）
  */
 
-const ISSUER = "pw-saas-api";
-const AUD = "pw-wechat-oauth-state";
 export const WECHAT_STATE_TTL_SECONDS = 10 * 60;
-
-export interface WechatStatePayload {
-  tenantCode: string;
-  /** H5 站内目标路径（已 sanitize）；登录成功后由前端跳转。 */
-  returnTo: string;
-}
+/** 16 字节 → 32 位十六进制，远低于 128 字节上限。 */
+const STATE_BYTES = 16;
 
 export class WechatStateError extends Error {}
+
+export function createStateToken(): string {
+  return randomBytes(STATE_BYTES).toString("hex");
+}
+
+/** 表里只存哈希：即使库被读走，也不能拿旧行重放登录。 */
+export function hashStateToken(state: string): string {
+  return createHash("sha256").update(state).digest("hex");
+}
+
+/** 微信要求 [a-zA-Z0-9] 且 ≤128 字节；脏值在**查库之前**就拒掉。 */
+export function isValidStateToken(state: string): boolean {
+  return /^[a-zA-Z0-9]{16,128}$/.test(state);
+}
 
 /**
  * `returnTo` 只接受**站内相对路径**，其余一律回退 `/`：
@@ -37,55 +49,4 @@ export function sanitizeReturnTo(returnTo: unknown): string {
     if (codePoint < 0x20 || codePoint === 0x7f) return "/";
   }
   return value;
-}
-
-export class WechatStateService {
-  private readonly key: Uint8Array;
-
-  constructor(secret: string) {
-    if (secret.length < 32) {
-      throw new Error("SESSION_SECRET must be at least 32 characters");
-    }
-    this.key = new TextEncoder().encode(secret);
-  }
-
-  async sign(
-    payload: { tenantCode: string; returnTo?: unknown },
-    nowSeconds: number = Math.floor(Date.now() / 1000),
-  ): Promise<string> {
-    return new SignJWT({
-      tenantCode: payload.tenantCode,
-      returnTo: sanitizeReturnTo(payload.returnTo),
-    })
-      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-      .setIssuer(ISSUER)
-      .setAudience(AUD)
-      .setJti(randomBytes(12).toString("hex"))
-      .setIssuedAt(nowSeconds)
-      .setExpirationTime(nowSeconds + WECHAT_STATE_TTL_SECONDS)
-      .sign(this.key);
-  }
-
-  async verify(token: string): Promise<WechatStatePayload> {
-    let raw: unknown;
-    try {
-      const { payload } = await jwtVerify(token, this.key, {
-        issuer: ISSUER,
-        audience: AUD,
-      });
-      raw = payload;
-    } catch (error) {
-      throw new WechatStateError(
-        `state 无效或已过期：${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-    const claims = raw as { tenantCode?: unknown; returnTo?: unknown };
-    if (typeof claims.tenantCode !== "string" || claims.tenantCode === "") {
-      throw new WechatStateError("state 缺少 tenantCode");
-    }
-    return {
-      tenantCode: claims.tenantCode,
-      returnTo: sanitizeReturnTo(claims.returnTo),
-    };
-  }
 }

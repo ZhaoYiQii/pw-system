@@ -134,7 +134,9 @@ H5 点「微信登录」
 **安全口径**
 
 - `state`：jose 签名 JWT（已是依赖），10 分钟过期，绑定 `tenantCode + returnTo + nonce`；`returnTo` 只接受**站内相对路径**（`//evil.com`、`https://…`、含反斜杠与控制字符的一律回退 `/`），杜绝开放重定向。
-- 授权 scope 默认用 `snsapi_base`（静默拿 openid，用户无感，进 H5 即可自动登录）；将来若要显示昵称头像再上 `snsapi_userinfo`（会多一次用户确认）。这条我没在本机验证过，第一次真实调用时确认。
+- 授权 scope 用 `snsapi_base`（**官方文档原文**：不弹出授权页面，直接跳转，只能获取用户 openid）；将来若要显示昵称头像再上 `snsapi_userinfo`（弹授权页；官方 2022-07-12 起对「不规范使用 snsapi_userinfo」会走网页快照页模式，能不用就不用）。
+- **state 的硬约束（2026-09-23 查官方文档发现，已修）**：参数表写明 state 只能填 **a-zA-Z0-9、最多 128 字节**。S3b 原先用「签名 JWT 装 tenantCode/returnTo」（约 250+ 字符且含 `-`/`_`）**不满足**，真实调用会失败。S3c-1 改为「32 位十六进制随机 state + 服务端 `wechat_login_states` 记录（单次消费、10 分钟过期）」。来源：`https://developers.weixin.qq.com/doc/service/guide/h5/auth.html`。
+- **网页授权仅服务号可用（官方文档原文）**：`微信网页开发` 页写「网页授权 …（仅服务号可用）」，并补「已认证的政府、事业单位和媒体类型的公众号也有权限」。这条把「是否必须是服务号」从推测变成定论。
 - 微信 `code` 只能用一次（微信侧保证，5 分钟）；换到 openid 后立刻建号/发会话，没有可重放的中间态（A′ 口径）。
 - AppSecret 只在服务端，且**任何错误信息与日志都不带请求 URL**（微信要求把 appsecret 放在查询串，URL 一旦进日志就是密钥泄漏）；传输层错误原文进错误信息前会把 appsecret 替换成 `***`；日志对 openid 只留首尾各 4 位。
 
@@ -159,7 +161,10 @@ H5 点「微信登录」
   开关 `WECHAT_LOGIN_ENABLED`：**默认关闭**（端点返回 503），避免没有公众号凭证的部署被新门禁打崩；置 `true` 即要求 3 个变量齐全，缺项启动失败。
   验收：`wechat-auth.service.spec.ts` 8 passed；`identity-access.module.spec.ts` 10 passed（新增默认关闭 / 开启缺凭证 / 缺 SESSION_SECRET / 齐全四例）；全量单测 434 passed / 1 skipped；typecheck（全仓 + tests）0；lint 0；format:check 0。
   **运行期实证**（`audit/s3b-runtime-check.mjs`，真实 dist + 真实 HTTP，6 项全 PASS）：未开开关 → `503 微信登录未启用`；开启 → `302` 且 Location 指向 `open.weixin.qq.com/connect/oauth2/authorize`（含 appid、`scope=snsapi_base`、state）；伪造 state → 400；state 与门店不一致 → 400；合法 state + 假 code → 微信真实返回 `40013`，服务端 400 且**不发会话**（不假成功），原始错误码进服务端日志。
-- **S3c**：手机号补绑（已登录状态，复用 `consumeCode`）+ 合并规则（手机号已有账号且未绑 openid → 绑过去；已绑别的 openid → 409），并决定 `wechat_login_requests` 删还是留。
+- **S3c-1（已完成，2026-09-23）**：按官方 state 约束重做授权状态：`wechat-state.ts` 只留 `createStateToken()`（32 位十六进制）/`hashStateToken()`/`isValidStateToken()`/`sanitizeReturnTo()`；新增预认证表 `wechat_login_states`（只存哈希、单次消费、10 分钟过期），迁移 `20260923120000_wechat_login_state` **删掉**已无用的空表 `wechat_login_requests`。
+  验收：`wechat-state.spec.ts` 6 passed、`wechat-auth.service.spec.ts` 9 passed（含 state 不可重放、过期、格式非法、跨门店）；`identity-access.module.spec.ts` 9 passed（去掉已不成立的 SESSION_SECRET 断言）；全量单测 432 passed / 1 skipped；typecheck（全仓 + tests）0；lint 0；format:check 0。
+  红→绿两处：① tsc 抓到 spec 里 `[...map.values()][0]` 可能 undefined（`noUncheckedIndexedAccess`）；② 新用例「state 属于别的门店」一开始红——我的 stub 对任何门店 code 都返回同一租户，等于没测到，改成如实映射后绿。
+- **S3c-2**：手机号补绑（已登录状态，复用 `consumeCode`）+ 合并规则（手机号已有账号且未绑 openid → 绑过去；已绑别的 openid → 409）。手机号通道未接入也能验：走 mock provider 的 debugCode。
 - **S3d**：H5 接入（`pages/customer/home` 加「微信登录」+ 入口页识别 code/state + 个人中心补绑手机号 + 文案），含 H5 单测与走查。
 
 ### S3.5 补齐租户表 RLS（S3 之后、S4 之前；用户已确认按此顺序）
@@ -174,6 +179,8 @@ H5 点「微信登录」
 2. 迁移：`ENABLE + FORCE ROW LEVEL SECURITY` + `tenant_isolation_platform` / `tenant_isolation_runtime` 两条策略 + 显式 `GRANT`（口径照 `20260906000100_tenancy`），用到三库。
 3. 验收：按 `audit/s3a2-rls-check.mjs` 的同一套方法在**有数据**的库上证「无租户上下文 = 0 / 本租户 = N / 异租户 = 0」；由于这两张表当前是空的，**必须先造夹具**，不可以拿「0 行」当证据。
 4. 同步把 `schema.prisma` 注释与实现对齐（对的就是注释，若决定不启用 RLS 则改注释）。
+
+**S3.5 必须一并核实的疑点（2026-09-23 发现，未验证）**：现有租户表的策略都是 `CREATE POLICY ... TO pw`（本地 owner 就是 `pw`），但**生产 owner 是 `pw_saas`**，而这些表又设了 `FORCE ROW LEVEL SECURITY`。`FORCE` 的意义是「连表 owner 也受策略约束」，那么在生产的 owner 连接上，`TO pw` 的策略**不匹配 `pw_saas`**——owner 可能读不到自己的表。本机（owner=pw）永远测不出这个差异，必须在生产同构的库里、用 `pw_saas` 角色实测一次（例如用 `grant-runtime.sql` 那套 fresh DB 流程）。这条会决定 S3.5 是「补策略」还是「先修策略的 TO 子句」。
 
 **开工前要你确认 4 件事**：① 公众号是否**已认证、且是服务号**——网页授权本身认证号即可，但 **S4 微信支付 JSAPI 只支持服务号/小程序**，所以服务号是硬要求（服务号/订阅号的具体权限差异我按官方文档执行，不在本机臆断）；② 「网页授权域名」是否已配置为 H5 的备案域名；③ 商户号与公众号是否同一主体/已关联（S4 前置）；④ 首次微信登录是否要求绑手机号（推荐要求）。
 

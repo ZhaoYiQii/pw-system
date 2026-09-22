@@ -1,73 +1,42 @@
-import { SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { TokenService } from "./tokens.js";
 import {
   WECHAT_STATE_TTL_SECONDS,
-  WechatStateError,
-  WechatStateService,
+  createStateToken,
+  hashStateToken,
+  isValidStateToken,
   sanitizeReturnTo,
 } from "./wechat-state.js";
 
-const SECRET = "test-secret-0123456789-0123456789-0123456789";
-
-describe("S3：微信授权 state（防伪造 / 防开放重定向）", () => {
-  it("签名后可验证，tenantCode 与 returnTo 原样（站内路径）保留", async () => {
-    const service = new WechatStateService(SECRET);
-    const token = await service.sign({
-      tenantCode: "s5cwalk",
-      returnTo: "/pages/customer/home/index",
-    });
-    await expect(service.verify(token)).resolves.toEqual({
-      tenantCode: "s5cwalk",
-      returnTo: "/pages/customer/home/index",
-    });
+describe("S3c-1：微信 state 生成与校验（按官方 ≤128 字节 a-zA-Z0-9 要求）", () => {
+  it("state 是 32 位十六进制、且每次不同（不透明随机）", () => {
+    const token = createStateToken();
+    expect(token).toMatch(/^[0-9a-f]{32}$/);
+    expect(createStateToken()).not.toBe(token);
   });
 
-  it("换密钥后验签失败（伪造 state 走不通）", async () => {
-    const other = new WechatStateService(
-      "another-secret-0123456789-0123456789-0123",
-    );
-    const token = await other.sign({ tenantCode: "s5cwalk", returnTo: "/" });
-    await expect(
-      new WechatStateService(SECRET).verify(token),
-    ).rejects.toBeInstanceOf(WechatStateError);
+  it("state 长度远小于微信的 128 字节上限，且只含 [a-zA-Z0-9]", () => {
+    const token = createStateToken();
+    expect(token.length).toBeLessThanOrEqual(128);
+    expect(/^[a-zA-Z0-9]+$/.test(token)).toBe(true);
   });
 
-  it("过期的 state 被拒（TTL = 10 分钟）", async () => {
-    const service = new WechatStateService(SECRET);
-    const past = Math.floor(Date.now() / 1000) - WECHAT_STATE_TTL_SECONDS - 60;
-    const token = await service.sign(
-      { tenantCode: "s5cwalk", returnTo: "/" },
-      past,
-    );
-    await expect(service.verify(token)).rejects.toThrowError(/无效或已过期/);
+  it("校验函数：接受 32 位十六进制，拒绝短串/超长/JWT（含 -_ 与 . ）", () => {
+    expect(isValidStateToken(createStateToken())).toBe(true);
+    expect(isValidStateToken("abc")).toBe(false);
+    expect(isValidStateToken("a".repeat(129))).toBe(false);
+    expect(isValidStateToken("eyJhbGciOiJIUzI1NiJ9.abc-def_ghi")).toBe(false);
+    expect(isValidStateToken("")).toBe(false);
   });
 
-  it("访问令牌不能当 state 用（audience 不同，防令牌混用）", async () => {
-    const accessToken = await new TokenService(SECRET).signAccess({
-      sub: "acct-1",
-      scope: "tenant",
-      role: "TENANT_OWNER",
-      username: "owner",
-      tenantId: "t-1",
-    });
-    await expect(
-      new WechatStateService(SECRET).verify(accessToken),
-    ).rejects.toBeInstanceOf(WechatStateError);
+  it("哈希稳定且不回显原文（表里只存哈希）", () => {
+    const token = createStateToken();
+    expect(hashStateToken(token)).toBe(hashStateToken(token));
+    expect(hashStateToken(token)).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashStateToken(token)).not.toContain(token);
   });
 
-  it("state 里没有 tenantCode 时拒绝（不能让回调落到未知门店）", async () => {
-    const key = new TextEncoder().encode(SECRET);
-    const token = await new SignJWT({ returnTo: "/" })
-      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-      .setIssuer("pw-saas-api")
-      .setAudience("pw-wechat-oauth-state")
-      .setIssuedAt()
-      .setExpirationTime("10m")
-      .sign(key);
-    await expect(
-      new WechatStateService(SECRET).verify(token),
-    ).rejects.toThrowError(/缺少 tenantCode/);
+  it("TTL 是 10 分钟（与文档里「code 5 分钟」错开，留出用户操作时间）", () => {
+    expect(WECHAT_STATE_TTL_SECONDS).toBe(600);
   });
 
   it("returnTo 白名单：站内路径通过，绝对地址/协议相对/反斜杠/控制字符一律回退 /", () => {
@@ -83,23 +52,5 @@ describe("S3：微信授权 state（防伪造 / 防开放重定向）", () => {
     expect(sanitizeReturnTo("/\\evil.example")).toBe("/");
     expect(sanitizeReturnTo("/ok\u0000")).toBe("/");
     expect(sanitizeReturnTo(42)).toBe("/");
-  });
-
-  it("签名时就把脏 returnTo 落成 /（verify 端只做二次兜底）", async () => {
-    const service = new WechatStateService(SECRET);
-    const token = await service.sign({
-      tenantCode: "s5cwalk",
-      returnTo: "https://evil.example/steal",
-    });
-    await expect(service.verify(token)).resolves.toEqual({
-      tenantCode: "s5cwalk",
-      returnTo: "/",
-    });
-  });
-
-  it("密钥过短直接拒绝（沿用 SESSION_SECRET 的强度要求）", () => {
-    expect(() => new WechatStateService("too-short")).toThrowError(
-      /at least 32/,
-    );
   });
 });

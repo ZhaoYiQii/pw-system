@@ -32,6 +32,22 @@ export interface RegisterWechatCustomerInput {
   displayName: string;
 }
 
+/** S3c-1：微信授权 state 的服务端记录（预认证表，不启用 RLS）。 */
+export interface WechatLoginStateRecord {
+  id: string;
+  tenantId: string;
+  returnTo: string;
+  expiresAt: Date;
+  consumedAt: Date | null;
+}
+
+export interface NewWechatLoginState {
+  tenantId: string;
+  stateHash: string;
+  returnTo: string;
+  expiresAt: Date;
+}
+
 export interface RefreshSessionRecord {
   id: string;
   subjectType: string;
@@ -86,6 +102,10 @@ export interface AuthRepository {
     tenantId: string,
     input: RegisterWechatCustomerInput,
   ): Promise<TenantAccountRecord>;
+  createWechatLoginState(input: NewWechatLoginState): Promise<void>;
+  consumeWechatLoginState(
+    stateHash: string,
+  ): Promise<WechatLoginStateRecord | null>;
   findTenantAccountById(
     accountId: string,
     tenantId?: string | null,

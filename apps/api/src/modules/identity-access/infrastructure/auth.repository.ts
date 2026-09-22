@@ -6,9 +6,11 @@ import type {
   NewRefreshSession,
   PlatformAccountRecord,
   RefreshSessionRecord,
+  NewWechatLoginState,
   RegisterPhoneCustomerInput,
   RegisterWechatCustomerInput,
   TenantAccountRecord,
+  WechatLoginStateRecord,
 } from "../application/auth-ports.js";
 
 function mapPlatform(row: {
@@ -247,6 +249,47 @@ export class PrismaAuthRepository implements AuthRepository {
         });
       },
     );
+  }
+
+  /** 预认证表：不带租户上下文写入（此时还没有会话），靠行内 tenant_id 做后续校验。 */
+  async createWechatLoginState(input: NewWechatLoginState): Promise<void> {
+    await this.runtime.wechatLoginState.create({
+      data: {
+        tenantId: input.tenantId,
+        stateHash: input.stateHash,
+        returnTo: input.returnTo,
+        expiresAt: input.expiresAt,
+      },
+    });
+  }
+
+  /**
+   * 单次消费：先看是否存在/过期，再用 updateMany 抢一次。
+   * 并发下只有一个请求能把 consumed_at 从 NULL 改成时间戳，其余返回 null。
+   */
+  async consumeWechatLoginState(
+    stateHash: string,
+  ): Promise<WechatLoginStateRecord | null> {
+    const row = await this.runtime.wechatLoginState.findUnique({
+      where: { stateHash },
+    });
+    if (!row) return null;
+    if (row.consumedAt !== null || row.expiresAt.getTime() <= Date.now()) {
+      return null;
+    }
+    const consumedAt = new Date();
+    const updated = await this.runtime.wechatLoginState.updateMany({
+      where: { id: row.id, consumedAt: null },
+      data: { consumedAt },
+    });
+    if (updated.count !== 1) return null;
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      returnTo: row.returnTo,
+      expiresAt: row.expiresAt,
+      consumedAt,
+    };
   }
 
   async findTenantAccountById(
