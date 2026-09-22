@@ -21,3 +21,27 @@ export class WechatPayPayloadError extends Error {
     this.name = "WechatPayPayloadError";
   }
 }
+
+/** 下单入参问题（金额非法等）→ 400。 */
+export class PrepayInputError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "PrepayInputError";
+  }
+}
+
+/** 门店侧支付未就绪（未进件 / 未完成开户意愿确认 / 已停用）→ 409。 */
+export class TenantPaymentNotReadyError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "TenantPaymentNotReadyError";
+  }
+}
+
+/** 客户没有 sp_openid：需要先在微信内授权登录 → 409。 */
+export class WechatPayerNotBoundError extends Error {
+  constructor() {
+    super("请先在微信内打开并授权登录后再支付");
+    this.name = "WechatPayerNotBoundError";
+  }
+}

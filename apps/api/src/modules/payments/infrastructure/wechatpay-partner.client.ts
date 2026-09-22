@@ -277,6 +277,11 @@ export class WechatPayPartnerClient {
     private readonly now: () => number = () => Math.floor(Date.now() / 1000),
   ) {}
 
+  /** 服务商商户号（下单/审计时需要落库，故对外暴露只读值）。 */
+  get spMchid(): string {
+    return this.config.spMchid;
+  }
+
   /** JSAPI 下单：`sp_appid` + `sp_mchid` + `sub_mchid` + `payer.sp_openid`（官方 4012738519）。 */
   async jsapiPrepay(input: JsapiPrepayInput): Promise<{ prepayId: string }> {
     const body = JSON.stringify({

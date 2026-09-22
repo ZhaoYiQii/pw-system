@@ -17426,6 +17426,34 @@
           "PlayerApplications"
         ]
       }
+    },
+    "/api/v1/payments/wechatpay/notify": {
+      "post": {
+        "operationId": "wechatPayNotify_notify",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WechatPayNotify"
+        ]
+      }
+    },
+    "/api/v1/payments/wechatpay/prepay": {
+      "post": {
+        "operationId": "wechatPayCheckout_prepay",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WechatPayCheckout"
+        ]
+      }
     }
   },
   "info": {

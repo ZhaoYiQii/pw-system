@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabaseClient } from "@pw/database";
 import type { PrismaClient } from "@pw/database";
 import { WechatPayNotificationService } from "../../apps/api/src/modules/payments/application/wechatpay-notification.service.js";
+import { WechatPayCheckoutService } from "../../apps/api/src/modules/payments/application/wechatpay-checkout.service.js";
 import { PrismaPaymentsRepository } from "../../apps/api/src/modules/payments/infrastructure/prisma-payments.repository.js";
 import {
   WechatPayPartnerClient,
@@ -96,8 +97,10 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
   let service: WechatPayNotificationService;
   let tenantId: string;
   let profileId: string;
+  let accountId: string;
   let orderId: string;
   let outNo: string;
+  let checkout: WechatPayCheckoutService;
   const eventIds = [
     `EV-IT-1-${suffix}`,
     `EV-IT-2-${suffix}`,
@@ -121,6 +124,7 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
         wechatOpenid: `oProbe${suffix}`,
       },
     });
+    accountId = account.id;
     const profile = await owner.customerProfile.create({
       data: { tenantId, tenantAccountId: account.id, name: "测试客户" },
     });
@@ -155,6 +159,15 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
       new PrismaPaymentsRepository(owner, runtime),
       new WechatPayPartnerClient(config),
     );
+    // S4-2c：同一套仓储也给下单用（真库验证新方法：门店子商户 / 客户 sp_openid / 预支付单）
+    checkout = new WechatPayCheckoutService(
+      new PrismaPaymentsRepository(owner, runtime),
+      new WechatPayPartnerClient(config, async () => ({
+        status: 200,
+        text: async () => '{"prepay_id":"wx-pay-params-probe"}',
+      })),
+      () => 1_700_000_000_000,
+    );
   });
 
   afterAll(async () => {
@@ -165,6 +178,7 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
     await owner.reconciliationDifference.deleteMany({ where: { tenantId } });
     await owner.walletEntry.deleteMany({ where: { tenantId } });
     await owner.bossWallet.deleteMany({ where: { tenantId } });
+    await owner.tenantPaymentAccount.deleteMany({ where: { tenantId } });
     await owner.paymentOrder.deleteMany({ where: { tenantId } });
     await owner.auditLog.deleteMany({ where: { tenantId } });
     await owner.customerProfile.deleteMany({ where: { tenantId } });
@@ -266,5 +280,35 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
     });
     expect(stillPending?.status).toBe("PENDING");
     await owner.paymentOrder.delete({ where: { id: mismatchOrder.id } });
+  });
+
+  it("下单：门店 ACTIVE 子商户 + 客户 sp_openid → 落 PENDING 支付单并回填 prepay_id（真库）", async () => {
+    await owner.tenantPaymentAccount.create({
+      data: {
+        tenantId,
+        subMchid: "1900007292",
+        applyNo: `APPLY-${suffix}`,
+        status: "ACTIVE",
+      },
+    });
+    const result = await checkout.prepay({
+      tenantId,
+      customerAccountId: accountId,
+      amountFen: 6600n,
+      description: "真库下单验证",
+    });
+    expect(result.payParams.package).toBe("prepay_id=wx-pay-params-probe");
+
+    const row = await owner.paymentOrder.findFirst({
+      where: { tenantId, outNo: result.outTradeNo },
+    });
+    expect(row).not.toBeNull();
+    expect(row!.status).toBe("PENDING");
+    expect(row!.amountFen).toBe(6600n);
+    expect(row!.provider).toBe("wechatpay_partner");
+    expect(row!.spMchid).toBe("1900007291");
+    expect(row!.subMchid).toBe("1900007292");
+    expect(row!.prepayId).toBe("wx-pay-params-probe");
+    expect(row!.customerProfileId).toBe(profileId);
   });
 });

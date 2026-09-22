@@ -9704,3 +9704,27 @@ export type PlayerApplicationsRejectData = {
 export type PlayerApplicationsRejectResponses = {
     201: unknown;
 };
+
+export type WechatPayNotifyNotifyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/payments/wechatpay/notify';
+};
+
+export type WechatPayNotifyNotifyResponses = {
+    204: void;
+};
+
+export type WechatPayNotifyNotifyResponse = WechatPayNotifyNotifyResponses[keyof WechatPayNotifyNotifyResponses];
+
+export type WechatPayCheckoutPrepayData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/payments/wechatpay/prepay';
+};
+
+export type WechatPayCheckoutPrepayResponses = {
+    201: unknown;
+};

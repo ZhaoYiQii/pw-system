@@ -8,6 +8,8 @@ import {
 } from "./infrastructure/wechatpay-partner.client.js";
 import { PrismaPaymentsRepository } from "./infrastructure/prisma-payments.repository.js";
 import { WechatPayNotifyController } from "./interface/wechatpay-notify.controller.js";
+import { WechatPayCheckoutController } from "./interface/wechatpay-checkout.controller.js";
+import { WechatPayCheckoutService } from "./application/wechatpay-checkout.service.js";
 
 export const PAYMENTS_PLATFORM_CLIENT = "PAYMENTS_PLATFORM_CLIENT";
 export const PAYMENTS_RUNTIME_CLIENT = "PAYMENTS_RUNTIME_CLIENT";
@@ -28,7 +30,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
 }
 
 @Module({
-  controllers: [WechatPayNotifyController],
+  controllers: [WechatPayNotifyController, WechatPayCheckoutController],
   providers: [
     {
       provide: PAYMENTS_PLATFORM_CLIENT,
@@ -63,7 +65,15 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
       ) => new WechatPayNotificationService(repository, client),
       inject: [PrismaPaymentsRepository, WECHATPAY_PARTNER_CLIENT],
     },
+    {
+      provide: WechatPayCheckoutService,
+      useFactory: (
+        repository: PrismaPaymentsRepository,
+        client: WechatPayPartnerClient | null,
+      ) => new WechatPayCheckoutService(repository, client),
+      inject: [PrismaPaymentsRepository, WECHATPAY_PARTNER_CLIENT],
+    },
   ],
-  exports: [WechatPayNotificationService],
+  exports: [WechatPayNotificationService, WechatPayCheckoutService],
 })
 export class PaymentsModule {}

@@ -1,6 +1,7 @@
 import { withTenantContext } from "@pw/database";
 import type { DbTransaction, PrismaClient } from "@pw/database";
 import { randomBytes } from "node:crypto";
+import type { CheckoutRepository } from "../application/checkout-ports.js";
 import type {
   InboxEventRecord,
   NewInboxEvent,
@@ -16,7 +17,9 @@ function bossNo(): string {
     .toUpperCase()}`;
 }
 
-export class PrismaPaymentsRepository implements PaymentsRepository {
+export class PrismaPaymentsRepository
+  implements PaymentsRepository, CheckoutRepository
+{
   constructor(
     /** 平台/owner 连接：回件箱与"按商户单号全局找支付单"都在不知道租户时进行。 */
     private readonly platform: PrismaClient,
@@ -210,6 +213,96 @@ export class PrismaPaymentsRepository implements PaymentsRepository {
           detail: input.detail,
         },
       }),
+    );
+  }
+
+  // ===== S4-2c：下单所需（门店子商户 / 客户 sp_openid / 预支付单） =====
+
+  async findTenantPaymentAccount(
+    tenantId: string,
+  ): Promise<{ subMchid: string | null; status: string } | null> {
+    return withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const row = await tx.tenantPaymentAccount.findFirst({
+          where: { tenantId },
+          select: { subMchid: true, status: true },
+        });
+        return row ?? null;
+      },
+    );
+  }
+
+  async findCustomerPayerIdentity(
+    tenantId: string,
+    customerAccountId: string,
+  ): Promise<{ customerProfileId: string; spOpenid: string | null } | null> {
+    return withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const profile = await tx.customerProfile.findFirst({
+          where: { tenantId, tenantAccountId: customerAccountId },
+          select: { id: true },
+        });
+        if (!profile) return null;
+        const account = await tx.tenantAccount.findFirst({
+          where: { tenantId, id: customerAccountId },
+          select: { wechatOpenid: true },
+        });
+        return {
+          customerProfileId: profile.id,
+          spOpenid: account?.wechatOpenid ?? null,
+        };
+      },
+    );
+  }
+
+  async createPrepayOrder(input: {
+    tenantId: string;
+    customerProfileId: string;
+    outNo: string;
+    amountFen: bigint;
+    spMchid: string;
+    subMchid: string;
+  }): Promise<{ id: string; outNo: string }> {
+    return withTenantContext(
+      this.runtime,
+      input.tenantId,
+      async (tx: DbTransaction) => {
+        const row = await tx.paymentOrder.create({
+          data: {
+            tenantId: input.tenantId,
+            customerProfileId: input.customerProfileId,
+            outNo: input.outNo,
+            amountFen: input.amountFen,
+            provider: "wechatpay_partner",
+            status: "PENDING",
+            spMchid: input.spMchid,
+            subMchid: input.subMchid,
+          },
+          select: { id: true, outNo: true },
+        });
+        return { id: row.id, outNo: row.outNo };
+      },
+    );
+  }
+
+  async attachPrepayId(
+    tenantId: string,
+    orderId: string,
+    prepayId: string,
+  ): Promise<void> {
+    await withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        await tx.paymentOrder.updateMany({
+          where: { id: orderId, tenantId },
+          data: { prepayId },
+        });
+      },
     );
   }
 }
