@@ -236,7 +236,15 @@ describe("S4-1：微信支付服务商客户端（可独立验证的部分）", 
     const client = new WechatPayPartnerClient(
       config(),
       async (url, init) => {
-        seen.push({ url, headers: init.headers, body: init.body });
+        seen.push({
+          url,
+          headers: init.headers,
+          // FetchLike 的 body 现在是 string | Buffer（上传媒体走二进制）；这里断言的是 JSON 接口
+          body:
+            typeof init.body === "string"
+              ? init.body
+              : init.body.toString("utf8"),
+        });
         return {
           status: 200,
           text: async () =>
@@ -275,7 +283,13 @@ describe("S4-1：微信支付服务商客户端（可独立验证的部分）", 
   it("关单：走 out-trade-no 接口并带 sub_mchid", async () => {
     let captured = { url: "", body: "" };
     const client = new WechatPayPartnerClient(config(), async (url, init) => {
-      captured = { url, body: init.body };
+      captured = {
+        url,
+        body:
+          typeof init.body === "string"
+            ? init.body
+            : init.body.toString("utf8"),
+      };
       return { status: 204, text: async () => "" };
     });
     await client.closeOrder({

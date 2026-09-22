@@ -146,6 +146,35 @@ export function verifyRsaSha256(
   }
 }
 
+/**
+ * 请求签名（正文可为字符串或二进制）。签名串一律是
+ * `方法\nURL\n时间戳\n随机串\n正文\n`；正文是二进制（multipart 上传）时必须按**原始字节**参与签名，
+ * 所以这里对 Buffer 走 Buffer.concat，而不是先转字符串（那样非 ASCII 字节会被改掉）。
+ */
+export function signRequestBody(
+  privateKeyPem: string,
+  parts: {
+    method: string;
+    urlPath: string;
+    timestamp: number | string;
+    nonce: string;
+  },
+  body: string | Buffer,
+): string {
+  const message =
+    typeof body === "string"
+      ? buildRequestSignString({ ...parts, body })
+      : Buffer.concat([
+          Buffer.from(
+            `${parts.method}\n${parts.urlPath}\n${parts.timestamp}\n${parts.nonce}\n`,
+            "utf8",
+          ),
+          body,
+          Buffer.from("\n", "utf8"),
+        ]);
+  return createSign("RSA-SHA256").update(message).sign(privateKeyPem, "base64");
+}
+
 export function buildAuthorizationHeader(input: {
   spMchid: string;
   merchantSerialNo: string;
@@ -156,10 +185,7 @@ export function buildAuthorizationHeader(input: {
   timestamp: number | string;
   nonce: string;
 }): string {
-  const signature = signRsaSha256(
-    input.privateKeyPem,
-    buildRequestSignString(input),
-  );
+  const signature = signRequestBody(input.privateKeyPem, input, input.body);
   return (
     `${WECHATPAY_AUTH_SCHEME} mchid="${input.spMchid}",nonce_str="${input.nonce}",` +
     `signature="${signature}",timestamp="${input.timestamp}",serial_no="${input.merchantSerialNo}"`
@@ -252,7 +278,8 @@ export type FetchLike = (
   init: {
     method: string;
     headers: Record<string, string>;
-    body: string;
+    /** S4-5b：上传媒体文件时是二进制（multipart），其余接口是 JSON 字符串。 */
+    body: string | Buffer;
     signal?: AbortSignal;
   },
 ) => Promise<{ status: number; text(): Promise<string> }>;
@@ -298,7 +325,15 @@ export interface JsapiPayParams {
 export class WechatPayPartnerClient {
   constructor(
     private readonly config: WechatPayPartnerConfig,
-    private readonly fetchImpl: FetchLike = (url, init) => fetch(url, init),
+    // 默认实现：把 Buffer 正文按字节交给 fetch（上传媒体是二进制；JSON 接口仍是字符串）
+    private readonly fetchImpl: FetchLike = (url, init) =>
+      fetch(url, {
+        method: init.method,
+        headers: init.headers,
+        body:
+          typeof init.body === "string" ? init.body : new Uint8Array(init.body),
+        ...(init.signal ? { signal: init.signal } : {}),
+      }),
     private readonly now: () => number = () => Math.floor(Date.now() / 1000),
   ) {}
 
@@ -531,6 +566,81 @@ export class WechatPayPartnerClient {
   }
 
   /**
+   * 上传媒体文件，拿到 `media_id`（官方「文件上传」partner/4012760490）。
+   *
+   * 官方硬要求：
+   * - `multipart/form-data`，两个部分：`meta`（JSON：filename + 文件二进制内容的 sha256）与 `file`（二进制）；
+   * - 图片只支持 JPG/BMP/PNG 且不超过 5M，PDF 不超过 7.5M；
+   * - 签名串里的正文是**整个 multipart 体的原始字节**（所以不能先转成字符串再签名）。
+   */
+  async uploadMedia(input: {
+    filename: string;
+    mimeType: string;
+    content: Buffer;
+  }): Promise<{ mediaId: string }> {
+    assertUploadableMedia(input);
+    const sha256 = createHash("sha256").update(input.content).digest("hex");
+    const boundary = `pw${randomBytes(16).toString("hex")}`;
+    const urlPath = "/v3/merchant/media/upload";
+    const body = buildMultipartBody({
+      boundary,
+      metaJson: JSON.stringify({ filename: input.filename, sha256 }),
+      filename: input.filename,
+      mimeType: input.mimeType,
+      content: input.content,
+    });
+    const timestamp = this.now();
+    const nonce = randomBytes(16).toString("hex").toUpperCase();
+    const signature = signRequestBody(
+      this.config.privateKeyPem,
+      { method: "POST", urlPath, timestamp, nonce },
+      body,
+    );
+    const authorization =
+      `${WECHATPAY_AUTH_SCHEME} mchid="${this.config.spMchid}",nonce_str="${nonce}",` +
+      `signature="${signature}",timestamp="${timestamp}",serial_no="${this.config.merchantSerialNo}"`;
+    let response: { status: number; text(): Promise<string> };
+    try {
+      response = await this.fetchImpl(`${this.config.apiBase}${urlPath}`, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+          authorization,
+          "user-agent": "pw-saas/1.0",
+        },
+        body,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      throw new WechatPayError(
+        name === "TimeoutError" || name === "AbortError"
+          ? "TimeoutError"
+          : "NetworkError",
+        0,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    const text = await response.text();
+    const parsed = text ? safeJson(text) : undefined;
+    if (response.status >= 400) {
+      throw new WechatPayError(
+        typeof parsed?.code === "string" ? parsed.code : "",
+        response.status,
+        typeof parsed?.message === "string"
+          ? parsed.message
+          : text.slice(0, 200),
+      );
+    }
+    const mediaId = typeof parsed?.media_id === "string" ? parsed.media_id : "";
+    if (!mediaId) {
+      throw new WechatPayError("EmptyResponse", 200, "上传应答缺少 media_id");
+    }
+    return { mediaId };
+  }
+
+  /**
    * 前端调起支付参数。签名串为 `appId\ntimeStamp\nnonceStr\npackage\n`（官方「JSAPI调起支付」）。
    * 注意 `appId` 必须与下单时的 `sp_appid`、实际调起的公众号一致。
    */
@@ -744,6 +854,63 @@ function encryptAtPath(
     return;
   }
   encryptAtPath(value, rest, encrypt);
+}
+
+/** 媒体文件上限（官方文件上传 partner/4012760490）：图片 5M，PDF 7.5M。 */
+const MEDIA_MAX_BYTES_IMAGE = 5 * 1024 * 1024;
+const MEDIA_MAX_BYTES_PDF = Math.round(7.5 * 1024 * 1024);
+
+/** 上送前先按官方限制挡一道：类型/后缀/大小不合规时直接抛错，不浪费一次请求。 */
+export function assertUploadableMedia(input: {
+  filename: string;
+  content: Buffer;
+}): void {
+  const ext = input.filename.toLowerCase().split(".").pop() ?? "";
+  const isImage = ["jpg", "jpeg", "bmp", "png"].includes(ext);
+  const isPdf = ext === "pdf";
+  if (!isImage && !isPdf) {
+    throw new WechatPayError(
+      "INVALID_MEDIA_TYPE",
+      0,
+      `不支持的媒体文件类型：${input.filename}（官方只支持 JPG/BMP/PNG，PDF 单独上限）`,
+    );
+  }
+  if (input.content.length === 0) {
+    throw new WechatPayError("INVALID_MEDIA_TYPE", 0, "媒体文件内容为空");
+  }
+  const max = isPdf ? MEDIA_MAX_BYTES_PDF : MEDIA_MAX_BYTES_IMAGE;
+  if (input.content.length > max) {
+    throw new WechatPayError(
+      "MEDIA_TOO_LARGE",
+      0,
+      `媒体文件超过上限：${input.content.length} 字节 > ${max} 字节`,
+    );
+  }
+}
+
+/** 拼 multipart 体（纯函数，便于单测钉住格式）：meta 部分 + file 部分，CRLF 分隔。 */
+export function buildMultipartBody(input: {
+  boundary: string;
+  metaJson: string;
+  filename: string;
+  mimeType: string;
+  content: Buffer;
+}): Buffer {
+  const head = Buffer.from(
+    `--${input.boundary}\r\n` +
+      `Content-Disposition: form-data; name="meta"\r\n` +
+      `Content-Type: application/json\r\n\r\n` +
+      `${input.metaJson}\r\n` +
+      `--${input.boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="${input.filename}"\r\n` +
+      `Content-Type: ${input.mimeType}\r\n\r\n`,
+    "utf8",
+  );
+  return Buffer.concat([
+    head,
+    input.content,
+    Buffer.from(`\r\n--${input.boundary}--\r\n`, "utf8"),
+  ]);
 }
 
 /** 账单文件完整性：官方 hash_type 固定 SHA1，下载后应按此比对。 */

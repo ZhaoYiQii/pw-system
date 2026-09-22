@@ -65,7 +65,12 @@ function harness(
     },
   };
   const client = new WechatPayPartnerClient(config, async (url, init) => {
-    requests.push({ url, body: init.body });
+    // FetchLike 的 body 是 string | Buffer（媒体上传走二进制）；这里断言的是 JSON 下单接口
+    requests.push({
+      url,
+      body:
+        typeof init.body === "string" ? init.body : init.body.toString("utf8"),
+    });
     return {
       status: 200,
       text: async () => '{"prepay_id":"wx201410272009395522657a690389285100"}',
