@@ -55,6 +55,17 @@ docker compose "${ENV_FILE[@]}" exec -T postgres \
   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 \
   -f /opt/pw-saas/grant-runtime.sql
 
+# 5.5) RLS 语义自检（S3.5，2026-09-23 生产同构实测得出，必须做）：
+#    租户表是 ENABLE ROW LEVEL SECURITY 但**不 FORCE**，语义是「表 owner 全量、非 owner 受策略约束」。
+#    若某次迁移把 FORCE 加回来，owner 连接会**静默读到 0 行**（不报错）：
+#    表现为自动关单/自动确认不执行、域名可被重复占用——这类问题上线后极难归因。
+#    期望：force_tables=0（>0 说明 S3.5 迁移没跑到）。
+#    另一条：owner 连接读租户表必须 >0 行（下例读 tenants；如已有租户数据，可换成 customer_profiles）。
+docker compose "${ENV_FILE[@]}" exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \
+  "select 'force_tables=' || count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relforcerowsecurity"
+docker compose "${ENV_FILE[@]}" exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \
+  "select 'tenants_visible=' || count(*) from tenants"
+
 # 6) 初始化演示数据（owner 连接；显式覆盖 DATABASE_URL 避免 RLS 拒绝）
 docker compose "${ENV_FILE[@]}" run --rm pw-init \
   sh -c 'DATABASE_URL=$DATABASE_MIGRATION_URL node /app/scripts/seed-prod.mjs'

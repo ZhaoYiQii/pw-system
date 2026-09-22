@@ -227,6 +227,19 @@ H5 点「微信登录」
    **非 super 的表 owner 也能读到 N 行**，且 runtime 仍是「无上下文 0 / 本租户 N / 异租户 0」。
 6. 同步把 `schema.prisma` 注释与实现对齐。
 
+**S3.5 完成记录（2026-09-23）**
+
+- 迁移 `20260923150000_rls_owner_semantics`：DO 块把所有 `FORCE ROW LEVEL SECURITY` 去掉（RAISE NOTICE 打出数量），
+  再给 `phone_verification_codes` / `player_applications` 补 `ENABLE` + 两条策略 + 显式 `GRANT`。已应用到本机三库。
+- 代码审计（本片要求的那一步）：两张表只被 `phone-verification.service.ts` 与 `player-applications.service.ts`
+  通过 `withTenantContext`（runtime 连接）访问，集成测试用 owner 连接做夹具/清理 —— owner 绕过 + runtime 带上下文，两条路都安全。
+- 验收（`audit/s3_5/acceptance.mjs`，生产同构一次性库，**15 项全 PASS**）：三张表（`customer_profiles` / `phone_verification_codes` / `player_applications`）
+  均满足「RLS 启用且不 FORCE」「runtime 无上下文 0 / 本租户 1 / 异租户 0」「**非 super 的表 owner 也能读到 1 行**」——
+  最后这条正是迁移前实测为 0 的那条。跑完一次性库与 `pw_saas` 角色已删除。
+- 三库终态：`force_tables=0`、`rls_tables=66`；缺策略清单只剩三张**设计如此**的预认证/平台表
+  （`refresh_sessions`、`platform_access_grants`、`wechat_login_states`）。
+- 部署手册新增第 5.5 步自检（`docs/runbooks/production-deploy.md`）：部署后必须确认 `force_tables=0` 且 owner 能读到租户表。
+
 **S3.5 必须一并核实的疑点（2026-09-23 发现，未验证）**：现有租户表的策略都是 `CREATE POLICY ... TO pw`（本地 owner 就是 `pw`），但**生产 owner 是 `pw_saas`**，而这些表又设了 `FORCE ROW LEVEL SECURITY`。`FORCE` 的意义是「连表 owner 也受策略约束」，那么在生产的 owner 连接上，`TO pw` 的策略**不匹配 `pw_saas`**——owner 可能读不到自己的表。本机（owner=pw）永远测不出这个差异，必须在生产同构的库里、用 `pw_saas` 角色实测一次（例如用 `grant-runtime.sql` 那套 fresh DB 流程）。这条会决定 S3.5 是「补策略」还是「先修策略的 TO 子句」。
 
 **开工前要你确认 4 件事**：① 公众号是否**已认证、且是服务号**——网页授权本身认证号即可，但 **S4 微信支付 JSAPI 只支持服务号/小程序**，所以服务号是硬要求（服务号/订阅号的具体权限差异我按官方文档执行，不在本机臆断）；② 「网页授权域名」是否已配置为 H5 的备案域名；③ 商户号与公众号是否同一主体/已关联（S4 前置）；④ 首次微信登录是否要求绑手机号（推荐要求）。
