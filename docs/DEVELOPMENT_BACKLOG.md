@@ -2,7 +2,7 @@
 
 - 校对日期：2026-09-11
 - 用途：只保留“仍未完成 / 仍有效 / 已批准待实施”的项；已完成项移入第五节归档摘要。
-- 证据基准：`master` @ `141e677`（基准 commit 于 2026-09-22 复核，条目内容仍为 2026-09-11 校对）；工作树另有 3 个未跟踪的本地临时脚本 `work/*.mjs`（`work/audit-endpoint-coverage.mjs`、`work/make-demo-shots.mjs`、`work/point-evidence-to-demo.mjs`），历史切片证据回查 git log `cce1ca0..3692450`。
+- 证据基准：`master` @ `836b8b1`（基准 commit 于 2026-09-22 复核，条目内容仍为 2026-09-11 校对）；工作树另有 3 个未跟踪的本地临时脚本 `work/*.mjs`（`work/audit-endpoint-coverage.mjs`、`work/make-demo-shots.mjs`、`work/point-evidence-to-demo.mjs`），历史切片证据回查 git log `cce1ca0..3692450`。
 - 范围决策备注：C5 采用 Redis 共享限流 + DB Outbox（事务内写入/退避/死信/重放）覆盖队列语义，按 2026-09-07 记录**不引入 BullMQ**；weapp 开发继续暂缓（等主程序完成后处理）。
 
 状态图例：
@@ -55,7 +55,7 @@
 - [x] 工作树改动提交（2026-09-20 由 PR #3 完成）：商家端导航 IA 与 UI 打磨、陪玩端 order-hall UI、E2E 更新与演示种子调整均已入库。
 - [ ] E2E 已正式入库并替换根脚本 `test:e2e`（`playwright test`，2026-09-10 最近一次运行 `passed`）；仍待把 `test:e2e` 接入 CI（当前 CI 无浏览器与服务启动步骤）。
 - [ ] F4 容量基线（100 租户 / 100 万订单，只读 100 RPS、写 50 RPS、P95 达标记录）。
-- [ ] 覆盖率质量债（已延后，2026-09-08）：`test:coverage` 已合并单元+集成，当时 branch 63.7%（目标 80%，critical-domain 已达 100/100/100/100）；待 E2E/支付/部署等优先项推进后再补。
+- [ ] 覆盖率质量债（已延后，2026-09-08）：`test:coverage` 已合并单元+集成，当时 branch 63.7%（目标 80%，critical-domain 已达 100/100/100/100）；待 E2E/支付/部署等优先项推进后再补。**注意：`tests/vitest.coverage.config.ts` 的 branch 阈值目前是 60，与这里的 80 目标不一致——直接把阈值提到 80 会让 CI 变红，应先补覆盖再提阈值；本轮未复跑覆盖率，故不在此写当前百分比。**
 - [ ] 可选：worker 崩溃注入测试与死信人工管理界面（outbox relay 已有租约回收/退避/死信/人工重放）。
 - [ ] 门禁环境依赖：集成测试与 E2E 需要本地 Docker（postgres 5433 / redis 6380 / minio）；Docker 未启动时 `/health` 用例会因 `database=down` 失败，属环境问题而非代码回归。
 
