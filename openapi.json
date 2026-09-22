@@ -17524,6 +17524,29 @@
           "TenantPaymentSetup"
         ]
       }
+    },
+    "/api/v1/tenant/payments/account/materials": {
+      "post": {
+        "operationId": "tenantPaymentSetup_uploadMaterial",
+        "parameters": [
+          {
+            "name": "x-material-kind",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantPaymentSetup"
+        ]
+      }
     }
   },
   "info": {

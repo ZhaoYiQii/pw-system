@@ -17,6 +17,15 @@ import {
   type IndividualIntakeInput,
 } from "../domain/applyment-payload.js";
 import {
+  assertMaterialBytes,
+  buildMaterialFilename,
+  detectMaterialImage,
+  MaterialFileError,
+  type MaterialKind,
+} from "../domain/material-file.js";
+import { createHash } from "node:crypto";
+import { randomBytes } from "node:crypto";
+import {
   PaymentSetupInputError,
   WechatPayDisabledError,
 } from "../domain/payments.errors.js";
@@ -85,6 +94,46 @@ export class TenantPaymentSetupService {
       operatorAccountId: input.operatorAccountId,
     });
     return toView(account);
+  }
+
+  /**
+   * 上传进件材料图片 → 换微信 `media_id`（官方 partner/4012760490）。
+   *
+   * 三条口径：
+   * 1. 类型只看**魔术字节**（不看客户端声明的 Content-Type / 文件名），只收真实的 JPG/PNG/BMP；
+   * 2. 图片**不落我们的存储**——只做转发，营业执照/身份证不在平台留副本；
+   * 3. 文件名由我们拼（官方要求后缀必须是 JPG/BMP/PNG）。
+   */
+  async uploadMaterial(input: { kind: MaterialKind; bytes: Buffer }): Promise<{
+    mediaId: string;
+    filename: string;
+    mimeType: string;
+    sha256: string;
+    sizeBytes: number;
+  }> {
+    if (!this.client) throw new WechatPayDisabledError();
+    assertMaterialBytes(input.bytes);
+    const detected = detectMaterialImage(input.bytes);
+    if (!detected) {
+      throw new MaterialFileError("仅支持真实的 JPG / PNG / BMP 图片");
+    }
+    const filename = buildMaterialFilename(
+      input.kind,
+      detected.ext,
+      randomBytes(4).toString("hex"),
+    );
+    const { mediaId } = await this.client.uploadMedia({
+      filename,
+      mimeType: detected.mimeType,
+      content: input.bytes,
+    });
+    return {
+      mediaId,
+      filename,
+      mimeType: detected.mimeType,
+      sha256: createHash("sha256").update(input.bytes).digest("hex"),
+      sizeBytes: input.bytes.length,
+    };
   }
 
   /**

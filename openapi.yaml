@@ -12578,6 +12578,19 @@ paths:
         "201":
           description: ""
       tags: *a40
+  /api/v1/tenant/payments/account/materials:
+    post:
+      operationId: tenantPaymentSetup_uploadMaterial
+      parameters:
+        - name: x-material-kind
+          required: true
+          in: header
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a40
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

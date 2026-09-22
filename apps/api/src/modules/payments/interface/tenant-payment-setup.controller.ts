@@ -2,12 +2,15 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
+  HttpCode,
   HttpException,
   HttpStatus,
   Inject,
   Post,
   Req,
 } from "@nestjs/common";
+import type { Request } from "express";
 import { Permissions, TenantScope } from "../../../common/auth/decorators.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import { WechatPayError } from "../infrastructure/wechatpay-partner.client.js";
@@ -15,6 +18,11 @@ import {
   IntakeValidationError,
   type IndividualIntakeInput,
 } from "../domain/applyment-payload.js";
+import {
+  MATERIAL_MAX_BYTES,
+  MaterialFileError,
+  normalizeMaterialKind,
+} from "../domain/material-file.js";
 import { TenantPaymentSetupService } from "../application/payment-setup.service.js";
 import {
   PaymentSetupInputError,
@@ -103,11 +111,37 @@ export class TenantPaymentSetupController {
     }
   }
 
+  /**
+   * 上传进件材料图片（原始字节流 + `x-material-kind` 头，与仓库 evidence 上传同一口径）。
+   * 只返回 `mediaId` 给前端，提交进件时再带上——**平台不保存这些证件图片**。
+   */
+  @TenantScope()
+  @Permissions("tenant.manage")
+  @Post("materials")
+  @HttpCode(HttpStatus.CREATED)
+  async uploadMaterial(
+    @Req() req: AuthenticatedRequest & Request,
+    @Headers("x-material-kind") kindHeader?: string,
+  ) {
+    const bytes = await readRawBody(req);
+    try {
+      return {
+        data: await this.setup.uploadMaterial({
+          kind: normalizeMaterialKind(kindHeader),
+          bytes,
+        }),
+      };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
   /** 错误映射集中一处：400 入参（含字段校验）/ 502 微信侧失败 / 503 未启用或缺公钥。 */
   private rethrow(error: unknown): never {
     if (
       error instanceof PaymentSetupInputError ||
-      error instanceof IntakeValidationError
+      error instanceof IntakeValidationError ||
+      error instanceof MaterialFileError
     ) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
@@ -144,6 +178,36 @@ function operatorOf(req: AuthenticatedRequest): string {
   if (!id)
     throw new HttpException("tenant context missing", HttpStatus.UNAUTHORIZED);
   return id;
+}
+
+/**
+ * 读取原始请求体（不依赖 multipart 解析器，与 evidence 上传同口径）。
+ * 超过官方 5MiB 上限立刻断流并报 400，避免把内存吃满。
+ */
+async function readRawBody(req: Request): Promise<Buffer> {
+  return new Promise<Buffer>((resolvePromise, rejectPromise) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let overflow = false;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MATERIAL_MAX_BYTES) {
+        overflow = true;
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (overflow) {
+        rejectPromise(
+          new MaterialFileError(`图片超过 5MiB 上限（已读取 ${size} 字节）`),
+        );
+      } else {
+        resolvePromise(Buffer.concat(chunks));
+      }
+    });
+    req.on("error", rejectPromise);
+  });
 }
 
 /** 请求体 → 进件资料（非字符串一律当空串，具体必填校验交给领域层点名到字段）。 */

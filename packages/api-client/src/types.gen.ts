@@ -9783,3 +9783,17 @@ export type TenantPaymentSetupSubmitIntakeData = {
 export type TenantPaymentSetupSubmitIntakeResponses = {
     201: unknown;
 };
+
+export type TenantPaymentSetupUploadMaterialData = {
+    body?: never;
+    headers: {
+        'x-material-kind': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/payments/account/materials';
+};
+
+export type TenantPaymentSetupUploadMaterialResponses = {
+    201: unknown;
+};
