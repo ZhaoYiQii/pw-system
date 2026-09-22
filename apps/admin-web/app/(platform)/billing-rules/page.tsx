@@ -11,6 +11,7 @@ import { ArrowRight, Calculator, Percent, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, apiFetch } from "../../_lib/api";
+import { fenToYuanText } from "../../_lib/money";
 import { PlatformShell } from "../../_lib/platform-shell";
 
 interface Tenant {
@@ -27,12 +28,21 @@ interface FinanceRule {
 function pct(bp: number): string {
   return `${(bp / 100).toFixed(2)}%`;
 }
-function splitAmount(amount: number, bp: number): string {
-  return new Intl.NumberFormat("zh-CN", {
-    style: "currency",
-    currency: "CNY",
-    minimumFractionDigits: 2,
-  }).format((amount * bp) / 10000);
+/**
+ * 分账试算（输入是「元」，见表单里的 `<span>元</span>` 标注）。
+ *
+ * 先把元换算成整数分，再按 bp（万分之一）除以 10000 并四舍五入到分，
+ * 避免「金额 × 费率」走浮点（AGENTS：金额禁止 JavaScript 浮点）。
+ * 注意这是展示用试算，不是记账口径。
+ */
+function splitAmount(amountYuan: number, bp: number): string {
+  const amountFen = Math.round(amountYuan * 100);
+  const feeFen = Math.round((amountFen * bp) / 10000);
+  // 千分位照旧用 toLocaleString 输出「整数元」（量级远小于 2^53，不涉及金额精度），
+  // 小数两位直接由整数分的余数拼出，避免再引入一次浮点除法。
+  const yuan = fenToYuanText(String(feeFen)).split(".")[0] ?? "0";
+  const cents = String(Math.abs(feeFen) % 100).padStart(2, "0");
+  return `¥${Number(yuan).toLocaleString("zh-CN")}.${cents}`;
 }
 
 function Inner() {
