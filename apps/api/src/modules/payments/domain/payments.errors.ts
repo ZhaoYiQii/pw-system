@@ -85,3 +85,11 @@ export class PaymentLedgerInputError extends Error {
     this.name = "PaymentLedgerInputError";
   }
 }
+
+/** S4-9a：门店客户钱包明细查不到（该客户还没充过值 / 不属于本门店）→ 404。 */
+export class PaymentWalletNotFoundError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "PaymentWalletNotFoundError";
+  }
+}

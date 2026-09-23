@@ -10,10 +10,10 @@ import {
 } from "./modules";
 
 describe("merchant navigation and UI permission mock", () => {
-  it("keeps 24 registered modules across four roles", () => {
+  it("keeps 25 registered modules across four roles", () => {
     // P3 / D3 新增「陪玩违约」台账模块；订单中心列表 Slice 2 新增「审核台」模块；
-    // S4-8 新增支付三页（支付台账 / 对账差异 / 支付设置），挂在商家端侧栏。
-    expect(MERCHANT_MODULES).toHaveLength(24);
+    // S4-8 新增支付三页（支付台账 / 对账差异 / 支付设置）；S4-9a 新增「客户钱包」。
+    expect(MERCHANT_MODULES).toHaveLength(25);
     expect(MERCHANT_ROLES).toEqual(["OWNER", "ADMIN", "CS", "FINANCE"]);
   });
 
@@ -27,10 +27,10 @@ describe("merchant navigation and UI permission mock", () => {
     // S4-8：支付台账 / 对账差异 给老板 + 财务（读账是财务日常）；支付设置只给老板
     // （绑定子商户号与刷新状态在后端要求 tenant.manage，仅老板持有）。
     expect(counts).toEqual({
-      OWNER: 24,
+      OWNER: 25,
       ADMIN: 19,
       CS: 11,
-      FINANCE: 14,
+      FINANCE: 15,
     });
   });
 

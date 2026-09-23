@@ -22,6 +22,9 @@ import { TenantPaymentLedgerController } from "./interface/tenant-payment-ledger
 import { TenantReconciliationService } from "./application/tenant-reconciliation.service.js";
 import { PrismaTenantReconciliationRepository } from "./infrastructure/prisma-tenant-reconciliation.repository.js";
 import { TenantReconciliationController } from "./interface/tenant-reconciliation.controller.js";
+import { TenantWalletService } from "./application/tenant-wallet.service.js";
+import { PrismaTenantWalletRepository } from "./infrastructure/prisma-tenant-wallet.repository.js";
+import { TenantWalletController } from "./interface/tenant-wallet.controller.js";
 
 export const PAYMENTS_PLATFORM_CLIENT = "PAYMENTS_PLATFORM_CLIENT";
 export const PAYMENTS_RUNTIME_CLIENT = "PAYMENTS_RUNTIME_CLIENT";
@@ -49,6 +52,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
     TenantPaymentSetupController,
     TenantPaymentLedgerController,
     TenantReconciliationController,
+    TenantWalletController,
   ],
   providers: [
     {
@@ -142,6 +146,18 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
         new TenantReconciliationService(repository),
       inject: [PrismaTenantReconciliationRepository],
     },
+    {
+      provide: PrismaTenantWalletRepository,
+      useFactory: (runtime: ReturnType<typeof createDatabaseClient>) =>
+        new PrismaTenantWalletRepository(runtime),
+      inject: [PAYMENTS_RUNTIME_CLIENT],
+    },
+    {
+      provide: TenantWalletService,
+      useFactory: (repository: PrismaTenantWalletRepository) =>
+        new TenantWalletService(repository),
+      inject: [PrismaTenantWalletRepository],
+    },
   ],
   exports: [
     WechatPayNotificationService,
@@ -150,6 +166,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
     TenantPaymentSetupService,
     TenantPaymentLedgerService,
     TenantReconciliationService,
+    TenantWalletService,
   ],
 })
 export class PaymentsModule {}

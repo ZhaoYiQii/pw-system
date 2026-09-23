@@ -244,6 +244,18 @@ export const MERCHANT_MODULES = [
     description: "门店收款状态、子商户号登记与状态刷新。",
     features: ["能不能收款 + 下一步", "登记子商户号", "刷新微信侧状态"],
   },
+  {
+    id: "payments-wallets",
+    group: "records",
+    label: "客户钱包",
+    kicker: "RECORDS / WALLETS",
+    description: "客户余额与充值 / 退款流水（只读），支持按客户名搜索。",
+    features: [
+      "客户余额列表与最近变动",
+      "单客户充值 / 退款 / 扣费流水",
+      "金额方向由后端判定（不猜正负）",
+    ],
+  },
 ] as const;
 
 export type MerchantModuleId = (typeof MERCHANT_MODULES)[number]["id"];
@@ -292,6 +304,7 @@ export const MERCHANT_NAV_DOMAINS = [
     activeModuleIds: [
       "finance",
       "settlements",
+      "payments-wallets",
       "payments-ledger",
       "payments-reconciliation",
     ],
@@ -656,6 +669,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "payments-ledger",
     "payments-reconciliation",
     "payments-settings",
+    "payments-wallets",
   ],
   ADMIN: [
     "work",
@@ -704,6 +718,7 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "risk",
     "finrisk",
     "health",
+    "payments-wallets",
     "payments-ledger",
     "payments-reconciliation",
   ],

@@ -21,6 +21,7 @@ import { ReviewConsoleView } from "./review-console-view";
 import { SettingsModuleView } from "./settings-view";
 import { BreachLedgerModuleView } from "./breach-ledger-view";
 import { PaymentLedgerPanel } from "@/app/_lib/payments/payment-ledger-panel";
+import { WalletPanel } from "@/app/_lib/payments/wallet-panel";
 import { PaymentSettingsPanel } from "@/app/_lib/payments/payment-settings-panel";
 import { ReconciliationPanel } from "@/app/_lib/payments/reconciliation-panel";
 
@@ -69,6 +70,9 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
     case "payments-settings":
       // S4-8：支付设置（与门店后台 /payments/settings 同一份 panel）。
       return record(moduleId, <PaymentSettingsPanel />);
+    case "payments-wallets":
+      // S4-9a：客户钱包台账（与门店后台 /payments/wallets 同一份 panel）。
+      return record(moduleId, <WalletPanel />);
     default:
       break;
   }

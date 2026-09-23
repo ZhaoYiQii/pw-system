@@ -9837,3 +9837,32 @@ export type TenantReconciliationOverviewData = {
 export type TenantReconciliationOverviewResponses = {
     200: unknown;
 };
+
+export type TenantWalletListData = {
+    body?: never;
+    path?: never;
+    query: {
+        query: string;
+        limit: string;
+    };
+    url: '/api/v1/tenant/payments/wallets';
+};
+
+export type TenantWalletListResponses = {
+    200: unknown;
+};
+
+export type TenantWalletDetailData = {
+    body?: never;
+    path: {
+        customerProfileId: string;
+    };
+    query: {
+        limit: string;
+    };
+    url: '/api/v1/tenant/payments/wallets/{customerProfileId}/entries';
+};
+
+export type TenantWalletDetailResponses = {
+    200: unknown;
+};
