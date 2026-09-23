@@ -9,7 +9,10 @@
   border: 1px solid var(--mc-line, #dce3e8);
   border-radius: 10px;
   background: #fff;
-  font-size: 12.5px;
+  font:
+    12.5px/1.5 "Segoe UI",
+    "Microsoft YaHei",
+    sans-serif;
   color: var(--mc-ink, #15202b);
 }
 
@@ -18,11 +21,27 @@
   border-bottom: 1px solid var(--mc-line, #dce3e8);
   color: #475569;
   font-weight: 600;
+  font-size: 12px;
 }
 
 .pw-dg .tabulator .tabulator-col {
   background: transparent;
   border-right: 1px solid #eef2f5;
+}
+
+.pw-dg .tabulator .tabulator-col .tabulator-col-content {
+  padding: 8px 10px;
+}
+
+/* 别让默认主题的表头 hover / 焦点框破坏稿子的观感；排序箭头用主色 */
+.pw-dg .tabulator .tabulator-col.tabulator-sortable:hover,
+.pw-dg .tabulator .tabulator-col.tabulator-sortable.tabulator-header-sort-asc,
+.pw-dg .tabulator .tabulator-col.tabulator-sortable.tabulator-header-sort-desc {
+  background: transparent;
+}
+
+.pw-dg .tabulator .tabulator-col .tabulator-arrow {
+  display: none;
 }
 
 .pw-dg .tabulator .tabulator-col.tabulator-frozen {
@@ -41,6 +60,10 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
+.pw-dg .tabulator .tabulator-row:hover {
+  background: #fbfcfd;
+}
+
 .pw-dg .tabulator .tabulator-row.tabulator-selected,
 .pw-dg .tabulator .tabulator-row.tabulator-selected:hover {
   background: rgba(17, 120, 111, 0.08);
@@ -48,7 +71,8 @@
 
 .pw-dg .tabulator .tabulator-cell {
   border-right: 1px solid #f6f8fa;
-  padding: 6px 10px;
+  padding: 8px 10px;
+  font-size: 12.5px;
 }
 
 /* 区域选择（Excel 手感）：半透明覆盖 + 选区高亮 */
@@ -80,6 +104,10 @@
   font-weight: 600;
 }
 
+.pw-dg .tabulator .tabulator-calcs-holder .tabulator-cell {
+  color: var(--mc-ink, #15202b);
+}
+
 .pw-dg .tabulator .tabulator-footer {
   display: none;
 }
@@ -87,6 +115,22 @@
 .pw-dg .tabulator .tabulator-placeholder {
   color: var(--muted-foreground, #6b7280);
   font-size: 12.5px;
+  padding: 28px 0;
+}
+
+/* 去掉默认主题的蓝色聚焦描边，改成主色的细描边（稿子里的选中/编辑观感） */
+.pw-dg .tabulator .tabulator-tableholder:focus,
+.pw-dg .tabulator .tabulator-cell:focus,
+.pw-dg .tabulator .tabulator-cell:focus-within {
+  outline: none;
+}
+
+.pw-dg
+  .tabulator
+  .tabulator-range-overlay
+  .tabulator-range.tabulator-range-active::after,
+.pw-dg .tabulator .tabulator-range-overlay .tabulator-range::after {
+  background: var(--mc-accent, #11786f);
 }
 
 .pw-dg-num {

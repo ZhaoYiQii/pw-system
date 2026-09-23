@@ -29,6 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { getAccessToken, apiFetch } from "../api";
 import { formatFenYuan } from "../money";
+// 先加载 Tabulator 自带的基础样式，再用我们的映射覆盖（否则表格是"没穿衣服"的 div）
+import "tabulator-tables/dist/css/tabulator.min.css";
 import "./data-grid.css";
 import type {
   DataGridColumn,
