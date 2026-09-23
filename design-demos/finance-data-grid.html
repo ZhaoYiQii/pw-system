@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>S4-10 设计稿：门店数据表格（Tabulator 壳）</title>
+    <style>
+      :root {
+        --mc-bg: #f3f6f8;
+        --mc-ink: #15202b;
+        --mc-line: #dce3e8;
+        --mc-side: #15202b;
+        --mc-side-2: #26364a;
+        --mc-accent: #11786f;
+        --mc-accent-2: #e3f5f2;
+        --muted: #6b7280;
+        --danger: #cf1322;
+        --danger-bg: #fff1f0;
+        --ok: #0f7b3f;
+        --warn: #a15c00;
+        --sel: rgba(47, 84, 235, 0.14);
+        --sel-line: #2f54eb;
+        --mono: "Cascadia Mono", Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--mc-bg);
+        color: var(--mc-ink);
+        font: 13px/1.5 "Segoe UI", "Microsoft YaHei", sans-serif;
+      }
+      .app { display: flex; min-height: 1180px; }
+      /* 侧栏 */
+      .side {
+        width: 224px; flex: 0 0 224px; background: var(--mc-side);
+        color: #cbd5e1; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px;
+      }
+      .brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 12px; }
+      .brand b { color: #fff; font-size: 13px; }
+      .brand small { display: block; font: 10px var(--mono); color: #7c8b9c; letter-spacing: 0.08em; }
+      .mark {
+        width: 26px; height: 26px; border-radius: 7px; background: var(--mc-accent);
+        color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px;
+      }
+      .nav-label { font: 10px var(--mono); color: #7c8b9c; padding: 8px 6px 2px; letter-spacing: 0.08em; }
+      .nav a { display: block; padding: 7px 8px; border-radius: 7px; color: #cbd5e1; text-decoration: none; font-size: 12.5px; }
+      .nav a.on { background: var(--mc-side-2); color: #fff; }
+      .nav .grp { padding: 7px 8px; border-radius: 7px; background: var(--mc-side-2); color: #fff; font-size: 12.5px; display: flex; justify-content: space-between; }
+      .nav .sub { padding-left: 10px; border-left: 1px solid #33475f; margin: 4px 0 4px 8px; }
+      .nav .sub a { font-size: 12px; padding: 6px 8px; }
+      .nav .sub a.on { background: var(--mc-accent); color: #fff; }
+      /* 主区 */
+      .main { flex: 1; min-width: 0; }
+      .top {
+        display: flex; align-items: center; gap: 10px; background: #fff;
+        border-bottom: 1px solid var(--mc-line); padding: 10px 18px;
+      }
+      .top .who { margin-left: auto; font-size: 12px; color: var(--muted); }
+      .page { padding: 18px; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .lead { color: var(--muted); margin: 0 0 14px; font-size: 12.5px; }
+      .card { background: #fff; border: 1px solid var(--mc-line); border-radius: 12px; }
+      .toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-wrap: wrap; border-bottom: 1px solid var(--mc-line); }
+      .btn {
+        border: 1px solid var(--mc-line); background: #fff; border-radius: 8px;
+        padding: 6px 10px; font-size: 12.5px; color: var(--mc-ink); cursor: default;
+      }
+      .btn.p { background: var(--mc-accent); border-color: var(--mc-accent); color: #fff; }
+      .btn.ghost { border-color: transparent; color: var(--muted); }
+      .chip { border: 1px solid var(--mc-line); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--muted); }
+      .chip.on { background: var(--mc-accent-2); border-color: var(--mc-accent); color: #0b5a53; }
+      .search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--mc-line); border-radius: 8px; padding: 5px 8px; min-width: 240px; }
+      .search input { border: 0; outline: 0; font: 12.5px inherit; width: 150px; }
+      .kbd { font: 10px var(--mono); border: 1px solid var(--mc-line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 4px; color: var(--muted); }
+      .spacer { margin-left: auto; }
+      /* 表格 */
+      table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+      th, td { border-bottom: 1px solid var(--mc-line); padding: 8px 10px; text-align: left; white-space: nowrap; }
+      th { background: #f8fafb; color: #475569; font-weight: 600; font-size: 12px; position: relative; }
+      th .sort { color: var(--mc-accent); font: 10px var(--mono); margin-left: 4px; }
+      th .funnel { color: var(--mc-accent); margin-left: 4px; }
+      th.fixed { background: #eef2f5; }
+      th .lock { font: 10px var(--mono); color: var(--muted); margin-left: 4px; }
+      th .resize { position: absolute; right: -1px; top: 0; bottom: 0; width: 5px; border-right: 2px solid var(--mc-accent); cursor: col-resize; }
+      td.num, th.num { text-align: right; font-family: var(--mono); }
+      tr:hover td { background: #fbfcfd; }
+      tr.selected td { background: var(--sel); }
+      td.inrange { background: var(--sel); box-shadow: inset 0 0 0 1px rgba(47, 84, 235, 0.35); }
+      td.editing { background: #fff; box-shadow: inset 0 0 0 2px var(--mc-accent); position: relative; }
+      td.editing .caret { display: inline-block; width: 1px; height: 14px; background: var(--mc-accent); vertical-align: -2px; animation: none; }
+      .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 11.5px; border: 1px solid transparent; }
+      .b-ok { background: #e8f7ee; color: var(--ok); border-color: #bfe6cf; }
+      .b-wait { background: #fff7e6; color: var(--warn); border-color: #ffd591; }
+      .b-bad { background: var(--danger-bg); color: var(--danger); border-color: #ffccc7; }
+      .mono { font-family: var(--mono); font-size: 11.5px; }
+      .muted { color: var(--muted); }
+      .link { color: var(--mc-accent); }
+      .footbar { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: #f8fafb; font-size: 12px; color: var(--muted); }
+      .footbar b { color: var(--mc-ink); font-family: var(--mono); }
+      .hint { margin-top: 10px; display: flex; gap: 8px; align-items: flex-start; background: var(--mc-accent-2); border: 1px solid #b9e2dc; color: #0b5a53; border-radius: 10px; padding: 9px 12px; font-size: 12px; }
+      /* 状态卡 */
+      .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+      .state { background: #fff; border: 1px solid var(--mc-line); border-radius: 12px; padding: 12px; }
+      .state h3 { margin: 0 0 8px; font-size: 13px; }
+      .state .small { color: var(--muted); font-size: 11.5px; margin: 0 0 8px; }
+      .paste-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 5px 0; border-bottom: 1px dashed var(--mc-line); }
+      .paste-row .x { color: var(--danger); font-family: var(--mono); }
+      .paste-row .v { color: var(--ok); font-family: var(--mono); }
+      .menu { border: 1px solid var(--mc-line); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08); }
+      .menu div { padding: 7px 10px; font-size: 12.5px; border-bottom: 1px solid #f1f5f9; }
+      .menu div:last-child { border-bottom: 0; }
+      .menu .sep { padding: 0; height: 1px; background: var(--mc-line); }
+      .hl { background: #fff3bf; box-shadow: inset 0 0 0 1px #f0c000; border-radius: 3px; padding: 0 2px; }
+      .strip { display: flex; gap: 6px; margin-top: 8px; }
+      .strip span { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--mc-line); border-radius: 6px; padding: 2px 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="side">
+        <div class="brand">
+          <span class="mark">PW</span>
+          <span><b>演示门店</b><small>STORE CONSOLE</small></span>
+        </div>
+        <div class="nav">
+          <div class="nav-label">工作台</div>
+          <a>经营工作台</a>
+          <a>经营总览</a>
+          <a>智能助手</a>
+          <div class="nav-label">记录台</div>
+          <a>订单中心</a>
+          <a>客户档案</a>
+          <a>陪玩档案</a>
+          <div class="nav-label">财务结算</div>
+          <div class="grp"><span>财务结算</span><span class="mono">5</span></div>
+          <div class="sub">
+            <a>经营入账</a>
+            <a>结算批次</a>
+            <a>客户钱包</a>
+            <a class="on">支付台账</a>
+            <a>对账差异</a>
+          </div>
+          <div class="nav-label">运营设置</div>
+          <a>门店与套餐</a>
+          <a>支付设置</a>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="top">
+          <span class="muted">跳到主要内容</span>
+          <span class="spacer"></span>
+          <span class="who">owner · 店老板 · 已连接后端</span>
+        </div>
+
+        <div class="page">
+          <h1>支付台账</h1>
+          <p class="lead">
+            客户充值支付单：金额、已退、可退，支持排序 / 筛选 / 区域选择复制 / 粘贴 / 查找 / 导出；所有修改都写审计。
+          </p>
+
+          <div class="card">
+            <div class="toolbar">
+              <div class="search">🔍
+                <input value="" placeholder="查找（任意列）" />
+                <span class="kbd">Ctrl</span><span class="kbd">F</span>
+              </div>
+              <span class="chip on">全部 16</span>
+              <span class="chip">已支付 12</span>
+              <span class="chip">待支付 3</span>
+              <span class="chip">支付失败 1</span>
+              <span class="btn">列显示 ▾</span>
+              <span class="btn">导出 CSV</span>
+              <span class="btn">导出 Excel</span>
+              <span class="spacer"></span>
+              <span class="muted">已选 2 条</span>
+              <span class="btn">批量导出</span>
+              <span class="btn">批量操作 ▾</span>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 34px">☑</th>
+                  <th class="fixed" style="width: 190px">支付单号<span class="lock">🔒固定</span><span class="resize"></span></th>
+                  <th style="width: 110px">客户<span class="sort">▲</span></th>
+                  <th style="width: 96px">状态<span class="funnel">▽</span></th>
+                  <th class="num" style="width: 110px">支付金额<span class="sort">▲</span></th>
+                  <th class="num" style="width: 96px">已退</th>
+                  <th class="num" style="width: 96px">可退</th>
+                  <th style="width: 150px">创建时间</th>
+                  <th style="width: 120px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>☑</td>
+                  <td class="mono">WX-FIXTURE-SUCCESS-…</td>
+                  <td>老王</td>
+                  <td><span class="badge b-ok">已支付</span></td>
+                  <td class="num">¥128.00</td>
+                  <td class="num">¥1.00</td>
+                  <td class="num">¥127.00</td>
+                  <td class="muted">2026/9/23 11:38</td>
+                  <td><span class="link">登记退款</span></td>
+                </tr>
+                <tr class="selected">
+                  <td>☑</td>
+                  <td class="mono">RCHMUBTRXHX3C0545CF</td>
+                  <td>走查老板</td>
+                  <td><span class="badge b-ok">已支付</span></td>
+                  <td class="num inrange">¥1,000.00</td>
+                  <td class="num inrange">¥1.00</td>
+                  <td class="num inrange">¥999.00</td>
+                  <td class="muted">2026/9/22 06:37</td>
+                  <td><span class="link">登记退款</span></td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td class="mono">RCHMUBTRXCT07973E2F</td>
+                  <td>走查老板</td>
+                  <td><span class="badge b-ok">已支付</span></td>
+                  <td class="num">¥1,000.00</td>
+                  <td class="num">¥0.00</td>
+                  <td class="num">¥1,000.00</td>
+                  <td class="muted">2026/9/22 06:36</td>
+                  <td><span class="link">登记退款</span></td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td class="mono">WX-FIXTURE-PENDING-…</td>
+                  <td>老王</td>
+                  <td><span class="badge b-wait">待支付</span></td>
+                  <td class="num">¥128.00</td>
+                  <td class="num">¥0.00</td>
+                  <td class="num">—</td>
+                  <td class="muted">2026/9/23 11:38</td>
+                  <td class="muted">—</td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td class="mono">RCHMUBTRXCT0AB12C</td>
+                  <td>小周</td>
+                  <td><span class="badge b-bad">支付失败</span></td>
+                  <td class="num">¥50.00</td>
+                  <td class="num">¥0.00</td>
+                  <td class="num">—</td>
+                  <td class="muted">2026/9/21 20:05</td>
+                  <td class="muted">—</td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td class="mono">RCHMUBTRXCT0AB77A</td>
+                  <td>小周</td>
+                  <td><span class="badge b-ok">已支付</span></td>
+                  <td class="num editing">¥12<span class="caret"></span>8.00</td>
+                  <td class="num">¥0.00</td>
+                  <td class="num">¥128.00</td>
+                  <td class="muted">2026/9/21 19:40</td>
+                  <td><span class="link">保存</span> · <span class="muted">Esc 取消</span></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="footbar">
+              <span>合计（ColumnCalcs）</span>
+              <span>支付金额 <b>¥2,306.00</b></span>
+              <span>已退 <b>¥2.00</b></span>
+              <span>可退 <b>¥2,254.00</b></span>
+              <span class="spacer"></span>
+              <span>第 1 / 2 页 · 每页 50 条 · 服务端分页与排序</span>
+            </div>
+          </div>
+
+          <div class="hint">
+            <span>🔐</span>
+            <span>
+              表格只是"手感"：任何修改都走后端受控接口（字段白名单 + 乐观锁 + 租户隔离），并记录
+              <b>操作者 / 改前 / 改后</b>；金额一律整数分，不出现浮点。
+            </span>
+          </div>
+
+          <!-- 三个关键交互态 -->
+          <div class="states">
+            <section class="state">
+              <h3>① 从 Excel 粘贴 → 先预览校验</h3>
+              <p class="small">粘贴 5 行，3 行合格、2 行有问题；不合格行不提交，逐行给原因。</p>
+              <div class="paste-row"><span class="v">✓</span><span>走查老板 · 充值 1000.00 · 2026-09-22</span></div>
+              <div class="paste-row"><span class="v">✓</span><span>小周 · 充值 128.00 · 2026-09-21</span></div>
+              <div class="paste-row"><span class="v">✓</span><span>老王 · 充值 50.00 · 2026-09-20</span></div>
+              <div class="paste-row"><span class="x">✗</span><span>金额"一千"不是数字（第 4 行）</span></div>
+              <div class="paste-row"><span class="x">✗</span><span>客户"张三"本店不存在（第 5 行）</span></div>
+              <div class="strip"><span>只提交 3 行</span><span>取消</span><span>查看全部错误</span></div>
+            </section>
+
+            <section class="state">
+              <h3>② 查找 / 区域选择</h3>
+              <p class="small">Ctrl+F 在全表查找并高亮，可上一个 / 下一个；拖拽或 Shift+↑↓ 选择区域后 Ctrl+C 复制。</p>
+              <div class="search" style="margin-bottom:8px">🔍<input value="退款" /></div>
+              <div class="paste-row"><span class="v">✓</span><span>命中 <b>2</b> 处：<span class="hl">退款</span>出账 · 2026/9/23</span></div>
+              <div class="paste-row"><span class="v">✓</span><span>命中 <b>2</b> 处：人工<span class="hl">退款</span>登记 · 2026/9/22</span></div>
+              <div class="strip"><span>上一个 ↑</span><span>下一个 ↓</span><span>区分大小写</span></div>
+            </section>
+
+            <section class="state">
+              <h3>③ 右键 / 表头菜单</h3>
+              <p class="small">格子右键、表头点漏斗都能就地操作；固定列与列宽拖拽调整在表头完成。</p>
+              <div class="menu">
+                <div>复制（Ctrl+C）</div>
+                <div>粘贴（Ctrl+V）</div>
+                <div class="sep"></div>
+                <div>插入行 · 删除行（软删）</div>
+                <div>冻结此列</div>
+                <div>按此列筛选 / 查找</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
