@@ -20,6 +20,9 @@ import { PricingRulesModuleView } from "./pricing-rules-view";
 import { ReviewConsoleView } from "./review-console-view";
 import { SettingsModuleView } from "./settings-view";
 import { BreachLedgerModuleView } from "./breach-ledger-view";
+import { PaymentLedgerPanel } from "@/app/_lib/payments/payment-ledger-panel";
+import { PaymentSettingsPanel } from "@/app/_lib/payments/payment-settings-panel";
+import { ReconciliationPanel } from "@/app/_lib/payments/reconciliation-panel";
 
 export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
   if (!getMerchantModule(moduleId)) {
@@ -57,6 +60,15 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
       return record(moduleId, <ReviewConsoleView />);
     case "pricing":
       return record(moduleId, <PricingRulesModuleView />);
+    case "payments-ledger":
+      // S4-8：支付台账（与门店后台 /payments/orders 同一份 panel）。
+      return record(moduleId, <PaymentLedgerPanel />);
+    case "payments-reconciliation":
+      // S4-8：对账差异（只读，与门店后台 /payments/reconciliation 同一份 panel）。
+      return record(moduleId, <ReconciliationPanel />);
+    case "payments-settings":
+      // S4-8：支付设置（与门店后台 /payments/settings 同一份 panel）。
+      return record(moduleId, <PaymentSettingsPanel />);
     default:
       break;
   }

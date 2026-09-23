@@ -214,6 +214,36 @@ export const MERCHANT_MODULES = [
     description: "门店资料、员工角色、套餐与功能开关。",
     features: ["门店资料与品牌", "员工与角色 / 权限矩阵", "套餐与增值功能"],
   },
+  // S4-8：支付线的三页挂进商家端侧栏（与门店后台渲染同一份 panel，不重复实现）。
+  {
+    id: "payments-ledger",
+    group: "records",
+    label: "支付台账",
+    kicker: "RECORDS / PAYMENTS",
+    description:
+      "客户充值支付单：金额、已退多少、还能退多少，并在行内登记退款。",
+    features: [
+      "支付单列表与状态筛选",
+      "已退 / 可退金额",
+      "人工退款登记（扣钱包 + 流水 + 审计）",
+    ],
+  },
+  {
+    id: "payments-reconciliation",
+    group: "records",
+    label: "对账差异",
+    kicker: "RECORDS / RECONCILIATION",
+    description: "微信账单与门店账本的比对结果，差异未解决优先（只读）。",
+    features: ["最近账单文件", "差异列表（未解决优先）", "差异类型中文说明"],
+  },
+  {
+    id: "payments-settings",
+    group: "settings",
+    label: "支付设置",
+    kicker: "SETTINGS / PAYMENTS",
+    description: "门店收款状态、子商户号登记与状态刷新。",
+    features: ["能不能收款 + 下一步", "登记子商户号", "刷新微信侧状态"],
+  },
 ] as const;
 
 export type MerchantModuleId = (typeof MERCHANT_MODULES)[number]["id"];
@@ -259,7 +289,12 @@ export const MERCHANT_NAV_DOMAINS = [
     id: "finance",
     label: "财务结算",
     description: "入账、结算与对账",
-    activeModuleIds: ["finance", "settlements"],
+    activeModuleIds: [
+      "finance",
+      "settlements",
+      "payments-ledger",
+      "payments-reconciliation",
+    ],
   },
   {
     id: "insights",
@@ -271,7 +306,7 @@ export const MERCHANT_NAV_DOMAINS = [
     id: "settings",
     label: "运营设置",
     description: "门店、权限与审计配置",
-    activeModuleIds: ["settings", "pricing", "audit"],
+    activeModuleIds: ["settings", "pricing", "audit", "payments-settings"],
   },
 ] as const satisfies readonly {
   id: string;
@@ -618,6 +653,9 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "finrisk",
     "health",
     "settings",
+    "payments-ledger",
+    "payments-reconciliation",
+    "payments-settings",
   ],
   ADMIN: [
     "work",
@@ -666,6 +704,8 @@ const ROLE_MODULE_IDS: Record<MerchantRole, readonly MerchantModuleId[]> = {
     "risk",
     "finrisk",
     "health",
+    "payments-ledger",
+    "payments-reconciliation",
   ],
 };
 
