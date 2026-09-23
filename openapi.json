@@ -17570,6 +17570,37 @@
           "TenantPaymentSetup"
         ]
       }
+    },
+    "/api/v1/tenant/payments/orders": {
+      "get": {
+        "operationId": "tenantPaymentLedger_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantPaymentLedger"
+        ]
+      }
     }
   },
   "info": {

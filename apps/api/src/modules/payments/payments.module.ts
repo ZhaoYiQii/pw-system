@@ -16,6 +16,9 @@ import { WechatPayRefundController } from "./interface/wechatpay-refund.controll
 import { TenantPaymentSetupService } from "./application/payment-setup.service.js";
 import { PrismaPaymentSetupRepository } from "./infrastructure/prisma-payment-setup.repository.js";
 import { TenantPaymentSetupController } from "./interface/tenant-payment-setup.controller.js";
+import { TenantPaymentLedgerService } from "./application/payment-ledger.service.js";
+import { PrismaPaymentLedgerRepository } from "./infrastructure/prisma-payment-ledger.repository.js";
+import { TenantPaymentLedgerController } from "./interface/tenant-payment-ledger.controller.js";
 
 export const PAYMENTS_PLATFORM_CLIENT = "PAYMENTS_PLATFORM_CLIENT";
 export const PAYMENTS_RUNTIME_CLIENT = "PAYMENTS_RUNTIME_CLIENT";
@@ -41,6 +44,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
     WechatPayCheckoutController,
     WechatPayRefundController,
     TenantPaymentSetupController,
+    TenantPaymentLedgerController,
   ],
   providers: [
     {
@@ -110,12 +114,25 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
       ) => new TenantPaymentSetupService(repository, client),
       inject: [PrismaPaymentSetupRepository, WECHATPAY_PARTNER_CLIENT],
     },
+    {
+      provide: PrismaPaymentLedgerRepository,
+      useFactory: (runtime: ReturnType<typeof createDatabaseClient>) =>
+        new PrismaPaymentLedgerRepository(runtime),
+      inject: [PAYMENTS_RUNTIME_CLIENT],
+    },
+    {
+      provide: TenantPaymentLedgerService,
+      useFactory: (repository: PrismaPaymentLedgerRepository) =>
+        new TenantPaymentLedgerService(repository),
+      inject: [PrismaPaymentLedgerRepository],
+    },
   ],
   exports: [
     WechatPayNotificationService,
     WechatPayCheckoutService,
     ManualRefundService,
     TenantPaymentSetupService,
+    TenantPaymentLedgerService,
   ],
 })
 export class PaymentsModule {}

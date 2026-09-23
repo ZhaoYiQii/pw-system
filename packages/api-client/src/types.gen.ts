@@ -9810,3 +9810,17 @@ export type TenantPaymentSetupUploadMaterialData = {
 export type TenantPaymentSetupUploadMaterialResponses = {
     201: unknown;
 };
+
+export type TenantPaymentLedgerListData = {
+    body?: never;
+    path?: never;
+    query: {
+        status: string;
+        limit: string;
+    };
+    url: '/api/v1/tenant/payments/orders';
+};
+
+export type TenantPaymentLedgerListResponses = {
+    200: unknown;
+};

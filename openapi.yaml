@@ -12604,6 +12604,25 @@ paths:
         "201":
           description: ""
       tags: *a41
+  /api/v1/tenant/payments/orders:
+    get:
+      operationId: tenantPaymentLedger_list
+      parameters:
+        - name: status
+          required: true
+          in: query
+          schema:
+            type: string
+        - name: limit
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags:
+        - TenantPaymentLedger
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

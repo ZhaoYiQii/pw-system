@@ -30,6 +30,7 @@ export const TENANT_NAV_GROUPS: readonly TenantNavGroup[] = [
       { href: "/catalog", label: "服务目录" },
       { href: "/game-templates", label: "陪玩模板" },
       { href: "/finance", label: "收入账本" },
+      { href: "/payments/orders", label: "支付台账" },
       { href: "/settlements", label: "结算批次" },
       { href: "/disputes", label: "客诉记录" },
       { href: "/audit", label: "审计日志" },

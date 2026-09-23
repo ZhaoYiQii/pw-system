@@ -77,3 +77,11 @@ export class PaymentSetupInputError extends Error {
     this.name = "PaymentSetupInputError";
   }
 }
+
+/** S4-7：门店支付台账入参问题（状态过滤认不出 / limit 越界）→ 400。 */
+export class PaymentLedgerInputError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "PaymentLedgerInputError";
+  }
+}
