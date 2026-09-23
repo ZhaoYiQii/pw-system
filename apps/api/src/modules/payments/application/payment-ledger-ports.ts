@@ -1,10 +1,22 @@
 /**
- * S4-7：门店支付台账的仓储端口（接口隔离，便于单测注入假实现，与 refund-ports 同范式）。
+ * S5-1：门店支付台账的仓储端口（ADR-0008 的数据表格壳要求**服务端**分页/排序/筛选）。
  *
- * 为什么要有它：客户在 H5 充完值，门店只看得到"钱包余额涨了"，**看不到支付单本身**——
- * 单号、支付金额、已退多少、微信侧状态全在平台库里。而人工退款登记的第一步就是
- * "找到那张支付单"（`out_refund_no` 之外的 `outNo` 必须由门店提供），所以台账是退款的前置能力。
+ * 为什么搬到服务端：表格壳支持几万行、列排序、按列筛选，前端一次拉全再排会随数据量线性变慢，
+ * 而且导出必须走服务端（大表不能在浏览器里拼）。所以口径是：**排序/筛选/分页参数由服务端解释**，
+ * 前端只负责把用户操作翻译成参数。
  */
+
+/** 允许排序的字段（白名单）：只放真实列，且都是 `payment_orders` 自己的列（关系列排序要 join，本片不做）。 */
+export const PAYMENT_LEDGER_SORT_FIELDS = [
+  "createdAt",
+  "paidAt",
+  "amountFen",
+  "status",
+  "outNo",
+] as const;
+
+export type PaymentLedgerSortField =
+  (typeof PAYMENT_LEDGER_SORT_FIELDS)[number];
 
 export interface PaymentLedgerRow {
   id: string;
@@ -23,10 +35,20 @@ export interface PaymentLedgerQuery {
   tenantId: string;
   /** 仅 `PENDING` / `SUCCESS` / `FAILED` 允许过滤；`undefined` = 不过滤。 */
   status?: string;
-  limit: number;
+  /** 关键词：支付单号**或**客户名，包含匹配（大小写不敏感）。 */
+  q?: string;
+  sortBy: PaymentLedgerSortField;
+  sortDir: "asc" | "desc";
+  /** 1 起算。 */
+  page: number;
+  pageSize: number;
 }
 
 export interface PaymentLedgerRepository {
-  /** 最近创建的支付单在前；调用方已把 `limit` 收在服务端上限内。 */
+  /** 最近创建的支付单在前；调用方已把 `pageSize` 收在服务端上限内。 */
   listOrders(query: PaymentLedgerQuery): Promise<PaymentLedgerRow[]>;
+  /** 同一套筛选条件下的总行数（分页器要用，且不能被 pageSize 影响）。 */
+  countOrders(
+    query: Pick<PaymentLedgerQuery, "tenantId" | "status" | "q">,
+  ): Promise<number>;
 }

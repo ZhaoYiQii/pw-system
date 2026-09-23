@@ -17,12 +17,14 @@
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tabulator-tables": "^6.5.3",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
+    "@types/tabulator-tables": "^6.3.6",
     "tailwindcss": "^4.3.3"
   }
 }

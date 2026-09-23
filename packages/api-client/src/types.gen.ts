@@ -9816,12 +9816,31 @@ export type TenantPaymentLedgerListData = {
     path?: never;
     query: {
         status: string;
+        q: string;
+        sortBy: string;
+        sortDir: string;
+        page: string;
+        pageSize: string;
         limit: string;
     };
     url: '/api/v1/tenant/payments/orders';
 };
 
 export type TenantPaymentLedgerListResponses = {
+    200: unknown;
+};
+
+export type TenantPaymentLedgerExportCsvData = {
+    body?: never;
+    path?: never;
+    query: {
+        status: string;
+        q: string;
+    };
+    url: '/api/v1/tenant/payments/orders/export.csv';
+};
+
+export type TenantPaymentLedgerExportCsvResponses = {
     200: unknown;
 };
 
