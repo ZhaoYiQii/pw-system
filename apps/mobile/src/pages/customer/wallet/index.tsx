@@ -110,6 +110,16 @@ export default function WalletPage() {
       setMsg({ tone: "error", text: "请输入正确的充值金额" });
       return;
     }
+    // ① 先判定环境：不在微信里直接提示、**不发请求**。
+    // 之前把环境判定写在 catch 里是错的——它会把后端真实错误（404/503）盖成"请在微信里打开"。
+    const readiness = currentPayReadiness({
+      payEnabled: true,
+      payerBound: true,
+    });
+    if (!readiness.ready) {
+      setMsg({ tone: "error", text: readiness.message });
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
@@ -136,15 +146,10 @@ export default function WalletPage() {
       await load(token);
       setMsg({ tone: "success", text: "支付成功，余额已更新。" });
     } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
-      // 后端会把"门店没开通 / 客户没授权"讲清楚（409/503），直接透给用户
-      const readiness = currentPayReadiness({
-        payEnabled: !/503|未启用|尚未开通/.test(text),
-        payerBound: !/授权/.test(text),
-      });
+      // 请求或调起失败：**原样透出**错误（404/500/409/503 都要看得见），不做任何美化掩盖
       setMsg({
         tone: "error",
-        text: readiness.ready ? text : readiness.message,
+        text: error instanceof Error ? error.message : String(error),
       });
     } finally {
       setBusy(false);
