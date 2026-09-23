@@ -1,5 +1,5 @@
 import { Button, Input, Text, View } from "@tarojs/components";
-import { useLoad } from "@tarojs/taro";
+import Taro, { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { apiAdapter } from "@platform-api";
 import { session } from "@platform-session";
@@ -142,9 +142,13 @@ export default function WalletPage() {
         setMsg({ tone: "error", text: "支付未完成，请重试。" });
         return;
       }
-      // PAID：钱已付，但余额要等微信回调入账（S4-6b 结果页负责轮询）——这里刷新一次余额
-      await load(token);
-      setMsg({ tone: "success", text: "支付成功，余额已更新。" });
+      // PAID：交给结果页去轮询到账（S4-6b）——不在钱包页宣布"成功"，因为钱付了不代表已入账
+      Taro.navigateTo({
+        url: `/pages/customer/pay-result/index?outTradeNo=${encodeURIComponent(
+          prepay.outTradeNo,
+        )}&outcome=PAID`,
+      });
+      return;
     } catch (error) {
       // 请求或调起失败：**原样透出**错误（404/500/409/503 都要看得见），不做任何美化掩盖
       setMsg({
