@@ -1,15 +1,16 @@
 "use client";
 
 /**
- * S5-1：门店「支付台账」= 通用数据表格壳（`<DataManager>`）+ 人工退款登记。
+ * S5-1 / S5-2：门店「支付台账」= 通用数据表格壳（`<DataManager>`）+ 人工退款登记。
  *
  * 表格部分交给壳（服务端排序/筛选/分页、区域选择、复制粘贴到 Excel、CSV 导出、当前页合计）；
- * 这里只声明列定义，并保留 S4-7a 就有的**人工退款登记**：从表格里复制支付单号 → 粘进下面的登记表单
- * （这就是"Excel 手感"的实际用法）。退款本身仍走后端受控接口（扣钱包 + 流水 + 审计 + 幂等 + 余额护栏）。
+ * 这里只声明列定义，并保留 S4-7a 就有的**人工退款登记**：表格最右侧「操作」列的「登记退款」
+ * 把该行的支付单号填进下面的登记表单（S5-2 只是把这条已有链路搬到行内入口，没加新功能）；
+ * 退款本身仍走后端受控接口（扣钱包 + 流水 + 审计 + 幂等 + 余额护栏）。
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { apiFetch } from "../api";
 import { formatFenYuan, yuanToFenString } from "../money";
 import { DataManager } from "../data-grid/data-manager";
-import type { DataGridColumn } from "../data-grid/types";
+import type { DataGridColumn, DataGridRowAction } from "../data-grid/types";
 
 interface PaymentLedgerRow {
   id: string;
@@ -48,19 +49,42 @@ interface RefundResult {
   duplicate: boolean;
 }
 
-/** 列定义必须是模块级常量（引用稳定，否则表格会被反复重建）。 */
+/** 稿子的时间样式：2026/9/23 11:38（本地时区，小时补零）。 */
+function formatDateTime(value: unknown): string {
+  if (!value) return "—";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "—";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}`;
+}
+
+/**
+ * 列定义必须是模块级常量（引用稳定，否则表格会被反复重建）。
+ * `sortable: false` 的列 = 后端排序白名单里没有它，点表头不该发请求（会 400）。
+ */
 const COLUMNS: readonly DataGridColumn<PaymentLedgerRow>[] = [
-  { key: "outNo", title: "支付单号", width: 230, frozen: true, minWidth: 180 },
+  {
+    key: "outNo",
+    title: "支付单号",
+    width: 190,
+    minWidth: 170,
+    frozen: true,
+    mono: true,
+  },
   {
     key: "customerName",
     title: "客户",
-    width: 120,
+    width: 110,
+    sortable: false,
     text: (value) => (value ? String(value) : "—"),
   },
   {
     key: "status",
     title: "状态",
-    width: 110,
+    width: 96,
+    filterHint: true,
     badge: (value) => {
       const status = String(value ?? "");
       if (status === "SUCCESS") return { label: "已支付", tone: "ok" };
@@ -69,20 +93,29 @@ const COLUMNS: readonly DataGridColumn<PaymentLedgerRow>[] = [
       return { label: status || "—", tone: "muted" };
     },
   },
-  { key: "amountFen", title: "支付金额", money: true, width: 120 },
-  { key: "refundedFen", title: "已退", money: true, width: 110 },
-  { key: "refundableFen", title: "可退", money: true, width: 110 },
+  { key: "amountFen", title: "支付金额", money: true, width: 110 },
   {
-    key: "createdAt",
-    title: "创建时间",
-    width: 190,
-    text: (value) => (value ? new Date(String(value)).toLocaleString() : "—"),
+    key: "refundedFen",
+    title: "已退",
+    money: true,
+    width: 96,
+    sortable: false,
   },
   {
-    key: "paidAt",
-    title: "支付时间",
-    width: 190,
-    text: (value) => (value ? new Date(String(value)).toLocaleString() : "—"),
+    key: "refundableFen",
+    title: "可退",
+    money: true,
+    width: 96,
+    sortable: false,
+  },
+  {
+    // 稿子：创建时间合成**一列两行**（第一行创建时间、第二行"支付 …"），不再是两列
+    key: "createdAt",
+    title: "创建时间",
+    width: 150,
+    text: (value) => formatDateTime(value),
+    subtext: (value, row) =>
+      row.paidAt ? `支付 ${formatDateTime(row.paidAt)}` : "支付 —",
   },
 ];
 
@@ -99,6 +132,7 @@ function errorText(error: unknown): string {
 
 export function PaymentLedgerPanel() {
   const queryClient = useQueryClient();
+  const refundCardRef = useRef<HTMLDivElement | null>(null);
   const [outNo, setOutNo] = useState("");
   const [amountYuan, setAmountYuan] = useState("");
   const [reason, setReason] = useState("");
@@ -139,6 +173,25 @@ export function PaymentLedgerPanel() {
     },
   });
 
+  /** 行内「登记退款」：把这一行的支付单号填进下面的表单（动作本身 S4-7a 就有了）。 */
+  const pickOutNo = useCallback((row: PaymentLedgerRow) => {
+    setOutNo(row.outNo);
+    refundCardRef.current?.scrollIntoView({ block: "nearest" });
+  }, []);
+
+  const actions = useMemo<readonly DataGridRowAction<PaymentLedgerRow>[]>(
+    () => [
+      {
+        key: "refund",
+        label: "登记退款",
+        // 只有"已支付且还有没退完的钱"的单子能退；口径与后端一致（canRefund）
+        when: (row) => row.canRefund,
+        onClick: pickOutNo,
+      },
+    ],
+    [pickOutNo],
+  );
+
   const submit = () => {
     if (!outNo.trim()) {
       setNotice(null);
@@ -176,18 +229,18 @@ export function PaymentLedgerPanel() {
       <DataManager<PaymentLedgerRow>
         resource="/api/v1/tenant/payments/orders"
         columns={COLUMNS}
+        actions={actions}
         statusOptions={STATUS_OPTIONS}
-        searchPlaceholder="支付单号 / 客户名（回车）"
         exportPath="/api/v1/tenant/payments/orders/export.csv"
         exportFileName="payment-orders.csv"
         emptyHint="没有符合条件的支付单。客户在 H5 充值后会在这里出现。"
       />
 
-      <Card>
+      <Card ref={refundCardRef}>
         <CardHeader>
           <CardTitle>登记退款</CardTitle>
           <CardDescription>
-            钱由门店在自己的商户号退给客户，这里只登记并扣客户钱包余额。支付单号从上面表格复制即可。
+            钱由门店在自己的商户号退给客户，这里只登记并扣客户钱包余额。表格里点「登记退款」即可带入支付单号。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

@@ -3,11 +3,17 @@
  *
  * 为什么不用它自带的主题（tabulator_midnight 等）：那会引入第二套配色与圆角，
  * 和后台其余页面对不上。这里只改"皮"，不动它的结构类。
+ *
+ * 尺寸与颜色照设计稿 `design-demos/finance-data-grid.html` 逐条对齐：
+ * 表头底 #f8fafb / 字 #475569 / 12px 半粗；单元格 padding 8px 10px / 12.5px；
+ * 行分隔 #f1f5f9、行 hover #fbfcfd、固定列底 #eef2f5；
+ * 选区蓝 rgba(47,84,235,.12) + 描边 rgba(47,84,235,.35)。
  */
 
 .pw-dg .tabulator {
-  border: 1px solid var(--mc-line, #dce3e8);
-  border-radius: 10px;
+  /* 卡片本身就是边框和圆角（稿子里表格是贴边的），这里不再画一层 */
+  border: 0;
+  border-radius: 0;
   background: #fff;
   font:
     12.5px/1.5 "Segoe UI",
@@ -15,6 +21,82 @@
     sans-serif;
   color: var(--mc-ink, #15202b);
 }
+
+/* ── 工具栏（稿子的 .btn / .chip / .search / .kbd） ───────────────────── */
+
+.pw-dg-btn {
+  border: 1px solid var(--mc-line, #dce3e8);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: var(--mc-ink, #15202b);
+  cursor: pointer;
+}
+
+.pw-dg-btn:hover:not(:disabled) {
+  background: var(--mc-paper-2, #f7f9fa);
+}
+
+.pw-dg-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pw-dg-chip {
+  border: 1px solid var(--mc-line, #dce3e8);
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--muted-foreground, #6b7280);
+  cursor: pointer;
+}
+
+.pw-dg-chip:hover {
+  background: var(--mc-paper-2, #f7f9fa);
+}
+
+.pw-dg-chip--on {
+  background: var(--mc-accent-2, #e3f5f2);
+  border-color: var(--mc-accent, #11786f);
+  color: #0b5a53;
+}
+
+.pw-dg-kbd {
+  font:
+    10px "Cascadia Mono",
+    Consolas,
+    monospace;
+  border: 1px solid var(--mc-line, #dce3e8);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 4px;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.pw-dg-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 12px 0;
+  padding: 8px 12px;
+  border: 1px solid #b9e2dc;
+  border-radius: 10px;
+  background: var(--mc-accent-2, #e3f5f2);
+  color: #0b5a53;
+  font-size: 12px;
+}
+
+.pw-dg-btn:focus-visible,
+.pw-dg-chip:focus-visible {
+  outline: 2px solid var(--mc-accent, #11786f);
+  outline-offset: 1px;
+}
+
+/* ── 表头 ─────────────────────────────────────────────────────────────── */
 
 .pw-dg .tabulator .tabulator-header {
   background: #f8fafb;
@@ -26,14 +108,14 @@
 
 .pw-dg .tabulator .tabulator-col {
   background: transparent;
-  border-right: 1px solid #eef2f5;
+  border-right: 0;
 }
 
 .pw-dg .tabulator .tabulator-col .tabulator-col-content {
   padding: 8px 10px;
 }
 
-/* 别让默认主题的表头 hover / 焦点框破坏稿子的观感；排序箭头用主色 */
+/* 别让默认主题的表头 hover / 焦点框破坏稿子的观感 */
 .pw-dg .tabulator .tabulator-col.tabulator-sortable:hover,
 .pw-dg .tabulator .tabulator-col.tabulator-sortable.tabulator-header-sort-asc,
 .pw-dg .tabulator .tabulator-col.tabulator-sortable.tabulator-header-sort-desc {
@@ -48,6 +130,50 @@
   background: #eef2f5;
 }
 
+/* 表头内容：标题 + 主色三角 / 漏斗 / 🔒固定（都是独立元素） */
+.pw-dg .tabulator .tabulator-col-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pw-dg-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.pw-dg-head-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pw-dg-sort,
+.pw-dg-lock {
+  font:
+    10px "Cascadia Mono",
+    Consolas,
+    monospace;
+  flex: none;
+}
+
+.pw-dg-sort {
+  color: var(--mc-accent, #11786f);
+}
+
+.pw-dg-lock {
+  margin-left: 4px;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.pw-dg-funnel {
+  color: var(--mc-accent, #11786f);
+  margin-left: 4px;
+  flex: none;
+}
+
+/* 列宽拖拽手柄：平时不抢眼，hover 变主色 */
 .pw-dg .tabulator .tabulator-col-resize-handle {
   background: transparent;
 }
@@ -55,6 +181,8 @@
 .pw-dg .tabulator .tabulator-col-resize-handle:hover {
   background: var(--mc-accent, #11786f);
 }
+
+/* ── 行与单元格 ───────────────────────────────────────────────────────── */
 
 .pw-dg .tabulator .tabulator-row {
   border-bottom: 1px solid #f1f5f9;
@@ -70,12 +198,63 @@
 }
 
 .pw-dg .tabulator .tabulator-cell {
-  border-right: 1px solid #f6f8fa;
+  border-right: 0;
   padding: 8px 10px;
   font-size: 12.5px;
 }
 
-/* 区域选择（Excel 手感）：半透明覆盖 + 选区高亮 */
+/* 冻结列要盖住滚动的行，得自己带底色（hover 也要跟着变） */
+.pw-dg .tabulator .tabulator-row .tabulator-cell.tabulator-frozen {
+  background: #fff;
+}
+
+.pw-dg .tabulator .tabulator-row:hover .tabulator-cell.tabulator-frozen {
+  background: #fbfcfd;
+}
+
+.pw-dg .tabulator .tabulator-cell.tabulator-col-frozen,
+.pw-dg .tabulator .tabulator-cell.tabulator-frozen {
+  border-right: 0;
+}
+
+/* 一列两行（创建时间 / 支付时间） */
+.pw-dg-cell2 {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.pw-dg-cell2-main {
+  color: var(--muted-foreground, #6b7280);
+}
+
+.pw-dg-cell2-sub {
+  color: var(--muted-foreground, #6b7280);
+  font-size: 11.5px;
+}
+
+/* 操作列里的动作（稿子的 .link） */
+.pw-dg-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--mc-accent, #11786f);
+  cursor: pointer;
+}
+
+.pw-dg-link:hover {
+  text-decoration: underline;
+}
+
+.pw-dg-link:focus-visible {
+  outline: 2px solid var(--mc-accent, #11786f);
+  outline-offset: 1px;
+}
+
+/* ── 区域选择（Excel 手感）────────────────────────────────────────────── */
+
 .pw-dg .tabulator .tabulator-range-overlay .tabulator-range {
   border: 1px solid var(--mc-accent, #11786f);
 }
@@ -93,31 +272,6 @@
   box-shadow: inset 0 0 0 1px rgba(47, 84, 235, 0.35);
 }
 
-/* 合计行（ColumnCalcs）：只算当前页，样式上与正文区分 */
-.pw-dg .tabulator .tabulator-calcs-holder {
-  background: #f8fafb;
-  border-top: 1px solid var(--mc-line, #dce3e8);
-}
-
-.pw-dg .tabulator .tabulator-calcs-holder .tabulator-row {
-  background: transparent;
-  font-weight: 600;
-}
-
-.pw-dg .tabulator .tabulator-calcs-holder .tabulator-cell {
-  color: var(--mc-ink, #15202b);
-}
-
-.pw-dg .tabulator .tabulator-footer {
-  display: none;
-}
-
-.pw-dg .tabulator .tabulator-placeholder {
-  color: var(--muted-foreground, #6b7280);
-  font-size: 12.5px;
-  padding: 28px 0;
-}
-
 /* 去掉默认主题的蓝色聚焦描边，改成主色的细描边（稿子里的选中/编辑观感） */
 .pw-dg .tabulator .tabulator-tableholder:focus,
 .pw-dg .tabulator .tabulator-cell:focus,
@@ -133,7 +287,78 @@
   background: var(--mc-accent, #11786f);
 }
 
+/* ── 合计行（ColumnCalcs）：只算当前页，浅灰加粗 ─────────────────────── */
+
+/*
+ * 合计行住在 Tabulator 的 footer 里（columnCalcs 的 bottomCalc 走 footerPrepend），
+ * 所以这里**不能**再把 footer 关掉——S5-1 的 `display:none` 就是把合计行藏起来了
+ * （innerText 读得到、眼睛看不到，走查当场抓到）。Tabulator 默认给合计背景 #f3f3f3 /
+ * #e2e2e2 且带 !important，这里必须一起用 !important 压回稿子的浅灰 #f8fafb。
+ */
+.pw-dg .tabulator .tabulator-footer {
+  background: #f8fafb;
+  border-top: 1px solid var(--mc-line, #dce3e8);
+  color: var(--muted-foreground, #6b7280);
+  font-size: 12px;
+}
+
+.pw-dg .tabulator .tabulator-footer .tabulator-calcs-holder,
+.pw-dg .tabulator .tabulator-footer .tabulator-calcs-holder .tabulator-row,
+.pw-dg .tabulator .tabulator-header .tabulator-calcs-holder,
+.pw-dg .tabulator .tabulator-header .tabulator-calcs-holder .tabulator-row,
+.pw-dg
+  .tabulator
+  .tabulator-tableholder
+  .tabulator-table
+  .tabulator-row.tabulator-calcs {
+  background: #f8fafb !important;
+}
+
+.pw-dg .tabulator .tabulator-footer .tabulator-calcs-holder {
+  border-top: 0;
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+.pw-dg .tabulator .tabulator-calcs-holder .tabulator-row {
+  border-bottom: 0;
+  font-weight: 600;
+}
+
+.pw-dg .tabulator .tabulator-calcs-holder .tabulator-cell {
+  color: var(--mc-ink, #15202b);
+}
+
+/* 稿子的合计行开头有「合计」两个字（数值各自落在对应列下面） */
+.pw-dg
+  .tabulator
+  .tabulator-footer
+  .tabulator-row.tabulator-calcs
+  .tabulator-cell:first-child::before {
+  content: "合计";
+  color: var(--muted-foreground, #6b7280);
+  font-weight: 400;
+}
+
+.pw-dg .tabulator .tabulator-footer .tabulator-row.tabulator-calcs {
+  border-top: 0;
+}
+
+.pw-dg .tabulator .tabulator-placeholder {
+  color: var(--muted-foreground, #6b7280);
+  font-size: 12.5px;
+  padding: 28px 0;
+}
+
+/* ── 单元格内容小件 ───────────────────────────────────────────────────── */
+
+/* 数字列等宽（稿子的 td.num 是 12.5px 等宽，跟着单元格字号走） */
 .pw-dg-num {
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+/* 支付单号这类机器码：等宽 + 小一号（稿子的 .mono） */
+.pw-dg-mono {
   font-family: "Cascadia Mono", Consolas, monospace;
   font-size: 11.5px;
 }
