@@ -48,7 +48,10 @@ export const TENANT_NAV_GROUPS: readonly TenantNavGroup[] = [
   {
     id: "settings",
     label: "设置",
-    items: [{ href: "/settings", label: "门店设置" }],
+    items: [
+      { href: "/settings", label: "门店设置" },
+      { href: "/payments/settings", label: "支付设置" },
+    ],
   },
 ];
 
