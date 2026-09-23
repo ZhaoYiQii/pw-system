@@ -226,15 +226,27 @@ export function PaymentLedgerPanel() {
         </div>
       ) : null}
 
-      <DataManager<PaymentLedgerRow>
-        resource="/api/v1/tenant/payments/orders"
-        columns={COLUMNS}
-        actions={actions}
-        statusOptions={STATUS_OPTIONS}
-        exportPath="/api/v1/tenant/payments/orders/export.csv"
-        exportFileName="payment-orders.csv"
-        emptyHint="没有符合条件的支付单。客户在 H5 充值后会在这里出现。"
-      />
+      <div className="flex flex-col gap-[10px]">
+        <DataManager<PaymentLedgerRow>
+          resource="/api/v1/tenant/payments/orders"
+          columns={COLUMNS}
+          actions={actions}
+          statusOptions={STATUS_OPTIONS}
+          exportPath="/api/v1/tenant/payments/orders/export.csv"
+          exportFileName="payment-orders.csv"
+          emptyHint="没有符合条件的支付单。客户在 H5 充值后会在这里出现。"
+        />
+
+        {/* 稿子的 🔐 提示条：表格只是"手感"，真正的写入走后端受控接口 */}
+        <div className="flex items-start gap-2 rounded-[10px] border border-[#b9e2dc] bg-[var(--mc-accent-2)] px-3 py-[9px] text-[12px] text-[#0b5a53]">
+          <span aria-hidden="true">🔐</span>
+          <span>
+            表格只是“手感”：任何修改都走后端受控接口（字段白名单 + 乐观锁 +
+            租户隔离），并记录
+            <b>操作者 / 改前 / 改后</b>；金额一律整数分，不出现浮点。
+          </span>
+        </div>
+      </div>
 
       <Card ref={refundCardRef}>
         <CardHeader>

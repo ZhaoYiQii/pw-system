@@ -63,7 +63,22 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
       return record(moduleId, <PricingRulesModuleView />);
     case "payments-ledger":
       // S4-8：支付台账（与门店后台 /payments/orders 同一份 panel）。
-      return record(moduleId, <PaymentLedgerPanel />);
+      // S5-2：页面骨架照 design-demos/finance-data-grid.html（大标题 + 一句说明）。
+      return record(
+        moduleId,
+        <>
+          <div className="mb-[14px]">
+            <h1 className="text-xl font-bold leading-tight tracking-tight text-[var(--mc-ink)]">
+              支付台账
+            </h1>
+            <p className="mt-1 text-[12.5px] text-[var(--mc-muted)]">
+              客户充值支付单：金额、已退、可退，支持排序 / 筛选 / 区域选择复制 /
+              粘贴 / 查找 / 导出；所有修改都写审计。
+            </p>
+          </div>
+          <PaymentLedgerPanel />
+        </>,
+      );
     case "payments-reconciliation":
       // S4-8：对账差异（只读，与门店后台 /payments/reconciliation 同一份 panel）。
       return record(moduleId, <ReconciliationPanel />);
