@@ -19,6 +19,9 @@ import { TenantPaymentSetupController } from "./interface/tenant-payment-setup.c
 import { TenantPaymentLedgerService } from "./application/payment-ledger.service.js";
 import { PrismaPaymentLedgerRepository } from "./infrastructure/prisma-payment-ledger.repository.js";
 import { TenantPaymentLedgerController } from "./interface/tenant-payment-ledger.controller.js";
+import { TenantReconciliationService } from "./application/tenant-reconciliation.service.js";
+import { PrismaTenantReconciliationRepository } from "./infrastructure/prisma-tenant-reconciliation.repository.js";
+import { TenantReconciliationController } from "./interface/tenant-reconciliation.controller.js";
 
 export const PAYMENTS_PLATFORM_CLIENT = "PAYMENTS_PLATFORM_CLIENT";
 export const PAYMENTS_RUNTIME_CLIENT = "PAYMENTS_RUNTIME_CLIENT";
@@ -45,6 +48,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
     WechatPayRefundController,
     TenantPaymentSetupController,
     TenantPaymentLedgerController,
+    TenantReconciliationController,
   ],
   providers: [
     {
@@ -126,6 +130,18 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
         new TenantPaymentLedgerService(repository),
       inject: [PrismaPaymentLedgerRepository],
     },
+    {
+      provide: PrismaTenantReconciliationRepository,
+      useFactory: (runtime: ReturnType<typeof createDatabaseClient>) =>
+        new PrismaTenantReconciliationRepository(runtime),
+      inject: [PAYMENTS_RUNTIME_CLIENT],
+    },
+    {
+      provide: TenantReconciliationService,
+      useFactory: (repository: PrismaTenantReconciliationRepository) =>
+        new TenantReconciliationService(repository),
+      inject: [PrismaTenantReconciliationRepository],
+    },
   ],
   exports: [
     WechatPayNotificationService,
@@ -133,6 +149,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
     ManualRefundService,
     TenantPaymentSetupService,
     TenantPaymentLedgerService,
+    TenantReconciliationService,
   ],
 })
 export class PaymentsModule {}

@@ -9824,3 +9824,16 @@ export type TenantPaymentLedgerListData = {
 export type TenantPaymentLedgerListResponses = {
     200: unknown;
 };
+
+export type TenantReconciliationOverviewData = {
+    body?: never;
+    path?: never;
+    query: {
+        limit: string;
+    };
+    url: '/api/v1/tenant/payments/reconciliation';
+};
+
+export type TenantReconciliationOverviewResponses = {
+    200: unknown;
+};

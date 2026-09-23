@@ -12623,6 +12623,20 @@ paths:
           description: ""
       tags:
         - TenantPaymentLedger
+  /api/v1/tenant/payments/reconciliation:
+    get:
+      operationId: tenantReconciliation_overview
+      parameters:
+        - name: limit
+          required: true
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+      tags:
+        - TenantReconciliation
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。

@@ -17601,6 +17601,29 @@
           "TenantPaymentLedger"
         ]
       }
+    },
+    "/api/v1/tenant/payments/reconciliation": {
+      "get": {
+        "operationId": "tenantReconciliation_overview",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantReconciliation"
+        ]
+      }
     }
   },
   "info": {
