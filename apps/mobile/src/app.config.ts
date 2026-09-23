@@ -14,6 +14,7 @@ export default defineAppConfig({
     "pages/customer/game-select/index",
     "pages/customer/order-detail/index",
     "pages/customer/wallet/index",
+    "pages/customer/pay-result/index",
     "pages/customer/profile/index",
     "pages/customer/disputes/index",
     "pages/customer/dispute-create/index",
