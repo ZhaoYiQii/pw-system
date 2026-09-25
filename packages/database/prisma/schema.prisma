@@ -43,6 +43,7 @@ model Tenant {
   paymentRefunds            PaymentRefund[]
   reconciliationStatements  ReconciliationStatement[]
   reconciliationDifferences ReconciliationDifference[]
+  reconciliationCases       ReconciliationCase[]
 
   @@map("tenants")
 }
@@ -763,6 +764,35 @@ enum BatchStatus {
   VOID
 }
 
+enum FundAccountKind {
+  WECHAT_SETTLEMENT
+  BANK
+  CASH
+  OFFLINE
+}
+
+enum FundAccountStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum LedgerEventType {
+  ORDER_ACCOUNTING
+  PAYMENT_CONFIRMED
+  WALLET_CONSUMED
+  REFUND_CONFIRMED
+  PLAYER_PAYOUT_CONFIRMED
+  RECONCILIATION_ADJUSTMENT
+  REVERSAL
+}
+
+enum LedgerTransactionStatus {
+  DRAFT
+  CONFIRMED
+  RECONCILED
+  REVERSED
+}
+
 model LedgerAccount {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
@@ -777,17 +807,49 @@ model LedgerAccount {
   @@map("ledger_accounts")
 }
 
+/// 真实资金所在地；与账务科目分离，避免把微信/银行卡误当作收入或应付科目。
+model FundAccount {
+  id          String            @id @default(uuid()) @db.Uuid
+  tenantId    String            @map("tenant_id") @db.Uuid
+  code        String
+  name        String
+  kind        FundAccountKind
+  status      FundAccountStatus @default(ACTIVE)
+  externalRef String?           @map("external_ref")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  version     Int               @default(1)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@map("fund_accounts")
+}
+
 /// 账本交易组：任一组的借方=贷方由提交逻辑保证；只追加。
 model LedgerTransaction {
   id          String   @id @default(uuid()) @db.Uuid
   tenantId    String   @map("tenant_id") @db.Uuid
   txNo        String   @map("tx_no")
   description String?
+  sourceType  String?  @map("source_type")
+  sourceId    String?  @map("source_id")
+  eventType   LedgerEventType? @map("event_type")
+  status      LedgerTransactionStatus @default(CONFIRMED)
+  fundAccountId String? @map("fund_account_id") @db.Uuid
+  reversalOfId String? @map("reversal_of_id") @db.Uuid
+  createdBy   String?  @map("created_by") @db.Uuid
+  confirmedBy String?  @map("confirmed_by") @db.Uuid
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
   occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz
   createdAt   DateTime @default(now()) @map("created_at")
 
+  reconciliationCases ReconciliationCase[]
+
   @@unique([tenantId, txNo])
+  @@unique([tenantId, sourceType, sourceId, eventType])
   @@index([tenantId, occurredAt])
+  @@index([tenantId, fundAccountId, occurredAt])
+  @@index([tenantId, sourceType, sourceId])
   @@map("ledger_transactions")
 }
 
@@ -799,10 +861,15 @@ model LedgerEntry {
   accountId     String    @map("account_id") @db.Uuid
   direction     Direction
   amountFen     BigInt    @map("amount_fen") @db.BigInt
+  fundAccountId String?   @map("fund_account_id") @db.Uuid
+  auxiliaryType String?   @map("auxiliary_type")
+  auxiliaryId   String?   @map("auxiliary_id")
   createdAt     DateTime  @default(now()) @map("created_at")
 
   @@index([tenantId, transactionId])
   @@index([tenantId, accountId])
+  @@index([tenantId, fundAccountId, createdAt])
+  @@index([tenantId, auxiliaryType, auxiliaryId])
   @@map("ledger_entries")
 }
 
@@ -1527,9 +1594,52 @@ model ReconciliationDifference {
   createdAt      DateTime  @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  case   ReconciliationCase?
 
   @@index([tenantId, kind, createdAt])
   @@map("reconciliation_differences")
+}
+
+/// DS-011：对账处理单状态。六个值与顺序同领域状态机 DS-010，逐字符一致；
+/// 数据库层只锁定合法取值集合，合法转移由 DS-010 的领域函数与后续服务层事务校验。
+enum ReconciliationCaseStatus {
+  OPEN
+  CLAIMED
+  PROCESSING
+  PENDING_REVIEW
+  CLOSED
+  IGNORED
+}
+
+/// DS-011：对账处理单。一条对账差异最多一张处理单，差异本身仍是不可由 UI 改写的原始事实，
+/// 处理单只记录认领/处理/复核/关闭的闭环留痕。租户级资源，启用 RLS（不 FORCE）。
+/// `status` 的枚举值与领域状态机 DS-010（apps/api/src/modules/payments/domain/reconciliation-case-state.ts）
+/// 逐字符一致；本迁移不新增处理说明校验、角色分离或审计写入（由后续切片在事务内完成）。
+model ReconciliationCase {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  tenantId            String                   @map("tenant_id") @db.Uuid
+  /// 单列唯一：既满足 Prisma 1:1 关系对定义侧外键的要求，也让「一条对账差异最多一张处理单」在库层成立。
+  differenceId        String                   @unique @map("difference_id") @db.Uuid
+  status              ReconciliationCaseStatus @default(OPEN)
+  ownerId             String?                  @map("owner_id") @db.Uuid
+  resolutionType      String?                  @map("resolution_type")
+  resolutionNote      String?                  @map("resolution_note")
+  linkedTransactionId String?                  @map("linked_transaction_id") @db.Uuid
+  reviewedBy          String?                  @map("reviewed_by") @db.Uuid
+  reviewedAt          DateTime?                @map("reviewed_at") @db.Timestamptz
+  closedAt            DateTime?                @map("closed_at") @db.Timestamptz
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  version             Int                      @default(1)
+
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  difference        ReconciliationDifference @relation(fields: [differenceId], references: [id], onDelete: Restrict)
+  linkedTransaction LedgerTransaction?       @relation(fields: [linkedTransactionId], references: [id], onDelete: Restrict)
+
+  @@index([linkedTransactionId])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, ownerId, status])
+  @@map("reconciliation_cases")
 }
 
 model SlotSession {
