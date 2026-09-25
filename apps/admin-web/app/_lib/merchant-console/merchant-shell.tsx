@@ -6,38 +6,37 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, logoutSession } from "../api";
+import { CONSOLE_BASE } from "./console-path";
 import { DOMAIN_ICONS, MODULE_ICONS } from "./icons";
 import {
   getModuleDomain,
-  getMerchantModule,
   getVisibleNavDomains,
   MERCHANT_ROLE_META,
+  resolveMerchantBreadcrumb,
+  type MerchantNavChild,
   type MerchantNavDomainId,
   type MerchantNavItem,
-  type MerchantModuleId,
 } from "./modules";
 import { useMerchantRole } from "./role-context";
-
-const CONSOLE_BASE = "/merchant-console";
 
 interface EffectiveConfig {
   config: { brand?: { logoText?: string } } | null;
 }
 
-function moduleIdFromPath(pathname: string): MerchantModuleId | "work" {
-  if (pathname === CONSOLE_BASE) return "work";
+/** 去掉 `/merchant-console` 前缀，得到面包屑解析用的 console 相对路径。 */
+function consoleRelativePath(pathname: string): string {
+  if (pathname === CONSOLE_BASE) return "";
   if (pathname.startsWith(`${CONSOLE_BASE}/`)) {
-    const candidate =
-      pathname.slice(CONSOLE_BASE.length + 1).split("/")[0] ?? "";
-    return (getMerchantModule(candidate)?.id ?? "work") as MerchantModuleId;
+    return pathname.slice(CONSOLE_BASE.length + 1);
   }
-  return "work";
+  return "";
 }
 
 export function MerchantShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const moduleId = moduleIdFromPath(pathname);
+  const breadcrumb = resolveMerchantBreadcrumb(consoleRelativePath(pathname));
+  const moduleId = breadcrumb.moduleId;
   const currentDomainId = getModuleDomain(moduleId)?.id ?? "business";
   const { role, principal, ready, unauthorized, forbidden } = useMerchantRole();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,6 +48,18 @@ export function MerchantShell({ children }: { children: ReactNode }) {
   const isChildActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
+  /** 三级菜单命中：取匹配 href 最长的一项，避免父级把子级页面也点亮。 */
+  const findActiveChildId = (
+    children: readonly MerchantNavChild[],
+  ): string | undefined =>
+    children
+      .filter((child) => isChildActive(child.href))
+      .reduce<MerchantNavChild | undefined>(
+        (best, child) =>
+          !best || child.href.length > best.href.length ? child : best,
+        undefined,
+      )?.id;
+
   const storeQuery = useQuery({
     queryKey: ["merchant", "store-config"],
     queryFn: () => apiFetch<EffectiveConfig>("/api/v1/tenant/config"),
@@ -56,7 +67,6 @@ export function MerchantShell({ children }: { children: ReactNode }) {
     retry: false,
   });
 
-  const currentModule = getMerchantModule(moduleId);
   const navDomains = useMemo(() => getVisibleNavDomains(role), [role]);
   const roleMeta = MERCHANT_ROLE_META[role];
   const previewDomain = previewItem
@@ -70,16 +80,20 @@ export function MerchantShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMenuOpen(false);
     setExpandedDomain(currentDomainId);
-    const activeGroup = getVisibleNavDomains(role)
+    // 只在当前模块内自动展开分组：`/dispatch/audit` 的模块是 review，
+    // 不该顺手把「订单中心」弹开（那会展开一个组内没有任何高亮项的面板）。
+    const activeGroup = navDomains
       .flatMap((domain) => domain.activeItems)
-      .find((item) =>
-        (item.children ?? []).some(
-          (child) =>
-            pathname === child.href || pathname.startsWith(`${child.href}/`),
-        ),
+      .find(
+        (item) =>
+          item.moduleId === moduleId &&
+          (item.children ?? []).some(
+            (child) =>
+              pathname === child.href || pathname.startsWith(`${child.href}/`),
+          ),
       );
     setExpandedGroup(activeGroup?.id ?? null);
-  }, [currentDomainId, pathname, role]);
+  }, [currentDomainId, moduleId, navDomains, pathname]);
 
   if (!ready) {
     return (
@@ -205,9 +219,11 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                         if (children.length > 0) {
                           const groupOpen = expandedGroup === item.id;
                           const groupId = `merchant-nav-group-${item.id}`;
-                          const childActive = children.some((child) =>
-                            isChildActive(child.href),
-                          );
+                          const activeChildId =
+                            itemId === moduleId
+                              ? findActiveChildId(children)
+                              : undefined;
+                          const childActive = activeChildId !== undefined;
                           return (
                             <div className="mc-nav-group" key={item.id}>
                               <button
@@ -241,9 +257,8 @@ export function MerchantShell({ children }: { children: ReactNode }) {
                               {groupOpen ? (
                                 <div id={groupId} className="mc-nav-sub">
                                   {children.map((child) => {
-                                    const childIsActive = isChildActive(
-                                      child.href,
-                                    );
+                                    const childIsActive =
+                                      child.id === activeChildId;
                                     return (
                                       <Link
                                         key={child.id}
@@ -342,7 +357,7 @@ export function MerchantShell({ children }: { children: ReactNode }) {
             </button>
             <div className="mc-crumb">
               <span>{storeLabel}</span>
-              <b aria-current="page">{currentModule?.label ?? "工作台"}</b>
+              <b aria-current="page">{breadcrumb.label}</b>
             </div>
             <div className="mc-top-actions">
               <span className="mc-mode-chip mc-mode-live">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   useInfiniteQuery,
@@ -1331,22 +1332,37 @@ export function TemplateManagerView() {
               新建模板
             </h2>
             <div className="mt-4 space-y-4">
-              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-                游戏（必选）
-                <select
-                  autoFocus
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  value={newGameId}
-                  onChange={(event) => setNewGameId(event.target.value)}
-                >
-                  <option value="">请选择游戏</option>
-                  {games.map((game) => (
-                    <option key={game.id} value={game.id}>
-                      {game.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                  游戏（必选）
+                  <select
+                    autoFocus
+                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={newGameId}
+                    onChange={(event) => setNewGameId(event.target.value)}
+                  >
+                    <option value="">请选择游戏</option>
+                    {games.map((game) => (
+                      <option key={game.id} value={game.id}>
+                        {game.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {/* 出口要留在 label 外面：label 的文本参与控件可访问名计算，链接
+                    若写在里面，「去服务目录添加」会被并进 select 的名字里。
+                    （规范上 `<a>` 并非 label 的禁止后代，点击也不会转发给
+                    select——留在这里的理由只有上面这一条，不是"非法 HTML"。） */}
+                <p className="text-xs text-muted-foreground">
+                  没有想要的游戏？
+                  <Link
+                    href="/merchant-console/catalog"
+                    className="text-primary hover:underline"
+                  >
+                    去服务目录添加
+                  </Link>
+                </p>
+              </div>
               <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                 模板名称
                 <Input

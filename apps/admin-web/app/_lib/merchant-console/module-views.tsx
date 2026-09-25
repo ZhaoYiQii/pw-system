@@ -549,10 +549,16 @@ export function CatalogModuleView() {
   const games = gamesQuery.data ?? [];
   const products = productsQuery.data ?? [];
 
-  const invalidate = () =>
-    void queryClient.invalidateQueries({
-      queryKey: ["merchant", "catalog"],
-    });
+  // 游戏列表还有第二个 key `["catalog-games"]`（「新建模板」对话框在用，带 5 分钟
+  // staleTime）。它与本页的 `["merchant","catalog",…]` 前缀不同，上面那条盖不到，
+  // 于是用户在这里加完游戏、回对话框最长 5 分钟看不到新游戏。标脏是幂等的：
+  // 未挂载的 observer 只被标记、不发请求。
+  // `(tenant)/players/page.tsx` 也用这个 key，但它自建 QueryClient，与本页不共享
+  // 缓存——这条 invalidate 传不到那里，也不需要传。
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["merchant", "catalog"] });
+    void queryClient.invalidateQueries({ queryKey: ["catalog-games"] });
+  };
   const run = (fn: () => Promise<unknown>) =>
     fn().catch((e) => setError(e instanceof Error ? e.message : String(e)));
 

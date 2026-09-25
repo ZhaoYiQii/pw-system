@@ -20,6 +20,7 @@ import { PricingRulesModuleView } from "./pricing-rules-view";
 import { ReviewConsoleView } from "./review-console-view";
 import { SettingsModuleView } from "./settings-view";
 import { BreachLedgerModuleView } from "./breach-ledger-view";
+import { FundLedgerView } from "./fund-ledger-view";
 import { PaymentLedgerPanel } from "@/app/_lib/payments/payment-ledger-panel";
 import { WalletPanel } from "@/app/_lib/payments/wallet-panel";
 import { PaymentSettingsPanel } from "@/app/_lib/payments/payment-settings-panel";
@@ -80,7 +81,7 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
         </>,
       );
     case "payments-reconciliation":
-      // S4-8：对账差异（只读，与门店后台 /payments/reconciliation 同一份 panel）。
+      // DS-014：对账处理工作台，与门店后台共用同一份 panel。
       return record(moduleId, <ReconciliationPanel />);
     case "payments-settings":
       // S4-8：支付设置（与门店后台 /payments/settings 同一份 panel）。
@@ -88,6 +89,8 @@ export function ModuleView({ moduleId }: { moduleId: MerchantModuleId }) {
     case "payments-wallets":
       // S4-9a：客户钱包台账（与门店后台 /payments/wallets 同一份 panel）。
       return record(moduleId, <WalletPanel />);
+    case "fund-ledger":
+      return record(moduleId, <FundLedgerView />);
     default:
       break;
   }

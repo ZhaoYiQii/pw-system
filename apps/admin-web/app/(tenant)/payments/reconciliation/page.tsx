@@ -16,9 +16,9 @@ export default function PaymentsReconciliationPage() {
   );
   return (
     <TenantShell>
-      <h1 className="text-2xl font-semibold tracking-tight">对账差异</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">对账处理工作台</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        微信账单与门店账本的比对结果（只读）。
+        微信账单与门店账本的比对结果，以及每条差异的处理单：认领、处理、提交复核、复核关闭或带理由忽略。
       </p>
       <div className="mt-6">
         <QueryClientProvider client={queryClient}>

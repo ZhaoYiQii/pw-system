@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiFetch, ApiError } from "../api";
 import { fenToYuanText } from "../money";
+import { CONSOLE_BASE } from "./console-path";
 import { NewOrderButton } from "./new-order-dialog";
 import {
   buildSelectedCsvForColumns,
@@ -99,7 +100,7 @@ async function fetchReportQueue(
 }
 
 /** 审核台入口：命中队列行时带 `sessionId` 深链，否则退回列表入口。 */
-const AUDIT_ENTRY = "/merchant-console/dispatch/audit";
+const AUDIT_ENTRY = `${CONSOLE_BASE}/dispatch/audit`;
 
 /**
  * 审核列深链：本次请求到的队列行里找到同一档位时带 `sessionId`（审核台会自动选中），

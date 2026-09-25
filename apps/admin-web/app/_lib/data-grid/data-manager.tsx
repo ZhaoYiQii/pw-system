@@ -21,7 +21,22 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { getAccessToken, apiFetch } from "../api";
 import { formatFenYuan } from "../money";
 // 先加载 Tabulator 自带的基础样式，再用我们的映射覆盖（否则表格是"没穿衣服"的 div）
@@ -117,13 +132,20 @@ function buildHeaderElement<T>(
   }
 
   if (column.filterHint) {
-    const funnel = textSpan("▽", "pw-dg-funnel");
+    const funnel = document.createElement("span");
+    funnel.className = "pw-dg-funnel";
     funnel.setAttribute("aria-hidden", "true");
+    funnel.innerHTML =
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v7l-4 2v-9z"/></svg>';
     head.appendChild(funnel);
   }
 
   if (column.frozen) {
-    head.appendChild(textSpan("🔒固定", "pw-dg-lock"));
+    const lock = document.createElement("span");
+    lock.className = "pw-dg-lock";
+    lock.innerHTML =
+      '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>固定';
+    head.appendChild(lock);
   }
 
   return head;
@@ -256,6 +278,8 @@ export function DataManager<T extends { id: string }>({
   const [pendingHint, setPendingHint] = useState<string | null>(null);
   const [selectedCount, setSelectedCount] = useState(0);
   const [exporting, setExporting] = useState(false);
+  /** 「列显示」勾掉的列（真隐藏，不是假菜单）；列表只在本次会话里有效。 */
+  const [hiddenKeys, setHiddenKeys] = useState<readonly string[]>([]);
 
   // 表格故意只建一次：排序、动作这些随渲染变化的东西都从 ref 里读（Tabulator 的坑）
   const sortRef = useRef<SortState>({ by: sortBy, dir: sortDir });
@@ -378,6 +402,22 @@ export function DataManager<T extends { id: string }>({
     }
   }, [columns, sortBy, sortDir, rows.length]);
 
+  // 「列显示」的勾选同步给 Tabulator：隐藏列不是删列，数据/排序/导出都不受影响
+  useEffect(() => {
+    const table = tableRef.current;
+    if (!table) return;
+    for (const column of columns) {
+      // v6 的列级 API：getColumn(field).hide()/show()（table.hideColumn 对 field 字符串无效）
+      const target = table.getColumn(column.key);
+      if (!target) continue;
+      if (hiddenKeys.includes(column.key)) {
+        target.hide();
+      } else {
+        target.show();
+      }
+    }
+  }, [columns, hiddenKeys, rows.length]);
+
   const downloadCsv = async () => {
     if (!exportPath) return;
     setExporting(true);
@@ -428,110 +468,159 @@ export function DataManager<T extends { id: string }>({
 
   return (
     <div className="pw-dg flex flex-col gap-4">
-      {message ? (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {message}
-        </div>
-      ) : null}
-      {/* 稿子：卡片顶部就是一条工具栏（没有"数据表格"标题与说明文字），表格与合计行贴边 */}
-      <Card className="overflow-hidden border-[var(--mc-line)] shadow-none">
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--mc-line)] px-3 py-2.5">
-          <div className="flex min-w-60 items-center gap-1.5 rounded-lg border border-[var(--mc-line)] px-2 py-[5px]">
-            <span aria-hidden="true" className="text-[12px] leading-none">
-              🔍
-            </span>
-            <input
-              aria-label="查找（任意列）"
-              className="w-[150px] min-w-0 bg-transparent text-[12.5px] text-[var(--mc-ink)] outline-none placeholder:text-[var(--mc-muted)]"
-              placeholder={searchPlaceholder}
-              value={qInput}
-              onChange={(event) => setQInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                setPendingHint(null);
-                setQ(qInput.trim());
-                setPage(1);
-              }}
-            />
-            <span className="pw-dg-kbd">Ctrl</span>
-            <span className="pw-dg-kbd">F</span>
+      <TooltipProvider delayDuration={250}>
+        {message ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            {message}
           </div>
-
-          {chips.map((option) => {
-            const active = status === option.value;
-            const label =
-              option.value === "" && listQuery.data
-                ? `全部 ${total}`
-                : option.label;
-            return (
-              <button
-                key={option.value || "all"}
-                type="button"
-                aria-pressed={active}
-                className={`pw-dg-chip${active ? " pw-dg-chip--on" : ""}`}
-                onClick={() => {
+        ) : null}
+        {/* 稿子：卡片顶部就是一条工具栏（没有"数据表格"标题与说明文字），表格与合计行贴边 */}
+        <Card className="overflow-hidden rounded-[14px] border-[#e3e9ee] shadow-[0_1px_2px_rgba(16,32,48,0.04),0_10px_28px_rgba(16,32,48,0.06)]">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--mc-line)] px-3 py-2.5">
+            <div className="flex min-w-60 items-center gap-1.5 rounded-lg border border-[var(--mc-line)] px-2 py-[5px]">
+              <Search
+                size={13}
+                aria-hidden="true"
+                className="shrink-0 text-[#7c8b99]"
+              />
+              <input
+                aria-label="查找（任意列）"
+                className="w-[150px] min-w-0 bg-transparent text-[12.5px] text-[var(--mc-ink)] outline-none placeholder:text-[var(--mc-muted)]"
+                placeholder={searchPlaceholder}
+                value={qInput}
+                onChange={(event) => setQInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
                   setPendingHint(null);
-                  setStatus(option.value);
+                  setQ(qInput.trim());
                   setPage(1);
                 }}
+              />
+              <span className="pw-dg-kbd">Ctrl</span>
+              <span className="pw-dg-kbd">F</span>
+            </div>
+
+            {chips.map((option) => {
+              const active = status === option.value;
+              const label =
+                option.value === "" && listQuery.data
+                  ? `全部 ${total}`
+                  : option.label;
+              return (
+                <button
+                  key={option.value || "all"}
+                  type="button"
+                  aria-pressed={active}
+                  className={`pw-dg-chip${active ? " pw-dg-chip--on" : ""}`}
+                  onClick={() => {
+                    setPendingHint(null);
+                    setStatus(option.value);
+                    setPage(1);
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="pw-dg-btn">
+                  列显示 ▾
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  勾选要显示的列
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {columns.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={!hiddenKeys.includes(column.key)}
+                    onCheckedChange={(next) => {
+                      setPendingHint(null);
+                      setHiddenKeys((current) =>
+                        next === true
+                          ? current.filter((item) => item !== column.key)
+                          : [...current, column.key],
+                      );
+                    }}
+                  >
+                    {column.title}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {exportPath ? (
+              <button
+                type="button"
+                className="pw-dg-btn"
+                disabled={exporting}
+                onClick={() => void downloadCsv()}
               >
-                {label}
+                {exporting ? "导出中…" : "导出 CSV"}
               </button>
-            );
-          })}
+            ) : null}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="pw-dg-btn"
+                  onClick={notImplemented}
+                >
+                  导出 Excel
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>功能待实现（先定 UI，后添功能）</TooltipContent>
+            </Tooltip>
 
-          <button type="button" className="pw-dg-btn" onClick={notImplemented}>
-            列显示 ▾
-          </button>
-          {exportPath ? (
-            <button
-              type="button"
-              className="pw-dg-btn"
-              disabled={exporting}
-              onClick={() => void downloadCsv()}
-            >
-              {exporting ? "导出中…" : "导出 CSV"}
-            </button>
-          ) : null}
-          <button type="button" className="pw-dg-btn" onClick={notImplemented}>
-            导出 Excel
-          </button>
-
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-[12px] text-[var(--mc-muted)]">
-              已选 {selectedCount} 条
-            </span>
-            <button
-              type="button"
-              className="pw-dg-btn"
-              onClick={notImplemented}
-            >
-              批量导出
-            </button>
-            <button
-              type="button"
-              className="pw-dg-btn"
-              onClick={notImplemented}
-            >
-              批量操作 ▾
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[12px] text-[var(--mc-muted)]">
+                已选 {selectedCount} 条
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="pw-dg-btn"
+                    onClick={notImplemented}
+                  >
+                    批量导出
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>功能待实现（先定 UI，后添功能）</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="pw-dg-btn"
+                    onClick={notImplemented}
+                  >
+                    批量操作 ▾
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>功能待实现（先定 UI，后添功能）</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        </div>
 
-        {pendingHint ? <div className="pw-dg-hint">{pendingHint}</div> : null}
+          {pendingHint ? <div className="pw-dg-hint">{pendingHint}</div> : null}
 
-        {listQuery.isError && !unauthorized ? (
-          <p className="px-3 pt-3 text-sm text-destructive">
-            加载失败：{errorText(listQuery.error)}
-          </p>
-        ) : null}
-        {unauthorized ? (
-          <p className="px-3 pt-3 text-sm text-destructive">
-            登录已失效，请重新登录后再打开本页。
-          </p>
-        ) : null}
-        <div ref={containerRef} />
-      </Card>
+          {listQuery.isError && !unauthorized ? (
+            <p className="px-3 pt-3 text-sm text-destructive">
+              加载失败：{errorText(listQuery.error)}
+            </p>
+          ) : null}
+          {unauthorized ? (
+            <p className="px-3 pt-3 text-sm text-destructive">
+              登录已失效，请重新登录后再打开本页。
+            </p>
+          ) : null}
+          <div ref={containerRef} />
+        </Card>
+      </TooltipProvider>
     </div>
   );
 }

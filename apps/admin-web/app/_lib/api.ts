@@ -97,3 +97,95 @@ export async function apiFetch<T = unknown>(
   const data = (body as { data?: T } | null)?.data;
   return data as T;
 }
+
+/** 导出文件名的兜底值：服务端没有给出可信 `Content-Disposition` 时使用。 */
+const DEFAULT_CSV_FILENAME = "fund-ledger.csv";
+/** Windows 保留字符：文件名里出现即视为不可信。 */
+const FORBIDDEN_FILENAME_CHARS = '<>:"|?*';
+
+/** 只接受纯文件名：剥掉路径、拒绝 `..`、控制字符与保留字符，避免服务端头注入落盘路径。 */
+function safeFilename(raw: string): string | null {
+  const base = raw
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .split(/[\\/]/)
+    .pop();
+  if (!base || base === "." || base === ".." || base.includes(".."))
+    return null;
+  for (const character of base) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code < 0x20 || code === 0x7f) return null;
+    if (FORBIDDEN_FILENAME_CHARS.includes(character)) return null;
+  }
+  return base;
+}
+
+/** 解析 `Content-Disposition`（优先 RFC 5987 `filename*`）；不可信时返回 null。 */
+function filenameFromDisposition(value: string | null): string | null {
+  if (!value) return null;
+  const extended = /filename\*\s*=\s*([^;]+)/i.exec(value);
+  if (extended?.[1]) {
+    const rawValue = extended[1].trim();
+    const encoded = /^UTF-8''(.+)$/i.exec(rawValue)?.[1] ?? rawValue;
+    try {
+      return safeFilename(decodeURIComponent(encoded));
+    } catch {
+      return null;
+    }
+  }
+  const plain = /filename\s*=\s*([^;]+)/i.exec(value);
+  return plain?.[1] ? safeFilename(plain[1]) : null;
+}
+
+export interface DownloadedCsvFile {
+  blob: Blob;
+  filename: string;
+}
+
+/**
+ * 只读 CSV 下载：鉴权与会话语义与 `apiFetch` 一致（Bearer + `credentials: include`，
+ * 401 清 token），但**不解析 JSON、不设置 `content-type`**——导出响应是 `text/csv`。
+ *
+ * 失败时抛出 `ApiError`（错误体里的 `message` 原样带出）；调用方只有在拿到返回值
+ * 之后才能创建 Blob URL 并触发下载，因此任何失败都不会产生残缺文件。
+ */
+export async function apiDownloadCsv(
+  path: string,
+  init?: RequestInit,
+): Promise<DownloadedCsvFile> {
+  const token = getAccessToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  const res = await fetch(`${apiOrigin}${path}`, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
+  if (res.status === 401) {
+    clearAccessToken();
+    throw new ApiError(401, "登录已失效，请重新登录");
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    let message = `HTTP ${res.status}`;
+    try {
+      const body: unknown = text ? JSON.parse(text) : null;
+      if (body !== null && typeof body === "object" && "message" in body) {
+        const candidate = (body as { message?: unknown }).message;
+        if (typeof candidate === "string" && candidate !== "") {
+          message = candidate;
+        }
+      }
+    } catch {
+      // 非 JSON 错误体：保留 `HTTP <status>` 兜底文案，不吞掉原始状态码。
+    }
+    throw new ApiError(res.status, message);
+  }
+  const blob = await res.blob();
+  return {
+    blob,
+    filename:
+      filenameFromDisposition(res.headers.get("content-disposition")) ??
+      DEFAULT_CSV_FILENAME,
+  };
+}
