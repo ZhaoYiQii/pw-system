@@ -2359,6 +2359,19 @@ export type SettlementsApproveResponses = {
     201: unknown;
 };
 
+export type SettlementsConfirmPaymentData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/settlements/{id}/payments';
+};
+
+export type SettlementsConfirmPaymentResponses = {
+    201: unknown;
+};
+
 export type SettlementsPayData = {
     body?: never;
     path: {
@@ -2384,6 +2397,533 @@ export type SettlementsVoidBatchData = {
 export type SettlementsVoidBatchResponses = {
     201: unknown;
 };
+
+export type FundAccountsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/funds/accounts';
+};
+
+export type FundAccountsListResponses = {
+    200: {
+        /**
+         * 资金账户列表
+         */
+        data: {
+            /**
+             * 当前服务端租户的资金账户（按 createdAt 升序）
+             */
+            items: Array<{
+                /**
+                 * 资金账户 id
+                 */
+                id: string;
+                /**
+                 * 账户编码
+                 */
+                code: string;
+                /**
+                 * 账户名称
+                 */
+                name: string;
+                /**
+                 * 资金账户类型
+                 */
+                kind: 'WECHAT_SETTLEMENT' | 'BANK' | 'CASH' | 'OFFLINE';
+                /**
+                 * 资金账户状态
+                 */
+                status: 'ACTIVE' | 'ARCHIVED';
+                /**
+                 * 外部引用；未传或空白为 null
+                 */
+                externalRef: string | null;
+                /**
+                 * 创建时间
+                 */
+                createdAt: string;
+            }>;
+        };
+    };
+};
+
+export type FundAccountsListResponse = FundAccountsListResponses[keyof FundAccountsListResponses];
+
+export type FundAccountsCreateData = {
+    /**
+     * 创建资金账户请求体
+     */
+    body: {
+        /**
+         * 账户编码（服务端 trim 并转大写，规范化后须符合 ^[A-Z][A-Z0-9_]{1,31}$，每租户唯一）
+         */
+        code: string;
+        /**
+         * 账户名称（去空白后 1-64 字符）
+         */
+        name: string;
+        /**
+         * 资金账户类型
+         */
+        kind: 'WECHAT_SETTLEMENT' | 'BANK' | 'CASH' | 'OFFLINE';
+        /**
+         * 外部引用（可空；BANK 账户非空时必须包含 * 掩码，不得存完整卡号）
+         */
+        externalRef?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/tenant/funds/accounts';
+};
+
+export type FundAccountsCreateErrors = {
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    400: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+    /**
+     * 受控业务错误（{ code, message, details? }）
+     */
+    409: {
+        /**
+         * 受控业务错误码
+         */
+        code: 'TEMPLATE_CURSOR_INVALID' | 'TEMPLATE_NOT_FOUND' | 'TEMPLATE_REVISION_CONFLICT' | 'TEMPLATE_ARCHIVED' | 'TEMPLATE_NAME_CONFLICT' | 'TEMPLATE_DELETE_RESTRICTED' | 'TEMPLATE_VERSION_UNAVAILABLE' | 'TEMPLATE_COMPONENT_INVALID' | 'TEMPLATE_BINDING_INVALID' | 'TEMPLATE_PRICE_RULE_INVALID' | 'TEMPLATE_LEGACY_REVIEW_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_REQUIRED' | 'TEMPLATE_IDEMPOTENCY_MISMATCH' | 'TEMPLATE_IDEMPOTENCY_IN_FLIGHT';
+        /**
+         * 错误说明
+         */
+        message: string;
+        /**
+         * 受控明细（不含 config、订单值或凭据）
+         */
+        details?: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type FundAccountsCreateError = FundAccountsCreateErrors[keyof FundAccountsCreateErrors];
+
+export type FundAccountsCreateResponses = {
+    201: {
+        /**
+         * 资金账户视图
+         */
+        data: {
+            /**
+             * 资金账户 id
+             */
+            id: string;
+            /**
+             * 账户编码
+             */
+            code: string;
+            /**
+             * 账户名称
+             */
+            name: string;
+            /**
+             * 资金账户类型
+             */
+            kind: 'WECHAT_SETTLEMENT' | 'BANK' | 'CASH' | 'OFFLINE';
+            /**
+             * 资金账户状态
+             */
+            status: 'ACTIVE' | 'ARCHIVED';
+            /**
+             * 外部引用；未传或空白为 null
+             */
+            externalRef: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+        };
+    };
+};
+
+export type FundAccountsCreateResponse = FundAccountsCreateResponses[keyof FundAccountsCreateResponses];
+
+export type TenantFundLedgerListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 单个合法 LedgerEventType（精确匹配）
+         */
+        eventType?: 'ORDER_ACCOUNTING' | 'PAYMENT_CONFIRMED' | 'WALLET_CONSUMED' | 'REFUND_CONFIRMED' | 'PLAYER_PAYOUT_CONFIRMED' | 'RECONCILIATION_ADJUSTMENT' | 'REVERSAL';
+        /**
+         * 单个合法 LedgerTransactionStatus（精确匹配）
+         */
+        status?: 'DRAFT' | 'CONFIRMED' | 'RECONCILED' | 'REVERSED';
+        /**
+         * 按交易头资金账户过滤（uuid）
+         */
+        fundAccountId?: string;
+        /**
+         * 来源类型（trim 后 1–64 字符，精确匹配）
+         */
+        sourceType?: string;
+        /**
+         * 关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）
+         */
+        q?: string;
+        /**
+         * 发生时间下界，ISO 8601 带时区，含边界
+         */
+        occurredFrom?: string;
+        /**
+         * 发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom
+         */
+        occurredTo?: string;
+        /**
+         * 金额下界（十进制字符串分，非负，含边界）
+         */
+        minAmountFen?: string;
+        /**
+         * 金额上界（十进制字符串分，非负，含边界且不得小于下界）
+         */
+        maxAmountFen?: string;
+        /**
+         * 排序字段（默认 occurredAt）
+         */
+        sortBy?: 'occurredAt' | 'confirmedAt' | 'createdAt' | 'amountFen' | 'txNo';
+        /**
+         * 排序方向（默认 desc）
+         */
+        sortDir?: 'asc' | 'desc';
+        /**
+         * 页码（1 起算，默认 1）
+         */
+        page?: number;
+        /**
+         * 每页条数（1-200，默认 50）
+         */
+        pageSize?: number;
+    };
+    url: '/api/v1/tenant/funds/ledger';
+};
+
+export type TenantFundLedgerListErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantFundLedgerListError = TenantFundLedgerListErrors[keyof TenantFundLedgerListErrors];
+
+export type TenantFundLedgerListResponses = {
+    200: {
+        /**
+         * 统一资金台账分页视图
+         */
+        data: {
+            /**
+             * 当前页交易行
+             */
+            rows: Array<{
+                /**
+                 * 交易 id
+                 */
+                transactionId: string;
+                /**
+                 * 交易号
+                 */
+                txNo: string;
+                /**
+                 * 台账事件类型
+                 */
+                eventType: 'ORDER_ACCOUNTING' | 'PAYMENT_CONFIRMED' | 'WALLET_CONSUMED' | 'REFUND_CONFIRMED' | 'PLAYER_PAYOUT_CONFIRMED' | 'RECONCILIATION_ADJUSTMENT' | 'REVERSAL';
+                /**
+                 * 交易状态
+                 */
+                status: 'DRAFT' | 'CONFIRMED' | 'RECONCILED' | 'REVERSED';
+                /**
+                 * 对账状态展示值（只有 RECONCILED 交易算已对账）
+                 */
+                reconciliationStatus: 'RECONCILED' | 'UNRECONCILED';
+                /**
+                 * 来源类型；无来源为 null
+                 */
+                sourceType: string | null;
+                /**
+                 * 来源单据 id；无来源为 null
+                 */
+                sourceId: string | null;
+                /**
+                 * 摘要；无摘要为 null
+                 */
+                description: string | null;
+                /**
+                 * 金额（该交易借方分录合计）（十进制字符串分，>=0）
+                 */
+                amountFen: string;
+                /**
+                 * 借方合计（十进制字符串分，>=0）
+                 */
+                debitFen: string;
+                /**
+                 * 贷方合计（十进制字符串分，>=0）
+                 */
+                creditFen: string;
+                /**
+                 * 借贷是否平衡（借方合计 = 贷方合计且大于 0）
+                 */
+                balanced: boolean;
+                /**
+                 * 资金流方向；无匹配分录为 null，借贷都有为 MIXED
+                 */
+                fundFlowDirection: 'DEBIT' | 'CREDIT' | 'MIXED';
+                /**
+                 * 交易头资金账户引用
+                 */
+                fundAccount: {
+                    /**
+                     * 资金账户 id
+                     */
+                    id: string;
+                    /**
+                     * 账户编码
+                     */
+                    code: string;
+                    /**
+                     * 账户名称
+                     */
+                    name: string;
+                    /**
+                     * 资金账户类型
+                     */
+                    kind: 'WECHAT_SETTLEMENT' | 'BANK' | 'CASH' | 'OFFLINE';
+                    /**
+                     * 资金账户状态
+                     */
+                    status: 'ACTIVE' | 'ARCHIVED';
+                } | null;
+                /**
+                 * 去重并按 (type, id) 升序的辅助核算引用
+                 */
+                auxiliaries: Array<{
+                    /**
+                     * 辅助核算类型（如 customer_profile）
+                     */
+                    type: string;
+                    /**
+                     * 辅助核算对象 id
+                     */
+                    id: string;
+                }>;
+                /**
+                 * 创建人 id；无记录为 null
+                 */
+                createdBy: string | null;
+                /**
+                 * 确认人 id；未确认为 null
+                 */
+                confirmedBy: string | null;
+                /**
+                 * 发生时间
+                 */
+                occurredAt: string;
+                /**
+                 * 确认时间；未确认为 null
+                 */
+                confirmedAt: string | null;
+                /**
+                 * 创建时间
+                 */
+                createdAt: string;
+            }>;
+            /**
+             * 同一筛选条件下的交易总数（不受 pageSize 影响）
+             */
+            total: number;
+            /**
+             * 页码（1 起算）
+             */
+            page: number;
+            /**
+             * 每页条数（上限 200）
+             */
+            pageSize: number;
+            /**
+             * 排序字段（默认 occurredAt）
+             */
+            sortBy: 'occurredAt' | 'confirmedAt' | 'createdAt' | 'amountFen' | 'txNo';
+            /**
+             * 排序方向（默认 desc）
+             */
+            sortDir: 'asc' | 'desc';
+        };
+    };
+};
+
+export type TenantFundLedgerListResponse = TenantFundLedgerListResponses[keyof TenantFundLedgerListResponses];
+
+export type TenantFundLedgerExportCsvData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 单个合法 LedgerEventType（精确匹配）
+         */
+        eventType?: 'ORDER_ACCOUNTING' | 'PAYMENT_CONFIRMED' | 'WALLET_CONSUMED' | 'REFUND_CONFIRMED' | 'PLAYER_PAYOUT_CONFIRMED' | 'RECONCILIATION_ADJUSTMENT' | 'REVERSAL';
+        /**
+         * 单个合法 LedgerTransactionStatus（精确匹配）
+         */
+        status?: 'DRAFT' | 'CONFIRMED' | 'RECONCILED' | 'REVERSED';
+        /**
+         * 按交易头资金账户过滤（uuid）
+         */
+        fundAccountId?: string;
+        /**
+         * 来源类型（trim 后 1–64 字符，精确匹配）
+         */
+        sourceType?: string;
+        /**
+         * 关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）
+         */
+        q?: string;
+        /**
+         * 发生时间下界，ISO 8601 带时区，含边界
+         */
+        occurredFrom?: string;
+        /**
+         * 发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom
+         */
+        occurredTo?: string;
+        /**
+         * 金额下界（十进制字符串分，非负，含边界）
+         */
+        minAmountFen?: string;
+        /**
+         * 金额上界（十进制字符串分，非负，含边界且不得小于下界）
+         */
+        maxAmountFen?: string;
+        /**
+         * 排序字段（默认 occurredAt）
+         */
+        sortBy?: 'occurredAt' | 'confirmedAt' | 'createdAt' | 'amountFen' | 'txNo';
+        /**
+         * 排序方向（默认 desc）
+         */
+        sortDir?: 'asc' | 'desc';
+    };
+    url: '/api/v1/tenant/funds/ledger/export.csv';
+};
+
+export type TenantFundLedgerExportCsvErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    422: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantFundLedgerExportCsvError = TenantFundLedgerExportCsvErrors[keyof TenantFundLedgerExportCsvErrors];
+
+export type TenantFundLedgerExportCsvResponses = {
+    /**
+     * 当前筛选与排序下的全部匹配交易（UTF-8 BOM + CRLF 的 CSV 文本）
+     */
+    200: string;
+};
+
+export type TenantFundLedgerExportCsvResponse = TenantFundLedgerExportCsvResponses[keyof TenantFundLedgerExportCsvResponses];
 
 export type PlayersListData = {
     body?: never;
@@ -9753,6 +10293,19 @@ export type WechatPayRefundRegisterManualResponses = {
     201: unknown;
 };
 
+export type WechatPayRefundConfirmManualData = {
+    body?: never;
+    path: {
+        refundId: string;
+    };
+    query?: never;
+    url: '/api/v1/payments/refunds/manual/{refundId}/confirm';
+};
+
+export type WechatPayRefundConfirmManualResponses = {
+    201: unknown;
+};
+
 export type TenantPaymentSetupGetData = {
     body?: never;
     path?: never;
@@ -9856,6 +10409,1538 @@ export type TenantReconciliationOverviewData = {
 export type TenantReconciliationOverviewResponses = {
     200: unknown;
 };
+
+export type TenantReconciliationCaseListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 状态过滤（大小写敏感；缺省不过滤）
+         */
+        status?: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+        /**
+         * 页码（1 起算，默认 1）
+         */
+        page?: number;
+        /**
+         * 每页条数（1-100，默认 20）
+         */
+        pageSize?: number;
+    };
+    url: '/api/v1/tenant/reconciliation/cases';
+};
+
+export type TenantReconciliationCaseListErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantReconciliationCaseListError = TenantReconciliationCaseListErrors[keyof TenantReconciliationCaseListErrors];
+
+export type TenantReconciliationCaseListResponses = {
+    200: {
+        /**
+         * 对账处理单分页视图
+         */
+        data: {
+            /**
+             * 当前页处理单
+             */
+            rows: Array<{
+                /**
+                 * 处理单 id
+                 */
+                id: string;
+                /**
+                 * 对账差异 id（一条差异最多一张处理单）
+                 */
+                differenceId: string;
+                /**
+                 * 对账处理单状态
+                 */
+                status: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+                /**
+                 * 当前处理人 id；未认领为 null
+                 */
+                ownerId: string | null;
+                /**
+                 * 处理结果类型；未处理为 null（取值不在本切片约束）
+                 */
+                resolutionType: string | null;
+                /**
+                 * 处理说明；无说明为 null
+                 */
+                resolutionNote: string | null;
+                /**
+                 * 关联的调整/冲销交易 id；无关联为 null
+                 */
+                linkedTransactionId: string | null;
+                /**
+                 * 复核人 id；未复核为 null
+                 */
+                reviewedBy: string | null;
+                /**
+                 * 复核时间；未复核为 null
+                 */
+                reviewedAt: string | null;
+                /**
+                 * 关闭时间；未关闭为 null
+                 */
+                closedAt: string | null;
+                /**
+                 * 创建时间
+                 */
+                createdAt: string;
+                /**
+                 * 更新时间
+                 */
+                updatedAt: string;
+                /**
+                 * 乐观锁版本号
+                 */
+                version: number;
+                /**
+                 * 对账差异引用
+                 */
+                difference: {
+                    /**
+                     * 差异类型原始值（如 AMOUNT_MISMATCH）
+                     */
+                    kind: string;
+                    /**
+                     * 差异类型中文说明；认不出的类型原样点名
+                     */
+                    kindLabel: string;
+                    /**
+                     * 差异金额（十进制字符串分；状态类差异为 null）
+                     */
+                    amountFen: string | null;
+                    /**
+                     * 差异说明；无说明为 null
+                     */
+                    detail: string | null;
+                    /**
+                     * 关联支付单 id；无关联为 null
+                     */
+                    paymentOrderId: string | null;
+                    /**
+                     * 差异解决时间；未解决为 null
+                     */
+                    resolvedAt: string | null;
+                    /**
+                     * 差异创建时间
+                     */
+                    createdAt: string;
+                };
+            }>;
+            /**
+             * 同一筛选条件下的处理单总数（不受 pageSize 影响）
+             */
+            total: number;
+            /**
+             * 页码（1 起算）
+             */
+            page: number;
+            /**
+             * 每页条数（1-100）
+             */
+            pageSize: number;
+        };
+    };
+};
+
+export type TenantReconciliationCaseListResponse = TenantReconciliationCaseListResponses[keyof TenantReconciliationCaseListResponses];
+
+export type TenantReconciliationCaseClaimData = {
+    /**
+     * 对账处理单命令请求体（只接受 expectedVersion 一个字段）
+     */
+    body: {
+        /**
+         * 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+         */
+        expectedVersion: number;
+    };
+    path: {
+        /**
+         * 对账处理单 id（单个规范 UUID，不接受空白或换行）
+         */
+        caseId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/reconciliation/cases/{caseId}/claim';
+};
+
+export type TenantReconciliationCaseClaimErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    401: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    403: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    404: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    409: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantReconciliationCaseClaimError = TenantReconciliationCaseClaimErrors[keyof TenantReconciliationCaseClaimErrors];
+
+export type TenantReconciliationCaseClaimResponses = {
+    200: {
+        /**
+         * 对账处理单
+         */
+        data: {
+            /**
+             * 处理单 id
+             */
+            id: string;
+            /**
+             * 对账差异 id（一条差异最多一张处理单）
+             */
+            differenceId: string;
+            /**
+             * 对账处理单状态
+             */
+            status: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+            /**
+             * 当前处理人 id；未认领为 null
+             */
+            ownerId: string | null;
+            /**
+             * 处理结果类型；未处理为 null（取值不在本切片约束）
+             */
+            resolutionType: string | null;
+            /**
+             * 处理说明；无说明为 null
+             */
+            resolutionNote: string | null;
+            /**
+             * 关联的调整/冲销交易 id；无关联为 null
+             */
+            linkedTransactionId: string | null;
+            /**
+             * 复核人 id；未复核为 null
+             */
+            reviewedBy: string | null;
+            /**
+             * 复核时间；未复核为 null
+             */
+            reviewedAt: string | null;
+            /**
+             * 关闭时间；未关闭为 null
+             */
+            closedAt: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 乐观锁版本号
+             */
+            version: number;
+            /**
+             * 对账差异引用
+             */
+            difference: {
+                /**
+                 * 差异类型原始值（如 AMOUNT_MISMATCH）
+                 */
+                kind: string;
+                /**
+                 * 差异类型中文说明；认不出的类型原样点名
+                 */
+                kindLabel: string;
+                /**
+                 * 差异金额（十进制字符串分；状态类差异为 null）
+                 */
+                amountFen: string | null;
+                /**
+                 * 差异说明；无说明为 null
+                 */
+                detail: string | null;
+                /**
+                 * 关联支付单 id；无关联为 null
+                 */
+                paymentOrderId: string | null;
+                /**
+                 * 差异解决时间；未解决为 null
+                 */
+                resolvedAt: string | null;
+                /**
+                 * 差异创建时间
+                 */
+                createdAt: string;
+            };
+        };
+    };
+};
+
+export type TenantReconciliationCaseClaimResponse = TenantReconciliationCaseClaimResponses[keyof TenantReconciliationCaseClaimResponses];
+
+export type TenantReconciliationCaseStartProcessingData = {
+    /**
+     * 对账处理单命令请求体（只接受 expectedVersion 一个字段）
+     */
+    body: {
+        /**
+         * 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+         */
+        expectedVersion: number;
+    };
+    path: {
+        /**
+         * 对账处理单 id（单个规范 UUID，不接受空白或换行）
+         */
+        caseId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/reconciliation/cases/{caseId}/start-processing';
+};
+
+export type TenantReconciliationCaseStartProcessingErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    401: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    403: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    404: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    409: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantReconciliationCaseStartProcessingError = TenantReconciliationCaseStartProcessingErrors[keyof TenantReconciliationCaseStartProcessingErrors];
+
+export type TenantReconciliationCaseStartProcessingResponses = {
+    200: {
+        /**
+         * 对账处理单
+         */
+        data: {
+            /**
+             * 处理单 id
+             */
+            id: string;
+            /**
+             * 对账差异 id（一条差异最多一张处理单）
+             */
+            differenceId: string;
+            /**
+             * 对账处理单状态
+             */
+            status: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+            /**
+             * 当前处理人 id；未认领为 null
+             */
+            ownerId: string | null;
+            /**
+             * 处理结果类型；未处理为 null（取值不在本切片约束）
+             */
+            resolutionType: string | null;
+            /**
+             * 处理说明；无说明为 null
+             */
+            resolutionNote: string | null;
+            /**
+             * 关联的调整/冲销交易 id；无关联为 null
+             */
+            linkedTransactionId: string | null;
+            /**
+             * 复核人 id；未复核为 null
+             */
+            reviewedBy: string | null;
+            /**
+             * 复核时间；未复核为 null
+             */
+            reviewedAt: string | null;
+            /**
+             * 关闭时间；未关闭为 null
+             */
+            closedAt: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 乐观锁版本号
+             */
+            version: number;
+            /**
+             * 对账差异引用
+             */
+            difference: {
+                /**
+                 * 差异类型原始值（如 AMOUNT_MISMATCH）
+                 */
+                kind: string;
+                /**
+                 * 差异类型中文说明；认不出的类型原样点名
+                 */
+                kindLabel: string;
+                /**
+                 * 差异金额（十进制字符串分；状态类差异为 null）
+                 */
+                amountFen: string | null;
+                /**
+                 * 差异说明；无说明为 null
+                 */
+                detail: string | null;
+                /**
+                 * 关联支付单 id；无关联为 null
+                 */
+                paymentOrderId: string | null;
+                /**
+                 * 差异解决时间；未解决为 null
+                 */
+                resolvedAt: string | null;
+                /**
+                 * 差异创建时间
+                 */
+                createdAt: string;
+            };
+        };
+    };
+};
+
+export type TenantReconciliationCaseStartProcessingResponse = TenantReconciliationCaseStartProcessingResponses[keyof TenantReconciliationCaseStartProcessingResponses];
+
+export type TenantReconciliationCaseSubmitReviewData = {
+    /**
+     * 提交复核请求体（判别联合：resolutionType 决定 linkedTransactionId 必须缺席还是必须携带）
+     */
+    body: {
+        /**
+         * 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+         */
+        expectedVersion: number;
+        /**
+         * 账目无需改动（本分支禁止携带 linkedTransactionId）
+         */
+        resolutionType: string;
+        /**
+         * 处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）
+         */
+        resolutionNote: string;
+    } | {
+        /**
+         * 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+         */
+        expectedVersion: number;
+        /**
+         * 关联既有账本交易（本分支必须携带 linkedTransactionId）
+         */
+        resolutionType: string;
+        /**
+         * 处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）
+         */
+        resolutionNote: string;
+        /**
+         * 关联的统一账本交易 id（必须是本租户 CONFIRMED 的既有交易）
+         */
+        linkedTransactionId: string;
+    };
+    path: {
+        /**
+         * 对账处理单 id（单个规范 UUID，不接受空白或换行）
+         */
+        caseId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/reconciliation/cases/{caseId}/submit-review';
+};
+
+export type TenantReconciliationCaseSubmitReviewErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    401: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    403: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    404: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    409: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantReconciliationCaseSubmitReviewError = TenantReconciliationCaseSubmitReviewErrors[keyof TenantReconciliationCaseSubmitReviewErrors];
+
+export type TenantReconciliationCaseSubmitReviewResponses = {
+    200: {
+        /**
+         * 对账处理单
+         */
+        data: {
+            /**
+             * 处理单 id
+             */
+            id: string;
+            /**
+             * 对账差异 id（一条差异最多一张处理单）
+             */
+            differenceId: string;
+            /**
+             * 对账处理单状态
+             */
+            status: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+            /**
+             * 当前处理人 id；未认领为 null
+             */
+            ownerId: string | null;
+            /**
+             * 处理结果类型；未处理为 null（取值不在本切片约束）
+             */
+            resolutionType: string | null;
+            /**
+             * 处理说明；无说明为 null
+             */
+            resolutionNote: string | null;
+            /**
+             * 关联的调整/冲销交易 id；无关联为 null
+             */
+            linkedTransactionId: string | null;
+            /**
+             * 复核人 id；未复核为 null
+             */
+            reviewedBy: string | null;
+            /**
+             * 复核时间；未复核为 null
+             */
+            reviewedAt: string | null;
+            /**
+             * 关闭时间；未关闭为 null
+             */
+            closedAt: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 乐观锁版本号
+             */
+            version: number;
+            /**
+             * 对账差异引用
+             */
+            difference: {
+                /**
+                 * 差异类型原始值（如 AMOUNT_MISMATCH）
+                 */
+                kind: string;
+                /**
+                 * 差异类型中文说明；认不出的类型原样点名
+                 */
+                kindLabel: string;
+                /**
+                 * 差异金额（十进制字符串分；状态类差异为 null）
+                 */
+                amountFen: string | null;
+                /**
+                 * 差异说明；无说明为 null
+                 */
+                detail: string | null;
+                /**
+                 * 关联支付单 id；无关联为 null
+                 */
+                paymentOrderId: string | null;
+                /**
+                 * 差异解决时间；未解决为 null
+                 */
+                resolvedAt: string | null;
+                /**
+                 * 差异创建时间
+                 */
+                createdAt: string;
+            };
+        };
+    };
+};
+
+export type TenantReconciliationCaseSubmitReviewResponse = TenantReconciliationCaseSubmitReviewResponses[keyof TenantReconciliationCaseSubmitReviewResponses];
+
+export type TenantReconciliationCaseCloseData = {
+    /**
+     * 对账处理单命令请求体（只接受 expectedVersion 一个字段）
+     */
+    body: {
+        /**
+         * 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+         */
+        expectedVersion: number;
+    };
+    path: {
+        /**
+         * 对账处理单 id（单个规范 UUID，不接受空白或换行）
+         */
+        caseId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/reconciliation/cases/{caseId}/close';
+};
+
+export type TenantReconciliationCaseCloseErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    401: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    403: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    404: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    409: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantReconciliationCaseCloseError = TenantReconciliationCaseCloseErrors[keyof TenantReconciliationCaseCloseErrors];
+
+export type TenantReconciliationCaseCloseResponses = {
+    200: {
+        /**
+         * 对账处理单
+         */
+        data: {
+            /**
+             * 处理单 id
+             */
+            id: string;
+            /**
+             * 对账差异 id（一条差异最多一张处理单）
+             */
+            differenceId: string;
+            /**
+             * 对账处理单状态
+             */
+            status: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+            /**
+             * 当前处理人 id；未认领为 null
+             */
+            ownerId: string | null;
+            /**
+             * 处理结果类型；未处理为 null（取值不在本切片约束）
+             */
+            resolutionType: string | null;
+            /**
+             * 处理说明；无说明为 null
+             */
+            resolutionNote: string | null;
+            /**
+             * 关联的调整/冲销交易 id；无关联为 null
+             */
+            linkedTransactionId: string | null;
+            /**
+             * 复核人 id；未复核为 null
+             */
+            reviewedBy: string | null;
+            /**
+             * 复核时间；未复核为 null
+             */
+            reviewedAt: string | null;
+            /**
+             * 关闭时间；未关闭为 null
+             */
+            closedAt: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 乐观锁版本号
+             */
+            version: number;
+            /**
+             * 对账差异引用
+             */
+            difference: {
+                /**
+                 * 差异类型原始值（如 AMOUNT_MISMATCH）
+                 */
+                kind: string;
+                /**
+                 * 差异类型中文说明；认不出的类型原样点名
+                 */
+                kindLabel: string;
+                /**
+                 * 差异金额（十进制字符串分；状态类差异为 null）
+                 */
+                amountFen: string | null;
+                /**
+                 * 差异说明；无说明为 null
+                 */
+                detail: string | null;
+                /**
+                 * 关联支付单 id；无关联为 null
+                 */
+                paymentOrderId: string | null;
+                /**
+                 * 差异解决时间；未解决为 null
+                 */
+                resolvedAt: string | null;
+                /**
+                 * 差异创建时间
+                 */
+                createdAt: string;
+            };
+        };
+    };
+};
+
+export type TenantReconciliationCaseCloseResponse = TenantReconciliationCaseCloseResponses[keyof TenantReconciliationCaseCloseResponses];
+
+export type TenantReconciliationCaseIgnoreData = {
+    /**
+     * 忽略请求体（只接受 expectedVersion 与 reason 两个字段）
+     */
+    body: {
+        /**
+         * 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+         */
+        expectedVersion: number;
+        /**
+         * 处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）
+         */
+        reason: string;
+    };
+    path: {
+        /**
+         * 对账处理单 id（单个规范 UUID，不接受空白或换行）
+         */
+        caseId: string;
+    };
+    query?: never;
+    url: '/api/v1/tenant/reconciliation/cases/{caseId}/ignore';
+};
+
+export type TenantReconciliationCaseIgnoreErrors = {
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    400: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    401: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    403: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    404: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+    /**
+     * 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+     */
+    409: {
+        /**
+         * 错误类型标识（RFC9457，如 about:blank#http-error）
+         */
+        type: string;
+        /**
+         * HTTP 状态短语（如 Bad Request）
+         */
+        title: string;
+        /**
+         * HTTP 状态码
+         */
+        status: number;
+        /**
+         * 错误代码（异常类名，如 FundLedgerInputError）
+         */
+        code: string;
+        /**
+         * 错误说明（面向调用方，可直接展示）
+         */
+        message: string;
+        /**
+         * 请求 id（服务端追踪用；缺失时为空串）
+         */
+        requestId: string;
+    };
+};
+
+export type TenantReconciliationCaseIgnoreError = TenantReconciliationCaseIgnoreErrors[keyof TenantReconciliationCaseIgnoreErrors];
+
+export type TenantReconciliationCaseIgnoreResponses = {
+    200: {
+        /**
+         * 对账处理单
+         */
+        data: {
+            /**
+             * 处理单 id
+             */
+            id: string;
+            /**
+             * 对账差异 id（一条差异最多一张处理单）
+             */
+            differenceId: string;
+            /**
+             * 对账处理单状态
+             */
+            status: 'OPEN' | 'CLAIMED' | 'PROCESSING' | 'PENDING_REVIEW' | 'CLOSED' | 'IGNORED';
+            /**
+             * 当前处理人 id；未认领为 null
+             */
+            ownerId: string | null;
+            /**
+             * 处理结果类型；未处理为 null（取值不在本切片约束）
+             */
+            resolutionType: string | null;
+            /**
+             * 处理说明；无说明为 null
+             */
+            resolutionNote: string | null;
+            /**
+             * 关联的调整/冲销交易 id；无关联为 null
+             */
+            linkedTransactionId: string | null;
+            /**
+             * 复核人 id；未复核为 null
+             */
+            reviewedBy: string | null;
+            /**
+             * 复核时间；未复核为 null
+             */
+            reviewedAt: string | null;
+            /**
+             * 关闭时间；未关闭为 null
+             */
+            closedAt: string | null;
+            /**
+             * 创建时间
+             */
+            createdAt: string;
+            /**
+             * 更新时间
+             */
+            updatedAt: string;
+            /**
+             * 乐观锁版本号
+             */
+            version: number;
+            /**
+             * 对账差异引用
+             */
+            difference: {
+                /**
+                 * 差异类型原始值（如 AMOUNT_MISMATCH）
+                 */
+                kind: string;
+                /**
+                 * 差异类型中文说明；认不出的类型原样点名
+                 */
+                kindLabel: string;
+                /**
+                 * 差异金额（十进制字符串分；状态类差异为 null）
+                 */
+                amountFen: string | null;
+                /**
+                 * 差异说明；无说明为 null
+                 */
+                detail: string | null;
+                /**
+                 * 关联支付单 id；无关联为 null
+                 */
+                paymentOrderId: string | null;
+                /**
+                 * 差异解决时间；未解决为 null
+                 */
+                resolvedAt: string | null;
+                /**
+                 * 差异创建时间
+                 */
+                createdAt: string;
+            };
+        };
+    };
+};
+
+export type TenantReconciliationCaseIgnoreResponse = TenantReconciliationCaseIgnoreResponses[keyof TenantReconciliationCaseIgnoreResponses];
 
 export type TenantWalletListData = {
     body?: never;

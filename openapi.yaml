@@ -2298,6 +2298,19 @@ paths:
         "201":
           description: ""
       tags: *a17
+  /api/v1/tenant/settlements/{id}/payments:
+    post:
+      operationId: settlements_confirmPayment
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a17
   /api/v1/tenant/settlements/{id}/pay:
     post:
       operationId: settlements_pay
@@ -2324,6 +2337,765 @@ paths:
         "201":
           description: ""
       tags: *a17
+  /api/v1/tenant/funds/accounts:
+    get:
+      operationId: fundAccounts_list
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - code
+                            - name
+                            - kind
+                            - status
+                            - externalRef
+                            - createdAt
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              description: 资金账户 id
+                            code:
+                              type: string
+                              description: 账户编码
+                            name:
+                              type: string
+                              description: 账户名称
+                            kind:
+                              type: string
+                              enum:
+                                - WECHAT_SETTLEMENT
+                                - BANK
+                                - CASH
+                                - OFFLINE
+                              description: 资金账户类型
+                            status:
+                              type: string
+                              enum:
+                                - ACTIVE
+                                - ARCHIVED
+                              description: 资金账户状态
+                            externalRef:
+                              type: string
+                              nullable: true
+                              description: 外部引用；未传或空白为 null
+                            createdAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 创建时间
+                          description: 资金账户视图
+                        description: 当前服务端租户的资金账户（按 createdAt 升序）
+                    description: 资金账户列表
+      tags: &a18
+        - FundAccounts
+    post:
+      operationId: fundAccounts_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - name
+                - kind
+              properties:
+                code:
+                  type: string
+                  pattern: ^[A-Za-z][A-Za-z0-9_]{1,31}$
+                  example: WECHAT_MAIN
+                  description: 账户编码（服务端 trim 并转大写，规范化后须符合 ^[A-Z][A-Z0-9_]{1,31}$，每租户唯一）
+                name:
+                  type: string
+                  description: 账户名称（去空白后 1-64 字符）
+                kind:
+                  type: string
+                  enum:
+                    - WECHAT_SETTLEMENT
+                    - BANK
+                    - CASH
+                    - OFFLINE
+                  description: 资金账户类型
+                externalRef:
+                  type: string
+                  nullable: true
+                  description: 外部引用（可空；BANK 账户非空时必须包含 * 掩码，不得存完整卡号）
+              description: 创建资金账户请求体
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - code
+                      - name
+                      - kind
+                      - status
+                      - externalRef
+                      - createdAt
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: 资金账户 id
+                      code:
+                        type: string
+                        description: 账户编码
+                      name:
+                        type: string
+                        description: 账户名称
+                      kind:
+                        type: string
+                        enum:
+                          - WECHAT_SETTLEMENT
+                          - BANK
+                          - CASH
+                          - OFFLINE
+                        description: 资金账户类型
+                      status:
+                        type: string
+                        enum:
+                          - ACTIVE
+                          - ARCHIVED
+                        description: 资金账户状态
+                      externalRef:
+                        type: string
+                        nullable: true
+                        description: 外部引用；未传或空白为 null
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                    description: 资金账户视图
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - TEMPLATE_CURSOR_INVALID
+                      - TEMPLATE_NOT_FOUND
+                      - TEMPLATE_REVISION_CONFLICT
+                      - TEMPLATE_ARCHIVED
+                      - TEMPLATE_NAME_CONFLICT
+                      - TEMPLATE_DELETE_RESTRICTED
+                      - TEMPLATE_VERSION_UNAVAILABLE
+                      - TEMPLATE_COMPONENT_INVALID
+                      - TEMPLATE_BINDING_INVALID
+                      - TEMPLATE_PRICE_RULE_INVALID
+                      - TEMPLATE_LEGACY_REVIEW_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_REQUIRED
+                      - TEMPLATE_IDEMPOTENCY_MISMATCH
+                      - TEMPLATE_IDEMPOTENCY_IN_FLIGHT
+                    description: 受控业务错误码
+                  message:
+                    type: string
+                    description: 错误说明
+                  details:
+                    type: object
+                    nullable: true
+                    additionalProperties: true
+                    description: 受控明细（不含 config、订单值或凭据）
+                description: 受控业务错误（{ code, message, details? }）
+      tags: *a18
+  /api/v1/tenant/funds/ledger:
+    get:
+      operationId: tenantFundLedger_list
+      parameters:
+        - name: eventType
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - ORDER_ACCOUNTING
+              - PAYMENT_CONFIRMED
+              - WALLET_CONSUMED
+              - REFUND_CONFIRMED
+              - PLAYER_PAYOUT_CONFIRMED
+              - RECONCILIATION_ADJUSTMENT
+              - REVERSAL
+            description: 单个合法 LedgerEventType（精确匹配）
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - CONFIRMED
+              - RECONCILED
+              - REVERSED
+            description: 单个合法 LedgerTransactionStatus（精确匹配）
+        - name: fundAccountId
+          required: false
+          in: query
+          schema:
+            type: string
+            format: uuid
+            description: 按交易头资金账户过滤（uuid）
+        - name: sourceType
+          required: false
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            description: 来源类型（trim 后 1–64 字符，精确匹配）
+        - name: q
+          required: false
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 50
+            description: 关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）
+        - name: occurredFrom
+          required: false
+          in: query
+          schema:
+            type: string
+            format: date-time
+            description: 发生时间下界，ISO 8601 带时区，含边界
+        - name: occurredTo
+          required: false
+          in: query
+          schema:
+            type: string
+            format: date-time
+            description: 发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom
+        - name: minAmountFen
+          required: false
+          in: query
+          schema:
+            type: string
+            pattern: ^(?:0|[1-9][0-9]*)$
+            description: 金额下界（十进制字符串分，非负，含边界）
+        - name: maxAmountFen
+          required: false
+          in: query
+          schema:
+            type: string
+            pattern: ^(?:0|[1-9][0-9]*)$
+            description: 金额上界（十进制字符串分，非负，含边界且不得小于下界）
+        - name: sortBy
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - occurredAt
+              - confirmedAt
+              - createdAt
+              - amountFen
+              - txNo
+            description: 排序字段（默认 occurredAt）
+        - name: sortDir
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: 排序方向（默认 desc）
+        - name: page
+          required: false
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            description: 页码（1 起算，默认 1）
+        - name: pageSize
+          required: false
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            description: 每页条数（1-200，默认 50）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - rows
+                      - total
+                      - page
+                      - pageSize
+                      - sortBy
+                      - sortDir
+                    properties:
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - transactionId
+                            - txNo
+                            - eventType
+                            - status
+                            - reconciliationStatus
+                            - sourceType
+                            - sourceId
+                            - description
+                            - amountFen
+                            - debitFen
+                            - creditFen
+                            - balanced
+                            - fundFlowDirection
+                            - fundAccount
+                            - auxiliaries
+                            - createdBy
+                            - confirmedBy
+                            - occurredAt
+                            - confirmedAt
+                            - createdAt
+                          properties:
+                            transactionId:
+                              type: string
+                              format: uuid
+                              description: 交易 id
+                            txNo:
+                              type: string
+                              description: 交易号
+                            eventType:
+                              type: string
+                              enum:
+                                - ORDER_ACCOUNTING
+                                - PAYMENT_CONFIRMED
+                                - WALLET_CONSUMED
+                                - REFUND_CONFIRMED
+                                - PLAYER_PAYOUT_CONFIRMED
+                                - RECONCILIATION_ADJUSTMENT
+                                - REVERSAL
+                              description: 台账事件类型
+                              nullable: true
+                            status:
+                              type: string
+                              enum:
+                                - DRAFT
+                                - CONFIRMED
+                                - RECONCILED
+                                - REVERSED
+                              description: 交易状态
+                            reconciliationStatus:
+                              type: string
+                              enum:
+                                - RECONCILED
+                                - UNRECONCILED
+                              description: 对账状态展示值（只有 RECONCILED 交易算已对账）
+                            sourceType:
+                              type: string
+                              nullable: true
+                              description: 来源类型；无来源为 null
+                            sourceId:
+                              type: string
+                              nullable: true
+                              description: 来源单据 id；无来源为 null
+                            description:
+                              type: string
+                              nullable: true
+                              description: 摘要；无摘要为 null
+                            amountFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 金额（该交易借方分录合计）（十进制字符串分，>=0）
+                            debitFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 借方合计（十进制字符串分，>=0）
+                            creditFen:
+                              type: string
+                              pattern: ^(?:0|[1-9][0-9]*)$
+                              example: "800"
+                              description: 贷方合计（十进制字符串分，>=0）
+                            balanced:
+                              type: boolean
+                              description: 借贷是否平衡（借方合计 = 贷方合计且大于 0）
+                            fundFlowDirection:
+                              type: string
+                              enum:
+                                - DEBIT
+                                - CREDIT
+                                - MIXED
+                              nullable: true
+                              description: 资金流方向；无匹配分录为 null，借贷都有为 MIXED
+                            fundAccount:
+                              type: object
+                              required:
+                                - id
+                                - code
+                                - name
+                                - kind
+                                - status
+                              properties:
+                                id:
+                                  type: string
+                                  format: uuid
+                                  description: 资金账户 id
+                                code:
+                                  type: string
+                                  description: 账户编码
+                                name:
+                                  type: string
+                                  description: 账户名称
+                                kind:
+                                  type: string
+                                  enum:
+                                    - WECHAT_SETTLEMENT
+                                    - BANK
+                                    - CASH
+                                    - OFFLINE
+                                  description: 资金账户类型
+                                status:
+                                  type: string
+                                  enum:
+                                    - ACTIVE
+                                    - ARCHIVED
+                                  description: 资金账户状态
+                              description: 交易头资金账户引用
+                              nullable: true
+                            auxiliaries:
+                              type: array
+                              items:
+                                type: object
+                                required:
+                                  - type
+                                  - id
+                                properties:
+                                  type:
+                                    type: string
+                                    description: 辅助核算类型（如 customer_profile）
+                                  id:
+                                    type: string
+                                    description: 辅助核算对象 id
+                                description: 辅助核算引用
+                              description: 去重并按 (type, id) 升序的辅助核算引用
+                            createdBy:
+                              type: string
+                              nullable: true
+                              description: 创建人 id；无记录为 null
+                            confirmedBy:
+                              type: string
+                              nullable: true
+                              description: 确认人 id；未确认为 null
+                            occurredAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 发生时间
+                            confirmedAt:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: 确认时间；未确认为 null
+                            createdAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 创建时间
+                          description: 统一资金台账交易行
+                        description: 当前页交易行
+                      total:
+                        type: integer
+                        minimum: 0
+                        description: 同一筛选条件下的交易总数（不受 pageSize 影响）
+                      page:
+                        type: integer
+                        minimum: 1
+                        description: 页码（1 起算）
+                      pageSize:
+                        type: integer
+                        minimum: 1
+                        maximum: 200
+                        description: 每页条数（上限 200）
+                      sortBy:
+                        type: string
+                        enum:
+                          - occurredAt
+                          - confirmedAt
+                          - createdAt
+                          - amountFen
+                          - txNo
+                        description: 排序字段（默认 occurredAt）
+                      sortDir:
+                        type: string
+                        enum:
+                          - asc
+                          - desc
+                        description: 排序方向（默认 desc）
+                    description: 统一资金台账分页视图
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 统一资金台账列表（服务端分页 / 排序 / 筛选）
+      tags: &a20
+        - TenantFundLedger
+  /api/v1/tenant/funds/ledger/export.csv:
+    get:
+      operationId: tenantFundLedger_exportCsv
+      parameters:
+        - name: eventType
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - ORDER_ACCOUNTING
+              - PAYMENT_CONFIRMED
+              - WALLET_CONSUMED
+              - REFUND_CONFIRMED
+              - PLAYER_PAYOUT_CONFIRMED
+              - RECONCILIATION_ADJUSTMENT
+              - REVERSAL
+            description: 单个合法 LedgerEventType（精确匹配）
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - CONFIRMED
+              - RECONCILED
+              - REVERSED
+            description: 单个合法 LedgerTransactionStatus（精确匹配）
+        - name: fundAccountId
+          required: false
+          in: query
+          schema:
+            type: string
+            format: uuid
+            description: 按交易头资金账户过滤（uuid）
+        - name: sourceType
+          required: false
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            description: 来源类型（trim 后 1–64 字符，精确匹配）
+        - name: q
+          required: false
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 50
+            description: 关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）
+        - name: occurredFrom
+          required: false
+          in: query
+          schema:
+            type: string
+            format: date-time
+            description: 发生时间下界，ISO 8601 带时区，含边界
+        - name: occurredTo
+          required: false
+          in: query
+          schema:
+            type: string
+            format: date-time
+            description: 发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom
+        - name: minAmountFen
+          required: false
+          in: query
+          schema:
+            type: string
+            pattern: ^(?:0|[1-9][0-9]*)$
+            description: 金额下界（十进制字符串分，非负，含边界）
+        - name: maxAmountFen
+          required: false
+          in: query
+          schema:
+            type: string
+            pattern: ^(?:0|[1-9][0-9]*)$
+            description: 金额上界（十进制字符串分，非负，含边界且不得小于下界）
+        - name: sortBy
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - occurredAt
+              - confirmedAt
+              - createdAt
+              - amountFen
+              - txNo
+            description: 排序字段（默认 occurredAt）
+        - name: sortDir
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            description: 排序方向（默认 desc）
+      responses:
+        "200":
+          description: 当前筛选与排序下的全部匹配交易（UTF-8 BOM + CRLF 的 CSV 文本）
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: 查询参数不合法（错误体为通用 HTTP 错误结构）
+          content:
+            application/json:
+              schema: &a19
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "422":
+          description: 匹配行数超过导出上限，需缩小筛选范围（错误体为通用 HTTP 错误结构）
+          content:
+            application/json:
+              schema: *a19
+      summary: 统一资金台账 CSV 导出（当前筛选与排序下的全部匹配交易）
+      tags: *a20
   /api/v1/tenant/players:
     get:
       operationId: players_list
@@ -2331,7 +3103,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a18
+      tags: &a21
         - Players
     post:
       operationId: players_create
@@ -2339,7 +3111,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/players/{id}:
     get:
       operationId: players_get
@@ -2352,7 +3124,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a21
     patch:
       operationId: players_update
       parameters:
@@ -2364,7 +3136,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a21
     delete:
       operationId: players_remove
       parameters:
@@ -2376,7 +3148,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/players/{id}/account:
     get:
       operationId: players_account
@@ -2389,7 +3161,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a21
     post:
       operationId: players_bind
       parameters:
@@ -2401,7 +3173,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/players/{id}/skills:
     post:
       operationId: players_addSkill
@@ -2414,7 +3186,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/players/{id}/skills/{skillId}:
     delete:
       operationId: players_removeSkill
@@ -2432,7 +3204,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/players/{id}/availability:
     post:
       operationId: players_addAvailability
@@ -2445,7 +3217,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/players/{id}/availability/{availabilityId}:
     delete:
       operationId: players_removeAvailability
@@ -2463,7 +3235,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a18
+      tags: *a21
   /api/v1/tenant/player/me:
     get:
       operationId: playerSelf_me
@@ -2471,7 +3243,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a19
+      tags: &a22
         - PlayerSelf
     patch:
       operationId: playerSelf_updateMe
@@ -2479,7 +3251,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a22
   /api/v1/tenant/player/availability:
     post:
       operationId: playerSelf_addAvailability
@@ -2487,7 +3259,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a19
+      tags: *a22
   /api/v1/tenant/player/availability/{availabilityId}:
     delete:
       operationId: playerSelf_removeAvailability
@@ -2500,7 +3272,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a19
+      tags: *a22
   /api/v1/tenant/catalog/games:
     get:
       operationId: catalog_listGames
@@ -2508,7 +3280,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a20
+      tags: &a23
         - Catalog
     post:
       operationId: catalog_createGame
@@ -2516,7 +3288,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/games/{id}:
     patch:
       operationId: catalog_updateGame
@@ -2529,7 +3301,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
     delete:
       operationId: catalog_removeGame
       parameters:
@@ -2541,7 +3313,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/regions:
     get:
       operationId: catalog_listRegions
@@ -2549,7 +3321,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/games/{gameId}/regions:
     post:
       operationId: catalog_createRegion
@@ -2562,7 +3334,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/regions/{id}:
     patch:
       operationId: catalog_updateRegion
@@ -2575,7 +3347,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
     delete:
       operationId: catalog_removeRegion
       parameters:
@@ -2587,7 +3359,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/products:
     get:
       operationId: catalog_listProducts
@@ -2595,14 +3367,14 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
     post:
       operationId: catalog_createProduct
       parameters: []
       responses:
         "201":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/products/{id}:
     patch:
       operationId: catalog_updateProduct
@@ -2615,7 +3387,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
     delete:
       operationId: catalog_removeProduct
       parameters:
@@ -2627,7 +3399,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/products/{productId}/pricing:
     get:
       operationId: catalog_listRules
@@ -2699,7 +3471,7 @@ paths:
                           nullable: false
                           description: 更新时间
                       description: 价格规则（金额字段为十进制字符串分）
-      tags: *a20
+      tags: *a23
     post:
       operationId: catalog_createRule
       parameters:
@@ -2796,7 +3568,7 @@ paths:
                         nullable: false
                         description: 更新时间
                     description: 价格规则（金额字段为十进制字符串分）
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/catalog/pricing/{id}:
     patch:
       operationId: catalog_updateRule
@@ -2892,7 +3664,7 @@ paths:
                         nullable: false
                         description: 更新时间
                     description: 价格规则（金额字段为十进制字符串分）
-      tags: *a20
+      tags: *a23
     delete:
       operationId: catalog_removeRule
       parameters:
@@ -2904,7 +3676,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a20
+      tags: *a23
   /api/v1/tenant/orders/{id}/publish:
     post:
       operationId: dispatchAdmin_publish
@@ -2917,7 +3689,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a21
+      tags: &a24
         - DispatchAdmin
   /api/v1/tenant/orders/{id}/applications:
     get:
@@ -2931,7 +3703,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a21
+      tags: *a24
   /api/v1/tenant/orders/{id}/applications/{applicationId}/shortlist:
     post:
       operationId: dispatchAdmin_shortlist
@@ -2949,7 +3721,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a21
+      tags: *a24
   /api/v1/tenant/orders/{id}/assignment:
     post:
       operationId: dispatchAdmin_assign
@@ -2962,7 +3734,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a21
+      tags: *a24
   /api/v1/tenant/player/order-hall:
     get:
       operationId: dispatchPlayer_hall
@@ -3019,7 +3791,7 @@ paths:
                           nullable: false
                           description: 创建时间
                       description: 接单大厅订单
-      tags: &a22
+      tags: &a25
         - DispatchPlayer
   /api/v1/tenant/player/applications:
     get:
@@ -3028,7 +3800,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a22
+      tags: *a25
   /api/v1/tenant/player/orders/{orderId}/applications:
     post:
       operationId: dispatchPlayer_apply
@@ -3041,7 +3813,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a22
+      tags: *a25
   /api/v1/tenant/customer/orders/{orderId}/applications:
     get:
       operationId: dispatchCustomer_candidates
@@ -3054,7 +3826,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a23
+      tags: &a26
         - DispatchCustomer
   /api/v1/tenant/customer/orders/{orderId}/assignment:
     post:
@@ -3068,7 +3840,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a23
+      tags: *a26
   /api/v1/tenant/sessions:
     get:
       operationId: sessions_list
@@ -3076,7 +3848,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a24
+      tags: &a27
         - Sessions
   /api/v1/tenant/sessions/{sessionId}:
     get:
@@ -3090,7 +3862,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a24
+      tags: *a27
   /api/v1/tenant/orders/{orderId}/session:
     get:
       operationId: sessions_session
@@ -3103,7 +3875,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a24
+      tags: *a27
   /api/v1/tenant/orders/{orderId}/session/start:
     post:
       operationId: sessions_start
@@ -3116,7 +3888,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a24
+      tags: *a27
   /api/v1/tenant/orders/{orderId}/session/end:
     post:
       operationId: sessions_end
@@ -3129,7 +3901,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a24
+      tags: *a27
   /api/v1/tenant/sessions/{sessionId}/adjustments:
     post:
       operationId: sessions_adjust
@@ -3142,7 +3914,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a24
+      tags: *a27
   /api/v1/tenant/sessions/{sessionId}/adjustments/{adjustmentId}/review:
     post:
       operationId: sessions_review
@@ -3160,7 +3932,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a24
+      tags: *a27
   /api/v1/tenant/sessions/{sessionId}/evidence:
     post:
       operationId: evidence_upload
@@ -3178,7 +3950,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a25
+      tags: &a28
         - Evidence
   /api/v1/tenant/sessions/{sessionId}/capture:
     post:
@@ -3197,7 +3969,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a25
+      tags: *a28
   /api/v1/tenant/evidence/{id}:
     get:
       operationId: evidence_download
@@ -3210,7 +3982,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a25
+      tags: *a28
   /api/v1/tenant/slot-evidence/{id}:
     get:
       operationId: evidence_downloadSlotEvidence
@@ -3223,7 +3995,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a25
+      tags: *a28
   /api/v1/tenant/disputes:
     get:
       operationId: disputes_listAll
@@ -3231,7 +4003,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a26
+      tags: &a29
         - Disputes
   /api/v1/tenant/disputes/{disputeId}:
     get:
@@ -3245,7 +4017,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a26
+      tags: *a29
   /api/v1/tenant/orders/{orderId}/disputes:
     get:
       operationId: disputes_list
@@ -3258,7 +4030,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a26
+      tags: *a29
     post:
       operationId: disputes_open
       parameters:
@@ -3270,7 +4042,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a26
+      tags: *a29
   /api/v1/tenant/player/disputes:
     get:
       operationId: disputes_playerMine
@@ -3278,7 +4050,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a26
+      tags: *a29
   /api/v1/tenant/customer/disputes:
     get:
       operationId: disputes_customerMine
@@ -3286,7 +4058,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a26
+      tags: *a29
   /api/v1/tenant/disputes/{disputeId}/resolve:
     post:
       operationId: disputes_resolve
@@ -3299,7 +4071,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a26
+      tags: *a29
   /api/v1/tenant/notifications:
     get:
       operationId: notifications_list
@@ -3307,7 +4079,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a27
+      tags: &a30
         - Notifications
   /api/v1/tenant/notifications/unread-count:
     get:
@@ -3316,7 +4088,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a27
+      tags: *a30
   /api/v1/tenant/notifications/{id}/read:
     post:
       operationId: notifications_markRead
@@ -3329,7 +4101,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a27
+      tags: *a30
   /api/v1/tenant/notifications/read-all:
     post:
       operationId: notifications_markAllRead
@@ -3337,7 +4109,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a27
+      tags: *a30
   /api/v1/tenant/ai/capabilities:
     get:
       operationId: ai_capabilities
@@ -3345,7 +4117,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a28
+      tags: &a31
         - Ai
   /api/v1/tenant/ai/parse-requirement:
     post:
@@ -3354,7 +4126,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a28
+      tags: *a31
   /api/v1/tenant/ai/orders/{orderId}/recommendations:
     get:
       operationId: ai_recommend
@@ -3367,7 +4139,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a28
+      tags: *a31
   /api/v1/platform/packages:
     get:
       operationId: platformBilling_packages
@@ -3375,7 +4147,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a29
+      tags: &a32
         - PlatformBilling
   /api/v1/platform/onboarding/tenants:
     post:
@@ -3384,7 +4156,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a29
+      tags: *a32
   /api/v1/platform/tenants/{tenantId}/package:
     post:
       operationId: platformBilling_assign
@@ -3397,7 +4169,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a29
+      tags: *a32
   /api/v1/platform/tenants/{tenantId}/activate:
     post:
       operationId: platformBilling_activate
@@ -3410,7 +4182,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a29
+      tags: *a32
   /api/v1/platform/subscriptions/{subscriptionId}/renew:
     post:
       operationId: platformBilling_renew
@@ -3423,7 +4195,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a29
+      tags: *a32
   /api/v1/platform/overview:
     get:
       operationId: platformOps_overview
@@ -3431,7 +4203,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a30
+      tags: &a33
         - PlatformOps
   /api/v1/platform/subscriptions:
     get:
@@ -3440,7 +4212,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a30
+      tags: *a33
   /api/v1/platform/tenants/{tenantId}/detail:
     get:
       operationId: platformOps_tenantDetail
@@ -3453,7 +4225,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a30
+      tags: *a33
   /api/v1/tenant/game-templates:
     get:
       operationId: gameTemplate_list
@@ -3461,7 +4233,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a31
+      tags: &a34
         - GameTemplate
     post:
       operationId: gameTemplate_create
@@ -3469,7 +4241,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a31
+      tags: *a34
   /api/v1/tenant/game-templates/{id}:
     get:
       operationId: gameTemplate_get
@@ -3482,7 +4254,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a31
+      tags: *a34
     patch:
       operationId: gameTemplate_update
       parameters:
@@ -3494,7 +4266,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a31
+      tags: *a34
     delete:
       operationId: gameTemplate_remove
       parameters:
@@ -3506,7 +4278,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a31
+      tags: *a34
   /api/v1/tenant/game-templates/{id}/copy:
     post:
       operationId: gameTemplate_copy
@@ -3519,7 +4291,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a31
+      tags: *a34
   /api/v1/tenant/game-dispatch-templates:
     get:
       operationId: genericGameTemplate_list
@@ -3759,7 +4531,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 模板摘要列表（游标分页，不含 config）
-      tags: &a32
+      tags: &a35
         - 通用派单模板（S2）
         - 通用派单模板（S2）
     post:
@@ -4006,7 +4778,7 @@ paths:
                                       minLength: 1
                                       maxLength: 50
                                       description: 旧价格规则名称
-                                    priceDeltaFen: &a44
+                                    priceDeltaFen: &a50
                                       type: string
                                       pattern: ^(?:0|[1-9][0-9]*)$
                                       example: "1000"
@@ -4209,7 +4981,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 创建模板（生成最小有效 v2 草稿）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/published:
     get:
       operationId: genericGameTemplate_listPublished
@@ -4345,7 +5117,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 该游戏可派单的模板（未归档且有生效版本，默认优先）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/versions/{versionId}/form:
     get:
       operationId: genericGameTemplate_getVersionForm
@@ -4620,7 +5392,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 锁定发布版本的派单表单配置
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/draft:
     get:
       operationId: genericGameTemplate_getDraft
@@ -4976,7 +5748,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 读取草稿与生效版本摘要
-      tags: *a32
+      tags: *a35
     patch:
       operationId: genericGameTemplate_saveDraft
       parameters:
@@ -5441,7 +6213,7 @@ paths:
                     description: 校验失败明细
                 description: 配置校验失败（422）
       summary: 整份保存草稿（expectedRevision 乐观锁）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/publish:
     post:
       operationId: genericGameTemplate_publish
@@ -5983,7 +6755,7 @@ paths:
                     description: 校验失败明细
                 description: 配置校验失败（422）
       summary: 发布当前草稿为不可变版本
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/versions:
     get:
       operationId: genericGameTemplate_listVersions
@@ -6183,7 +6955,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 版本历史（游标分页，只返回摘要）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/restore:
     post:
       operationId: genericGameTemplate_restore
@@ -6694,7 +7466,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 把历史 v2 版本还原为草稿（不直接上线）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/copy:
     post:
       operationId: genericGameTemplate_copy
@@ -7181,7 +7953,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 复制当前草稿到同租户目标游戏（独立 DRAFT）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/default:
     post:
       operationId: genericGameTemplate_setDefault
@@ -7646,7 +8418,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 设为该游戏默认模板（同游戏唯一）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/archive:
     post:
       operationId: genericGameTemplate_archive
@@ -8074,7 +8846,7 @@ paths:
                     description: 修订冲突明细
                 description: 修订冲突（409）
       summary: 归档模板（保留草稿/版本/历史）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}/unarchive:
     post:
       operationId: genericGameTemplate_unarchive
@@ -8502,7 +9274,7 @@ paths:
                     description: 修订冲突明细
                 description: 修订冲突（409）
       summary: 取消归档（按 activeVersionId 恢复状态）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch-templates/{id}:
     delete:
       operationId: genericGameTemplate_remove
@@ -8670,7 +9442,7 @@ paths:
                     description: 删除受限明细
                 description: 删除受限（409，应改为归档）
       summary: 删除未发布且无引用的模板（否则应归档）
-      tags: *a32
+      tags: *a35
   /api/v1/tenant/game-dispatch/customer/games:
     get:
       operationId: customerGameTemplate_listGames
@@ -8740,7 +9512,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：该店可下单的游戏（至少一个已发布模板）
-      tags: &a33
+      tags: &a36
         - CustomerGameTemplate
   /api/v1/tenant/game-dispatch/customer/published:
     get:
@@ -8877,7 +9649,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：该游戏可下单的模板（未归档且有生效版本）
-      tags: *a33
+      tags: *a36
   /api/v1/tenant/game-dispatch/customer/versions/{versionId}/form:
     get:
       operationId: customerGameTemplate_getVersionForm
@@ -9115,7 +9887,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：按 CUSTOMER 端口过滤后的发布表单
-      tags: *a33
+      tags: *a36
   /api/v1/tenant/game-dispatch/customer/template-orders:
     post:
       description: 请求体不含 customerProfileId——客户档案由登录身份推导；同一 Idempotency-Key 重试会回放首次结果。
@@ -9381,7 +10153,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客户入口：客户自助下单（人数与价格由服务端按快照计算）
-      tags: *a33
+      tags: *a36
   /api/v1/tenant/game-dispatch:
     get:
       operationId: gameDispatch_list
@@ -9572,7 +10344,7 @@ paths:
                     minimum: 0
                     description: 当前筛选条件下的总条数
                 description: 派单列表页
-      tags: &a34
+      tags: &a37
         - GameDispatch
   /api/v1/tenant/game-dispatch/summary:
     get:
@@ -9610,7 +10382,7 @@ paths:
                         description: 已核定金额合计（十进制字符串分，>=0）
                     description: 订单中心页头汇总
       summary: 订单中心页头汇总（待审批报单 / 违约 / 已核定金额）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders:
     post:
       operationId: gameDispatch_createDraft
@@ -9618,7 +10390,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/customer/orders:
     post:
       operationId: gameDispatch_customerCreateDraft
@@ -9626,7 +10398,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/customer/templates:
     get:
       operationId: gameDispatch_customerTemplates
@@ -9634,7 +10406,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/customer/templates/{id}:
     get:
       operationId: gameDispatch_customerTemplate
@@ -9647,7 +10419,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}:
     get:
       operationId: gameDispatch_view
@@ -9960,7 +10732,7 @@ paths:
                     additionalProperties: true
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/applications:
     get:
       operationId: gameDispatch_applications
@@ -9973,7 +10745,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/player/orders/{orderId}/signup:
     get:
       operationId: gameDispatch_playerSignup
@@ -9986,7 +10758,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/customer/orders/{orderId}/select:
     get:
       operationId: gameDispatch_customerSelect
@@ -9999,7 +10771,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/customer/orders/{orderId}/assignment:
     post:
       operationId: gameDispatch_customerAssign
@@ -10012,7 +10784,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/copy-text:
     get:
       operationId: gameDispatch_copy
@@ -10025,7 +10797,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/publish:
     post:
       operationId: gameDispatch_publish
@@ -10038,7 +10810,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/confirm-settlement:
     post:
       operationId: gameDispatch_confirmSettlement
@@ -10051,7 +10823,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/lines/{lineId}/applications:
     post:
       operationId: gameDispatch_apply
@@ -10069,7 +10841,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/applications/{id}/withdraw:
     post:
       operationId: gameDispatch_withdraw
@@ -10082,7 +10854,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/player/hall:
     get:
       operationId: gameDispatch_playerHall
@@ -10254,7 +11026,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 陪玩端报名大厅（含每个位置行的报名情况与我的报名）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/player/applications:
     get:
       operationId: gameDispatch_playerApplications
@@ -10408,7 +11180,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 陪玩端我的报名与选中档位（含是否可自助取消）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/slots/{slotId}/release:
     post:
       operationId: gameDispatch_releaseSlot
@@ -10589,7 +11361,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 商家释放名额（档位置 RELEASED、订单回到报名阶段并重开一轮）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/player-breaches:
     post:
       operationId: gameDispatch_recordBreach
@@ -10748,7 +11520,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 记录陪玩违约（写库 + 审计 + 通知老板）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/player-breaches:
     get:
       operationId: gameDispatch_listBreaches
@@ -10877,7 +11649,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 违约记录台账（可按 orderId / playerId / 时间范围过滤，默认最近 20 条）
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/applications/{id}:
     delete:
       operationId: gameDispatch_staffRemove
@@ -10890,7 +11662,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/orders/{orderId}/assignment:
     post:
       operationId: gameDispatch_assign
@@ -10940,7 +11712,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a34
+      tags: *a37
   /api/v1/tenant/game-dispatch/template-orders:
     post:
       description: 同一 Idempotency-Key 重试会回放首次结果；同键不同请求体返回 422；模板归档后返回 409 TEMPLATE_ARCHIVED。
@@ -11401,7 +12173,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 读取某游戏的加价规则库
-      tags: &a35
+      tags: &a38
         - 算价模型（S6）
     put:
       description: 命中键为「字段标识=选项值」，如 mode=ranked；本版只接受 SURCHARGE。
@@ -11595,7 +12367,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 整表替换某游戏的加价规则（PUT 语义，金额为分字符串）
-      tags: *a35
+      tags: *a38
   /api/v1/tenant/game-pricing/players/{playerId}/games/{gameId}/base:
     get:
       operationId: pricingRules_getPlayerGamePrice
@@ -11696,7 +12468,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 读取陪玩在某游戏的底价（含陪玩级兜底，便于显示未设置时用哪个价）
-      tags: *a35
+      tags: *a38
     put:
       operationId: pricingRules_putPlayerGamePrice
       parameters:
@@ -11854,7 +12626,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 设置陪玩在某游戏的底价（分/小时）
-      tags: *a35
+      tags: *a38
   /api/v1/tenant/game-dispatch/player/orders/{orderId}/service-slots:
     get:
       operationId: slotSession_serviceSlots
@@ -11867,7 +12639,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a36
+      tags: &a39
         - SlotSession
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/start:
     post:
@@ -11881,7 +12653,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a36
+      tags: *a39
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/end:
     post:
       operationId: slotSession_end
@@ -11894,7 +12666,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a36
+      tags: *a39
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/evidence:
     post:
       operationId: slotSession_evidence
@@ -11917,7 +12689,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a36
+      tags: *a39
   /api/v1/tenant/game-dispatch/slots/{slotId}/session/capture:
     post:
       operationId: slotSession_capture
@@ -11940,7 +12712,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a36
+      tags: *a39
   /api/v1/tenant/game-dispatch/slots/{slotId}/report:
     post:
       description: 申报时长 15–1440 分钟；须先上传 REPORT_START/REPORT_END 两张截图；报单不产生金额。
@@ -12209,7 +12981,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 陪玩结束服务后报单（申报总时长，截图走证据通道）
-      tags: &a37
+      tags: &a40
         - 算价模型（S6）
   /api/v1/tenant/game-dispatch/slots/{slotId}/report/review:
     post:
@@ -12449,7 +13221,7 @@ paths:
                     description: 受控明细（不含 config、订单值或凭据）
                 description: 受控业务错误（{ code, message, details? }）
       summary: 客服审批报单（可人工修正时长，写审计留痕）
-      tags: *a37
+      tags: *a40
   /api/v1/boss/wallet:
     get:
       operationId: wallet_get
@@ -12457,7 +13229,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a38
+      tags: &a41
         - Wallet
   /api/v1/boss/wallet/recharge:
     post:
@@ -12466,7 +13238,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a38
+      tags: *a41
   /api/v1/tenant/dashboard/summary:
     get:
       operationId: dashboardSummary_summary
@@ -12483,7 +13255,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a39
+      tags: &a42
         - PlayerApplications
     get:
       operationId: playerApplications_list
@@ -12491,7 +13263,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a39
+      tags: *a42
   /api/v1/tenant/player-applications/{id}/approve:
     post:
       operationId: playerApplications_approve
@@ -12504,7 +13276,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a39
+      tags: *a42
   /api/v1/tenant/player-applications/{id}/reject:
     post:
       operationId: playerApplications_reject
@@ -12517,7 +13289,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a39
+      tags: *a42
   /api/v1/payments/wechatpay/notify:
     post:
       operationId: wechatPayNotify_notify
@@ -12534,7 +13306,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: &a40
+      tags: &a43
         - WechatPayCheckout
   /api/v1/payments/wechatpay/orders/{outTradeNo}:
     get:
@@ -12548,7 +13320,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a40
+      tags: *a43
   /api/v1/payments/refunds/manual:
     post:
       operationId: wechatPayRefund_registerManual
@@ -12556,8 +13328,21 @@ paths:
       responses:
         "201":
           description: ""
-      tags:
+      tags: &a44
         - WechatPayRefund
+  /api/v1/payments/refunds/manual/{refundId}/confirm:
+    post:
+      operationId: wechatPayRefund_confirmManual
+      parameters:
+        - name: refundId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ""
+      tags: *a44
   /api/v1/tenant/payments/account:
     get:
       operationId: tenantPaymentSetup_get
@@ -12565,7 +13350,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a41
+      tags: &a45
         - TenantPaymentSetup
   /api/v1/tenant/payments/account/bind:
     post:
@@ -12574,7 +13359,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a41
+      tags: *a45
   /api/v1/tenant/payments/account/refresh:
     post:
       operationId: tenantPaymentSetup_refresh
@@ -12582,7 +13367,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a41
+      tags: *a45
   /api/v1/tenant/payments/account/applyment:
     post:
       operationId: tenantPaymentSetup_submitIntake
@@ -12590,7 +13375,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a41
+      tags: *a45
   /api/v1/tenant/payments/account/materials:
     post:
       operationId: tenantPaymentSetup_uploadMaterial
@@ -12603,7 +13388,7 @@ paths:
       responses:
         "201":
           description: ""
-      tags: *a41
+      tags: *a45
   /api/v1/tenant/payments/orders:
     get:
       operationId: tenantPaymentLedger_list
@@ -12646,7 +13431,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a42
+      tags: &a46
         - TenantPaymentLedger
   /api/v1/tenant/payments/orders/export.csv:
     get:
@@ -12665,7 +13450,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a42
+      tags: *a46
   /api/v1/tenant/payments/reconciliation:
     get:
       operationId: tenantReconciliation_overview
@@ -12680,6 +13465,1931 @@ paths:
           description: ""
       tags:
         - TenantReconciliation
+  /api/v1/tenant/reconciliation/cases:
+    get:
+      operationId: tenantReconciliationCase_list
+      parameters:
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - OPEN
+              - CLAIMED
+              - PROCESSING
+              - PENDING_REVIEW
+              - CLOSED
+              - IGNORED
+            description: 状态过滤（大小写敏感；缺省不过滤）
+        - name: page
+          required: false
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            description: 页码（1 起算，默认 1）
+        - name: pageSize
+          required: false
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            description: 每页条数（1-100，默认 20）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - rows
+                      - total
+                      - page
+                      - pageSize
+                    properties:
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - differenceId
+                            - status
+                            - ownerId
+                            - resolutionType
+                            - resolutionNote
+                            - linkedTransactionId
+                            - reviewedBy
+                            - reviewedAt
+                            - closedAt
+                            - createdAt
+                            - updatedAt
+                            - version
+                            - difference
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              description: 处理单 id
+                            differenceId:
+                              type: string
+                              format: uuid
+                              description: 对账差异 id（一条差异最多一张处理单）
+                            status:
+                              type: string
+                              enum:
+                                - OPEN
+                                - CLAIMED
+                                - PROCESSING
+                                - PENDING_REVIEW
+                                - CLOSED
+                                - IGNORED
+                              description: 对账处理单状态
+                            ownerId:
+                              type: string
+                              nullable: true
+                              description: 当前处理人 id；未认领为 null
+                            resolutionType:
+                              type: string
+                              nullable: true
+                              description: 处理结果类型；未处理为 null（取值不在本切片约束）
+                            resolutionNote:
+                              type: string
+                              nullable: true
+                              description: 处理说明；无说明为 null
+                            linkedTransactionId:
+                              type: string
+                              nullable: true
+                              description: 关联的调整/冲销交易 id；无关联为 null
+                            reviewedBy:
+                              type: string
+                              nullable: true
+                              description: 复核人 id；未复核为 null
+                            reviewedAt:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: 复核时间；未复核为 null
+                            closedAt:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: 关闭时间；未关闭为 null
+                            createdAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 创建时间
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              nullable: false
+                              description: 更新时间
+                            version:
+                              type: integer
+                              minimum: 1
+                              description: 乐观锁版本号
+                            difference:
+                              type: object
+                              required:
+                                - kind
+                                - kindLabel
+                                - amountFen
+                                - detail
+                                - paymentOrderId
+                                - resolvedAt
+                                - createdAt
+                              properties:
+                                kind:
+                                  type: string
+                                  description: 差异类型原始值（如 AMOUNT_MISMATCH）
+                                kindLabel:
+                                  type: string
+                                  description: 差异类型中文说明；认不出的类型原样点名
+                                amountFen:
+                                  type: string
+                                  pattern: ^(?:0|[1-9][0-9]*)$
+                                  example: "800"
+                                  description: 差异金额（十进制字符串分；状态类差异为 null）
+                                  nullable: true
+                                detail:
+                                  type: string
+                                  nullable: true
+                                  description: 差异说明；无说明为 null
+                                paymentOrderId:
+                                  type: string
+                                  nullable: true
+                                  description: 关联支付单 id；无关联为 null
+                                resolvedAt:
+                                  type: string
+                                  format: date-time
+                                  nullable: true
+                                  description: 差异解决时间；未解决为 null
+                                createdAt:
+                                  type: string
+                                  format: date-time
+                                  nullable: false
+                                  description: 差异创建时间
+                              description: 对账差异引用
+                          description: 对账处理单
+                        description: 当前页处理单
+                      total:
+                        type: integer
+                        minimum: 0
+                        description: 同一筛选条件下的处理单总数（不受 pageSize 影响）
+                      page:
+                        type: integer
+                        minimum: 1
+                        description: 页码（1 起算）
+                      pageSize:
+                        type: integer
+                        minimum: 1
+                        maximum: 100
+                        description: 每页条数（1-100）
+                    description: 对账处理单分页视图
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 对账处理单列表（服务端分页，只读）
+      tags: &a47
+        - TenantReconciliationCase
+  /api/v1/tenant/reconciliation/cases/{caseId}/claim:
+    post:
+      operationId: tenantReconciliationCase_claim
+      parameters:
+        - name: caseId
+          required: true
+          in: path
+          schema:
+            type: string
+            format: uuid
+            description: 对账处理单 id（单个规范 UUID，不接受空白或换行）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedVersion
+              additionalProperties: false
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+                  description: 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+              description: 对账处理单命令请求体（只接受 expectedVersion 一个字段）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - differenceId
+                      - status
+                      - ownerId
+                      - resolutionType
+                      - resolutionNote
+                      - linkedTransactionId
+                      - reviewedBy
+                      - reviewedAt
+                      - closedAt
+                      - createdAt
+                      - updatedAt
+                      - version
+                      - difference
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: 处理单 id
+                      differenceId:
+                        type: string
+                        format: uuid
+                        description: 对账差异 id（一条差异最多一张处理单）
+                      status:
+                        type: string
+                        enum:
+                          - OPEN
+                          - CLAIMED
+                          - PROCESSING
+                          - PENDING_REVIEW
+                          - CLOSED
+                          - IGNORED
+                        description: 对账处理单状态
+                      ownerId:
+                        type: string
+                        nullable: true
+                        description: 当前处理人 id；未认领为 null
+                      resolutionType:
+                        type: string
+                        nullable: true
+                        description: 处理结果类型；未处理为 null（取值不在本切片约束）
+                      resolutionNote:
+                        type: string
+                        nullable: true
+                        description: 处理说明；无说明为 null
+                      linkedTransactionId:
+                        type: string
+                        nullable: true
+                        description: 关联的调整/冲销交易 id；无关联为 null
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        description: 复核人 id；未复核为 null
+                      reviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 复核时间；未复核为 null
+                      closedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 关闭时间；未关闭为 null
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      version:
+                        type: integer
+                        minimum: 1
+                        description: 乐观锁版本号
+                      difference:
+                        type: object
+                        required:
+                          - kind
+                          - kindLabel
+                          - amountFen
+                          - detail
+                          - paymentOrderId
+                          - resolvedAt
+                          - createdAt
+                        properties:
+                          kind:
+                            type: string
+                            description: 差异类型原始值（如 AMOUNT_MISMATCH）
+                          kindLabel:
+                            type: string
+                            description: 差异类型中文说明；认不出的类型原样点名
+                          amountFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 差异金额（十进制字符串分；状态类差异为 null）
+                            nullable: true
+                          detail:
+                            type: string
+                            nullable: true
+                            description: 差异说明；无说明为 null
+                          paymentOrderId:
+                            type: string
+                            nullable: true
+                            description: 关联支付单 id；无关联为 null
+                          resolvedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 差异解决时间；未解决为 null
+                          createdAt:
+                            type: string
+                            format: date-time
+                            nullable: false
+                            description: 差异创建时间
+                        description: 对账差异引用
+                    description: 对账处理单
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 认领对账处理单（OPEN -> CLAIMED）
+      tags: *a47
+  /api/v1/tenant/reconciliation/cases/{caseId}/start-processing:
+    post:
+      operationId: tenantReconciliationCase_startProcessing
+      parameters:
+        - name: caseId
+          required: true
+          in: path
+          schema:
+            type: string
+            format: uuid
+            description: 对账处理单 id（单个规范 UUID，不接受空白或换行）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedVersion
+              additionalProperties: false
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+                  description: 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+              description: 对账处理单命令请求体（只接受 expectedVersion 一个字段）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - differenceId
+                      - status
+                      - ownerId
+                      - resolutionType
+                      - resolutionNote
+                      - linkedTransactionId
+                      - reviewedBy
+                      - reviewedAt
+                      - closedAt
+                      - createdAt
+                      - updatedAt
+                      - version
+                      - difference
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: 处理单 id
+                      differenceId:
+                        type: string
+                        format: uuid
+                        description: 对账差异 id（一条差异最多一张处理单）
+                      status:
+                        type: string
+                        enum:
+                          - OPEN
+                          - CLAIMED
+                          - PROCESSING
+                          - PENDING_REVIEW
+                          - CLOSED
+                          - IGNORED
+                        description: 对账处理单状态
+                      ownerId:
+                        type: string
+                        nullable: true
+                        description: 当前处理人 id；未认领为 null
+                      resolutionType:
+                        type: string
+                        nullable: true
+                        description: 处理结果类型；未处理为 null（取值不在本切片约束）
+                      resolutionNote:
+                        type: string
+                        nullable: true
+                        description: 处理说明；无说明为 null
+                      linkedTransactionId:
+                        type: string
+                        nullable: true
+                        description: 关联的调整/冲销交易 id；无关联为 null
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        description: 复核人 id；未复核为 null
+                      reviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 复核时间；未复核为 null
+                      closedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 关闭时间；未关闭为 null
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      version:
+                        type: integer
+                        minimum: 1
+                        description: 乐观锁版本号
+                      difference:
+                        type: object
+                        required:
+                          - kind
+                          - kindLabel
+                          - amountFen
+                          - detail
+                          - paymentOrderId
+                          - resolvedAt
+                          - createdAt
+                        properties:
+                          kind:
+                            type: string
+                            description: 差异类型原始值（如 AMOUNT_MISMATCH）
+                          kindLabel:
+                            type: string
+                            description: 差异类型中文说明；认不出的类型原样点名
+                          amountFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 差异金额（十进制字符串分；状态类差异为 null）
+                            nullable: true
+                          detail:
+                            type: string
+                            nullable: true
+                            description: 差异说明；无说明为 null
+                          paymentOrderId:
+                            type: string
+                            nullable: true
+                            description: 关联支付单 id；无关联为 null
+                          resolvedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 差异解决时间；未解决为 null
+                          createdAt:
+                            type: string
+                            format: date-time
+                            nullable: false
+                            description: 差异创建时间
+                        description: 对账差异引用
+                    description: 对账处理单
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 开始处理对账处理单（CLAIMED -> PROCESSING）
+      tags: *a47
+  /api/v1/tenant/reconciliation/cases/{caseId}/submit-review:
+    post:
+      operationId: tenantReconciliationCase_submitReview
+      parameters:
+        - name: caseId
+          required: true
+          in: path
+          schema:
+            type: string
+            format: uuid
+            description: 对账处理单 id（单个规范 UUID，不接受空白或换行）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required:
+                    - expectedVersion
+                    - resolutionType
+                    - resolutionNote
+                  properties:
+                    expectedVersion:
+                      type: integer
+                      minimum: 1
+                      description: 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+                    resolutionType:
+                      type: string
+                      const: NO_LEDGER_CHANGE
+                      description: 账目无需改动（本分支禁止携带 linkedTransactionId）
+                    resolutionNote: &a48
+                      type: string
+                      minLength: 1
+                      maxLength: 500
+                      description: 处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）
+                  description: 无需改账分支（不接受 linkedTransactionId，多传该键即非法）
+                  additionalProperties: false
+                - type: object
+                  required:
+                    - expectedVersion
+                    - resolutionType
+                    - resolutionNote
+                    - linkedTransactionId
+                  properties:
+                    expectedVersion:
+                      type: integer
+                      minimum: 1
+                      description: 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+                    resolutionType:
+                      type: string
+                      const: LEDGER_TRANSACTION
+                      description: 关联既有账本交易（本分支必须携带 linkedTransactionId）
+                    resolutionNote: *a48
+                    linkedTransactionId:
+                      type: string
+                      format: uuid
+                      description: 关联的统一账本交易 id（必须是本租户 CONFIRMED 的既有交易）
+                  description: 关联既有交易分支（必须携带本租户 CONFIRMED 交易的 id）
+                  additionalProperties: false
+              discriminator:
+                propertyName: resolutionType
+              description: 提交复核请求体（判别联合：resolutionType 决定 linkedTransactionId 必须缺席还是必须携带）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - differenceId
+                      - status
+                      - ownerId
+                      - resolutionType
+                      - resolutionNote
+                      - linkedTransactionId
+                      - reviewedBy
+                      - reviewedAt
+                      - closedAt
+                      - createdAt
+                      - updatedAt
+                      - version
+                      - difference
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: 处理单 id
+                      differenceId:
+                        type: string
+                        format: uuid
+                        description: 对账差异 id（一条差异最多一张处理单）
+                      status:
+                        type: string
+                        enum:
+                          - OPEN
+                          - CLAIMED
+                          - PROCESSING
+                          - PENDING_REVIEW
+                          - CLOSED
+                          - IGNORED
+                        description: 对账处理单状态
+                      ownerId:
+                        type: string
+                        nullable: true
+                        description: 当前处理人 id；未认领为 null
+                      resolutionType:
+                        type: string
+                        nullable: true
+                        description: 处理结果类型；未处理为 null（取值不在本切片约束）
+                      resolutionNote:
+                        type: string
+                        nullable: true
+                        description: 处理说明；无说明为 null
+                      linkedTransactionId:
+                        type: string
+                        nullable: true
+                        description: 关联的调整/冲销交易 id；无关联为 null
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        description: 复核人 id；未复核为 null
+                      reviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 复核时间；未复核为 null
+                      closedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 关闭时间；未关闭为 null
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      version:
+                        type: integer
+                        minimum: 1
+                        description: 乐观锁版本号
+                      difference:
+                        type: object
+                        required:
+                          - kind
+                          - kindLabel
+                          - amountFen
+                          - detail
+                          - paymentOrderId
+                          - resolvedAt
+                          - createdAt
+                        properties:
+                          kind:
+                            type: string
+                            description: 差异类型原始值（如 AMOUNT_MISMATCH）
+                          kindLabel:
+                            type: string
+                            description: 差异类型中文说明；认不出的类型原样点名
+                          amountFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 差异金额（十进制字符串分；状态类差异为 null）
+                            nullable: true
+                          detail:
+                            type: string
+                            nullable: true
+                            description: 差异说明；无说明为 null
+                          paymentOrderId:
+                            type: string
+                            nullable: true
+                            description: 关联支付单 id；无关联为 null
+                          resolvedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 差异解决时间；未解决为 null
+                          createdAt:
+                            type: string
+                            format: date-time
+                            nullable: false
+                            description: 差异创建时间
+                        description: 对账差异引用
+                    description: 对账处理单
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 提交对账处理单复核（PROCESSING -> PENDING_REVIEW）
+      tags: *a47
+  /api/v1/tenant/reconciliation/cases/{caseId}/close:
+    post:
+      operationId: tenantReconciliationCase_close
+      parameters:
+        - name: caseId
+          required: true
+          in: path
+          schema:
+            type: string
+            format: uuid
+            description: 对账处理单 id（单个规范 UUID，不接受空白或换行）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedVersion
+              additionalProperties: false
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+                  description: 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+              description: 对账处理单命令请求体（只接受 expectedVersion 一个字段）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - differenceId
+                      - status
+                      - ownerId
+                      - resolutionType
+                      - resolutionNote
+                      - linkedTransactionId
+                      - reviewedBy
+                      - reviewedAt
+                      - closedAt
+                      - createdAt
+                      - updatedAt
+                      - version
+                      - difference
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: 处理单 id
+                      differenceId:
+                        type: string
+                        format: uuid
+                        description: 对账差异 id（一条差异最多一张处理单）
+                      status:
+                        type: string
+                        enum:
+                          - OPEN
+                          - CLAIMED
+                          - PROCESSING
+                          - PENDING_REVIEW
+                          - CLOSED
+                          - IGNORED
+                        description: 对账处理单状态
+                      ownerId:
+                        type: string
+                        nullable: true
+                        description: 当前处理人 id；未认领为 null
+                      resolutionType:
+                        type: string
+                        nullable: true
+                        description: 处理结果类型；未处理为 null（取值不在本切片约束）
+                      resolutionNote:
+                        type: string
+                        nullable: true
+                        description: 处理说明；无说明为 null
+                      linkedTransactionId:
+                        type: string
+                        nullable: true
+                        description: 关联的调整/冲销交易 id；无关联为 null
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        description: 复核人 id；未复核为 null
+                      reviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 复核时间；未复核为 null
+                      closedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 关闭时间；未关闭为 null
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      version:
+                        type: integer
+                        minimum: 1
+                        description: 乐观锁版本号
+                      difference:
+                        type: object
+                        required:
+                          - kind
+                          - kindLabel
+                          - amountFen
+                          - detail
+                          - paymentOrderId
+                          - resolvedAt
+                          - createdAt
+                        properties:
+                          kind:
+                            type: string
+                            description: 差异类型原始值（如 AMOUNT_MISMATCH）
+                          kindLabel:
+                            type: string
+                            description: 差异类型中文说明；认不出的类型原样点名
+                          amountFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 差异金额（十进制字符串分；状态类差异为 null）
+                            nullable: true
+                          detail:
+                            type: string
+                            nullable: true
+                            description: 差异说明；无说明为 null
+                          paymentOrderId:
+                            type: string
+                            nullable: true
+                            description: 关联支付单 id；无关联为 null
+                          resolvedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 差异解决时间；未解决为 null
+                          createdAt:
+                            type: string
+                            format: date-time
+                            nullable: false
+                            description: 差异创建时间
+                        description: 对账差异引用
+                    description: 对账处理单
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 复核关闭对账处理单（PENDING_REVIEW -> CLOSED）
+      tags: *a47
+  /api/v1/tenant/reconciliation/cases/{caseId}/ignore:
+    post:
+      operationId: tenantReconciliationCase_ignore
+      parameters:
+        - name: caseId
+          required: true
+          in: path
+          schema:
+            type: string
+            format: uuid
+            description: 对账处理单 id（单个规范 UUID，不接受空白或换行）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedVersion
+                - reason
+              additionalProperties: false
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+                  description: 客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: 处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）
+              description: 忽略请求体（只接受 expectedVersion 与 reason 两个字段）
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - differenceId
+                      - status
+                      - ownerId
+                      - resolutionType
+                      - resolutionNote
+                      - linkedTransactionId
+                      - reviewedBy
+                      - reviewedAt
+                      - closedAt
+                      - createdAt
+                      - updatedAt
+                      - version
+                      - difference
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: 处理单 id
+                      differenceId:
+                        type: string
+                        format: uuid
+                        description: 对账差异 id（一条差异最多一张处理单）
+                      status:
+                        type: string
+                        enum:
+                          - OPEN
+                          - CLAIMED
+                          - PROCESSING
+                          - PENDING_REVIEW
+                          - CLOSED
+                          - IGNORED
+                        description: 对账处理单状态
+                      ownerId:
+                        type: string
+                        nullable: true
+                        description: 当前处理人 id；未认领为 null
+                      resolutionType:
+                        type: string
+                        nullable: true
+                        description: 处理结果类型；未处理为 null（取值不在本切片约束）
+                      resolutionNote:
+                        type: string
+                        nullable: true
+                        description: 处理说明；无说明为 null
+                      linkedTransactionId:
+                        type: string
+                        nullable: true
+                        description: 关联的调整/冲销交易 id；无关联为 null
+                      reviewedBy:
+                        type: string
+                        nullable: true
+                        description: 复核人 id；未复核为 null
+                      reviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 复核时间；未复核为 null
+                      closedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: 关闭时间；未关闭为 null
+                      createdAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 创建时间
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        nullable: false
+                        description: 更新时间
+                      version:
+                        type: integer
+                        minimum: 1
+                        description: 乐观锁版本号
+                      difference:
+                        type: object
+                        required:
+                          - kind
+                          - kindLabel
+                          - amountFen
+                          - detail
+                          - paymentOrderId
+                          - resolvedAt
+                          - createdAt
+                        properties:
+                          kind:
+                            type: string
+                            description: 差异类型原始值（如 AMOUNT_MISMATCH）
+                          kindLabel:
+                            type: string
+                            description: 差异类型中文说明；认不出的类型原样点名
+                          amountFen:
+                            type: string
+                            pattern: ^(?:0|[1-9][0-9]*)$
+                            example: "800"
+                            description: 差异金额（十进制字符串分；状态类差异为 null）
+                            nullable: true
+                          detail:
+                            type: string
+                            nullable: true
+                            description: 差异说明；无说明为 null
+                          paymentOrderId:
+                            type: string
+                            nullable: true
+                            description: 关联支付单 id；无关联为 null
+                          resolvedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: 差异解决时间；未解决为 null
+                          createdAt:
+                            type: string
+                            format: date-time
+                            nullable: false
+                            description: 差异创建时间
+                        description: 对账差异引用
+                    description: 对账处理单
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "401":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "403":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "404":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+        "409":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - title
+                  - status
+                  - code
+                  - message
+                  - requestId
+                properties:
+                  type:
+                    type: string
+                    description: 错误类型标识（RFC9457，如 about:blank#http-error）
+                  title:
+                    type: string
+                    description: HTTP 状态短语（如 Bad Request）
+                  status:
+                    type: integer
+                    minimum: 0
+                    description: HTTP 状态码
+                  code:
+                    type: string
+                    description: 错误代码（异常类名，如 FundLedgerInputError）
+                  message:
+                    type: string
+                    description: 错误说明（面向调用方，可直接展示）
+                  requestId:
+                    type: string
+                    description: 请求 id（服务端追踪用；缺失时为空串）
+                description: 通用 HTTP 错误响应（全局 HttpErrorFilter 写出）
+      summary: 忽略对账处理单（OPEN/CLAIMED -> IGNORED）
+      tags: *a47
   /api/v1/tenant/payments/wallets:
     get:
       operationId: tenantWallet_list
@@ -12697,7 +15407,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: &a43
+      tags: &a49
         - TenantWallet
   /api/v1/tenant/payments/wallets/{customerProfileId}/entries:
     get:
@@ -12716,7 +15426,7 @@ paths:
       responses:
         "200":
           description: ""
-      tags: *a43
+      tags: *a49
 info:
   title: 陪玩门店多租户 SaaS API
   description: 一期 API。金额字段一律为十进制字符串分（MoneyFen），禁止 number/浮点。
@@ -12837,7 +15547,7 @@ components:
         options:
           type: array
           maxItems: 100
-          items: &a45
+          items: &a51
             type: object
             required:
               - value
@@ -12852,7 +15562,7 @@ components:
                 minLength: 1
                 maxLength: 50
                 description: 选项名称
-              priceDeltaFen: *a44
+              priceDeltaFen: *a50
             description: 选择项（含可选加价）
           description: 选择项（选择类字段必须至少一个）
         aggregationPolicy:
@@ -12979,7 +15689,7 @@ components:
               options:
                 type: array
                 maxItems: 100
-                items: *a45
+                items: *a51
                 description: 单选列的选项
             description: 可重复表格列
           description: 表格列（最多 10 列）

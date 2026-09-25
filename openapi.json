@@ -3283,6 +3283,29 @@
         ]
       }
     },
+    "/api/v1/tenant/settlements/{id}/payments": {
+      "post": {
+        "operationId": "settlements_confirmPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Settlements"
+        ]
+      }
+    },
     "/api/v1/tenant/settlements/{id}/pay": {
       "post": {
         "operationId": "settlements_pay",
@@ -3326,6 +3349,1062 @@
         },
         "tags": [
           "Settlements"
+        ]
+      }
+    },
+    "/api/v1/tenant/funds/accounts": {
+      "get": {
+        "operationId": "fundAccounts_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "code",
+                              "name",
+                              "kind",
+                              "status",
+                              "externalRef",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "资金账户 id"
+                              },
+                              "code": {
+                                "type": "string",
+                                "description": "账户编码"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "账户名称"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "WECHAT_SETTLEMENT",
+                                  "BANK",
+                                  "CASH",
+                                  "OFFLINE"
+                                ],
+                                "description": "资金账户类型"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "ACTIVE",
+                                  "ARCHIVED"
+                                ],
+                                "description": "资金账户状态"
+                              },
+                              "externalRef": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "外部引用；未传或空白为 null"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "创建时间"
+                              }
+                            },
+                            "description": "资金账户视图"
+                          },
+                          "description": "当前服务端租户的资金账户（按 createdAt 升序）"
+                        }
+                      },
+                      "description": "资金账户列表"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FundAccounts"
+        ]
+      },
+      "post": {
+        "operationId": "fundAccounts_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "name",
+                  "kind"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_]{1,31}$",
+                    "example": "WECHAT_MAIN",
+                    "description": "账户编码（服务端 trim 并转大写，规范化后须符合 ^[A-Z][A-Z0-9_]{1,31}$，每租户唯一）"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "账户名称（去空白后 1-64 字符）"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "WECHAT_SETTLEMENT",
+                      "BANK",
+                      "CASH",
+                      "OFFLINE"
+                    ],
+                    "description": "资金账户类型"
+                  },
+                  "externalRef": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "外部引用（可空；BANK 账户非空时必须包含 * 掩码，不得存完整卡号）"
+                  }
+                },
+                "description": "创建资金账户请求体"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "code",
+                        "name",
+                        "kind",
+                        "status",
+                        "externalRef",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "资金账户 id"
+                        },
+                        "code": {
+                          "type": "string",
+                          "description": "账户编码"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "账户名称"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "WECHAT_SETTLEMENT",
+                            "BANK",
+                            "CASH",
+                            "OFFLINE"
+                          ],
+                          "description": "资金账户类型"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "ARCHIVED"
+                          ],
+                          "description": "资金账户状态"
+                        },
+                        "externalRef": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "外部引用；未传或空白为 null"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        }
+                      },
+                      "description": "资金账户视图"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "TEMPLATE_CURSOR_INVALID",
+                        "TEMPLATE_NOT_FOUND",
+                        "TEMPLATE_REVISION_CONFLICT",
+                        "TEMPLATE_ARCHIVED",
+                        "TEMPLATE_NAME_CONFLICT",
+                        "TEMPLATE_DELETE_RESTRICTED",
+                        "TEMPLATE_VERSION_UNAVAILABLE",
+                        "TEMPLATE_COMPONENT_INVALID",
+                        "TEMPLATE_BINDING_INVALID",
+                        "TEMPLATE_PRICE_RULE_INVALID",
+                        "TEMPLATE_LEGACY_REVIEW_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_REQUIRED",
+                        "TEMPLATE_IDEMPOTENCY_MISMATCH",
+                        "TEMPLATE_IDEMPOTENCY_IN_FLIGHT"
+                      ],
+                      "description": "受控业务错误码"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明"
+                    },
+                    "details": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": true,
+                      "description": "受控明细（不含 config、订单值或凭据）"
+                    }
+                  },
+                  "description": "受控业务错误（{ code, message, details? }）"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "FundAccounts"
+        ]
+      }
+    },
+    "/api/v1/tenant/funds/ledger": {
+      "get": {
+        "operationId": "tenantFundLedger_list",
+        "parameters": [
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ORDER_ACCOUNTING",
+                "PAYMENT_CONFIRMED",
+                "WALLET_CONSUMED",
+                "REFUND_CONFIRMED",
+                "PLAYER_PAYOUT_CONFIRMED",
+                "RECONCILIATION_ADJUSTMENT",
+                "REVERSAL"
+              ],
+              "description": "单个合法 LedgerEventType（精确匹配）"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "CONFIRMED",
+                "RECONCILED",
+                "REVERSED"
+              ],
+              "description": "单个合法 LedgerTransactionStatus（精确匹配）"
+            }
+          },
+          {
+            "name": "fundAccountId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "按交易头资金账户过滤（uuid）"
+            }
+          },
+          {
+            "name": "sourceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "来源类型（trim 后 1–64 字符，精确匹配）"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50,
+              "description": "关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）"
+            }
+          },
+          {
+            "name": "occurredFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "发生时间下界，ISO 8601 带时区，含边界"
+            }
+          },
+          {
+            "name": "occurredTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom"
+            }
+          },
+          {
+            "name": "minAmountFen",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)$",
+              "description": "金额下界（十进制字符串分，非负，含边界）"
+            }
+          },
+          {
+            "name": "maxAmountFen",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)$",
+              "description": "金额上界（十进制字符串分，非负，含边界且不得小于下界）"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "occurredAt",
+                "confirmedAt",
+                "createdAt",
+                "amountFen",
+                "txNo"
+              ],
+              "description": "排序字段（默认 occurredAt）"
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "排序方向（默认 desc）"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "页码（1 起算，默认 1）"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "每页条数（1-200，默认 50）"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "rows",
+                        "total",
+                        "page",
+                        "pageSize",
+                        "sortBy",
+                        "sortDir"
+                      ],
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "transactionId",
+                              "txNo",
+                              "eventType",
+                              "status",
+                              "reconciliationStatus",
+                              "sourceType",
+                              "sourceId",
+                              "description",
+                              "amountFen",
+                              "debitFen",
+                              "creditFen",
+                              "balanced",
+                              "fundFlowDirection",
+                              "fundAccount",
+                              "auxiliaries",
+                              "createdBy",
+                              "confirmedBy",
+                              "occurredAt",
+                              "confirmedAt",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "transactionId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "交易 id"
+                              },
+                              "txNo": {
+                                "type": "string",
+                                "description": "交易号"
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "ORDER_ACCOUNTING",
+                                  "PAYMENT_CONFIRMED",
+                                  "WALLET_CONSUMED",
+                                  "REFUND_CONFIRMED",
+                                  "PLAYER_PAYOUT_CONFIRMED",
+                                  "RECONCILIATION_ADJUSTMENT",
+                                  "REVERSAL"
+                                ],
+                                "description": "台账事件类型",
+                                "nullable": true
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "DRAFT",
+                                  "CONFIRMED",
+                                  "RECONCILED",
+                                  "REVERSED"
+                                ],
+                                "description": "交易状态"
+                              },
+                              "reconciliationStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "RECONCILED",
+                                  "UNRECONCILED"
+                                ],
+                                "description": "对账状态展示值（只有 RECONCILED 交易算已对账）"
+                              },
+                              "sourceType": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "来源类型；无来源为 null"
+                              },
+                              "sourceId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "来源单据 id；无来源为 null"
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "摘要；无摘要为 null"
+                              },
+                              "amountFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "金额（该交易借方分录合计）（十进制字符串分，>=0）"
+                              },
+                              "debitFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "借方合计（十进制字符串分，>=0）"
+                              },
+                              "creditFen": {
+                                "type": "string",
+                                "pattern": "^(?:0|[1-9][0-9]*)$",
+                                "example": "800",
+                                "description": "贷方合计（十进制字符串分，>=0）"
+                              },
+                              "balanced": {
+                                "type": "boolean",
+                                "description": "借贷是否平衡（借方合计 = 贷方合计且大于 0）"
+                              },
+                              "fundFlowDirection": {
+                                "type": "string",
+                                "enum": [
+                                  "DEBIT",
+                                  "CREDIT",
+                                  "MIXED"
+                                ],
+                                "nullable": true,
+                                "description": "资金流方向；无匹配分录为 null，借贷都有为 MIXED"
+                              },
+                              "fundAccount": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "code",
+                                  "name",
+                                  "kind",
+                                  "status"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "资金账户 id"
+                                  },
+                                  "code": {
+                                    "type": "string",
+                                    "description": "账户编码"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "账户名称"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "WECHAT_SETTLEMENT",
+                                      "BANK",
+                                      "CASH",
+                                      "OFFLINE"
+                                    ],
+                                    "description": "资金账户类型"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ACTIVE",
+                                      "ARCHIVED"
+                                    ],
+                                    "description": "资金账户状态"
+                                  }
+                                },
+                                "description": "交易头资金账户引用",
+                                "nullable": true
+                              },
+                              "auxiliaries": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "type",
+                                    "id"
+                                  ],
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "description": "辅助核算类型（如 customer_profile）"
+                                    },
+                                    "id": {
+                                      "type": "string",
+                                      "description": "辅助核算对象 id"
+                                    }
+                                  },
+                                  "description": "辅助核算引用"
+                                },
+                                "description": "去重并按 (type, id) 升序的辅助核算引用"
+                              },
+                              "createdBy": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "创建人 id；无记录为 null"
+                              },
+                              "confirmedBy": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "确认人 id；未确认为 null"
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "发生时间"
+                              },
+                              "confirmedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "确认时间；未确认为 null"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "创建时间"
+                              }
+                            },
+                            "description": "统一资金台账交易行"
+                          },
+                          "description": "当前页交易行"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "同一筛选条件下的交易总数（不受 pageSize 影响）"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "页码（1 起算）"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 200,
+                          "description": "每页条数（上限 200）"
+                        },
+                        "sortBy": {
+                          "type": "string",
+                          "enum": [
+                            "occurredAt",
+                            "confirmedAt",
+                            "createdAt",
+                            "amountFen",
+                            "txNo"
+                          ],
+                          "description": "排序字段（默认 occurredAt）"
+                        },
+                        "sortDir": {
+                          "type": "string",
+                          "enum": [
+                            "asc",
+                            "desc"
+                          ],
+                          "description": "排序方向（默认 desc）"
+                        }
+                      },
+                      "description": "统一资金台账分页视图"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "统一资金台账列表（服务端分页 / 排序 / 筛选）",
+        "tags": [
+          "TenantFundLedger"
+        ]
+      }
+    },
+    "/api/v1/tenant/funds/ledger/export.csv": {
+      "get": {
+        "operationId": "tenantFundLedger_exportCsv",
+        "parameters": [
+          {
+            "name": "eventType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ORDER_ACCOUNTING",
+                "PAYMENT_CONFIRMED",
+                "WALLET_CONSUMED",
+                "REFUND_CONFIRMED",
+                "PLAYER_PAYOUT_CONFIRMED",
+                "RECONCILIATION_ADJUSTMENT",
+                "REVERSAL"
+              ],
+              "description": "单个合法 LedgerEventType（精确匹配）"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "CONFIRMED",
+                "RECONCILED",
+                "REVERSED"
+              ],
+              "description": "单个合法 LedgerTransactionStatus（精确匹配）"
+            }
+          },
+          {
+            "name": "fundAccountId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "按交易头资金账户过滤（uuid）"
+            }
+          },
+          {
+            "name": "sourceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "来源类型（trim 后 1–64 字符，精确匹配）"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50,
+              "description": "关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）"
+            }
+          },
+          {
+            "name": "occurredFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "发生时间下界，ISO 8601 带时区，含边界"
+            }
+          },
+          {
+            "name": "occurredTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "description": "发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom"
+            }
+          },
+          {
+            "name": "minAmountFen",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)$",
+              "description": "金额下界（十进制字符串分，非负，含边界）"
+            }
+          },
+          {
+            "name": "maxAmountFen",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)$",
+              "description": "金额上界（十进制字符串分，非负，含边界且不得小于下界）"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "occurredAt",
+                "confirmedAt",
+                "createdAt",
+                "amountFen",
+                "txNo"
+              ],
+              "description": "排序字段（默认 occurredAt）"
+            }
+          },
+          {
+            "name": "sortDir",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "排序方向（默认 desc）"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "当前筛选与排序下的全部匹配交易（UTF-8 BOM + CRLF 的 CSV 文本）",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "查询参数不合法（错误体为通用 HTTP 错误结构）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "匹配行数超过导出上限，需缩小筛选范围（错误体为通用 HTTP 错误结构）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "统一资金台账 CSV 导出（当前筛选与排序下的全部匹配交易）",
+        "tags": [
+          "TenantFundLedger"
         ]
       }
     },
@@ -17492,6 +18571,29 @@
         ]
       }
     },
+    "/api/v1/payments/refunds/manual/{refundId}/confirm": {
+      "post": {
+        "operationId": "wechatPayRefund_confirmManual",
+        "parameters": [
+          {
+            "name": "refundId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WechatPayRefund"
+        ]
+      }
+    },
     "/api/v1/tenant/payments/account": {
       "get": {
         "operationId": "tenantPaymentSetup_get",
@@ -17693,6 +18795,2562 @@
         },
         "tags": [
           "TenantReconciliation"
+        ]
+      }
+    },
+    "/api/v1/tenant/reconciliation/cases": {
+      "get": {
+        "operationId": "tenantReconciliationCase_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "CLAIMED",
+                "PROCESSING",
+                "PENDING_REVIEW",
+                "CLOSED",
+                "IGNORED"
+              ],
+              "description": "状态过滤（大小写敏感；缺省不过滤）"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "页码（1 起算，默认 1）"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "每页条数（1-100，默认 20）"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "rows",
+                        "total",
+                        "page",
+                        "pageSize"
+                      ],
+                      "properties": {
+                        "rows": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "differenceId",
+                              "status",
+                              "ownerId",
+                              "resolutionType",
+                              "resolutionNote",
+                              "linkedTransactionId",
+                              "reviewedBy",
+                              "reviewedAt",
+                              "closedAt",
+                              "createdAt",
+                              "updatedAt",
+                              "version",
+                              "difference"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "处理单 id"
+                              },
+                              "differenceId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "对账差异 id（一条差异最多一张处理单）"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "OPEN",
+                                  "CLAIMED",
+                                  "PROCESSING",
+                                  "PENDING_REVIEW",
+                                  "CLOSED",
+                                  "IGNORED"
+                                ],
+                                "description": "对账处理单状态"
+                              },
+                              "ownerId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "当前处理人 id；未认领为 null"
+                              },
+                              "resolutionType": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "处理结果类型；未处理为 null（取值不在本切片约束）"
+                              },
+                              "resolutionNote": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "处理说明；无说明为 null"
+                              },
+                              "linkedTransactionId": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "关联的调整/冲销交易 id；无关联为 null"
+                              },
+                              "reviewedBy": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "复核人 id；未复核为 null"
+                              },
+                              "reviewedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "复核时间；未复核为 null"
+                              },
+                              "closedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "关闭时间；未关闭为 null"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "创建时间"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": false,
+                                "description": "更新时间"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "乐观锁版本号"
+                              },
+                              "difference": {
+                                "type": "object",
+                                "required": [
+                                  "kind",
+                                  "kindLabel",
+                                  "amountFen",
+                                  "detail",
+                                  "paymentOrderId",
+                                  "resolvedAt",
+                                  "createdAt"
+                                ],
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "description": "差异类型原始值（如 AMOUNT_MISMATCH）"
+                                  },
+                                  "kindLabel": {
+                                    "type": "string",
+                                    "description": "差异类型中文说明；认不出的类型原样点名"
+                                  },
+                                  "amountFen": {
+                                    "type": "string",
+                                    "pattern": "^(?:0|[1-9][0-9]*)$",
+                                    "example": "800",
+                                    "description": "差异金额（十进制字符串分；状态类差异为 null）",
+                                    "nullable": true
+                                  },
+                                  "detail": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "差异说明；无说明为 null"
+                                  },
+                                  "paymentOrderId": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "关联支付单 id；无关联为 null"
+                                  },
+                                  "resolvedAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": true,
+                                    "description": "差异解决时间；未解决为 null"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": false,
+                                    "description": "差异创建时间"
+                                  }
+                                },
+                                "description": "对账差异引用"
+                              }
+                            },
+                            "description": "对账处理单"
+                          },
+                          "description": "当前页处理单"
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "同一筛选条件下的处理单总数（不受 pageSize 影响）"
+                        },
+                        "page": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "页码（1 起算）"
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100,
+                          "description": "每页条数（1-100）"
+                        }
+                      },
+                      "description": "对账处理单分页视图"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "对账处理单列表（服务端分页，只读）",
+        "tags": [
+          "TenantReconciliationCase"
+        ]
+      }
+    },
+    "/api/v1/tenant/reconciliation/cases/{caseId}/claim": {
+      "post": {
+        "operationId": "tenantReconciliationCase_claim",
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "对账处理单 id（单个规范 UUID，不接受空白或换行）"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）"
+                  }
+                },
+                "description": "对账处理单命令请求体（只接受 expectedVersion 一个字段）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "differenceId",
+                        "status",
+                        "ownerId",
+                        "resolutionType",
+                        "resolutionNote",
+                        "linkedTransactionId",
+                        "reviewedBy",
+                        "reviewedAt",
+                        "closedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "version",
+                        "difference"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "处理单 id"
+                        },
+                        "differenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "对账差异 id（一条差异最多一张处理单）"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "OPEN",
+                            "CLAIMED",
+                            "PROCESSING",
+                            "PENDING_REVIEW",
+                            "CLOSED",
+                            "IGNORED"
+                          ],
+                          "description": "对账处理单状态"
+                        },
+                        "ownerId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "当前处理人 id；未认领为 null"
+                        },
+                        "resolutionType": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理结果类型；未处理为 null（取值不在本切片约束）"
+                        },
+                        "resolutionNote": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理说明；无说明为 null"
+                        },
+                        "linkedTransactionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "关联的调整/冲销交易 id；无关联为 null"
+                        },
+                        "reviewedBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "复核人 id；未复核为 null"
+                        },
+                        "reviewedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "复核时间；未复核为 null"
+                        },
+                        "closedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "关闭时间；未关闭为 null"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "乐观锁版本号"
+                        },
+                        "difference": {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "kindLabel",
+                            "amountFen",
+                            "detail",
+                            "paymentOrderId",
+                            "resolvedAt",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "差异类型原始值（如 AMOUNT_MISMATCH）"
+                            },
+                            "kindLabel": {
+                              "type": "string",
+                              "description": "差异类型中文说明；认不出的类型原样点名"
+                            },
+                            "amountFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "差异金额（十进制字符串分；状态类差异为 null）",
+                              "nullable": true
+                            },
+                            "detail": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "差异说明；无说明为 null"
+                            },
+                            "paymentOrderId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "关联支付单 id；无关联为 null"
+                            },
+                            "resolvedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "差异解决时间；未解决为 null"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "差异创建时间"
+                            }
+                          },
+                          "description": "对账差异引用"
+                        }
+                      },
+                      "description": "对账处理单"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "认领对账处理单（OPEN -> CLAIMED）",
+        "tags": [
+          "TenantReconciliationCase"
+        ]
+      }
+    },
+    "/api/v1/tenant/reconciliation/cases/{caseId}/start-processing": {
+      "post": {
+        "operationId": "tenantReconciliationCase_startProcessing",
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "对账处理单 id（单个规范 UUID，不接受空白或换行）"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）"
+                  }
+                },
+                "description": "对账处理单命令请求体（只接受 expectedVersion 一个字段）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "differenceId",
+                        "status",
+                        "ownerId",
+                        "resolutionType",
+                        "resolutionNote",
+                        "linkedTransactionId",
+                        "reviewedBy",
+                        "reviewedAt",
+                        "closedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "version",
+                        "difference"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "处理单 id"
+                        },
+                        "differenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "对账差异 id（一条差异最多一张处理单）"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "OPEN",
+                            "CLAIMED",
+                            "PROCESSING",
+                            "PENDING_REVIEW",
+                            "CLOSED",
+                            "IGNORED"
+                          ],
+                          "description": "对账处理单状态"
+                        },
+                        "ownerId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "当前处理人 id；未认领为 null"
+                        },
+                        "resolutionType": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理结果类型；未处理为 null（取值不在本切片约束）"
+                        },
+                        "resolutionNote": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理说明；无说明为 null"
+                        },
+                        "linkedTransactionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "关联的调整/冲销交易 id；无关联为 null"
+                        },
+                        "reviewedBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "复核人 id；未复核为 null"
+                        },
+                        "reviewedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "复核时间；未复核为 null"
+                        },
+                        "closedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "关闭时间；未关闭为 null"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "乐观锁版本号"
+                        },
+                        "difference": {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "kindLabel",
+                            "amountFen",
+                            "detail",
+                            "paymentOrderId",
+                            "resolvedAt",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "差异类型原始值（如 AMOUNT_MISMATCH）"
+                            },
+                            "kindLabel": {
+                              "type": "string",
+                              "description": "差异类型中文说明；认不出的类型原样点名"
+                            },
+                            "amountFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "差异金额（十进制字符串分；状态类差异为 null）",
+                              "nullable": true
+                            },
+                            "detail": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "差异说明；无说明为 null"
+                            },
+                            "paymentOrderId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "关联支付单 id；无关联为 null"
+                            },
+                            "resolvedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "差异解决时间；未解决为 null"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "差异创建时间"
+                            }
+                          },
+                          "description": "对账差异引用"
+                        }
+                      },
+                      "description": "对账处理单"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "开始处理对账处理单（CLAIMED -> PROCESSING）",
+        "tags": [
+          "TenantReconciliationCase"
+        ]
+      }
+    },
+    "/api/v1/tenant/reconciliation/cases/{caseId}/submit-review": {
+      "post": {
+        "operationId": "tenantReconciliationCase_submitReview",
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "对账处理单 id（单个规范 UUID，不接受空白或换行）"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "expectedVersion",
+                      "resolutionType",
+                      "resolutionNote"
+                    ],
+                    "properties": {
+                      "expectedVersion": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）"
+                      },
+                      "resolutionType": {
+                        "type": "string",
+                        "const": "NO_LEDGER_CHANGE",
+                        "description": "账目无需改动（本分支禁止携带 linkedTransactionId）"
+                      },
+                      "resolutionNote": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                        "description": "处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）"
+                      }
+                    },
+                    "description": "无需改账分支（不接受 linkedTransactionId，多传该键即非法）",
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "expectedVersion",
+                      "resolutionType",
+                      "resolutionNote",
+                      "linkedTransactionId"
+                    ],
+                    "properties": {
+                      "expectedVersion": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）"
+                      },
+                      "resolutionType": {
+                        "type": "string",
+                        "const": "LEDGER_TRANSACTION",
+                        "description": "关联既有账本交易（本分支必须携带 linkedTransactionId）"
+                      },
+                      "resolutionNote": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500,
+                        "description": "处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）"
+                      },
+                      "linkedTransactionId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "关联的统一账本交易 id（必须是本租户 CONFIRMED 的既有交易）"
+                      }
+                    },
+                    "description": "关联既有交易分支（必须携带本租户 CONFIRMED 交易的 id）",
+                    "additionalProperties": false
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "resolutionType"
+                },
+                "description": "提交复核请求体（判别联合：resolutionType 决定 linkedTransactionId 必须缺席还是必须携带）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "differenceId",
+                        "status",
+                        "ownerId",
+                        "resolutionType",
+                        "resolutionNote",
+                        "linkedTransactionId",
+                        "reviewedBy",
+                        "reviewedAt",
+                        "closedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "version",
+                        "difference"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "处理单 id"
+                        },
+                        "differenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "对账差异 id（一条差异最多一张处理单）"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "OPEN",
+                            "CLAIMED",
+                            "PROCESSING",
+                            "PENDING_REVIEW",
+                            "CLOSED",
+                            "IGNORED"
+                          ],
+                          "description": "对账处理单状态"
+                        },
+                        "ownerId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "当前处理人 id；未认领为 null"
+                        },
+                        "resolutionType": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理结果类型；未处理为 null（取值不在本切片约束）"
+                        },
+                        "resolutionNote": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理说明；无说明为 null"
+                        },
+                        "linkedTransactionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "关联的调整/冲销交易 id；无关联为 null"
+                        },
+                        "reviewedBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "复核人 id；未复核为 null"
+                        },
+                        "reviewedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "复核时间；未复核为 null"
+                        },
+                        "closedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "关闭时间；未关闭为 null"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "乐观锁版本号"
+                        },
+                        "difference": {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "kindLabel",
+                            "amountFen",
+                            "detail",
+                            "paymentOrderId",
+                            "resolvedAt",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "差异类型原始值（如 AMOUNT_MISMATCH）"
+                            },
+                            "kindLabel": {
+                              "type": "string",
+                              "description": "差异类型中文说明；认不出的类型原样点名"
+                            },
+                            "amountFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "差异金额（十进制字符串分；状态类差异为 null）",
+                              "nullable": true
+                            },
+                            "detail": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "差异说明；无说明为 null"
+                            },
+                            "paymentOrderId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "关联支付单 id；无关联为 null"
+                            },
+                            "resolvedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "差异解决时间；未解决为 null"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "差异创建时间"
+                            }
+                          },
+                          "description": "对账差异引用"
+                        }
+                      },
+                      "description": "对账处理单"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "提交对账处理单复核（PROCESSING -> PENDING_REVIEW）",
+        "tags": [
+          "TenantReconciliationCase"
+        ]
+      }
+    },
+    "/api/v1/tenant/reconciliation/cases/{caseId}/close": {
+      "post": {
+        "operationId": "tenantReconciliationCase_close",
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "对账处理单 id（单个规范 UUID，不接受空白或换行）"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）"
+                  }
+                },
+                "description": "对账处理单命令请求体（只接受 expectedVersion 一个字段）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "differenceId",
+                        "status",
+                        "ownerId",
+                        "resolutionType",
+                        "resolutionNote",
+                        "linkedTransactionId",
+                        "reviewedBy",
+                        "reviewedAt",
+                        "closedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "version",
+                        "difference"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "处理单 id"
+                        },
+                        "differenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "对账差异 id（一条差异最多一张处理单）"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "OPEN",
+                            "CLAIMED",
+                            "PROCESSING",
+                            "PENDING_REVIEW",
+                            "CLOSED",
+                            "IGNORED"
+                          ],
+                          "description": "对账处理单状态"
+                        },
+                        "ownerId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "当前处理人 id；未认领为 null"
+                        },
+                        "resolutionType": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理结果类型；未处理为 null（取值不在本切片约束）"
+                        },
+                        "resolutionNote": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理说明；无说明为 null"
+                        },
+                        "linkedTransactionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "关联的调整/冲销交易 id；无关联为 null"
+                        },
+                        "reviewedBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "复核人 id；未复核为 null"
+                        },
+                        "reviewedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "复核时间；未复核为 null"
+                        },
+                        "closedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "关闭时间；未关闭为 null"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "乐观锁版本号"
+                        },
+                        "difference": {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "kindLabel",
+                            "amountFen",
+                            "detail",
+                            "paymentOrderId",
+                            "resolvedAt",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "差异类型原始值（如 AMOUNT_MISMATCH）"
+                            },
+                            "kindLabel": {
+                              "type": "string",
+                              "description": "差异类型中文说明；认不出的类型原样点名"
+                            },
+                            "amountFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "差异金额（十进制字符串分；状态类差异为 null）",
+                              "nullable": true
+                            },
+                            "detail": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "差异说明；无说明为 null"
+                            },
+                            "paymentOrderId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "关联支付单 id；无关联为 null"
+                            },
+                            "resolvedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "差异解决时间；未解决为 null"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "差异创建时间"
+                            }
+                          },
+                          "description": "对账差异引用"
+                        }
+                      },
+                      "description": "对账处理单"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "复核关闭对账处理单（PENDING_REVIEW -> CLOSED）",
+        "tags": [
+          "TenantReconciliationCase"
+        ]
+      }
+    },
+    "/api/v1/tenant/reconciliation/cases/{caseId}/ignore": {
+      "post": {
+        "operationId": "tenantReconciliationCase_ignore",
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "对账处理单 id（单个规范 UUID，不接受空白或换行）"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedVersion",
+                  "reason"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）"
+                  }
+                },
+                "description": "忽略请求体（只接受 expectedVersion 与 reason 两个字段）"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "differenceId",
+                        "status",
+                        "ownerId",
+                        "resolutionType",
+                        "resolutionNote",
+                        "linkedTransactionId",
+                        "reviewedBy",
+                        "reviewedAt",
+                        "closedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "version",
+                        "difference"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "处理单 id"
+                        },
+                        "differenceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "对账差异 id（一条差异最多一张处理单）"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "OPEN",
+                            "CLAIMED",
+                            "PROCESSING",
+                            "PENDING_REVIEW",
+                            "CLOSED",
+                            "IGNORED"
+                          ],
+                          "description": "对账处理单状态"
+                        },
+                        "ownerId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "当前处理人 id；未认领为 null"
+                        },
+                        "resolutionType": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理结果类型；未处理为 null（取值不在本切片约束）"
+                        },
+                        "resolutionNote": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "处理说明；无说明为 null"
+                        },
+                        "linkedTransactionId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "关联的调整/冲销交易 id；无关联为 null"
+                        },
+                        "reviewedBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "复核人 id；未复核为 null"
+                        },
+                        "reviewedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "复核时间；未复核为 null"
+                        },
+                        "closedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "description": "关闭时间；未关闭为 null"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "创建时间"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": false,
+                          "description": "更新时间"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "乐观锁版本号"
+                        },
+                        "difference": {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "kindLabel",
+                            "amountFen",
+                            "detail",
+                            "paymentOrderId",
+                            "resolvedAt",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "description": "差异类型原始值（如 AMOUNT_MISMATCH）"
+                            },
+                            "kindLabel": {
+                              "type": "string",
+                              "description": "差异类型中文说明；认不出的类型原样点名"
+                            },
+                            "amountFen": {
+                              "type": "string",
+                              "pattern": "^(?:0|[1-9][0-9]*)$",
+                              "example": "800",
+                              "description": "差异金额（十进制字符串分；状态类差异为 null）",
+                              "nullable": true
+                            },
+                            "detail": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "差异说明；无说明为 null"
+                            },
+                            "paymentOrderId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "关联支付单 id；无关联为 null"
+                            },
+                            "resolvedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "description": "差异解决时间；未解决为 null"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": false,
+                              "description": "差异创建时间"
+                            }
+                          },
+                          "description": "对账差异引用"
+                        }
+                      },
+                      "description": "对账处理单"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "code",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "错误类型标识（RFC9457，如 about:blank#http-error）"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "HTTP 状态短语（如 Bad Request）"
+                    },
+                    "status": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "HTTP 状态码"
+                    },
+                    "code": {
+                      "type": "string",
+                      "description": "错误代码（异常类名，如 FundLedgerInputError）"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "错误说明（面向调用方，可直接展示）"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "description": "请求 id（服务端追踪用；缺失时为空串）"
+                    }
+                  },
+                  "description": "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）"
+                }
+              }
+            }
+          }
+        },
+        "summary": "忽略对账处理单（OPEN/CLAIMED -> IGNORED）",
+        "tags": [
+          "TenantReconciliationCase"
         ]
       }
     },
