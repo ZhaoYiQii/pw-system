@@ -44,6 +44,7 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
   let financeToken: string;
   let playerToken: string;
   let platformToken: string;
+  let fundAccountId: string;
 
   beforeAll(async () => {
     client = createDatabaseClient(envOrThrow("PW_TEST_MIGRATION_URL"));
@@ -82,6 +83,16 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
     await client.tenantAccountRole.create({
       data: { tenantId, tenantAccountId: fin.id, role: "FINANCE" },
     });
+    fundAccountId = (
+      await client.fundAccount.create({
+        data: {
+          tenantId,
+          code: `BANK_${suffix}`,
+          name: "审计结算账户",
+          kind: "BANK",
+        },
+      })
+    ).id;
 
     await client.customerProfile.create({ data: { tenantId, name: "审计客" } });
     const playerAcc = await client.tenantAccount.create({
@@ -159,6 +170,7 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
       await client.ledgerEntry.deleteMany({ where: { tenantId } });
       await client.ledgerTransaction.deleteMany({ where: { tenantId } });
       await client.ledgerAccount.deleteMany({ where: { tenantId } });
+      await client.fundAccount.deleteMany({ where: { tenantId } });
       await client.disputeEvent.deleteMany({ where: { tenantId } });
       await client.dispute.deleteMany({ where: { tenantId } });
       await client.evidenceAsset.deleteMany({ where: { tenantId } });
@@ -396,7 +408,13 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
       .post(`/api/v1/tenant/settlements/${batch.id}/approve`)
       .expect(201);
     await req(ownerToken)
-      .post(`/api/v1/tenant/settlements/${batch.id}/pay`)
+      .post(`/api/v1/tenant/settlements/${batch.id}/payments`, {
+        fundAccountId,
+        evidenceRef: `BANK_AUDIT_${suffix}`,
+        occurredAt: "2026-09-24T12:00:00.000Z",
+        idempotencyKey: `audit_payout_${suffix}`,
+        note: "不得进入审计摘要",
+      })
       .expect(201);
 
     const actions = await auditActions();
@@ -405,10 +423,16 @@ describe("C1 audit coverage: 关键写操作统一写入 audit_logs", () => {
       "settlement.add_items",
       "settlement.review",
       "settlement.approve",
-      "settlement.pay",
+      "settlement.payment.confirmed",
     ]) {
       expect(actions).toContain(expected);
     }
+    const paymentAudit = await client.auditLog.findFirstOrThrow({
+      where: { tenantId, action: "settlement.payment.confirmed" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(paymentAudit.summary).not.toContain(`BANK_AUDIT_${suffix}`);
+    expect(paymentAudit.summary).not.toContain("不得进入审计摘要");
   });
 
   it("配置保存/回滚、费率、平台功能开关与登录失败写审计", async () => {

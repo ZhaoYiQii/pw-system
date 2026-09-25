@@ -25,6 +25,10 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
   let tenantId: string;
   let ownerToken: string;
   let financeToken: string;
+  let fundAccountId: string;
+  let archivedFundAccountId: string;
+  let foreignTenantId: string;
+  let foreignFundAccountId: string;
   const earningIds: string[] = [];
 
   beforeAll(async () => {
@@ -46,6 +50,42 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
     await client.tenantAccountRole.create({
       data: { tenantId, tenantAccountId: fin.id, role: "FINANCE" },
     });
+    fundAccountId = (
+      await client.fundAccount.create({
+        data: {
+          tenantId,
+          code: `BANK_${suffix}`,
+          name: "结算测试银行账户",
+          kind: "BANK",
+        },
+      })
+    ).id;
+    archivedFundAccountId = (
+      await client.fundAccount.create({
+        data: {
+          tenantId,
+          code: `OLD_${suffix}`,
+          name: "已归档账户",
+          kind: "OFFLINE",
+          status: "ARCHIVED",
+        },
+      })
+    ).id;
+    foreignTenantId = (
+      await client.tenant.create({
+        data: { code: `st_other_${suffix}`, name: "其他结算店" },
+      })
+    ).id;
+    foreignFundAccountId = (
+      await client.fundAccount.create({
+        data: {
+          tenantId: foreignTenantId,
+          code: `FOREIGN_${suffix}`,
+          name: "其他租户账户",
+          kind: "BANK",
+        },
+      })
+    ).id;
     const player = await client.playerProfile.create({
       data: { tenantId, name: "结算玩" },
     });
@@ -90,6 +130,10 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
     if (client) {
       await client.auditLog.deleteMany({ where: { tenantId } });
       await client.manualPaymentRecord.deleteMany({ where: { tenantId } });
+      await client.ledgerEntry.deleteMany({ where: { tenantId } });
+      await client.ledgerTransaction.deleteMany({ where: { tenantId } });
+      await client.ledgerAccount.deleteMany({ where: { tenantId } });
+      await client.fundAccount.deleteMany({ where: { tenantId } });
       await client.settlementItem.deleteMany({ where: { tenantId } });
       await client.settlementBatch.deleteMany({ where: { tenantId } });
       await client.earning.deleteMany({ where: { tenantId } });
@@ -102,6 +146,10 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
       await client.tenantAccountRole.deleteMany({ where: { tenantId } });
       await client.tenantAccount.deleteMany({ where: { tenantId } });
       await client.tenant.deleteMany({ where: { id: tenantId } });
+      await client.fundAccount.deleteMany({
+        where: { tenantId: foreignTenantId },
+      });
+      await client.tenant.deleteMany({ where: { id: foreignTenantId } });
       await client.$disconnect();
     }
     if (app) await app.close();
@@ -116,6 +164,20 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
           .post(u)
           .set(h)
           .send(b ?? {}),
+    };
+  }
+
+  function paymentBody(
+    key: string,
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    return {
+      fundAccountId,
+      evidenceRef: `BANK_${key}`,
+      occurredAt: "2026-09-24T12:00:00.000Z",
+      idempotencyKey: key,
+      note: "测试付款备注",
+      ...overrides,
     };
   }
 
@@ -187,14 +249,65 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
     await req(financeToken)
       .post(`/api/v1/tenant/settlements/${b1.id}/approve`)
       .expect(201);
+    // 旧路由不再允许无资金事实的空请求体。
     await req(ownerToken)
       .post(`/api/v1/tenant/settlements/${b1.id}/pay`)
+      .expect(400);
+    const payment = await req(ownerToken)
+      .post(
+        `/api/v1/tenant/settlements/${b1.id}/payments`,
+        paymentBody("payout_success_1"),
+      )
       .expect(201);
+    expect(payment.body.data).toMatchObject({
+      batchId: b1.id,
+      status: "PAID",
+      amountFen: "15400",
+      duplicate: false,
+    });
 
     const paid = await client.earning.findMany({
       where: { tenantId, id: { in: earningIds } },
     });
     expect(paid.every((e) => e.status === "PAID")).toBe(true);
+    const payoutTransaction = await client.ledgerTransaction.findFirstOrThrow({
+      where: {
+        tenantId,
+        sourceType: "settlement_batch",
+        sourceId: b1.id,
+        eventType: "PLAYER_PAYOUT_CONFIRMED",
+      },
+    });
+    const payoutEntries = await client.ledgerEntry.findMany({
+      where: { tenantId, transactionId: payoutTransaction.id },
+      orderBy: { direction: "asc" },
+    });
+    expect(payoutEntries).toHaveLength(2);
+    expect(
+      payoutEntries.reduce(
+        (sum, entry) =>
+          sum +
+          (entry.direction === "DEBIT" ? entry.amountFen : -entry.amountFen),
+        0n,
+      ),
+    ).toBe(0n);
+    expect(
+      payoutEntries.filter((entry) => entry.fundAccountId !== null),
+    ).toHaveLength(1);
+    expect(
+      payoutEntries.find((entry) => entry.direction === "CREDIT")
+        ?.fundAccountId,
+    ).toBe(fundAccountId);
+    const audit = await client.auditLog.findFirstOrThrow({
+      where: {
+        tenantId,
+        action: "settlement.payment.confirmed",
+        resourceId: b1.id,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(audit.summary).not.toContain("BANK_payout_success_1");
+    expect(audit.summary).not.toContain("测试付款备注");
     // PAID 后不可再添加/冲正
     await req(ownerToken)
       .post(`/api/v1/tenant/settlements/${b1.id}/items`, {
@@ -206,7 +319,7 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
       .expect(409);
   });
 
-  it("并发 pay：批次行锁保证仅一次成功、一条线下支付记录", async () => {
+  it("跨租户/归档资金账户拒绝；并发付款只产生一次资金事实", async () => {
     const cust = await client.customerProfile.create({
       data: { tenantId, name: "并发客" },
     });
@@ -239,9 +352,40 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
       .post(`/api/v1/tenant/settlements/${b4.id}/approve`)
       .expect(201);
 
+    await req(ownerToken)
+      .post(
+        `/api/v1/tenant/settlements/${b4.id}/payments`,
+        paymentBody("payout_foreign", { fundAccountId: foreignFundAccountId }),
+      )
+      .expect(409);
+    await req(ownerToken)
+      .post(
+        `/api/v1/tenant/settlements/${b4.id}/payments`,
+        paymentBody("payout_archived", {
+          fundAccountId: archivedFundAccountId,
+        }),
+      )
+      .expect(409);
+    expect(
+      await client.ledgerTransaction.count({
+        where: {
+          tenantId,
+          sourceType: "settlement_batch",
+          sourceId: b4.id,
+          eventType: "PLAYER_PAYOUT_CONFIRMED",
+        },
+      }),
+    ).toBe(0);
+
     const results = await Promise.allSettled([
-      req(ownerToken).post(`/api/v1/tenant/settlements/${b4.id}/pay`),
-      req(ownerToken).post(`/api/v1/tenant/settlements/${b4.id}/pay`),
+      req(ownerToken).post(
+        `/api/v1/tenant/settlements/${b4.id}/payments`,
+        paymentBody("payout_concurrent"),
+      ),
+      req(ownerToken).post(
+        `/api/v1/tenant/settlements/${b4.id}/payments`,
+        paymentBody("payout_concurrent"),
+      ),
     ]);
     const fulfilled = results.filter(
       (r) => r.status === "fulfilled" && r.value.status === 201,
@@ -258,6 +402,21 @@ describe("Slice 8 settlement (批次状态机/并发唯一/职责分离)", () =>
         where: { tenantId, batchId: b4.id },
       }),
     ).toBe(1);
+    const transactions = await client.ledgerTransaction.findMany({
+      where: {
+        tenantId,
+        sourceType: "settlement_batch",
+        sourceId: b4.id,
+        eventType: "PLAYER_PAYOUT_CONFIRMED",
+      },
+      select: { id: true },
+    });
+    expect(transactions).toHaveLength(1);
+    expect(
+      await client.ledgerEntry.count({
+        where: { tenantId, transactionId: transactions[0]?.id },
+      }),
+    ).toBe(2);
   });
   it("VOID 可让 DRAFT/REVIEWED 批次退回 earning 为 PENDING", async () => {
     const cust = await client.customerProfile.create({

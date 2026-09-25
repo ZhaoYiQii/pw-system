@@ -25,6 +25,7 @@ describe("Slice 9 dispute freeze & audit", () => {
   let tenantId: string;
   let ownerToken: string;
   let financeToken: string;
+  let fundAccountId: string;
   let playerId = "";
   const eIds: string[] = [];
 
@@ -47,6 +48,16 @@ describe("Slice 9 dispute freeze & audit", () => {
     await client.tenantAccountRole.create({
       data: { tenantId, tenantAccountId: fin.id, role: "FINANCE" },
     });
+    fundAccountId = (
+      await client.fundAccount.create({
+        data: {
+          tenantId,
+          code: `BANK_${suffix}`,
+          name: "争议结算账户",
+          kind: "BANK",
+        },
+      })
+    ).id;
     const player = await client.playerProfile.create({
       data: { tenantId, name: "争议玩" },
     });
@@ -94,6 +105,10 @@ describe("Slice 9 dispute freeze & audit", () => {
       await client.dispute.deleteMany({ where: { tenantId } });
       await client.auditLog.deleteMany({ where: { tenantId } });
       await client.manualPaymentRecord.deleteMany({ where: { tenantId } });
+      await client.ledgerEntry.deleteMany({ where: { tenantId } });
+      await client.ledgerTransaction.deleteMany({ where: { tenantId } });
+      await client.ledgerAccount.deleteMany({ where: { tenantId } });
+      await client.fundAccount.deleteMany({ where: { tenantId } });
       await client.settlementItem.deleteMany({ where: { tenantId } });
       await client.settlementBatch.deleteMany({ where: { tenantId } });
       await client.earning.deleteMany({ where: { tenantId } });
@@ -120,6 +135,15 @@ describe("Slice 9 dispute freeze & audit", () => {
           .post(u)
           .set(h)
           .send(b ?? {}),
+    };
+  }
+
+  function paymentBody(key: string) {
+    return {
+      fundAccountId,
+      evidenceRef: `BANK_${key}`,
+      occurredAt: "2026-09-24T12:00:00.000Z",
+      idempotencyKey: key,
     };
   }
 
@@ -178,7 +202,10 @@ describe("Slice 9 dispute freeze & audit", () => {
       .post(`/api/v1/tenant/settlements/${b2.id}/approve`)
       .expect(201);
     await req(ownerToken)
-      .post(`/api/v1/tenant/settlements/${b2.id}/pay`)
+      .post(
+        `/api/v1/tenant/settlements/${b2.id}/payments`,
+        paymentBody("dispute_open_1"),
+      )
       .expect(409);
 
     // 处理争议后可支付
@@ -188,7 +215,10 @@ describe("Slice 9 dispute freeze & audit", () => {
       })
       .expect(201);
     await req(ownerToken)
-      .post(`/api/v1/tenant/settlements/${b2.id}/pay`)
+      .post(
+        `/api/v1/tenant/settlements/${b2.id}/payments`,
+        paymentBody("dispute_open_2"),
+      )
       .expect(409); // 争议2仍 OPEN
     const allOpen = await client.dispute.findMany({
       where: { tenantId, status: "OPEN" },
@@ -202,7 +232,10 @@ describe("Slice 9 dispute freeze & audit", () => {
         .expect(201);
     }
     await req(ownerToken)
-      .post(`/api/v1/tenant/settlements/${b2.id}/pay`)
+      .post(
+        `/api/v1/tenant/settlements/${b2.id}/payments`,
+        paymentBody("dispute_resolved"),
+      )
       .expect(201);
 
     const audit = (

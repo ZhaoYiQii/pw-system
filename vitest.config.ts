@@ -9,6 +9,7 @@ export default defineConfig({
       "packages/config-schema/src/**/*.spec.ts",
       "apps/mobile/src/features/**/*.spec.ts",
       "apps/admin-web/app/_lib/merchant-console/**/*.spec.ts",
+      "apps/admin-web/app/_lib/payments/**/*.spec.ts",
     ],
     env: {
       PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER ?? "mock",

@@ -269,8 +269,31 @@ describe("OpenAPI 契约：S2 通用派单模板管理", () => {
       path.join(root, "packages/api-client/src/types.gen.ts"),
       "utf8",
     );
-    expect(generatedTypes).toContain("kind: 'FIELD'");
-    expect(generatedTypes).not.toContain("kind: string");
+    for (const [typeName, kind] of [
+      ["TemplateFieldComponentV2", "FIELD"],
+      ["TemplateTableComponentV2", "REPEATABLE_TABLE"],
+      ["TemplateNoteComponentV2", "NOTE"],
+      ["TemplateStaffingFixedV2", "FIXED"],
+      ["TemplateStaffingNumberFieldV2", "NUMBER_FIELD"],
+      ["TemplateStaffingTableSumV2", "REPEATABLE_TABLE_SUM"],
+    ] as const) {
+      const marker = `export type ${typeName} = {`;
+      const start = generatedTypes.indexOf(marker);
+      expect(
+        start,
+        `${typeName} must exist in generated types`,
+      ).toBeGreaterThanOrEqual(0);
+      const nextType = generatedTypes.indexOf(
+        "\nexport type ",
+        start + marker.length,
+      );
+      const block = generatedTypes.slice(
+        start,
+        nextType === -1 ? undefined : nextType,
+      );
+      expect(block).toContain(`kind: '${kind}'`);
+      expect(block).not.toContain("kind: string");
+    }
 
     // 选项加价：FIELD 选项与表格列选项都必须是 decimal string。
     const fieldVariant = componentSchemas.TemplateFieldComponentV2 as Record<

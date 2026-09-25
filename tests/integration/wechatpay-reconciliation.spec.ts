@@ -181,6 +181,7 @@ describe("wechatpay 每日对账（真库）", () => {
 
   afterAll(async () => {
     if (!tenantId) return;
+    await owner.reconciliationCase.deleteMany({ where: { tenantId } });
     await owner.reconciliationDifference.deleteMany({ where: { tenantId } });
     await owner.reconciliationStatement.deleteMany({ where: { tenantId } });
     await owner.paymentOrder.deleteMany({ where: { tenantId } });
@@ -222,6 +223,16 @@ describe("wechatpay 每日对账（真库）", () => {
     const mismatch = differences.find((row) => row.kind === "AMOUNT_MISMATCH");
     expect(mismatch!.amountFen).toBe(100n);
 
+    const cases = await owner.reconciliationCase.findMany({
+      where: { tenantId },
+      orderBy: { differenceId: "asc" },
+    });
+    expect(cases).toHaveLength(3);
+    expect(cases.every((row) => row.status === "OPEN")).toBe(true);
+    expect(cases.map((row) => row.differenceId).sort()).toEqual(
+      differences.map((row) => row.id).sort(),
+    );
+
     // 同一份账单再对一次：幂等，不重复记差异
     const second = await service.reconcile({
       tenantId,
@@ -236,5 +247,8 @@ describe("wechatpay 每日对账（真库）", () => {
     expect(
       await owner.reconciliationDifference.count({ where: { tenantId } }),
     ).toBe(3);
+    expect(await owner.reconciliationCase.count({ where: { tenantId } })).toBe(
+      3,
+    );
   });
 });

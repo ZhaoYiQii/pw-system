@@ -1052,6 +1052,7 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
       reportStatus: string;
       declaredDurationMinutes: number | null;
       reportSubmittedAt: string | null;
+      reportReviewedAt: string | null;
       hasReportEvidence: boolean;
     };
     const listSessions = async (query = "") =>
@@ -1067,9 +1068,18 @@ describe("算价模型 Task 3：报单（申报时长 + 截图）与客服审批
     expect(pendingRow?.declaredDurationMinutes).toBe(90);
     expect(pendingRow?.reportSubmittedAt).not.toBeNull();
     expect(pendingRow?.hasReportEvidence).toBe(true);
+    // 待审批：尚未审批 → 审批时间为 null。（用 toBeNull 而非 not.toBeNull：字段缺失时
+    // 是 undefined，后者会对 undefined 误判通过，测不出「后端漏发字段」这个缺陷。）
+    expect(pendingRow?.reportReviewedAt).toBeNull();
     const approvedRow = all.find((row) => row.slotId === approved.slotId);
     expect(approvedRow?.reportStatus).toBe("APPROVED");
     expect(approvedRow?.hasReportEvidence).toBe(true);
+    // 已通过：审批时间必须真实下发。审核台的「今日已通过」= 已通过队列里
+    // `Date.parse(reportReviewedAt) >= 今天 0 点` 的行数；字段一缺就恒为 0。
+    expect(approvedRow?.reportReviewedAt).toEqual(expect.any(String));
+    expect(Number.isNaN(Date.parse(approvedRow?.reportReviewedAt ?? ""))).toBe(
+      false,
+    );
 
     // 按报单状态过滤：各队列只含对应状态（同文件其它用例造的场次也可能在内，所以断言「包含 + 全体一致」）
     const pendingQueue = await listSessions("?reportStatus=PENDING_REVIEW");

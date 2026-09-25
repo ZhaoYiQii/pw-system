@@ -12,11 +12,20 @@ import {
   signRsaSha256,
   type WechatPayPartnerConfig,
 } from "../../apps/api/src/modules/payments/infrastructure/wechatpay-partner.client.js";
+import {
+  CUSTOMER_AUXILIARY_TYPE,
+  CUSTOMER_PREPAID_LIABILITY_ACCOUNT,
+  PAYMENT_CONFIRMED_EVENT_TYPE,
+  PAYMENT_CONFIRMED_SOURCE_TYPE,
+  PAYMENT_CONFIRMED_STATUS,
+  WECHAT_SETTLEMENT_ASSET_ACCOUNT,
+} from "../../apps/api/src/modules/payments/domain/payment-confirmed-ledger-posting.js";
 
 /**
  * S4-2b：微信支付回调 → 自动入账的**真库**验证。
  *
- * 为什么不满足于单测：入账要跨 4 张表（boss_wallets / wallet_entries / payment_orders / audit_logs）
+ * 为什么不满足于单测：入账要跨 8 张表（boss_wallets / wallet_entries / payment_orders / audit_logs
+ * 以及 DS-003 的 fund_accounts / ledger_accounts / ledger_transactions / ledger_entries）
  * 并在 RLS 上下文里跑行锁；字段名、RLS 授权、唯一约束、金额单位这些只有真库能验
  * （上一次就是靠真库测试抓到"仓储漏映射字段导致规则失效"）。
  */
@@ -100,6 +109,7 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
   let accountId: string;
   let orderId: string;
   let outNo: string;
+  let fundAccountId: string;
   let checkout: WechatPayCheckoutService;
   const eventIds = [
     `EV-IT-1-${suffix}`,
@@ -115,6 +125,20 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
       data: { code: `wxpay_${suffix}`, name: "微信支付集成测试店" },
     });
     tenantId = tenant.id;
+
+    // DS-003：支付入账前，租户必须**恰好**一个 ACTIVE 的 WECHAT_SETTLEMENT 资金账户
+    // （0 个或多个都会让整笔入账回滚：支付单不转 SUCCESS、钱包与总账都不写）。
+    // 总账交易锚定在这个账户上，断言里要拿它的 id 比对。
+    const fundAccount = await owner.fundAccount.create({
+      data: {
+        tenantId,
+        code: `WX_SETTLE_${suffix}`,
+        name: "微信结算资金账户",
+        kind: "WECHAT_SETTLEMENT",
+        status: "ACTIVE",
+      },
+    });
+    fundAccountId = fundAccount.id;
 
     const account = await owner.tenantAccount.create({
       data: {
@@ -172,6 +196,11 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
 
   afterAll(async () => {
     if (!tenantId) return;
+    // 先删分录，再删交易、科目、资金账户（按外键顺序）
+    await owner.ledgerEntry.deleteMany({ where: { tenantId } });
+    await owner.ledgerTransaction.deleteMany({ where: { tenantId } });
+    await owner.ledgerAccount.deleteMany({ where: { tenantId } });
+    await owner.fundAccount.deleteMany({ where: { tenantId } });
     await owner.webhookInbox.deleteMany({
       where: { eventId: { in: eventIds } },
     });
@@ -236,13 +265,66 @@ describe("wechatpay 回调 → 自动入账（真库）", () => {
     });
     expect(audits).toBe(1);
 
-    // 再跑一轮（模拟微信重试或 worker 重启）：不得重复入账
+    // ===== DS-003：与入账同一事务落地的统一总账 =====
+    // 一条 PAYMENT_CONFIRMED 交易锚定在测试资金账户上，两条各 12800 分的分录一借一贷（平衡）。
+    const ledgerTxns = await owner.ledgerTransaction.findMany({
+      where: { tenantId },
+    });
+    expect(ledgerTxns).toHaveLength(1);
+    const ledgerTxn = ledgerTxns[0]!;
+    expect(ledgerTxn.eventType).toBe(PAYMENT_CONFIRMED_EVENT_TYPE);
+    expect(ledgerTxn.status).toBe(PAYMENT_CONFIRMED_STATUS);
+    expect(ledgerTxn.sourceType).toBe(PAYMENT_CONFIRMED_SOURCE_TYPE);
+    expect(ledgerTxn.sourceId).toBe(orderId);
+    expect(ledgerTxn.fundAccountId).toBe(fundAccountId);
+
+    const ledgerEntries = await owner.ledgerEntry.findMany({
+      where: { tenantId, transactionId: ledgerTxn.id },
+    });
+    expect(ledgerEntries).toHaveLength(2);
+    const codeById = new Map(
+      (
+        await owner.ledgerAccount.findMany({
+          where: { tenantId },
+          select: { id: true, code: true },
+        })
+      ).map((row) => [row.id, row.code]),
+    );
+    const debit = ledgerEntries.find((row) => row.direction === "DEBIT");
+    const credit = ledgerEntries.find((row) => row.direction === "CREDIT");
+    expect(debit).toBeDefined();
+    expect(credit).toBeDefined();
+    expect(codeById.get(debit!.accountId)).toBe(
+      WECHAT_SETTLEMENT_ASSET_ACCOUNT.code,
+    );
+    expect(codeById.get(credit!.accountId)).toBe(
+      CUSTOMER_PREPAID_LIABILITY_ACCOUNT.code,
+    );
+    expect(debit!.amountFen).toBe(12800n);
+    expect(credit!.amountFen).toBe(12800n);
+    // 只有借方（资产）落在资金账户上；贷方是客户预收款负债，不挂资金账户
+    expect(debit!.fundAccountId).toBe(fundAccountId);
+    expect(credit!.fundAccountId).toBeNull();
+    for (const entry of ledgerEntries) {
+      expect(entry.auxiliaryType).toBe(CUSTOMER_AUXILIARY_TYPE);
+      expect(entry.auxiliaryId).toBe(profileId);
+    }
+
+    // 再跑一轮（模拟微信重试或 worker 重启）：不得重复入账，也不得重复写总账
     await service.processPending(10);
     const walletAgain = await owner.bossWallet.findFirst({
       where: { tenantId, customerProfileId: profileId },
     });
     expect(walletAgain!.balanceFen).toBe(12800n);
     expect(await owner.walletEntry.count({ where: { tenantId } })).toBe(1);
+    expect(await owner.ledgerTransaction.count({ where: { tenantId } })).toBe(
+      1,
+    );
+    expect(
+      await owner.ledgerEntry.count({
+        where: { tenantId, transactionId: ledgerTxn.id },
+      }),
+    ).toBe(2);
   });
 
   it("金额不符：写对账差异、不入账、支付单保持 PENDING", async () => {

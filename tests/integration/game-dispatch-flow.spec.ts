@@ -27,6 +27,7 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
   let customerId: string;
   let ownerToken: string;
   let financeToken = "";
+  let fundAccountId = "";
   let customerToken = "";
   let templateId = "";
   let playerTokens: Record<string, string> = {};
@@ -62,6 +63,16 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     }
     await account("boss", "TENANT_OWNER");
     await account("fin", "FINANCE");
+    fundAccountId = (
+      await client.fundAccount.create({
+        data: {
+          tenantId,
+          code: `BANK_${suffix}`,
+          name: "派单结算账户",
+          kind: "BANK",
+        },
+      })
+    ).id;
     const p1 = await account(`p1_${suffix}`, "PLAYER", "阿一");
     const p2 = await account(`p2_${suffix}`, "PLAYER", "阿二");
     const p3 = await account(`p3_${suffix}`, "PLAYER", "阿三");
@@ -162,6 +173,10 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
     if (client) {
       await client.settlementItem.deleteMany({ where: { tenantId } });
       await client.manualPaymentRecord.deleteMany({ where: { tenantId } });
+      await client.ledgerEntry.deleteMany({ where: { tenantId } });
+      await client.ledgerTransaction.deleteMany({ where: { tenantId } });
+      await client.ledgerAccount.deleteMany({ where: { tenantId } });
+      await client.fundAccount.deleteMany({ where: { tenantId } });
       await client.settlementBatch.deleteMany({ where: { tenantId } });
       await client.slotEvidence.deleteMany({ where: { tenantId } });
       await client.slotSession.deleteMany({ where: { tenantId } });
@@ -544,7 +559,12 @@ describe("Game Dispatch flow (草稿→发布→报名→选人)", () => {
       .post(`/api/v1/tenant/settlements/${batch.id}/approve`)
       .expect(201);
     await req(ownerToken)
-      .post(`/api/v1/tenant/settlements/${batch.id}/pay`)
+      .post(`/api/v1/tenant/settlements/${batch.id}/payments`, {
+        fundAccountId,
+        evidenceRef: `BANK_GAME_${suffix}`,
+        occurredAt: "2026-09-24T12:00:00.000Z",
+        idempotencyKey: `game_payout_${suffix}`,
+      })
       .expect(201);
     const paid = await client.slotEarning.findMany({
       where: { tenantId, id: { in: slotIds } },
