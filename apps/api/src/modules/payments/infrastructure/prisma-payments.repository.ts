@@ -1,6 +1,7 @@
 import { withTenantContext } from "@pw/database";
 import type { DbTransaction, PrismaClient } from "@pw/database";
 import { randomBytes } from "node:crypto";
+import { buildLedgerTransactionNo } from "../../ledger/domain/ledger-transaction-no.js";
 import type { CheckoutRepository } from "../application/checkout-ports.js";
 import type {
   InboxEventRecord,
@@ -9,6 +10,12 @@ import type {
   PaymentsRepository,
   SettleResult,
 } from "../application/payments-ports.js";
+import {
+  CUSTOMER_PREPAID_LIABILITY_ACCOUNT,
+  WECHAT_SETTLEMENT_ASSET_ACCOUNT,
+  WechatSettlementFundAccountConfigurationError,
+  buildPaymentConfirmedLedgerPosting,
+} from "../domain/payment-confirmed-ledger-posting.js";
 
 /** 与 wallet.service 同款老板号生成规则（钱包不存在时按需建）。 */
 function bossNo(): string {
@@ -187,6 +194,109 @@ export class PrismaPaymentsRepository
             summary: `微信支付入账 ${order.amountFen} 分（transaction_id=${input.transactionId}）`,
           },
         });
+
+        // ===== DS-003：同一事务内追加统一总账交易（借贷平衡、可按资金账户查询） =====
+        // 资金账户必须恰好一个：0 个说明还没配微信结算账户，多于 1 个说明配置有歧义。
+        // 两种情况都不得擅自挑一个，抛错让整个事务回滚——支付单不转 SUCCESS、钱包不变动、总账不写入。
+        const fundAccounts = await tx.fundAccount.findMany({
+          where: {
+            tenantId: input.tenantId,
+            status: "ACTIVE",
+            kind: "WECHAT_SETTLEMENT",
+          },
+          select: { id: true },
+        });
+        const fundAccount =
+          fundAccounts.length === 1 ? fundAccounts[0] : undefined;
+        if (!fundAccount) {
+          throw new WechatSettlementFundAccountConfigurationError(
+            fundAccounts.length,
+          );
+        }
+
+        const posting = buildPaymentConfirmedLedgerPosting({
+          amountFen: order.amountFen,
+          fundAccountId: fundAccount.id,
+          paymentOrderId: order.id,
+          paymentOrderOutNo: order.outNo,
+          customerProfileId: order.customerProfileId,
+          paidAt: input.paidAt,
+        });
+
+        // 科目只建不改：`update` 为空对象，避免覆盖既有科目的名称。
+        // 不依赖 upsert 的返回值——空 update 的 upsert 在行已存在时不保证回读该行；
+        // 按仓内既有约定（prisma-ledger.repository.ensureAccount）改成 upsert 后重新查回 id。
+        for (const account of [
+          WECHAT_SETTLEMENT_ASSET_ACCOUNT,
+          CUSTOMER_PREPAID_LIABILITY_ACCOUNT,
+        ]) {
+          await tx.ledgerAccount.upsert({
+            where: {
+              tenantId_code: {
+                tenantId: input.tenantId,
+                code: account.code,
+              },
+            },
+            create: {
+              tenantId: input.tenantId,
+              code: account.code,
+              name: account.name,
+            },
+            update: {},
+          });
+        }
+        const accountRows = await tx.ledgerAccount.findMany({
+          where: {
+            tenantId: input.tenantId,
+            code: {
+              in: [
+                WECHAT_SETTLEMENT_ASSET_ACCOUNT.code,
+                CUSTOMER_PREPAID_LIABILITY_ACCOUNT.code,
+              ],
+            },
+          },
+          select: { id: true, code: true },
+        });
+        const accountIds = new Map<string, string>();
+        for (const row of accountRows) {
+          accountIds.set(row.code, row.id);
+        }
+
+        const ledgerTransaction = await tx.ledgerTransaction.create({
+          data: {
+            tenantId: input.tenantId,
+            txNo: buildLedgerTransactionNo(),
+            description: posting.transaction.description,
+            sourceType: posting.transaction.sourceType,
+            sourceId: posting.transaction.sourceId,
+            eventType: posting.transaction.eventType,
+            status: posting.transaction.status,
+            fundAccountId: posting.transaction.fundAccountId,
+            occurredAt: posting.transaction.occurredAt,
+            confirmedAt: posting.transaction.confirmedAt,
+          },
+          select: { id: true },
+        });
+
+        for (const entry of posting.entries) {
+          const accountId = accountIds.get(entry.accountCode);
+          if (!accountId) {
+            throw new Error(`总账科目未就绪：${entry.accountCode}`);
+          }
+          await tx.ledgerEntry.create({
+            data: {
+              tenantId: input.tenantId,
+              transactionId: ledgerTransaction.id,
+              accountId,
+              direction: entry.direction,
+              amountFen: entry.amountFen,
+              fundAccountId: entry.fundAccountId,
+              auxiliaryType: entry.auxiliaryType,
+              auxiliaryId: entry.auxiliaryId,
+            },
+          });
+        }
+
         return { credited: true, balanceAfterFen: after };
       },
     );

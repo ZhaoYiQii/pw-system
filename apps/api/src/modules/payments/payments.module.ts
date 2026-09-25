@@ -22,6 +22,9 @@ import { TenantPaymentLedgerController } from "./interface/tenant-payment-ledger
 import { TenantReconciliationService } from "./application/tenant-reconciliation.service.js";
 import { PrismaTenantReconciliationRepository } from "./infrastructure/prisma-tenant-reconciliation.repository.js";
 import { TenantReconciliationController } from "./interface/tenant-reconciliation.controller.js";
+import { ReconciliationCaseService } from "./application/reconciliation-case.service.js";
+import { PrismaReconciliationCaseRepository } from "./infrastructure/prisma-reconciliation-case.repository.js";
+import { TenantReconciliationCaseController } from "./interface/tenant-reconciliation-case.controller.js";
 import { TenantWalletService } from "./application/tenant-wallet.service.js";
 import { PrismaTenantWalletRepository } from "./infrastructure/prisma-tenant-wallet.repository.js";
 import { TenantWalletController } from "./interface/tenant-wallet.controller.js";
@@ -52,6 +55,7 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
     TenantPaymentSetupController,
     TenantPaymentLedgerController,
     TenantReconciliationController,
+    TenantReconciliationCaseController,
     TenantWalletController,
   ],
   providers: [
@@ -145,6 +149,18 @@ export function resolveWechatPayClient(): WechatPayPartnerClient | null {
       useFactory: (repository: PrismaTenantReconciliationRepository) =>
         new TenantReconciliationService(repository),
       inject: [PrismaTenantReconciliationRepository],
+    },
+    {
+      provide: PrismaReconciliationCaseRepository,
+      useFactory: (runtime: ReturnType<typeof createDatabaseClient>) =>
+        new PrismaReconciliationCaseRepository(runtime),
+      inject: [PAYMENTS_RUNTIME_CLIENT],
+    },
+    {
+      provide: ReconciliationCaseService,
+      useFactory: (repository: PrismaReconciliationCaseRepository) =>
+        new ReconciliationCaseService(repository),
+      inject: [PrismaReconciliationCaseRepository],
     },
     {
       provide: PrismaTenantWalletRepository,

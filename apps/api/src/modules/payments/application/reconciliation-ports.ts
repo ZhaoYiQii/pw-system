@@ -35,6 +35,13 @@ export interface ReconciliationRepository {
     totalCount: number;
     totalFen: bigint;
   }): Promise<{ id: string; inserted: boolean }>;
+  /**
+   * 落对账差异。每条差异在**同一个租户事务内**用嵌套写入同时创建一张 `OPEN` 处理单：
+   * 差异与处理单要么一起成功、要么一起回滚，不会留下「有差异却没有处理单」的新数据。
+   *
+   * 处理单状态取数据库默认值（`OPEN`）；系统自动建单不写审计行、不改差异的比较口径与幂等语义，
+   * 也**不做历史补齐**——列表接口只读，不会顺手补单。
+   */
   recordDifferences(
     inputs: Array<{
       tenantId: string;

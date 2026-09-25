@@ -8,6 +8,7 @@ interface SchemaProperty {
   pattern?: string;
   description?: string;
   minimum?: number;
+  maximum?: number;
   items?: unknown;
   properties?: Record<string, unknown>;
   required?: string[];
@@ -2112,3 +2113,646 @@ export const playerBreachViewSchema: OpenApiSchema = {
   ...dataSchema(playerBreachItemSchema),
   description: "违约记录（同时写审计并经 Outbox 通知老板）",
 };
+
+/** 资金账户类型（四种精确枚举值，顺序与 DS-002 契约一致）。 */
+export const fundAccountKindSchema: OpenApiSchema = {
+  type: "string",
+  enum: ["WECHAT_SETTLEMENT", "BANK", "CASH", "OFFLINE"],
+  description: "资金账户类型",
+};
+
+/** 资金账户状态（本任务只创建 ACTIVE，不提供归档入口）。 */
+export const fundAccountStatusSchema: OpenApiSchema = {
+  type: "string",
+  enum: ["ACTIVE", "ARCHIVED"],
+  description: "资金账户状态",
+};
+
+/** DS-002 创建资金账户请求体；code 规范化（trim 转大写）后必须匹配 pattern。 */
+export const createFundAccountBodySchema: OpenApiSchema = object(
+  ["code", "name", "kind"],
+  {
+    code: {
+      type: "string",
+      pattern: "^[A-Za-z][A-Za-z0-9_]{1,31}$",
+      example: "WECHAT_MAIN",
+      description:
+        "账户编码（服务端 trim 并转大写，规范化后须符合 ^[A-Z][A-Z0-9_]{1,31}$，每租户唯一）",
+    },
+    name: stringField("账户名称（去空白后 1-64 字符）"),
+    kind: fundAccountKindSchema,
+    externalRef: {
+      type: "string",
+      nullable: true,
+      description:
+        "外部引用（可空；BANK 账户非空时必须包含 * 掩码，不得存完整卡号）",
+    },
+  },
+  "创建资金账户请求体",
+);
+
+/** 资金账户视图：仅契约字段，不含 tenantId、余额、流水、日结与对账数据。 */
+export const fundAccountViewSchema: OpenApiSchema = object(
+  ["id", "code", "name", "kind", "status", "externalRef", "createdAt"],
+  {
+    id: { type: "string", format: "uuid", description: "资金账户 id" },
+    code: stringField("账户编码"),
+    name: stringField("账户名称"),
+    kind: fundAccountKindSchema,
+    status: fundAccountStatusSchema,
+    externalRef: {
+      type: "string",
+      nullable: true,
+      description: "外部引用；未传或空白为 null",
+    },
+    createdAt: dateTime("创建时间"),
+  },
+  "资金账户视图",
+);
+
+/** GET /api/v1/tenant/funds/accounts 响应：{ data: { items: FundAccountView[] } }。 */
+export const fundAccountListSchema: OpenApiSchema = dataSchema(
+  object(
+    ["items"],
+    {
+      items: {
+        type: "array",
+        items: fundAccountViewSchema,
+        description: "当前服务端租户的资金账户（按 createdAt 升序）",
+      },
+    },
+    "资金账户列表",
+  ),
+);
+
+/* -------------------------------------------------------------------------- */
+/* DS-008：统一资金台账（只读）列表与 CSV 导出                                   */
+/* -------------------------------------------------------------------------- */
+
+/** 台账事件类型：与 Prisma `LedgerEventType` 逐一对应。 */
+export const fundLedgerEventTypeSchema: OpenApiSchema = {
+  type: "string",
+  enum: [
+    "ORDER_ACCOUNTING",
+    "PAYMENT_CONFIRMED",
+    "WALLET_CONSUMED",
+    "REFUND_CONFIRMED",
+    "PLAYER_PAYOUT_CONFIRMED",
+    "RECONCILIATION_ADJUSTMENT",
+    "REVERSAL",
+  ],
+  description: "台账事件类型",
+};
+
+/** 交易状态：与 Prisma `LedgerTransactionStatus` 逐一对应。 */
+export const fundLedgerTransactionStatusSchema: OpenApiSchema = {
+  type: "string",
+  enum: ["DRAFT", "CONFIRMED", "RECONCILED", "REVERSED"],
+  description: "交易状态",
+};
+
+/** 对账状态展示映射：只有 RECONCILED 交易算已对账；原始 status 同时返回。 */
+export const fundLedgerReconciliationStatusSchema: OpenApiSchema = {
+  type: "string",
+  enum: ["RECONCILED", "UNRECONCILED"],
+  description: "对账状态展示值（只有 RECONCILED 交易算已对账）",
+};
+
+/** 资金流方向：`null` = 没有挂接交易头资金账户的分录；两种方向都有为 MIXED。 */
+export const fundFlowDirectionSchema: OpenApiSchema = {
+  type: "string",
+  enum: ["DEBIT", "CREDIT", "MIXED"],
+  nullable: true,
+  description: "资金流方向；无匹配分录为 null，借贷都有为 MIXED",
+};
+
+/** 辅助核算引用（去重并按 (type, id) 升序后的最小追溯维度）。 */
+export const fundLedgerAuxiliaryRefSchema: OpenApiSchema = object(
+  ["type", "id"],
+  {
+    type: stringField("辅助核算类型（如 customer_profile）"),
+    id: { type: "string", description: "辅助核算对象 id" },
+  },
+  "辅助核算引用",
+);
+
+/** 交易头资金账户引用；交易头未挂账户或账户不存在时为 `null`。 */
+export const fundLedgerFundAccountRefSchema: OpenApiSchema = object(
+  ["id", "code", "name", "kind", "status"],
+  {
+    id: { type: "string", format: "uuid", description: "资金账户 id" },
+    code: stringField("账户编码"),
+    name: stringField("账户名称"),
+    kind: fundAccountKindSchema,
+    status: fundAccountStatusSchema,
+  },
+  "交易头资金账户引用",
+);
+
+/** 台账行视图：金额为十进制字符串分，时间为 ISO 8601，可空字段显式 nullable。 */
+export const fundLedgerRowSchema: OpenApiSchema = object(
+  [
+    "transactionId",
+    "txNo",
+    "eventType",
+    "status",
+    "reconciliationStatus",
+    "sourceType",
+    "sourceId",
+    "description",
+    "amountFen",
+    "debitFen",
+    "creditFen",
+    "balanced",
+    "fundFlowDirection",
+    "fundAccount",
+    "auxiliaries",
+    "createdBy",
+    "confirmedBy",
+    "occurredAt",
+    "confirmedAt",
+    "createdAt",
+  ],
+  {
+    transactionId: { type: "string", format: "uuid", description: "交易 id" },
+    txNo: stringField("交易号"),
+    eventType: { ...fundLedgerEventTypeSchema, nullable: true },
+    status: fundLedgerTransactionStatusSchema,
+    reconciliationStatus: fundLedgerReconciliationStatusSchema,
+    sourceType: optionalString("来源类型；无来源为 null", true),
+    sourceId: optionalString("来源单据 id；无来源为 null", true),
+    description: optionalString("摘要；无摘要为 null", true),
+    amountFen: nonNegativeFen("金额（该交易借方分录合计）"),
+    debitFen: nonNegativeFen("借方合计"),
+    creditFen: nonNegativeFen("贷方合计"),
+    balanced: bool("借贷是否平衡（借方合计 = 贷方合计且大于 0）"),
+    fundFlowDirection: fundFlowDirectionSchema,
+    fundAccount: { ...fundLedgerFundAccountRefSchema, nullable: true },
+    auxiliaries: {
+      type: "array",
+      items: fundLedgerAuxiliaryRefSchema,
+      description: "去重并按 (type, id) 升序的辅助核算引用",
+    },
+    createdBy: optionalString("创建人 id；无记录为 null", true),
+    confirmedBy: optionalString("确认人 id；未确认为 null", true),
+    occurredAt: dateTime("发生时间"),
+    confirmedAt: dateTime("确认时间；未确认为 null", true),
+    createdAt: dateTime("创建时间"),
+  },
+  "统一资金台账交易行",
+);
+
+/** 列表视图：分页、排序与总数回显（导出端点不返回该结构）。 */
+export const fundLedgerViewSchema: OpenApiSchema = object(
+  ["rows", "total", "page", "pageSize", "sortBy", "sortDir"],
+  {
+    rows: {
+      type: "array",
+      items: fundLedgerRowSchema,
+      description: "当前页交易行",
+    },
+    total: integer("同一筛选条件下的交易总数（不受 pageSize 影响）", 0),
+    page: { type: "integer", minimum: 1, description: "页码（1 起算）" },
+    pageSize: {
+      type: "integer",
+      minimum: 1,
+      maximum: 200,
+      description: "每页条数（上限 200）",
+    },
+    sortBy: {
+      type: "string",
+      enum: ["occurredAt", "confirmedAt", "createdAt", "amountFen", "txNo"],
+      description: "排序字段（默认 occurredAt）",
+    },
+    sortDir: {
+      type: "string",
+      enum: ["asc", "desc"],
+      description: "排序方向（默认 desc）",
+    },
+  },
+  "统一资金台账分页视图",
+);
+
+/** GET /api/v1/tenant/funds/ledger 响应：{ data: FundLedgerView }。 */
+export const fundLedgerResponseSchema: OpenApiSchema =
+  dataSchema(fundLedgerViewSchema);
+
+/** 事件类型查询参数（列表与导出共用同一份 schema，避免契约漂移）。 */
+export const fundLedgerEventTypeQuerySchema: SchemaProperty = {
+  type: "string",
+  enum: [
+    "ORDER_ACCOUNTING",
+    "PAYMENT_CONFIRMED",
+    "WALLET_CONSUMED",
+    "REFUND_CONFIRMED",
+    "PLAYER_PAYOUT_CONFIRMED",
+    "RECONCILIATION_ADJUSTMENT",
+    "REVERSAL",
+  ],
+  description: "单个合法 LedgerEventType（精确匹配）",
+};
+
+/** 交易状态查询参数。 */
+export const fundLedgerStatusQuerySchema: SchemaProperty = {
+  type: "string",
+  enum: ["DRAFT", "CONFIRMED", "RECONCILED", "REVERSED"],
+  description: "单个合法 LedgerTransactionStatus（精确匹配）",
+};
+
+/** 交易头资金账户 id 查询参数。 */
+export const fundLedgerFundAccountIdQuerySchema: SchemaProperty = {
+  type: "string",
+  format: "uuid",
+  description: "按交易头资金账户过滤（uuid）",
+};
+
+/** 来源类型查询参数（trim 后 1–64 字符，精确匹配）。 */
+export const fundLedgerSourceTypeQuerySchema: SchemaProperty = {
+  type: "string",
+  minLength: 1,
+  maxLength: 64,
+  description: "来源类型（trim 后 1–64 字符，精确匹配）",
+};
+
+/** 关键词查询参数（trim 后 1–50 字符；只有空白按未提供处理）。 */
+export const fundLedgerSearchQuerySchema: SchemaProperty = {
+  type: "string",
+  minLength: 1,
+  maxLength: 50,
+  description:
+    "关键词（单号/摘要/来源/资金账户编码或名称的包含匹配，trim 后 ≤50 字符）",
+};
+
+/** 发生时间下界（含）。 */
+export const fundLedgerOccurredFromQuerySchema: SchemaProperty = {
+  type: "string",
+  format: "date-time",
+  description: "发生时间下界，ISO 8601 带时区，含边界",
+};
+
+/** 发生时间上界（不含）。 */
+export const fundLedgerOccurredToQuerySchema: SchemaProperty = {
+  type: "string",
+  format: "date-time",
+  description: "发生时间上界，ISO 8601 带时区，不含边界且必须晚于 occurredFrom",
+};
+
+/** 金额下界（十进制字符串分，非负，含）。 */
+export const fundLedgerMinAmountFenQuerySchema: SchemaProperty = {
+  type: "string",
+  pattern: "^(?:0|[1-9][0-9]*)$",
+  description: "金额下界（十进制字符串分，非负，含边界）",
+};
+
+/** 金额上界（十进制字符串分，非负，含）。 */
+export const fundLedgerMaxAmountFenQuerySchema: SchemaProperty = {
+  type: "string",
+  pattern: "^(?:0|[1-9][0-9]*)$",
+  description: "金额上界（十进制字符串分，非负，含边界且不得小于下界）",
+};
+
+/** 排序字段查询参数。 */
+export const fundLedgerSortByQuerySchema: SchemaProperty = {
+  type: "string",
+  enum: ["occurredAt", "confirmedAt", "createdAt", "amountFen", "txNo"],
+  description: "排序字段（默认 occurredAt）",
+};
+
+/** 排序方向查询参数。 */
+export const fundLedgerSortDirQuerySchema: SchemaProperty = {
+  type: "string",
+  enum: ["asc", "desc"],
+  description: "排序方向（默认 desc）",
+};
+
+/** 页码查询参数（列表专用；导出不接受 page/pageSize）。 */
+export const fundLedgerPageQuerySchema: SchemaProperty = {
+  type: "integer",
+  minimum: 1,
+  description: "页码（1 起算，默认 1）",
+};
+
+/** 每页条数查询参数（列表专用；导出不接受 page/pageSize）。 */
+export const fundLedgerPageSizeQuerySchema: SchemaProperty = {
+  type: "integer",
+  minimum: 1,
+  maximum: 200,
+  description: "每页条数（1-200，默认 50）",
+};
+
+/**
+ * 通用 HTTP 错误响应：全局 `HttpErrorFilter` 实际写出的结构（RFC9457 风格 + 兼容 `message`）。
+ *
+ * 与 `genericTemplateErrorSchema` 的区别：后者是**控制器自行序列化**的受控业务错误
+ * （`{ code, message, details? }`，`code` 是业务枚举）；本 schema 描述异常过滤器兜底写出的
+ * 通用结构——`code` 为异常类名，并带 `type`/`title`/`status`/`requestId`。
+ * 只要 `HttpException` 的 body 带 `{ code, message }`，过滤器就会原样透传到响应里。
+ */
+export const httpErrorSchema: OpenApiSchema = object(
+  ["type", "title", "status", "code", "message", "requestId"],
+  {
+    type: stringField("错误类型标识（RFC9457，如 about:blank#http-error）"),
+    title: stringField("HTTP 状态短语（如 Bad Request）"),
+    status: integer("HTTP 状态码"),
+    code: stringField("错误代码（异常类名，如 FundLedgerInputError）"),
+    message: stringField("错误说明（面向调用方，可直接展示）"),
+    requestId: stringField("请求 id（服务端追踪用；缺失时为空串）"),
+  },
+  "通用 HTTP 错误响应（全局 HttpErrorFilter 写出）",
+);
+
+/** DS-012：对账处理单状态。六个值与 DS-010 领域状态机、Prisma 枚举逐字符一致（大小写敏感）。 */
+export const reconciliationCaseStatusSchema: OpenApiSchema = {
+  type: "string",
+  enum: [
+    "OPEN",
+    "CLAIMED",
+    "PROCESSING",
+    "PENDING_REVIEW",
+    "CLOSED",
+    "IGNORED",
+  ],
+  description: "对账处理单状态",
+};
+
+/** DS-012：处理单内嵌的对账差异（不可由 UI 改写的原始事实，只读引用）。 */
+export const reconciliationCaseDifferenceSchema: OpenApiSchema = object(
+  [
+    "kind",
+    "kindLabel",
+    "amountFen",
+    "detail",
+    "paymentOrderId",
+    "resolvedAt",
+    "createdAt",
+  ],
+  {
+    kind: stringField("差异类型原始值（如 AMOUNT_MISMATCH）"),
+    kindLabel: stringField("差异类型中文说明；认不出的类型原样点名"),
+    amountFen: {
+      ...nonNegativeFen("差异金额"),
+      nullable: true,
+      description: "差异金额（十进制字符串分；状态类差异为 null）",
+    },
+    detail: optionalString("差异说明；无说明为 null", true),
+    paymentOrderId: optionalString("关联支付单 id；无关联为 null", true),
+    resolvedAt: dateTime("差异解决时间；未解决为 null", true),
+    createdAt: dateTime("差异创建时间"),
+  },
+  "对账差异引用",
+);
+
+/**
+ * DS-012：对账处理单行。**不含** `tenantId`；也不含处理人显示名、可执行动作或关联交易详情——
+ * 本切片只暴露这一张处理单自身的字段。
+ */
+export const reconciliationCaseRowSchema: OpenApiSchema = object(
+  [
+    "id",
+    "differenceId",
+    "status",
+    "ownerId",
+    "resolutionType",
+    "resolutionNote",
+    "linkedTransactionId",
+    "reviewedBy",
+    "reviewedAt",
+    "closedAt",
+    "createdAt",
+    "updatedAt",
+    "version",
+    "difference",
+  ],
+  {
+    id: { type: "string", format: "uuid", description: "处理单 id" },
+    differenceId: {
+      type: "string",
+      format: "uuid",
+      description: "对账差异 id（一条差异最多一张处理单）",
+    },
+    status: reconciliationCaseStatusSchema,
+    ownerId: optionalString("当前处理人 id；未认领为 null", true),
+    resolutionType: optionalString(
+      "处理结果类型；未处理为 null（取值不在本切片约束）",
+      true,
+    ),
+    resolutionNote: optionalString("处理说明；无说明为 null", true),
+    linkedTransactionId: optionalString(
+      "关联的调整/冲销交易 id；无关联为 null",
+      true,
+    ),
+    reviewedBy: optionalString("复核人 id；未复核为 null", true),
+    reviewedAt: dateTime("复核时间；未复核为 null", true),
+    closedAt: dateTime("关闭时间；未关闭为 null", true),
+    createdAt: dateTime("创建时间"),
+    updatedAt: dateTime("更新时间"),
+    version: integer("乐观锁版本号", 1),
+    difference: reconciliationCaseDifferenceSchema,
+  },
+  "对账处理单",
+);
+
+/** DS-012：对账处理单分页视图（排序固定 `createdAt DESC, id DESC`，不随请求变化）。 */
+export const reconciliationCaseViewSchema: OpenApiSchema = object(
+  ["rows", "total", "page", "pageSize"],
+  {
+    rows: {
+      type: "array",
+      items: reconciliationCaseRowSchema,
+      description: "当前页处理单",
+    },
+    total: integer("同一筛选条件下的处理单总数（不受 pageSize 影响）", 0),
+    page: { type: "integer", minimum: 1, description: "页码（1 起算）" },
+    pageSize: {
+      type: "integer",
+      minimum: 1,
+      // 与 RECONCILIATION_CASE_MAX_PAGE_SIZE 一致：本文件不引入依赖，故写字面量。
+      maximum: 100,
+      description: "每页条数（1-100）",
+    },
+  },
+  "对账处理单分页视图",
+);
+
+/** GET /api/v1/tenant/reconciliation/cases 响应：{ data: ReconciliationCaseView }。 */
+export const reconciliationCaseResponseSchema: OpenApiSchema = dataSchema(
+  reconciliationCaseViewSchema,
+);
+
+/** 状态过滤查询参数：一个精确状态，缺省不过滤（空白、数组、小写别名在服务层被拒）。 */
+export const reconciliationCaseStatusQuerySchema: SchemaProperty = {
+  type: "string",
+  enum: [
+    "OPEN",
+    "CLAIMED",
+    "PROCESSING",
+    "PENDING_REVIEW",
+    "CLOSED",
+    "IGNORED",
+  ],
+  description: "状态过滤（大小写敏感；缺省不过滤）",
+};
+
+/** 页码查询参数：服务端按规范十进制正整数字符串校验（`0`、前导零、符号、小数一律 400）。 */
+export const reconciliationCasePageQuerySchema: SchemaProperty = {
+  type: "integer",
+  minimum: 1,
+  description: "页码（1 起算，默认 1）",
+};
+
+/** 每页条数查询参数：与 RECONCILIATION_CASE_MAX_PAGE_SIZE 一致的上限。 */
+export const reconciliationCasePageSizeQuerySchema: SchemaProperty = {
+  type: "integer",
+  minimum: 1,
+  maximum: 100,
+  description: "每页条数（1-100，默认 20）",
+};
+
+/**
+ * DS-013：处理单命令的路径参数（`reconciliation_cases.id`）。
+ * 与既有退款确认命令同一口径：形状不对在服务层拦成 400，不把客户端输入错误放进 Prisma。
+ */
+export const reconciliationCaseIdParamSchema: SchemaProperty = {
+  type: "string",
+  format: "uuid",
+  description: "对账处理单 id（单个规范 UUID，不接受空白或换行）",
+};
+
+/**
+ * DS-013：处理单命令请求体。
+ *
+ * **只允许 `expectedVersion` 一个字段**（`additionalProperties: false`）——服务层会拒绝多余字段，
+ * 契约里就不把「多传字段也合法」画成允许；`minimum: 1` 对应「版本号自 1 起算」。
+ * 目标状态、处理人、租户都**不**在请求体里：目标状态由命令路径决定，处理人与租户只来自登录态。
+ */
+export const reconciliationCaseTransitionCommandSchema: OpenApiSchema = {
+  type: "object",
+  required: ["expectedVersion"],
+  additionalProperties: false,
+  properties: {
+    expectedVersion: integer(
+      "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）",
+      1,
+    ),
+  },
+  description: "对账处理单命令请求体（只接受 expectedVersion 一个字段）",
+};
+
+/**
+ * 处理说明 / 忽略理由：与运行期 `RECONCILIATION_NOTE_{MIN,MAX}_CODE_POINTS` 同一口径
+ * （先 trim，再按 **Unicode 码位**计 1-500，拒绝控制字符）。
+ *
+ * `minLength`/`maxLength` 只是给调用方的提示：运行期校验才是权威——
+ * 「500 个 emoji」这类用例不是 schema 能替你挡的。
+ */
+const reconciliationNoteProperty: SchemaProperty = {
+  type: "string",
+  minLength: 1,
+  maxLength: 500,
+  description:
+    "处理说明 / 忽略理由（先 trim 再计长，1-500 个 Unicode 码位；不接受控制字符或换行）",
+};
+
+/** 关联的统一账本交易 id：规范 UUID，且必须是**本租户已确认**的既有交易。 */
+const reconciliationLinkedTransactionIdProperty: SchemaProperty = {
+  type: "string",
+  format: "uuid",
+  description: "关联的统一账本交易 id（必须是本租户 CONFIRMED 的既有交易）",
+};
+
+/**
+ * DS-014 提交复核请求体：按 `resolutionType` 判别的**两个完整分支**。
+ *
+ * 每个分支都是独立、完整且互斥的对象 schema，各自 `additionalProperties: false`：
+ * - `NO_LEDGER_CHANGE`：`linkedTransactionId` **不在** `properties` 里，配合
+ *   `additionalProperties: false` 就是**禁止**——不是「允许但忽略」，多写一个键即非法；
+ * - `LEDGER_TRANSACTION`：`linkedTransactionId` 进 `required`，缺了即非法。
+ *
+ * 两个分支的 `const` 互斥，命中且只命中一个（判别联合的标准形状，与
+ * `genericTemplateComponentSchema` 同一写法）。这里只描述**请求**词表：落库列
+ * `resolution_type` 是自由 TEXT，忽略命令会往里写内部字面量 `IGNORED`，
+ * 那个值不在本端点的分支里，只能由 ignore 命令产生。
+ *
+ * 契约与运行期同口径：服务层对这两种组合的取舍完全一致（不从宽也不从紧），
+ * 这里的 `const`/`required`/`additionalProperties` 只是把运行期规则提前告诉调用方。
+ */
+export const reconciliationCaseSubmitReviewCommandSchema: OpenApiSchema = {
+  oneOf: [
+    {
+      ...object(
+        ["expectedVersion", "resolutionType", "resolutionNote"],
+        {
+          expectedVersion: integer(
+            "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）",
+            1,
+          ),
+          resolutionType: {
+            type: "string",
+            const: "NO_LEDGER_CHANGE",
+            description: "账目无需改动（本分支禁止携带 linkedTransactionId）",
+          },
+          resolutionNote: reconciliationNoteProperty,
+        },
+        "无需改账分支（不接受 linkedTransactionId，多传该键即非法）",
+      ),
+      additionalProperties: false,
+    },
+    {
+      ...object(
+        [
+          "expectedVersion",
+          "resolutionType",
+          "resolutionNote",
+          "linkedTransactionId",
+        ],
+        {
+          expectedVersion: integer(
+            "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）",
+            1,
+          ),
+          resolutionType: {
+            type: "string",
+            const: "LEDGER_TRANSACTION",
+            description:
+              "关联既有账本交易（本分支必须携带 linkedTransactionId）",
+          },
+          resolutionNote: reconciliationNoteProperty,
+          linkedTransactionId: reconciliationLinkedTransactionIdProperty,
+        },
+        "关联既有交易分支（必须携带本租户 CONFIRMED 交易的 id）",
+      ),
+      additionalProperties: false,
+    },
+  ],
+  discriminator: { propertyName: "resolutionType" },
+  description:
+    "提交复核请求体（判别联合：resolutionType 决定 linkedTransactionId 必须缺席还是必须携带）",
+};
+
+/**
+ * DS-014 忽略请求体：理由必填，与运行期同一口径。
+ *
+ * 词表里只有 `expectedVersion` 与 `reason` 两个字段：忽略人、时间戳、落库用的
+ * `resolutionType` 一律**不接受**客户端提交（第一个不在本切片，后两个由服务端决定）。
+ */
+export const reconciliationCaseIgnoreCommandSchema: OpenApiSchema = {
+  type: "object",
+  required: ["expectedVersion", "reason"],
+  additionalProperties: false,
+  properties: {
+    expectedVersion: integer(
+      "客户端当前看到的处理单版本号（乐观锁；与库内不一致即 409）",
+      1,
+    ),
+    reason: reconciliationNoteProperty,
+  },
+  description: "忽略请求体（只接受 expectedVersion 与 reason 两个字段）",
+};
+
+/**
+ * DS-013 命令成功响应：`{ data: ReconciliationCaseRow }`——与列表里的行**同一个** schema，
+ * 命令成功后就地返回推进后的处理单，不另造一套「命令结果」结构。
+ */
+export const reconciliationCaseRowResponseSchema: OpenApiSchema = dataSchema(
+  reconciliationCaseRowSchema,
+);

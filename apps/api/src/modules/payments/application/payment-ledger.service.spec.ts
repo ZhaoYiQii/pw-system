@@ -5,7 +5,6 @@ import type {
   PaymentLedgerRow,
 } from "./payment-ledger-ports.js";
 import {
-  fenToYuanText,
   parseLedgerLimit,
   parseLedgerPage,
   parseLedgerQuery,
@@ -20,6 +19,7 @@ import {
   toLedgerRowView,
 } from "./payment-ledger.service.js";
 import { PaymentLedgerInputError } from "../domain/payments.errors.js";
+import { fenToYuanText } from "../../../common/money.js";
 
 /**
  * S5-1：门店支付台账的**纯口径**单测（真库/RLS 行为见 integration 用例）。
@@ -215,7 +215,7 @@ describe("toLedgerRowView", () => {
   });
 });
 
-describe("fenToYuanText / toLedgerCsv", () => {
+describe("fenToYuanText（共享实现）/ toLedgerCsv", () => {
   it("分转元是整数运算（不经过浮点）", () => {
     expect(fenToYuanText("0")).toBe("0.00");
     expect(fenToYuanText("5")).toBe("0.05");
@@ -241,6 +241,20 @@ describe("fenToYuanText / toLedgerCsv", () => {
   it("引号会被翻倍转义", () => {
     const csv = toLedgerCsv([toLedgerRowView(row({ customerName: 'A"B' }))]);
     expect(csv).toContain('"A""B"');
+  });
+
+  it("客户名 / 单号以 = + - @ 开头时按文本导出（公式注入防护）", () => {
+    const csv = toLedgerCsv([
+      toLedgerRowView(
+        row({ outNo: "=cmd|'/c calc'!A0", customerName: "+1+1" }),
+      ),
+    ]);
+    // 第二行是数据行：BOM 只出现在文件最前，不会影响这一行
+    const first = csv.split("\r\n")[1];
+    expect(first).toContain("'=cmd|'/c calc'!A0");
+    expect(first).toContain("'+1+1");
+    expect(csv).not.toContain(",=cmd");
+    expect(csv).not.toContain(",+1+1");
   });
 });
 

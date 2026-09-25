@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@pw/database";
 import { splitSettlement } from "../domain/split.js";
+import { buildLedgerTransactionNo } from "../domain/ledger-transaction-no.js";
 
 export interface PlayerFinanceView {
   pendingFen: string;
@@ -114,7 +115,7 @@ export class PrismaLedgerRepository {
       const txRow = await tx.ledgerTransaction.create({
         data: {
           tenantId,
-          txNo: `T${Date.now().toString(36).toUpperCase()}`,
+          txNo: buildLedgerTransactionNo(),
           description: `订单核算 ${order.orderNo}`,
         },
       });

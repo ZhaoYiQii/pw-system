@@ -72,6 +72,11 @@ export interface SessionListRow {
   declaredDurationMinutes: number | null;
   reportStatus: SlotReportStatus;
   reportSubmittedAt: Date | null;
+  /**
+   * 客服审批时间。审核台的「今日已通过」按它过滤（`Date.parse` 后与今天 0 点比较），
+   * 详情页早已下发同名字段，列表此前漏发会让该计数恒为 0。
+   */
+  reportReviewedAt: Date | null;
   /** 是否已上传报单需要的开始/结束截图（两类都齐才算 true）。 */
   hasReportEvidence: boolean;
 }
@@ -433,6 +438,7 @@ export class PrismaSessionsRepository {
         declaredDurationMinutes: null,
         reportStatus: "NOT_REPORTED" as SlotReportStatus,
         reportSubmittedAt: null,
+        reportReviewedAt: null,
         hasReportEvidence: false,
       };
     });
@@ -463,6 +469,7 @@ export class PrismaSessionsRepository {
           hasEarning: earningSlotIds.has(r.orderSlotId),
         }),
         reportSubmittedAt: r.reportSubmittedAt ?? null,
+        reportReviewedAt: r.reportReviewedAt ?? null,
         hasReportEvidence: hasFullReportEvidence(r.id),
       };
     });

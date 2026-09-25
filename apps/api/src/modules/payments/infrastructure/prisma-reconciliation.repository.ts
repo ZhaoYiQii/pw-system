@@ -130,6 +130,10 @@ export class PrismaReconciliationRepository implements ReconciliationRepository 
                 ? { amountFen: input.amountFen }
                 : {}),
               detail: input.detail,
+              // 嵌套写入：处理单与差异在同一事务内一起落库（不另开事务、不补写、不做补偿删除）。
+              // 差异写入失败 → 处理单不可能存在；处理单写入失败 → 整条差异插入回滚。
+              // 只给 tenantId：状态取数据库默认值 OPEN，其余字段留空由后续切片在事务内推进。
+              case: { create: { tenantId: input.tenantId } },
             },
           }),
       );

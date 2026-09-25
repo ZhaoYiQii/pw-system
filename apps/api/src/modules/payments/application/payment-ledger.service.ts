@@ -6,6 +6,8 @@ import type {
 } from "./payment-ledger-ports.js";
 import { PAYMENT_LEDGER_SORT_FIELDS } from "./payment-ledger-ports.js";
 import { PaymentLedgerInputError } from "../domain/payments.errors.js";
+import { toUtf8BomCsv } from "../../../common/csv.js";
+import { fenToYuanText } from "../../../common/money.js";
 
 /**
  * S5-1：门店支付台账（客户充值/支付的支付单列表），服务端分页 + 排序 + 筛选 + CSV 导出。
@@ -225,16 +227,10 @@ export function toLedgerRowView(row: PaymentLedgerRow): PaymentLedgerRowView {
   };
 }
 
-/** 分 → 元的十进制文本（整数运算，不用浮点）。 */
-export function fenToYuanText(fen: string): string {
-  if (!/^\d+$/.test(fen)) return "0.00";
-  const value = BigInt(fen);
-  return `${value / 100n}.${String(value % 100n).padStart(2, "0")}`;
-}
-
 /**
  * 台账 CSV（Excel 直接可开）：带 UTF-8 BOM，金额列输出**元**（两位小数，整数运算）。
- * 字段一律按 CSV 规则转义（含逗号/引号/换行时加引号并把引号翻倍）——客户名里出现逗号不算稀奇。
+ * 字段一律交给共享 `toUtf8BomCsv` 转义：RFC 引号规则（逗号/引号/换行加引号并翻倍引号）
+ * 加上公式注入防护（`=`/`+`/`-`/`@` 开头的客户名或单号不能变成公式）——两套台账共用同一口径。
  */
 export function toLedgerCsv(rows: readonly PaymentLedgerRowView[]): string {
   const header = [
@@ -257,10 +253,5 @@ export function toLedgerCsv(rows: readonly PaymentLedgerRowView[]): string {
     row.createdAt,
     row.paidAt ?? "",
   ]);
-  const lines = [header, ...body].map((cells) => cells.map(csvCell).join(","));
-  return `\uFEFF${lines.join("\r\n")}\r\n`;
-}
-
-function csvCell(value: string): string {
-  return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  return toUtf8BomCsv([header, ...body]);
 }
