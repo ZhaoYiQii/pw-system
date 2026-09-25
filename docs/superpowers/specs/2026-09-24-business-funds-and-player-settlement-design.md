@@ -1,0 +1,180 @@
+# 业务资金与陪玩结算系统设计 v1
+
+- 状态：**方向已批准，待按实施计划进入第一个代码切片**
+- 日期：2026-09-24
+- 产品边界：业务资金与陪玩结算系统；不是税务、总账或通用 ERP。
+- 关联：支付服务商模式设计、ADR-0004（档位结算分摊）、ADR-0007（租户仓储不变量）、既有 `ledger_*` / `payment_*` / `settlement_*` 模型。
+
+## 1. 目标与非目标
+
+### 1.1 目标
+
+门店可在同一套业务资金链路中回答以下问题：
+
+1. 客户的钱从哪一笔支付进入、目前属于哪个客户余额或业务订单；
+2. 一笔已完成服务怎样拆成门店收入与陪玩应付；
+3. 陪玩应付是否已进入批次、是否经复核批准、是否已经实际付款；
+4. 实际资金经由微信、银行卡、现金或线下渠道发生了什么；
+5. 渠道账单与本地记录是否一致；不一致时由谁处理、如何处理、何时关闭；
+6. 日结后某一日的资金结论能否稳定追溯。
+
+### 1.2 非目标
+
+- 不实现税务申报、发票开具、会计准则科目全量配置、凭证打印或通用 ERP 总账。
+- 不改变微信支付服务商模式、既有金额分单位、租户隔离、订单定价/分成口径和陪玩结算公式。
+- 不在 v1 调用微信退款 API；仍允许门店实际退款后在系统登记，但必须区分登记与渠道确认。
+- 不把支付订单、钱包、结算批次等业务原表替换为新的总表。
+
+## 2. 当前事实与问题
+
+当前代码已存在两条可用但彼此独立的链路：
+
+```text
+支付订单 → 客户钱包 → 人工退款 → 微信账单差异
+订单完成 → LedgerTransaction / LedgerEntry → 陪玩应收 → 结算批次 → 线下支付登记
+```
+
+`LedgerAccount`、`LedgerTransaction` 和 `LedgerEntry` 已可表达平衡的借贷分录，但仅在订单自动核算中写入；`PaymentOrder`、`PaymentRefund` 与 `ManualPaymentRecord` 没有与账务交易组的结构化关联。因此商家端不能可靠地从某一资金变动追到来源单据、资金账户、处理记录和对账结论。
+
+## 3. 核心决策
+
+| 编号 | 决策 | 固定口径 |
+| --- | --- | --- |
+| F1 | 扩展现有 `ledger_*`，不新建并行财务账本 | 每个已确认的资金或结算业务事实最多对应一个主账务交易组；更正通过新交易冲销，历史交易不更新。 |
+| F2 | 业务原表仍是业务事实来源 | 支付单、退款单、订单、结算批次、对账差异保留；账务交易只负责统一追溯与汇总。 |
+| F3 | 显式建模资金账户 | 微信子商户结算账户、银行卡、现金、线下渠道均为 `FundAccount`；会计科目与资金账户不是同一对象。 |
+| F4 | 退款区分内部登记与渠道确认 | `REGISTERED` 不等于实际退款成功；只有渠道/人工凭证确认后才进入 `CONFIRMED`，对账完成后为 `RECONCILED`。 |
+| F5 | 对账差异采用处理单而非直接修改差异 | 差异事实只追加；处理单记录认领、匹配、忽略、补录、复核、关闭及其审计。 |
+| F6 | v1 做日结，不做月结总账 | 日结对每个资金账户形成只读快照；更正使用次日或反向交易，不改已日结历史。 |
+| F7 | 资金写操作必须幂等、事务化、可审计 | 依赖既有租户上下文、RLS、`finance.manage`；批次审批继续保持发起人不可批准本人批次。 |
+
+## 4. 目标模型
+
+### 4.1 新增 `FundAccount`
+
+字段：`id`、`tenantId`、`code`、`name`、`kind`（`WECHAT_SETTLEMENT` / `BANK` / `CASH` / `OFFLINE`）、`status`、`externalRef?`、`openedAt?`、`createdAt`、`updatedAt`、`version`。
+
+- `externalRef` 存子商户号或脱敏账户标识，不存完整银行卡敏感信息。
+- 实时余额由已确认交易的分录汇总；日结快照用于历史展示与核对，不维护可被任意覆盖的余额字段。
+- 每个租户至少有一个有效的微信结算账户或人工线下资金账户，才允许登记对应付款/退款确认。
+
+### 4.2 扩展 `LedgerTransaction`
+
+新增：`sourceType`、`sourceId`、`eventType`、`status`、`fundAccountId?`、`reversalOfId?`、`occurredAt`、`confirmedAt?`、`createdBy?`、`confirmedBy?`。
+
+- 唯一键：`[tenantId, sourceType, sourceId, eventType]`。同一来源、同一种业务事件只写一次主交易，作为幂等后盾。
+- `status`：`DRAFT`、`CONFIRMED`、`RECONCILED`、`REVERSED`。自动支付回调可直接创建 `CONFIRMED`；人工操作先 `DRAFT` 或 `REGISTERED` 对应的业务原表状态，再确认。
+- `reversalOfId` 只允许指向同租户已确认交易；冲销交易新增相反方向分录，原交易保持只读。
+
+### 4.3 扩展 `LedgerEntry`
+
+保留 `accountId`、`direction`、`amountFen`，新增 `fundAccountId?` 与 `auxiliaryType?` / `auxiliaryId?`。
+
+- `fundAccountId` 仅标记实际资金收支所在账户；收入、应收、应付等非资金分录为空。
+- `auxiliary*` 用于最小维度追溯：客户、陪玩、订单、结算批次。v1 不提供用户自定义辅助核算。
+- 交易写入前必须校验借方合计等于贷方合计；金额大于 0 分；所有关联资源必须同租户。
+
+### 4.4 新增 `ReconciliationCase`
+
+字段：`id`、`tenantId`、`differenceId`、`status`、`ownerId?`、`resolutionType?`、`resolutionNote?`、`linkedTransactionId?`、`createdAt`、`reviewedAt?`、`closedAt?`、`version`。
+
+状态：`OPEN → CLAIMED → PROCESSING → PENDING_REVIEW → CLOSED`，也可 `OPEN/CLAIMED → IGNORED`。
+
+- `CLOSED` 必须有处理说明、处理人、复核人和处理结果；`IGNORED` 必须有理由。
+- 对账差异本身的 `resolvedAt` 在迁移后由关闭处理单同步写入；不允许 UI 直接写该字段。
+
+### 4.5 新增 `DailyFundClose`
+
+字段：`id`、`tenantId`、`closeDate`、`fundAccountId`、`openingFen`、`incomeFen`、`expenseFen`、`closingFen`、`unresolvedDifferenceCount`、`status`、`closedBy`、`closedAt`。
+
+- 唯一键：`[tenantId, closeDate, fundAccountId]`。
+- `READY` 表示可预览，`CLOSED` 表示已锁定。
+- 关账前：该账户当日不能存在未关闭对账差异；关账后的更正只能生成新的冲销/调整交易，不能更新历史交易。
+
+## 5. 业务事件到交易映射
+
+以下映射使用既有的整数分与借贷平衡规则。科目代码是业务系统内部固定代码，不暴露为可自由编辑的总账科目表。
+
+| 事件 | 来源 | 最小分录口径 | 必填关联 |
+| --- | --- | --- | --- |
+| 客户充值渠道确认 | `PaymentOrder` | 借：渠道待结算资金；贷：客户预收/钱包负债 | 支付单、客户、微信资金账户、渠道交易号 |
+| 客户钱包消费并对应订单 | 订单付款/钱包扣减事实 | 借：客户预收/钱包负债；贷：客户应收或业务结算中间科目 | 客户、订单、钱包流水 |
+| 订单服务核算 | `Order` | 借：客户应收/业务结算中间科目；贷：门店佣金收入、陪玩应付 | 订单、陪玩、分成规则快照 |
+| 陪玩实际付款确认 | `SettlementBatch` + `ManualPaymentRecord` | 借：陪玩应付；贷：银行/现金资金账户 | 批次、陪玩、付款凭证或外部交易号、资金账户 |
+| 客户退款确认 | `PaymentRefund` | 借：客户预收/退款支出；贷：渠道待结算资金或银行资金账户 | 退款单、支付单、客户、退款凭证 |
+| 对账补记或更正 | `ReconciliationCase` | 通过批准的冲销或调整交易平衡入账 | 差异、处理单、处理人、复核人 |
+
+“客户钱包消费并对应订单”的现有事实来源需要在第一实现切片中由订单支付链路确认；在确认前不得在 UI 上伪造已入账状态。
+
+## 6. 状态机
+
+### 6.1 结算批次
+
+保留既有：`DRAFT → REVIEWED → APPROVED → PAID`，`DRAFT/REVIEWED → VOID`。
+
+增强规则：
+
+- `PAID` 的前置条件是存在有效资金账户、付款时间、付款凭证/外部交易号、已确认的付款账务交易。
+- 支付失败或凭证无效时批次保持 `APPROVED`，不得写 `PAID`。
+- `PAID` 后不允许作废；更正用反向批次或补差交易。
+
+### 6.2 人工退款
+
+业务退款状态扩展为：`REGISTERED → CONFIRMED → RECONCILED`；登记可被 `CANCELLED`，但确认后只能以冲销退款修正。
+
+- `REGISTERED`：已通过金额、钱包和权限校验，尚未证实外部资金已退。
+- `CONFIRMED`：录入人工退款凭证或渠道返回结果，并生成确认交易。
+- `RECONCILED`：对应渠道账单或处理单已关闭。
+
+## 7. API 轮廓
+
+所有端点在服务端从 `TenantContext` 获取租户；写端点要求 `finance.manage`，审核/日结如需分权则新增专用权限而不是在前端隐藏按钮。
+
+| 端点 | 语义 |
+| --- | --- |
+| `GET /api/v1/tenant/funds/accounts` | 列出资金账户及可用余额、最近日结、未解决差异数。 |
+| `POST /api/v1/tenant/funds/accounts` | 创建资金账户；验证账户类型、脱敏外部标识和代码唯一性。 |
+| `GET /api/v1/tenant/funds/ledger` | 统一业务资金台账：日期、事件类型、来源、资金账户、客户/陪玩、状态、金额范围、关键词、分页、多列排序。 |
+| `GET /api/v1/tenant/funds/ledger/export.csv` | 导出当前完整筛选条件和排序；行数上限与支付台账一致或更严格。 |
+| `POST /api/v1/tenant/settlements/:id/payments` | 将批准批次登记为实际付款；请求必须含资金账户、付款凭证、发生时间和幂等键。 |
+| `POST /api/v1/tenant/payments/refunds/:id/confirm` | 确认已登记退款；必须含确认依据与幂等键。 |
+| `GET /api/v1/tenant/reconciliation/cases` | 分页查询对账处理单。 |
+| `POST /api/v1/tenant/reconciliation/cases/:id/{claim,submit-review,close,ignore}` | 差异处理状态迁移；状态、角色、审计和幂等均由服务端验证。 |
+| `GET /api/v1/tenant/funds/daily-closes` | 查询日结快照及待关闭日期。 |
+| `POST /api/v1/tenant/funds/daily-closes/:date/close` | 关闭指定自然日所有有效资金账户；阻止存在未关闭差异的关账。 |
+
+## 8. 前端边界
+
+商家端保留并逐步升级以下页面：
+
+1. `/payments/orders`：支付订单台账，不把它误称为完整资金总账；展示关联交易、退款确认与对账状态。
+2. `/payments/wallets`：客户预收资金与钱包流水。
+3. `/settlements`：陪玩结算批次与实际付款登记。
+4. `/payments/reconciliation`：升级为对账处理工作台。
+5. `/finance`：升级为资金与结算总览，而非仅展示陪玩收入账本。
+6. 新增统一资金台账和资金账户页；使用现有 Tailwind v4、shadcn 风格组件和 Tabulator 数据网格壳。
+
+## 9. 安全、金额与可靠性不变量
+
+- 金额始终用整数分或 `BigInt`，接口输出十进制字符串；前端不得重算结算金额。
+- 所有写交易使用数据库事务、来源唯一键或明确幂等键；外部渠道回调继续以原始事件/渠道交易号幂等。
+- 所有租户资源使用 `tenantGuarded` / `withTenantContext`，数据库 RLS 继续生效；不得信任客户端 `tenantId`。
+- 资金、退款、批次支付、差异关闭、日结均写审计日志；审计记录至少含来源资源、操作者、前后状态和原因。
+- 已确认交易不可更新或删除；只能反向冲销；日结快照不可改写。
+
+## 10. 迁移与回滚原则
+
+1. 先新增表/字段/索引和兼容读路径，再开始新事件双写；不修改或删除历史事实。
+2. 历史 `PaymentOrder`、`PaymentRefund`、`ManualPaymentRecord` 通过一次性回填或“首次查看时映射”关联交易；回填必须可重复执行且输出未映射清单。
+3. 当新旧账务汇总在试点租户对齐后，统一资金台账切换到新读路径；旧页面保留至验收完成。
+4. 回滚只停止新写路径并恢复旧读路径；已确认的新交易和日结快照保留为不可变历史，禁止删除或回滚金额事实。
+
+## 11. 验收标准
+
+- 任意支付、退款、结算付款能从台账逐级打开来源单据、资金账户、账务交易、处理人和审计记录。
+- 一笔确认交易的借贷合计相等，金额均大于 0 分，且所有关联资源同租户。
+- 重复请求、重复回调、重复点击不会重复入账、重复退款或重复付款。
+- 存在未关闭差异时日结失败；关闭后新增历史日期交易失败并引导使用更正/冲销。
+- 支付台账、客户钱包、结算批次、统一资金台账对同一来源金额口径一致。
+- 支持服务端筛选、排序、分页、导出；空态、错误态与无权限态均有中文明确指引。
+
