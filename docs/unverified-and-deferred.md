@@ -29,7 +29,7 @@
 
 ## C. 工程与体验收尾（本地可继续开发）
 
-- 工作树未提交：商家端导航信息架构（**2026-09-25 起为 7 业务域** / active-preview-planned 三态）、商家端与陪玩端 UI 打磨、E2E 更新、演示密码调整；提交前需按 `AGENTS.md` 单独授权。（PR #3 入库的是 8 域版本；域的裁撤与 `modules.ts` 拆分为 `nav-registry` / `nav-domains` / `nav-access` / `nav-breadcrumb` / `console-path` 五个文件均在未提交层。）
+- （2026-09-26 更新）原「工作树未提交」一批中的商家端导航信息架构（7 业务域 / active-preview-planned 三态）、`modules.ts` 拆分为 `nav-registry` / `nav-domains` / `nav-access` / `nav-breadcrumb` / `console-path`，以及业务资金/对账/退款确认后端、契约、测试与支付台账 UI，已于 2026-09-26 分 8 笔提交入库（`007e190..3c73cd4`）；PR #3 入库的是 8 域版本。UI 打磨、E2E 更新、演示密码调整等是否仍有剩余，以 `git status --short` 实时结果为准。
 - 服务目录新页 `CatalogModuleView` **只读**：区服（`GameRegion`）的写入仍只在旧页 `(tenant)/catalog/page.tsx`。契约上，新控制台的区服增删改未接通前，旧页与 `tenant-links.ts:30` 的入口都不能删。
 - 游戏列表存在第三处 5 分钟缓存：`new-order-view.tsx`（key `["merchant","new-order","games"]`，经「智能助手 → 新建订单」可达）。服务目录页与新建模板对话框的 key 已互相标脏，这一处未接；其余 5 个读取方无 `staleTime`，会自愈。
 - 折叠态域徽标只数「建设能力」（preview + planned），不区分可用性——裁撤「商品店铺」只是把这枚失真徽标移到「运营设置」（5 个真实项 + 11 个未来项），并未消除。

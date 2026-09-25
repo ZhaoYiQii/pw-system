@@ -1,7 +1,7 @@
 # 项目状态（精简导航）
 
-- 核对日期：2026-09-22（当日整体审查复核了本文件列出的能力与环境事实）
-- 当前状态：`master` @ `48bae79`（2026-09-22）；实时提交与工作树以 `git log -1`、`git status --short` 为准。
+- 核对日期：2026-09-26（2026-09-26 完成业务资金线 8 笔提交入库与全量门禁复核）
+- 当前状态：`master` @ `3c73cd4`（2026-09-26）；实时提交与工作树以 `git log -1`、`git status --short` 为准。
 - 本文件只保留当前状态和导航，不再复制完整历史、文件清单或验收日志。
 
 ## 当前能力
@@ -15,7 +15,7 @@
 
 ## 当前工作树与环境
 
-- 此前散落在工作树的 admin / API / mobile / 测试 / OpenAPI 生成物改动已随 PR #3 全部入库。2026-09-22 复查：工作树仍有 3 个未跟踪的本地临时脚本（`work/audit-endpoint-coverage.mjs`、`work/make-demo-shots.mjs`、`work/point-evidence-to-demo.mjs`，`work/` 未被 `.gitignore` 覆盖），此外 `apps/admin-web/next-env.d.ts` 会被 Next 在 dev/build 时自动改写。仍然禁止无路径的批量清理、重置或格式化。
+- 此前散落在工作树的 admin / API / 测试 / OpenAPI 生成物改动已随 PR #3 与 2026-09-26 的 8 笔提交全部入库。2026-09-26 复查：工作树仅剩 `work/` 下约 20 个本地辅助脚本与截图目录（`work/` 未被 `.gitignore` 覆盖）、`apps/admin-web/.next.stale-20260926/` 过期构建快照（eslint ignores 已补 `**/.next.*/**`），以及会被 Next 在 dev/build 时自动改写的 `apps/admin-web/next-env.d.ts`。仍然禁止无路径的批量清理、重置或格式化。
 - Node 24.19.0、pnpm 10.34.5 可用。
 - 2026-09-20 核对：Docker Desktop 在运行，`pw-saas-local` 的 postgres(5433) / redis(6380) / minio(9002,9003) 三个容器均在跑，集成套件本地连续 5 次全量通过。注意沙箱内进程连不上 docker pipe，docker 命令需提权执行。
 - 2026-09-22 审查复核：本机 `:3300` 与 `:3100` 两个 API 实测**都指向一次性测试库 `pw_saas_s2_task2_20260916`**（该库含走查门店 `s5cwalk`），而 dev 库 `pw_saas`（含演示门店 `c1`）当前没有 API 在服务；dev 库与 `pw_saas_test` 均落后仓库 7 个迁移。凡「本机实测」结论都要先确认 API 连的是哪个库。
