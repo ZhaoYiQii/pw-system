@@ -414,6 +414,156 @@
   font-variant-numeric: tabular-nums;
   color: var(--cu-ink);
 }
+/* ── Slice C：下单流程 ─────────────────────────────────────── */
+
+/* 步骤条（选游戏 → 选模板 → 确认）。 */
+.cu-steps {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 24px;
+}
+.cu-step-label {
+  font-size: 21px;
+  color: var(--cu-muted);
+  white-space: nowrap;
+}
+.cu-step-label.is-on {
+  color: var(--cu-primary);
+  font-weight: 600;
+}
+.cu-steps-bar {
+  flex: 1;
+  height: 1px;
+  background: var(--cu-line);
+}
+
+/* 游戏图标容器（ChoiceCard 内可选使用）。 */
+.cu-choice-gi {
+  flex: none;
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--cu-serif);
+  font-size: 30px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* CTA 吸底容器（拇指区）。 */
+.cu-cta-stick {
+  position: sticky;
+  bottom: calc(124px + env(safe-area-inset-bottom));
+  z-index: 10;
+  margin-top: 8px;
+  padding: 14px 0 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(245, 242, 234, 0) 0%,
+    var(--cu-paper) 40%
+  );
+}
+.cu-cta-stick .cu-cta-fine {
+  display: block;
+  margin-top: 10px;
+  font-size: 19px;
+  color: var(--cu-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Slice C：订单详情时间线 ───────────────────────────────── */
+
+.cu-track {
+  margin-bottom: 22px;
+  padding: 28px 26px 20px;
+  border: 1px solid var(--cu-line);
+  border-radius: var(--cu-radius-card);
+  background: var(--cu-card);
+  box-shadow: var(--cu-shadow-card);
+}
+.cu-track-line {
+  display: flex;
+}
+.cu-track-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 30px;
+  flex: none;
+}
+.cu-track-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--cu-line);
+}
+.cu-track-dot.done {
+  background: var(--cu-primary);
+}
+.cu-track-dot.cur {
+  background: var(--cu-accent);
+  box-shadow: 0 0 0 8px var(--cu-accent-soft);
+}
+.cu-track-vline {
+  width: 3px;
+  flex: 1;
+  min-height: 34px;
+  background: var(--cu-line);
+}
+.cu-track-vline.done {
+  background: var(--cu-primary);
+}
+.cu-track-body {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 26px 16px;
+}
+.cu-track-body:last-child {
+  padding-bottom: 4px;
+}
+.cu-track-tt {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--cu-ink);
+}
+.cu-track-td {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  color: var(--cu-muted);
+  line-height: 1.5;
+}
+.cu-track-body.is-dim .cu-track-tt {
+  color: var(--cu-muted);
+  font-weight: 400;
+}
+.cu-evidence-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+}
+.cu-evidence {
+  width: 116px;
+  height: 86px;
+  border-radius: 14px;
+  border: 1px solid var(--cu-line);
+  background: #e7e2d4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  color: var(--cu-muted);
+  overflow: hidden;
+}
+.cu-evidence.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
 /* 筛选 chips（列表页）。 */
 .cu-filter-row {
   display: flex;

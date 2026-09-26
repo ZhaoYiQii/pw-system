@@ -869,6 +869,13 @@ export default function GameOrderPage() {
         <>
           {v2Step === "GAME" ? (
             <>
+              <View className="cu-steps">
+                <Text className="cu-step-label is-on">1 选游戏</Text>
+                <View className="cu-steps-bar" />
+                <Text className="cu-step-label">2 选模板</Text>
+                <View className="cu-steps-bar" />
+                <Text className="cu-step-label">3 确认支付</Text>
+              </View>
               <Text className="cu-section-label">选择游戏</Text>
               {games.map((game, index) => (
                 <ChoiceCard
@@ -887,6 +894,13 @@ export default function GameOrderPage() {
 
           {v2Step === "TEMPLATE" ? (
             <>
+              <View className="cu-steps">
+                <Text className="cu-step-label is-on">1 选游戏</Text>
+                <View className="cu-steps-bar" />
+                <Text className="cu-step-label is-on">2 选模板</Text>
+                <View className="cu-steps-bar" />
+                <Text className="cu-step-label">3 确认支付</Text>
+              </View>
               <Text className="cu-section-label">
                 {selectedGame ? `${selectedGame.name} · 选择模板` : "选择模板"}
               </Text>
@@ -927,18 +941,21 @@ export default function GameOrderPage() {
                 missingKeys={missingKeys}
                 onChange={setV2Value}
               />
-              <Button
-                className={`cu-button cu-button-primary cu-button-full${busy ? " is-disabled" : ""}`}
-                disabled={busy}
-                onClick={() => void submitV2()}
-              >
-                {busy ? "提交中…" : "提交订单"}
-              </Button>
-              {missing.length > 0 ? (
-                <Text className="cu-footnote">
-                  还有 {missing.length} 个必填项未填写
+              <View className="cu-cta-stick">
+                <Button
+                  className={`cu-button cu-button-primary cu-button-full${busy ? " is-disabled" : ""}`}
+                  disabled={busy}
+                  onClick={() => void submitV2()}
+                >
+                  {busy ? "提交中…" : "提交订单"}
+                </Button>
+                <Text className="cu-cta-fine">
+                  资金平台托管 · 服务完成后再结算给陪玩
+                  {missing.length > 0
+                    ? ` · 还有 ${missing.length} 个必填项未填写`
+                    : ""}
                 </Text>
-              ) : null}
+              </View>
               <Button
                 className="cu-button cu-button-outline cu-button-small cu-button-full"
                 onClick={() => {

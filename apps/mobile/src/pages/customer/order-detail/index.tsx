@@ -28,6 +28,10 @@ interface OrderSummary {
     durationSeconds: number | null;
     desiredStartAt: string | null;
   } | null;
+  snapshot: Array<{
+    productName: string;
+    lineTotalFen: string;
+  }> | null;
   timeline: Array<{
     id: string;
     eventType: string;
@@ -189,6 +193,106 @@ export default function CustomerOrderDetailPage() {
   };
 
   const status = classic?.status ?? gd?.status;
+
+  /** 快照合计（整数分 BigInt 求和 → 元文本），不经浮点；无快照返回 null。 */
+  const amountText = (() => {
+    const lines = classic?.snapshot ?? [];
+    if (lines.length === 0) return null;
+    let total = BigInt(0);
+    for (const line of lines) {
+      try {
+        total += BigInt(line.lineTotalFen);
+      } catch {
+        return null;
+      }
+    }
+    const yuan = total / BigInt(100);
+    const fen = total % BigInt(100);
+    return `${yuan}.${fen.toString().padStart(2, "0")}`;
+  })();
+
+  /**
+   * 进度时间线（灵析重设计 Slice C）：按真实状态机推导节点。
+   * 已发生 = timeline 里出现过的 toStatus；当前 = 订单 status。
+   */
+  const trackNodes = (() => {
+    const doneStatuses = new Set(
+      (classic?.timeline ?? []).map((event) => event.toStatus),
+    );
+    const orderStatus = classic?.status ?? gd?.status ?? null;
+    const nodes: Array<{
+      key: string;
+      title: string;
+      desc: string;
+      state: "done" | "cur" | "todo";
+    }> = [
+      {
+        key: "CREATED",
+        title: "下单成功",
+        desc: classic
+          ? `创建于 ${new Date(classic.createdAt).toLocaleString()}`
+          : "等待门店确认",
+        state: "todo",
+      },
+      {
+        key: "DISPATCHING",
+        title: "选人 / 派单",
+        desc: "门店与老板确认陪玩人选",
+        state: "todo",
+      },
+      {
+        key: "IN_PROGRESS",
+        title: "服务进行中",
+        desc: "陪玩服务过程有截图存证",
+        state: "todo",
+      },
+      {
+        key: "PENDING_CONFIRMATION",
+        title: "服务结束 · 你来确认",
+        desc: "确认后费用核算给陪玩",
+        state: "todo",
+      },
+      {
+        key: "COMPLETED",
+        title: "已完成",
+        desc: "可在钱包查看消费明细",
+        state: "todo",
+      },
+    ];
+    if (orderStatus === "CANCELLED") {
+      return [
+        {
+          key: "CANCELLED",
+          title: "订单已取消",
+          desc: "如有疑问请联系门店或发起争议",
+          state: "cur",
+        },
+      ];
+    }
+    const currentIndex = nodes.findIndex((node) => {
+      if (node.key === "DISPATCHING") {
+        return (
+          orderStatus === "DISPATCHING" ||
+          orderStatus === "ASSIGNED" ||
+          orderStatus === "READY"
+        );
+      }
+      return node.key === orderStatus;
+    });
+    return nodes.map((node, index) => ({
+      ...node,
+      desc:
+        node.key === "DISPATCHING" && doneStatuses.has("DISPATCHING")
+          ? `${node.desc} · 已完成`
+          : node.desc,
+      state:
+        index < currentIndex
+          ? "done"
+          : index === currentIndex
+            ? "cur"
+            : "todo",
+    }));
+  })();
   const subtitle = classic?.orderNo ?? gd?.dispatchNo ?? "订单详情";
 
   return (
@@ -256,13 +360,18 @@ export default function CustomerOrderDetailPage() {
         </View>
       ) : null}
       {classic?.status === "PENDING_CONFIRMATION" ? (
-        <Button
-          className="cu-button cu-button-green cu-button-full"
-          disabled={busy}
-          onClick={() => void confirmClassic()}
-        >
-          {busy ? "确认中…" : "服务结束 · 确认完成"}
-        </Button>
+        <View className="cu-cta-stick">
+          <Button
+            className="cu-button cu-button-green cu-button-full"
+            disabled={busy}
+            onClick={() => void confirmClassic()}
+          >
+            {busy ? "确认中…" : "服务结束 · 确认完成"}
+          </Button>
+          <Text className="cu-cta-fine">
+            确认后按下单快照核算给陪玩；有异议请先发起争议。
+          </Text>
+        </View>
       ) : null}
       {gd?.status === "PENDING_CONFIRMATION" ? (
         <View className="cu-card">
@@ -272,20 +381,39 @@ export default function CustomerOrderDetailPage() {
           </Text>
         </View>
       ) : null}
-      {classic?.timeline && classic.timeline.length > 0 ? (
+      {amountText ? (
         <View className="cu-card">
-          <Text className="cu-card-title">订单时间线</Text>
-          {classic.timeline.map((event) => (
-            <View className="cu-row" key={event.id}>
-              <Text className="cu-meta">{event.eventType}</Text>
-              <Text className="cu-meta">
-                {event.fromStatus ?? "-"} → {event.toStatus ?? "-"}
-              </Text>
+          <View className="cu-row cu-row-first">
+            <Text className="cu-card-title">订单金额</Text>
+            <Text className="cu-order-amount">¥{amountText}</Text>
+          </View>
+          <Text className="cu-meta">
+            按下单快照合计；确认完成后核算给陪玩（门店抽成另计）。
+          </Text>
+        </View>
+      ) : null}
+      {trackNodes.length > 0 ? (
+        <View className="cu-track">
+          {trackNodes.map((node) => (
+            <View className="cu-track-line" key={node.key}>
+              <View className="cu-track-node">
+                <View
+                  className={`cu-track-dot ${node.state === "done" ? "done" : node.state === "cur" ? "cur" : ""}`}
+                />
+                <View
+                  className={`cu-track-vline${node.state === "done" ? " done" : ""}`}
+                />
+              </View>
+              <View
+                className={`cu-track-body${node.state === "todo" ? " is-dim" : ""}`}
+              >
+                <Text className="cu-track-tt">{node.title}</Text>
+                <Text className="cu-track-td">{node.desc}</Text>
+              </View>
             </View>
           ))}
         </View>
-      ) : null}
-      {gd && status === "DISPATCHING" ? (
+      ) : null}      {gd && status === "DISPATCHING" ? (
         <Button
           className="cu-button cu-button-primary cu-button-full"
           onClick={() =>
