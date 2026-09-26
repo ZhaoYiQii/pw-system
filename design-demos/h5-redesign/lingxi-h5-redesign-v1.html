@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灵析陪玩 SaaS · H5 用户端重设计（概念稿）</title>
+<!--
+  灵析陪玩 SaaS 系统 · H5 用户端 UI 重设计概念稿
+  ─────────────────────────────────────────────
+  设计依据（全部来自真实代码库 D:\pw system）：
+  · 功能模块：CUSTOMER_NAV_ITEMS（首页/下单/钱包/我的）、落地身份选择、
+    下单流程（game-select → game-order → order-detail）、钱包充值、争议、注册登录（手机号/密码）
+  · 文案沿用：「今晚，选个合拍的队友」「老板端」「欢迎回来」
+  · 色彩：延续代码库 customer-ui/styles.css 既有 token（米纸/松绿/陶土），将其贯穿全端
+  · 本稿为纯视觉概念，不改动任何项目代码；示例数据仅用于占位
+-->
+<style>
+  :root {
+    --paper: #f5f2ea;
+    --card: #fffdf8;
+    --ink: #18231e;
+    --muted: #6f756c;
+    --line: #e6e0d2;
+    --primary: #24543f;
+    --primary-ink: #ffffff;
+    --primary-soft: #e5efe8;
+    --accent: #cf6040;
+    --accent-soft: #f6e3db;
+    --amber: #a56b22;
+    --amber-soft: #f5ead7;
+    --radius-card: 20px;
+    --radius-btn: 14px;
+    --shadow-card: 0 2px 6px rgba(24,35,30,.05), 0 12px 32px rgba(24,35,30,.07);
+    --serif: "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  /* 品牌色向 B：黛蓝（顶部工具条可切换） */
+  .theme-lan {
+    --primary: #2c4a6e;
+    --primary-soft: #e6edf5;
+    --accent: #c98a3d;
+    --accent-soft: #f5ecd9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #141a17;
+    color: #e9e6dc;
+    font-family: var(--sans);
+    padding: 40px 48px 72px;
+  }
+  .deck-head { max-width: 1280px; margin: 0 auto 28px; }
+  .deck-brand { display: flex; align-items: baseline; gap: 14px; }
+  .deck-brand h1 { font-family: var(--serif); font-size: 30px; font-weight: 700; letter-spacing: .06em; }
+  .deck-brand span { font-size: 13px; color: #9aa79e; }
+  .deck-sub { margin-top: 8px; font-size: 13px; color: #9aa79e; line-height: 1.7; }
+  .deck-tools { margin-top: 18px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .deck-tools .lbl { font-size: 12px; color: #9aa79e; margin-right: 2px; }
+  .theme-btn {
+    border: 1px solid #3a473f; background: #1c2420; color: #cfd8cf;
+    font-size: 12px; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+  }
+  .theme-btn.on { background: var(--primary, #24543f); border-color: transparent; color: #fff; }
+
+  .board {
+    display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start;
+    max-width: 1280px; margin: 0 auto;
+  }
+  .shot { flex: none; }
+  .shot-label {
+    font-size: 12px; font-style: italic; color: #8d9a90; margin-bottom: 10px;
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  .shot-label b { font-weight: 500; font-style: normal; color: #c4cfc4; }
+
+  /* ── H5 浏览器手机框（这是 H5 页面，不用 iOS 灵动岛外壳）── */
+  .phone {
+    width: 390px; height: 812px; border-radius: 34px; overflow: hidden;
+    background: var(--paper); position: relative;
+    box-shadow: 0 0 0 10px #232b26, 0 0 0 12px #3a473f, 0 30px 60px rgba(0,0,0,.45);
+    display: flex; flex-direction: column;
+    color: var(--ink); font-size: 14px;
+  }
+  .p-chrome {
+    height: 34px; background: #fbf9f3; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; padding: 0 14px; flex: none;
+  }
+  .p-chrome .dot { width: 6px; height: 6px; border-radius: 50%; background: #c9c3b4; }
+  .p-chrome .addr {
+    flex: 1; background: #efece2; border-radius: 8px; font-size: 10px; color: #8b9188;
+    text-align: center; padding: 4px 0; letter-spacing: .02em;
+  }
+  .p-body { flex: 1; overflow-y: auto; scrollbar-width: none; position: relative; }
+  .p-body::-webkit-scrollbar { display: none; }
+
+  /* ── 公共组件 ── */
+  .appbar {
+    padding: 18px 20px 14px; display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .appbar .brandline { display: flex; flex-direction: column; gap: 3px; }
+  .appbar .hello { font-family: var(--serif); font-size: 21px; font-weight: 700; letter-spacing: .02em; }
+  .appbar .sub { font-size: 11.5px; color: var(--muted); }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 14px; color: #fff;
+    background: linear-gradient(135deg, var(--primary), #3d7a5c);
+  }
+  .avatar.orange { background: linear-gradient(135deg, var(--accent), #e0916f); }
+  .avatar.small { width: 30px; height: 30px; font-size: 12px; }
+
+  .card {
+    background: var(--card); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card); padding: 18px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    margin: 22px 20px 10px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-title .more { font-size: 11.5px; color: var(--muted); font-weight: 400; cursor: pointer; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10.5px; padding: 3px 9px; border-radius: 999px; font-weight: 500;
+  }
+  .chip.green { background: var(--primary-soft); color: var(--primary); }
+  .chip.orange { background: var(--accent-soft); color: var(--accent); }
+  .chip.amber { background: var(--amber-soft); color: var(--amber); }
+  .chip.gray { background: #efece2; color: var(--muted); }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center;
+    height: 46px; border-radius: var(--radius-btn); font-size: 14.5px; font-weight: 600;
+    cursor: pointer; border: none; width: 100%; font-family: var(--sans);
+    transition: transform .06s ease, filter .15s ease;
+  }
+  .btn:active { transform: scale(.985); filter: brightness(.96); }
+  .btn-primary { background: var(--primary); color: var(--primary-ink); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-soft { background: var(--primary-soft); color: var(--primary); }
+  .btn-ghost { background: transparent; color: var(--primary); border: 1px solid var(--line); }
+  .btn-line { height: 38px; font-size: 12.5px; font-weight: 500; border-radius: 10px; }
+
+  .money { font-family: var(--serif); font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .arrow { color: #b9b3a2; font-size: 16px; }
+
+  /* ── 底部 tab bar（对应 CUSTOMER_NAV_ITEMS：首页/下单/钱包/我的）── */
+  .tabbar {
+    flex: none; background: #fffdf8f2; backdrop-filter: blur(8px);
+    border-top: 1px solid var(--line); display: flex; padding: 8px 6px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; color: #98948a; cursor: pointer; padding: 4px 0; border-radius: 10px;
+  }
+  .tab.on { color: var(--primary); font-weight: 600; }
+  .tab svg { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+
+  /* ── 落地页（重设计的身份选择）── */
+  .land-hero { padding: 30px 22px 6px; }
+  .land-brandrow { display: flex; align-items: center; gap: 10px; }
+  .land-seal {
+    width: 44px; height: 44px; border-radius: 12px; background: var(--primary);
+    color: #f5f2ea; font-family: var(--serif); font-size: 20px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; letter-spacing: 0;
+  }
+  .land-brandname { font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: .04em; }
+  .land-brandsub { font-size: 10.5px; color: var(--muted); letter-spacing: .12em; margin-top: 2px; }
+  .land-store {
+    margin-top: 24px; font-family: var(--serif); font-size: 30px; font-weight: 700; line-height: 1.35;
+  }
+  .land-store em { font-style: normal; color: var(--accent); }
+  .land-note { margin-top: 8px; font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+  .role-card {
+    margin: 14px 20px 0; background: var(--card); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card); padding: 18px; cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    border: 1px solid transparent; transition: border-color .15s ease, transform .06s ease;
+  }
+  .role-card:active { transform: scale(.99); }
+  .role-card .ic {
+    width: 46px; height: 46px; border-radius: 14px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .role-card .ic svg { width: 22px; height: 22px; stroke-width: 1.7; fill: none; }
+  .role-card.boss .ic { background: var(--primary-soft); }
+  .role-card.boss .ic svg { stroke: var(--primary); }
+  .role-card.player .ic { background: var(--accent-soft); }
+  .role-card.player .ic svg { stroke: var(--accent); }
+  .role-card .copy { flex: 1; min-width: 0; }
+  .role-card .t { font-size: 15.5px; font-weight: 600; }
+  .role-card .d { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.55; }
+  .land-foot {
+    margin: 26px 20px 0; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.8;
+  }
+  .land-foot .lk { color: var(--primary); font-weight: 600; cursor: pointer; }
+
+  /* ── 首页 ── */
+  .greet-card {
+    margin: 4px 20px 0; border-radius: var(--radius-card); padding: 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, #35684e 100%);
+    color: #f2f5ef; box-shadow: var(--shadow-card);
+  }
+  .greet-card .g1 { font-family: var(--serif); font-size: 20px; font-weight: 700; }
+  .greet-card .g2 { font-size: 11.5px; opacity: .82; margin-top: 6px; line-height: 1.6; }
+  .quick {
+    margin: 14px 20px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .quick .q {
+    background: var(--card); border-radius: 16px; box-shadow: var(--shadow-card);
+    padding: 13px 6px 11px; text-align: center; cursor: pointer;
+  }
+  .quick .q svg { width: 20px; height: 20px; stroke: var(--primary); fill: none; stroke-width: 1.7; }
+  .quick .q .qt { font-size: 10.5px; margin-top: 6px; color: var(--ink); font-weight: 500; }
+  .order-mini {
+    margin: 0 20px; background: var(--card); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card); padding: 15px 16px;
+  }
+  .order-mini .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .order-mini .ono { font-size: 12.5px; font-weight: 600; }
+  .order-mini .row2 { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .order-mini .meta { flex: 1; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+
+  /* ── 下单流程 ── */
+  .steps { display: flex; align-items: center; gap: 6px; margin: 4px 20px 0; }
+  .steps .st { font-size: 10.5px; color: var(--muted); }
+  .steps .st.on { color: var(--primary); font-weight: 600; }
+  .steps .bar { flex: 1; height: 1px; background: var(--line); }
+  .game-item {
+    margin: 0 20px 10px; background: var(--card); border-radius: 16px;
+    box-shadow: var(--shadow-card); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    border: 1.5px solid transparent;
+  }
+  .game-item.sel { border-color: var(--primary); }
+  .game-item .gi {
+    width: 42px; height: 42px; border-radius: 12px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-weight: 700; font-size: 17px; color: #fff;
+  }
+  .game-item .gn { flex: 1; }
+  .game-item .gn .n { font-size: 14px; font-weight: 600; }
+  .game-item .gn .c { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .tpl-card {
+    margin: 0 20px 12px; background: var(--card); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card); padding: 16px; cursor: pointer; border: 1.5px solid transparent;
+  }
+  .tpl-card.sel { border-color: var(--primary); }
+  .tpl-card .r1 { display: flex; justify-content: space-between; align-items: center; }
+  .tpl-card .tn { font-size: 14px; font-weight: 600; }
+  .tpl-card .tags { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+
+  /* ── 订单详情 ── */
+  .track { margin: 4px 20px 0; background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 18px 16px 14px; }
+  .track-line { display: flex; }
+  .track-node { display: flex; flex-direction: column; align-items: center; width: 18px; flex: none; }
+  .track-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .track-dot.done { background: var(--primary); }
+  .track-dot.cur { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .track-vline { width: 2px; flex: 1; background: var(--line); min-height: 22px; }
+  .track-vline.done { background: var(--primary); }
+  .track-body { flex: 1; padding-bottom: 18px; }
+  .track-body .tt { font-size: 12.5px; font-weight: 600; }
+  .track-body .td { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .track-body.dim .tt { color: var(--muted); font-weight: 400; }
+  .player-row { display: flex; align-items: center; gap: 12px; }
+  .player-row .pn { font-size: 13.5px; font-weight: 600; }
+  .player-row .pd { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .star { color: var(--amber); font-size: 11px; }
+
+  /* ── 钱包 ── */
+  .wallet-hero {
+    margin: 4px 20px 0; border-radius: var(--radius-card); padding: 22px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, #3a7156 100%);
+    color: #f2f5ef; box-shadow: var(--shadow-card);
+  }
+  .wallet-hero .wl { font-size: 11px; opacity: .8; letter-spacing: .06em; }
+  .wallet-hero .wv { font-family: var(--serif); font-size: 40px; font-weight: 700; margin-top: 10px; }
+  .wallet-hero .wv small { font-size: 15px; font-weight: 500; margin-right: 4px; opacity: .85; }
+  .wallet-hero .wr { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .wallet-hero .hint { font-size: 10.5px; opacity: .72; }
+  .topup-btn {
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.35);
+    color: #fff; font-size: 12px; padding: 7px 16px; border-radius: 999px; cursor: pointer;
+  }
+  .flow-item { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .flow-item:last-child { border-bottom: 0; }
+  .flow-item .fi {
+    width: 36px; height: 36px; border-radius: 11px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .flow-item .fc { flex: 1; }
+  .flow-item .fc .t { font-size: 13px; font-weight: 500; }
+  .flow-item .fc .d { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .flow-item .amt { font-size: 14px; font-weight: 600; }
+  .flow-item .amt.plus { color: var(--primary); }
+
+  /* ── 我的 ── */
+  .me-card { margin: 4px 20px 0; background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 18px; display: flex; align-items: center; gap: 14px; }
+  .me-card .mn { font-size: 16px; font-weight: 700; }
+  .me-card .md { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .me-list { margin: 12px 20px 0; background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 4px 16px; }
+  .me-row { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .me-row:last-child { border-bottom: 0; }
+  .me-row .mi { width: 30px; height: 30px; border-radius: 9px; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; }
+  .me-row .mi svg { width: 15px; height: 15px; stroke: var(--primary); fill: none; stroke-width: 1.7; }
+  .me-row .mt { flex: 1; font-size: 13.5px; font-weight: 500; }
+  .me-row .badge { background: var(--accent-soft); color: var(--accent); }
+
+  /* ── 充值弹层 ── */
+  .sheet-mask {
+    position: absolute; inset: 0; background: rgba(24,35,30,.42); z-index: 30;
+    display: none; align-items: flex-end;
+  }
+  .sheet-mask.open { display: flex; }
+  .sheet {
+    width: 100%; background: var(--card); border-radius: 24px 24px 0 0; padding: 20px 20px 26px;
+  }
+  .sheet .sh { display: flex; justify-content: space-between; align-items: center; }
+  .sheet .st1 { font-size: 16px; font-weight: 700; }
+  .sheet .x { cursor: pointer; color: var(--muted); font-size: 15px; }
+  .amount-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 16px; }
+  .amount {
+    border: 1.5px solid var(--line); border-radius: 12px; text-align: center;
+    padding: 12px 0; cursor: pointer; font-size: 15px; font-weight: 600; font-family: var(--serif);
+  }
+  .amount small { display: block; font-size: 9.5px; color: var(--muted); font-weight: 400; margin-top: 2px; font-family: var(--sans); }
+  .amount.sel { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+  .sheet .btn { margin-top: 16px; }
+
+  /* 详情展开 */
+  .collapse { cursor: pointer; }
+  .collapse .extra { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 11px; color: var(--muted); line-height: 1.8; }
+  .collapse.open .extra { display: block; }
+
+  .demo-note {
+    margin: 10px 20px 18px; font-size: 10px; color: #a9a396; text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="deck-head">
+  <div class="deck-brand">
+    <h1>灵析陪玩 SaaS 系统</h1>
+    <span>H5 用户端 · UI 重设计概念稿 v1</span>
+  </div>
+  <div class="deck-sub">
+    基于真实功能模块重排：底部四 Tab（首页 / 下单 / 钱包 / 我的）· 落地身份选择 · 模板下单流程 · 订单进度与确认 · 钱包充值与流水 · 争议入口。
+    色彩延续代码库 customer-ui 既有 token（米纸 / 松绿 / 陶土橙），品牌名「灵析」以宋体呈现。所有数据为示例占位。
+  </div>
+  <div class="deck-tools">
+    <span class="lbl">品牌色向</span>
+    <button class="theme-btn on" id="btn-lv" onclick="setTheme('lv')">A · 松绿 × 陶土（延续现有 token）</button>
+    <button class="theme-btn" id="btn-lan" onclick="setTheme('lan')">B · 黛蓝 × 琥珀（冷调备选）</button>
+    <span class="lbl" style="margin-left:14px">玩法</span>
+    <span class="theme-btn" style="cursor:default">底部 Tab / 登录方式 / 下单选择 / 充值弹层 / 明细展开 均可点击</span>
+  </div>
+</div>
+
+<div class="board" id="board">
+
+  <!-- ═══════════ ① 落地页 ═══════════ -->
+  <div class="shot">
+    <div class="shot-label"><b>① 落地 · 身份选择</b><span>对比现版：去黑色大按钮 / 单一品牌色 / 整卡可点</span></div>
+    <div class="phone">
+      <div class="p-chrome"><span class="dot"></span><span class="dot"></span><span class="addr">lingxi-play.example · ?t=c1</span></div>
+      <div class="p-body">
+        <div class="land-hero">
+          <div class="land-brandrow">
+            <div class="land-seal">灵析</div>
+            <div>
+              <div class="land-brandname">灵析陪玩</div>
+              <div class="land-brandsub">LINGXI PLAY · 门店数字化</div>
+            </div>
+          </div>
+          <div class="land-store">今晚，<br>选个<em>合拍</em>的队友。</div>
+          <div class="land-note">已接入门店：<b style="color:var(--ink)">西西club</b> · 实名认证 · 资金平台托管</div>
+        </div>
+        <div style="margin:18px 20px 0; font-size:12px; font-weight:600; color:var(--muted)">选择入口</div>
+        <div class="role-card boss" onclick="tap(this,'进入老板端（真实版本走 /pages/customer/home）')">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M3 11l9-8 9 8"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/></svg></div>
+          <div class="copy">
+            <div class="t">我是老板</div>
+            <div class="d">自助下单、选人确认、钱包结算与争议处理</div>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="role-card player" onclick="tap(this,'进入陪玩端（真实版本走陪玩 H5）')">
+          <div class="ic"><svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+          <div class="copy">
+            <div class="t">我是陪玩</div>
+            <div class="d">查看可接订单、报名、开始与结束服务</div>
+          </div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="land-foot">
+          还没有账号？<span class="lk" onclick="tap(this,'注册（账号密码 / 手机号快捷）')">注册新账号</span><br>
+          手机号验证码登录 · 注册即代表同意用户协议
+        </div>
+        <div class="demo-note">概念稿 · 示例门店与文案 · 灵析陪玩 SaaS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ② 首页（老板登录后）═══════════ -->
+  <div class="shot">
+    <div class="shot-label"><b>② 首页 · 老板端</b><span>Tab「首页」 · 登录后</span></div>
+    <div class="phone">
+      <div class="p-chrome"><span class="dot"></span><span class="dot"></span><span class="addr">灵析陪玩 · 西西club</span></div>
+      <div class="p-body">
+        <div class="appbar">
+          <div class="brandline">
+            <div class="hello">晚上好，老王</div>
+            <div class="sub">西西club · 老板端</div>
+          </div>
+          <div class="avatar">王</div>
+        </div>
+        <div class="greet-card">
+          <div class="g1">今晚，选个合拍的队友</div>
+          <div class="g2">3 位常点陪玩在线 · 平均 2 分钟接单 · 平台托管资金</div>
+        </div>
+        <div class="quick">
+          <div class="q" onclick="tap(this,'去下单 → game-select')">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+            <div class="qt">去下单</div>
+          </div>
+          <div class="q" onclick="tap(this,'我的订单 → orders')">
+            <svg viewBox="0 0 24 24"><path d="M8 6h11M8 12h11M8 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+            <div class="qt">我的订单</div>
+          </div>
+          <div class="q" onclick="tap(this,'钱包 → wallet')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M3 11h18M16 15h2"/></svg>
+            <div class="qt">钱包</div>
+          </div>
+          <div class="q" onclick="tap(this,'争议与售后 → disputes')">
+            <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.5"/></svg>
+            <div class="qt">争议</div>
+          </div>
+        </div>
+        <div class="section-title">进行中的订单 <span class="more" onclick="tap(this,'全部订单')">全部 ›</span></div>
+        <div class="order-mini">
+          <div class="row1"><span class="ono">RMUHP0U1W4VCFE</span><span class="chip orange">服务中</span></div>
+          <div class="row2">
+            <div class="avatar small orange">小</div>
+            <div class="meta">王者 · 组队 1 小时<br>陪玩 小周 · 已服务 32 分钟</div>
+            <button class="btn btn-line btn-soft" style="width:auto; padding:0 14px" onclick="tap(this,'查看订单详情')">详情</button>
+          </div>
+        </div>
+        <div class="section-title">常点的陪玩</div>
+        <div class="order-mini collapse" onclick="this.classList.toggle('open')">
+          <div class="player-row">
+            <div class="avatar orange">周</div>
+            <div style="flex:1">
+              <div class="pn">小周 <span class="star">★ 4.9</span></div>
+              <div class="pd">王者 / 派对游戏 · 本月 12 单</div>
+            </div>
+            <span class="arrow" id="chev1">⌄</span>
+          </div>
+          <div class="extra">最近一单：9/25 组队 1 小时 · ¥150.00 · 已完成<br>常一起点：小鹿、阿哲 · 段位 巅峰 1800</div>
+        </div>
+        <div class="demo-note">示例数据 · 登录后首页沿用「今晚，选个合拍的队友」文案</div>
+      </div>
+      <div class="tabbar" data-page="home"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ③ 下单流程 ═══════════ -->
+  <div class="shot">
+    <div class="shot-label"><b>③ 下单 · 选游戏 → 选模板</b><span>Tab「下单」 · game-select / game-order</span></div>
+    <div class="phone">
+      <div class="p-chrome"><span class="dot"></span><span class="dot"></span><span class="addr">灵析陪玩 · 下单</span></div>
+      <div class="p-body">
+        <div class="appbar">
+          <div class="brandline"><div class="hello">去下单</div><div class="sub">选游戏 → 选模板 → 确认</div></div>
+        </div>
+        <div class="steps">
+          <span class="st on">1 选游戏</span><span class="bar"></span>
+          <span class="st on">2 选模板</span><span class="bar"></span>
+          <span class="st">3 确认支付</span>
+        </div>
+        <div class="section-title" style="margin-top:16px">选择游戏 <span class="more">门店已开通 4 款</span></div>
+        <div class="game-item sel" onclick="selGame(this)">
+          <div class="gi" style="background:#3d6a8f">王</div>
+          <div class="gn"><div class="n">王者荣耀</div><div class="c">2 个模板 · 上分 / 娱乐陪</div></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="game-item" onclick="selGame(this)">
+          <div class="gi" style="background:#8f5f3d">永</div>
+          <div class="gn"><div class="n">永劫无间</div><div class="c">1 个模板 · 修罗陪练</div></div>
+          <span class="arrow">›</span>
+        </div>
+        <div class="section-title">王者荣耀 · 选择模板</div>
+        <div class="tpl-card sel" onclick="selTpl(this)">
+          <div class="r1"><span class="tn">组队上分 · 1 小时</span><span class="money" style="font-size:16px;font-weight:700">¥150</span></div>
+          <div class="tags"><span class="chip green">1 对 1</span><span class="chip gray">可指定段位</span><span class="chip amber">热门</span></div>
+        </div>
+        <div class="tpl-card" onclick="selTpl(this)">
+          <div class="r1"><span class="tn">五排开黑 · 2 小时</span><span class="money" style="font-size:16px;font-weight:700">¥280</span></div>
+          <div class="tags"><span class="chip green">组队 5 人</span><span class="chip gray">含语音</span></div>
+        </div>
+        <div style="padding:2px 20px 0">
+          <button class="btn btn-primary" onclick="tap(this,'提交订单（真实版本走受控接口 + 幂等键）')">选择 1 个模板，去确认 · ¥150</button>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">资金平台托管 · 服务完成后再结算给陪玩</div>
+        </div>
+        <div class="demo-note">示例数据 · 模板字段端口可见性沿用 v2 配置</div>
+      </div>
+      <div class="tabbar" data-page="order"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ④ 订单详情 ═══════════ -->
+  <div class="shot">
+    <div class="shot-label"><b>④ 订单详情 · 进度与确认</b><span>order-detail · 确认完成入口</span></div>
+    <div class="phone">
+      <div class="p-chrome"><span class="dot"></span><span class="dot"></span><span class="addr">订单详情</span></div>
+      <div class="p-body">
+        <div class="appbar">
+          <div class="brandline">
+            <div class="hello">订单详情</div>
+            <div class="sub">RMUHP0U1W4VCFE</div>
+          </div>
+          <span class="chip orange">服务中</span>
+        </div>
+        <div class="track">
+          <div class="track-line">
+            <div class="track-node"><div class="track-dot done"></div><div class="track-vline done"></div></div>
+            <div class="track-body"><div class="tt">下单成功</div><div class="td">21:02 · 王者 组队 1 小时 ¥150.00</div></div>
+          </div>
+          <div class="track-line">
+            <div class="track-node"><div class="track-dot done"></div><div class="track-vline done"></div></div>
+            <div class="track-body"><div class="tt">陪玩接单</div><div class="td">21:04 · 小周 接单</div></div>
+          </div>
+          <div class="track-line">
+            <div class="track-node"><div class="track-dot cur"></div><div class="track-vline"></div></div>
+            <div class="track-body"><div class="tt">服务进行中</div><div class="td">已服务 32 分钟 · 证据已存证 2 张</div></div>
+          </div>
+          <div class="track-line">
+            <div class="track-node"><div class="track-dot"></div><div class="track-vline"></div></div>
+            <div class="track-body dim"><div class="tt">服务结束 · 你来确认</div><div class="td">确认后费用核算给陪玩</div></div>
+          </div>
+          <div class="track-line">
+            <div class="track-node"><div class="track-dot"></div></div>
+            <div class="track-body dim" style="padding-bottom:2px"><div class="tt">已完成</div><div class="td">可开具消费明细</div></div>
+          </div>
+        </div>
+        <div class="section-title">服务你的陪玩</div>
+        <div class="order-mini">
+          <div class="player-row">
+            <div class="avatar orange">周</div>
+            <div style="flex:1">
+              <div class="pn">小周 <span class="star">★ 4.9</span></div>
+              <div class="pd">巅峰 1800 · 善边路 · 接单率 98%</div>
+            </div>
+            <button class="btn btn-line btn-ghost" style="width:auto;padding:0 12px" onclick="tap(this,'联系客服 / 争议入口（dispute-create）')">有异议</button>
+          </div>
+        </div>
+        <div style="padding:18px 20px 0">
+          <button class="btn btn-accent" onclick="tap(this,'确认完成（真实版本 staff-confirm → 自动核算 earning）')">服务已结束，确认完成</button>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">确认后 ¥150.00 中的 ¥120.00 将结算给陪玩（门店抽成 20%）</div>
+        </div>
+        <div class="demo-note">示例数据 · 进度节点对应真实状态机 CONFIRMED→DISPATCHING→ASSIGNED→IN_PROGRESS→PENDING_CONFIRMATION</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ⑤ 钱包 ═══════════ -->
+  <div class="shot">
+    <div class="shot-label"><b>⑤ 钱包 · 余额与充值</b><span>Tab「钱包」 · wallet + 充值弹层</span></div>
+    <div class="phone">
+      <div class="p-chrome"><span class="dot"></span><span class="dot"></span><span class="addr">我的钱包</span></div>
+      <div class="p-body" style="position:relative">
+        <div class="appbar">
+          <div class="brandline"><div class="hello">我的钱包</div><div class="sub">资金由平台托管，消费有明细</div></div>
+        </div>
+        <div class="wallet-hero">
+          <div class="wl">可用余额（元）</div>
+          <div class="wv"><small>¥</small>1,000.00</div>
+          <div class="wr">
+            <span class="hint">冻结 ¥0.00 · 累计充值 ¥1,100.00</span>
+            <button class="topup-btn" onclick="openSheet()">充值</button>
+          </div>
+        </div>
+        <div class="section-title">收支明细 <span class="more">导出</span></div>
+        <div class="order-mini">
+          <div class="flow-item">
+            <div class="fi" style="background:var(--primary-soft)">充</div>
+            <div class="fc"><div class="t">钱包充值</div><div class="d">今天 20:41 · 微信支付</div></div>
+            <div class="amt plus money">+1,000.00</div>
+          </div>
+          <div class="flow-item">
+            <div class="fi" style="background:var(--accent-soft)">消</div>
+            <div class="fc"><div class="t">订单扣费 · 组队 1 小时</div><div class="d">今天 21:02 · RMUHP0U1…</div></div>
+            <div class="amt money">-150.00</div>
+          </div>
+          <div class="flow-item">
+            <div class="fi" style="background:var(--primary-soft)">退</div>
+            <div class="fc"><div class="t">退款到账 · 客户未到场</div><div class="d">9/24 14:20 · 全额退回</div></div>
+            <div class="amt plus money">+128.00</div>
+          </div>
+        </div>
+        <div class="demo-note">示例数据 · 充值/退款流水与真实 WalletEntry 字段一致</div>
+        <!-- 充值弹层 -->
+        <div class="sheet-mask" id="sheet">
+          <div class="sheet">
+            <div class="sh"><span class="st1">钱包充值</span><span class="x" onclick="closeSheet()">✕</span></div>
+            <div class="amount-grid">
+              <div class="amount" onclick="selAmount(this)">¥50<small>约 20 分钟</small></div>
+              <div class="amount sel" onclick="selAmount(this)">¥128<small>约 50 分钟</small></div>
+              <div class="amount" onclick="selAmount(this)">¥300<small>约 2 小时</small></div>
+              <div class="amount" onclick="selAmount(this)">¥500<small>约 3.5 小时</small></div>
+              <div class="amount" onclick="selAmount(this)">¥1,000<small>约 7 小时</small></div>
+              <div class="amount" onclick="tap(this,'自定义金额输入')">自定义</div>
+            </div>
+            <button class="btn btn-primary" onclick="closeSheet(); tap(this,'微信支付（mock：走 /boss/wallet/recharge）')">微信支付 ¥128</button>
+            <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">重复点击不会重复扣款（幂等）· 余额仅用于本门店消费</div>
+          </div>
+        </div>
+      </div>
+      <div class="tabbar" data-page="wallet"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ⑥ 我的 ═══════════ -->
+  <div class="shot">
+    <div class="shot-label"><b>⑥ 我的 · 个人中心</b><span>Tab「我的」 · profile / disputes 入口</span></div>
+    <div class="phone">
+      <div class="p-chrome"><span class="dot"></span><span class="dot"></span><span class="addr">我的</span></div>
+      <div class="p-body">
+        <div class="me-card">
+          <div class="avatar" style="width:52px;height:52px;font-size:18px">王</div>
+          <div style="flex:1">
+            <div class="mn">老王 <span class="chip green" style="vertical-align:2px">已实名</span></div>
+            <div class="md">138****8848 · 西西club · 加入 45 天</div>
+          </div>
+        </div>
+        <div class="me-list">
+          <div class="me-row" onclick="tap(this,'我的订单')">
+            <div class="mi"><svg viewBox="0 0 24 24"><path d="M8 6h11M8 12h11M8 18h11"/></svg></div>
+            <div class="mt">我的订单</div><span class="arrow">›</span>
+          </div>
+          <div class="me-row" onclick="tap(this,'我的争议（disputes）')">
+            <div class="mi" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" style="stroke:var(--accent)"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17.5v.5"/></svg></div>
+            <div class="mt">争议与售后</div><span class="chip badge">1 单处理中</span><span class="arrow">›</span>
+          </div>
+          <div class="me-row" onclick="tap(this,'绑定手机号（phone-verification-code → 手机号快捷登录）')">
+            <div class="mi"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg></div>
+            <div class="mt">手机号快捷登录</div><span class="arrow">›</span>
+          </div>
+          <div class="me-row" onclick="tap(this,'消费明细导出（CSV，服务端生成）')">
+            <div class="mi"><svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg></div>
+            <div class="mt">消费明细</div><span class="arrow">›</span>
+          </div>
+        </div>
+        <div class="land-foot" style="margin-top:24px">
+          <span class="lk" onclick="tap(this,'退出登录（logoutSession → 撤销 refresh 会话）')">退出登录</span>
+        </div>
+        <div class="demo-note">灵析陪玩 SaaS · H5 用户端 v1 概念稿</div>
+      </div>
+      <div class="tabbar" data-page="profile"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── 底部 Tab（结构 = CUSTOMER_NAV_ITEMS）── */
+  const TABS = [
+    { id: "home", label: "首页", icon: '<path d="M3 11l9-8 9 8"/><path d="M5 9v11h14V9"/>' },
+    { id: "order", label: "下单", icon: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>' },
+    { id: "wallet", label: "钱包", icon: '<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M3 11h18"/>' },
+    { id: "profile", label: "我的", icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' },
+  ];
+  document.querySelectorAll(".tabbar").forEach((bar) => {
+    const cur = bar.dataset.page;
+    bar.innerHTML = TABS.map(
+      (t) => `<div class="tab ${t.id === cur ? "on" : ""}" onclick="tap(this,'切到 ${t.label}')">
+        <svg viewBox="0 0 24 24">${t.icon}</svg><span>${t.label}</span></div>`,
+    ).join("");
+  });
+
+  /* ── 交互 ── */
+  function tap(el, msg) {
+    const orig = el.dataset.orig;
+    if (!orig) { el.dataset.orig = el.tagName === "BUTTON" ? el.textContent : ""; }
+    const tip = document.createElement("div");
+    tip.textContent = "→ " + msg;
+    tip.style.cssText = "position:fixed;left:50%;bottom:36px;transform:translateX(-50%);background:#18231e;color:#f5f2ea;font-size:12px;padding:8px 16px;border-radius:999px;z-index:99;opacity:.94;pointer-events:none;transition:opacity .4s";
+    document.body.appendChild(tip);
+    setTimeout(() => { tip.style.opacity = "0"; }, 1300);
+    setTimeout(() => tip.remove(), 1800);
+  }
+  function setTheme(k) {
+    document.body.classList.toggle("theme-lan", k === "lan");
+    document.getElementById("btn-lv").classList.toggle("on", k !== "lan");
+    document.getElementById("btn-lan").classList.toggle("on", k === "lan");
+  }
+  function selGame(el) {
+    el.parentElement.querySelectorAll(".game-item").forEach((x) => x.classList.remove("sel"));
+    el.classList.add("sel");
+  }
+  function selTpl(el) {
+    document.querySelectorAll(".tpl-card").forEach((x) => x.classList.remove("sel"));
+    el.classList.add("sel");
+  }
+  function openSheet() { document.getElementById("sheet").classList.add("open"); }
+  function closeSheet() { document.getElementById("sheet").classList.remove("open"); }
+  function selAmount(el) {
+    el.parentElement.querySelectorAll(".amount").forEach((x) => x.classList.remove("sel"));
+    el.classList.add("sel");
+  }
+</script>
+</body>
+</html>
