@@ -1,4 +1,4 @@
-import { Button, Text, View } from "@tarojs/components";
+import { Button, Text, Textarea, View } from "@tarojs/components";
 import Taro, { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { apiAdapter } from "@platform-api";
@@ -9,6 +9,7 @@ import {
   CustomerShell,
   goCustomer,
 } from "../../../components/customer-ui";
+import { applyAsPlayer } from "../../../features/account-ui/actions";
 import {
   customerLogin,
   customerLogout,
@@ -38,6 +39,8 @@ export default function CustomerProfilePage() {
     tone: "error" | "success" | "info";
     text: string;
   } | null>(null);
+  const [showApply, setShowApply] = useState(false);
+  const [applyIntro, setApplyIntro] = useState("");
 
   const load = async (accessToken: string) => {
     setMsg(null);
@@ -99,6 +102,32 @@ export default function CustomerProfilePage() {
     void Taro.reLaunch({ url: "/pages/customer/home/index" });
   };
 
+  /**
+   * 陪玩申请：本页账号是 CUSTOMER，申请经老板审核通过后由 SP1 的多角色授权开出 PLAYER 角色，
+   * 同一 token 随后可进陪玩端。
+   */
+  const applyPlayer = async () => {
+    if (!applyIntro.trim()) {
+      setMsg({ tone: "error", text: "请填写陪玩申请说明" });
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await applyAsPlayer(applyIntro.trim());
+      setApplyIntro("");
+      setShowApply(false);
+      setMsg({ tone: "success", text: "已提交，等待老板审核。" });
+    } catch (error) {
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <CustomerShell title="我的" active="profile">
       {!token ? (
@@ -154,6 +183,40 @@ export default function CustomerProfilePage() {
               <Text className="cu-menu-arrow">›</Text>
             </Button>
           </View>
+          <Button
+            className="cu-button cu-button-outline cu-button-full"
+            onClick={() => goCustomer("/pages/account/password/index")}
+          >
+            设置密码
+          </Button>
+          <Button
+            className="cu-button cu-button-outline cu-button-full"
+            disabled={busy}
+            aria-pressed={showApply}
+            onClick={() => setShowApply(!showApply)}
+          >
+            {showApply ? "收起陪玩申请" : "申请成为陪玩"}
+          </Button>
+          {showApply ? (
+            <View className="cu-card">
+              <Text className="cu-card-title">陪玩申请说明</Text>
+              <Textarea
+                className="cu-textarea"
+                name="playerApplyIntro"
+                aria-label="陪玩申请说明"
+                value={applyIntro}
+                onInput={(event) => setApplyIntro(event.detail.value)}
+                placeholder="介绍擅长游戏与段位，便于老板审核"
+              />
+              <Button
+                className="cu-button cu-button-primary cu-button-full"
+                disabled={busy}
+                onClick={() => void applyPlayer()}
+              >
+                {busy ? "提交中…" : "提交申请"}
+              </Button>
+            </View>
+          ) : null}
           <Button
             className="cu-button cu-button-outline cu-button-full"
             disabled={busy}

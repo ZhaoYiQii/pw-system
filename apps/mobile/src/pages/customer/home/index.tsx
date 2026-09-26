@@ -141,6 +141,7 @@ export default function CustomerHomePage() {
             onWechatLogin={() =>
               startWechatAuthorize(tenantCode, "/pages/customer/home/index")
             }
+            onRegister={() => goCustomer("/pages/register/index")}
           />
         </>
       ) : null}

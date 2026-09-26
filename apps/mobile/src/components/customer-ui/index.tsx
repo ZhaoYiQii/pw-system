@@ -147,6 +147,7 @@ export function CustomerPhoneLoginCard({
   onLogin,
   showWechatLogin = false,
   onWechatLogin,
+  onRegister,
 }: {
   tenantCode: string;
   phone: string;
@@ -162,6 +163,8 @@ export function CustomerPhoneLoginCard({
   /** S3d：只用于按钮显隐（微信内置浏览器嗅探），不参与任何安全判断。 */
   showWechatLogin?: boolean;
   onWechatLogin?: () => void;
+  /** SP2：未登录者可从这里去自助注册；不传则不渲染。 */
+  onRegister?: () => void;
 }) {
   return (
     <View className="cu-card cu-login-card">
@@ -225,6 +228,14 @@ export function CustomerPhoneLoginCard({
       <Text className="cu-footnote">
         首次登录会自动创建本店老板账号与客户档案。
       </Text>
+      {onRegister ? (
+        <Button
+          className="cu-button cu-button-outline cu-button-full"
+          onClick={onRegister}
+        >
+          注册新账号
+        </Button>
+      ) : null}
     </View>
   );
 }

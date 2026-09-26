@@ -261,6 +261,14 @@ export default function PlayerProfilePage() {
             <Text className="pw-section-label">简介</Text>
             <Text className="pw-muted">{me.intro ?? "还没有填写个人简介"}</Text>
           </View>
+          <Button
+            className="pw-button pw-button-plain"
+            onClick={() =>
+              void Taro.navigateTo({ url: "/pages/account/password/index" })
+            }
+          >
+            设置密码
+          </Button>
           <Button className="pw-button pw-button-plain" onClick={logout}>
             安全退出
           </Button>

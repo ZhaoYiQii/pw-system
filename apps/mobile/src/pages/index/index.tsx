@@ -88,6 +88,10 @@ export default function Index() {
     void Taro.navigateTo({ url: "/pages/customer/home/index" });
   };
 
+  const openRegister = () => {
+    void Taro.navigateTo({ url: "/pages/register/index" });
+  };
+
   return (
     <View className="portal">
       {info === null ? (
@@ -146,6 +150,15 @@ export default function Index() {
             </View>
             <Button className="role-btn" onClick={openBoss}>
               进入老板端
+            </Button>
+          </View>
+
+          <View className="register-entry">
+            <Text className="register-entry-note">
+              还没有账号？注册后可用账号密码登录，也可以绑定手机号快捷登录。
+            </Text>
+            <Button className="register-entry-btn" onClick={openRegister}>
+              注册新账号
             </Button>
           </View>
         </View>
