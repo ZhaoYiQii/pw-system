@@ -1,18 +1,22 @@
 .pw-page {
-  --pw-paper: #f3f6f8;
+  /* Slice E（灵析品牌对齐）：paper 换米白同族（保持冷调工作台），muted 加深达 AA。 */
+  --pw-paper: #f4f4ef;
   --pw-card: #ffffff;
   --pw-ink: #15202b;
-  --pw-muted: #647180;
+  --pw-muted: #5b6560;
   --pw-line: #dce3e8;
   /* 主操作色：原 #189c91 配白字仅 3.39:1（AA 要求 4.5:1），作为文字在浅色底上也不足。
      改为 #11786f：白字 5.33:1、白底 5.33:1、--pw-primary-soft 上 4.72:1，均达 AA。 */
-  --pw-primary: #11786f;
+  --pw-primary: #1d5c50;
   --pw-primary-soft: #e3f5f2;
   --pw-pine: #15202b;
   --pw-pine-soft: #e3f5f2;
   --pw-amber: #a66e13;
   --pw-amber-soft: #fff5dd;
   --pw-radius: 22px;
+  /* Slice E 新增：渐变第二色 + 宋体数字族（收入/单价与用户端 ¥ 金额呼应）。 */
+  --pw-primary-g2: #2f7a68;
+  --pw-serif: "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
   min-height: 100vh;
   color: var(--pw-ink);
   background: var(--pw-paper);
@@ -84,10 +88,11 @@
   opacity: 0.82;
 }
 .pw-stat-value {
-  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-family: var(--pw-serif);
   font-size: 48px;
   line-height: 1.15;
-  font-weight: 800;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .pw-card-title {
   font-size: 30px;
@@ -387,10 +392,101 @@
 .pw-divider-row:last-child {
   border-bottom: 0;
 }
-.pw-price {
+/* ── Slice F：工作台精修 ─────────────────────────────────── */
+
+/* 接单状态：状态点 + 文案（绿=接单中 / 灰=已暂停）。 */
+.pw-accept-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.pw-accept-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pw-accept-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c3cbd4;
+}
+.pw-accept-dot.is-on {
+  background: #2f9e6e;
+  box-shadow: 0 0 0 6px rgba(47, 158, 110, 0.18);
+}
+.pw-accept-text {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--pw-ink);
+}
+.pw-accept-note {
+  font-size: 21px;
+  color: var(--pw-muted);
+  line-height: 1.5;
+}
+/* 暂停（灰系 outline）/ 恢复（主色实心）双态按钮。 */
+.pw-button-pause {
+  border: 1px solid var(--pw-line);
+  background: var(--pw-card);
+  color: var(--pw-ink);
+}
+.pw-button-resume {
+  background: var(--pw-primary);
+  border: 1px solid transparent;
+  color: #ffffff;
+}
+
+/* 手机号补全引导行。 */
+.pw-guide-row {
+  width: 100%;
+  margin: 18px 0 0;
+  padding: 20px 22px;
+  border: 1px dashed var(--pw-primary);
+  border-radius: 18px;
+  background: var(--pw-primary-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.pw-guide-row::after {
+  border: 0;
+}
+.pw-guide-row:active {
+  transform: scale(0.99);
+}
+.pw-guide-title {
+  font-size: 25px;
+  font-weight: 600;
+  color: var(--pw-primary);
+}
+.pw-guide-desc {
+  font-size: 20px;
+  color: var(--pw-muted);
+  line-height: 1.5;
+}
+
+/* 退出登录危险色。 */
+.pw-button-danger {
+  color: #b4443c;
+  border: 1px solid rgba(180, 68, 60, 0.45);
+  background: transparent;
+}
+
+/* 收入行：来源为主标题，订单号弱化为等宽小字。 */
+.income-row-no {
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--pw-muted);
+}
+.pw-price {
+  font-family: var(--pw-serif);
   font-size: 32px;
-  font-weight: 850;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (min-width: 720px) {

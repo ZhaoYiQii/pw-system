@@ -194,9 +194,6 @@ export default function PlayerProfilePage() {
               </Text>
               <View className="profile-tags">
                 <Text className="profile-tag">门店陪玩</Text>
-                <Text className="profile-tag">
-                  {me.acceptingOrders ? "当前可接单" : "暂停接单"}
-                </Text>
               </View>
             </View>
           </View>
@@ -204,15 +201,38 @@ export default function PlayerProfilePage() {
           <View className="pw-card">
             <Text className="pw-card-title">接单状态</Text>
             <View className="pw-row-between">
-              <Text className="pw-muted">暂停后不会收到新的大厅订单</Text>
+              <View className="pw-accept-copy">
+                <View className="pw-accept-state">
+                  <View
+                    className={`pw-accept-dot${me.acceptingOrders ? " is-on" : ""}`}
+                  />
+                  <Text className="pw-accept-text">
+                    {me.acceptingOrders ? "接单中" : "已暂停接单"}
+                  </Text>
+                </View>
+                <Text className="pw-accept-note">
+                  暂停后不会收到新的大厅订单
+                </Text>
+              </View>
               <Button
-                className="pw-button pw-button-small pw-button-soft"
+                className={`pw-button pw-button-small ${me.acceptingOrders ? "pw-button-pause" : "pw-button-resume"}`}
                 disabled={busy}
                 onClick={() => void toggleAccepting()}
               >
                 {me.acceptingOrders ? "暂停接单" : "恢复接单"}
               </Button>
             </View>
+            {!me.mobile ? (
+              <Button
+                className="pw-guide-row"
+                onClick={() => void Taro.navigateTo({ url: "/pages/account/password/index" })}
+              >
+                <Text className="pw-guide-title">补全手机号</Text>
+                <Text className="pw-guide-desc">
+                  便于门店联系与收入到账通知 ›
+                </Text>
+              </Button>
+            ) : null}
           </View>
 
           <View className="pw-card pw-divider-list">
@@ -284,7 +304,11 @@ export default function PlayerProfilePage() {
           >
             设置密码
           </Button>
-          <Button className="pw-button pw-button-plain" onClick={logout}>
+          <Button
+            className="pw-button pw-button-plain pw-button-danger"
+            disabled={busy}
+            onClick={logout}
+          >
             安全退出
           </Button>
         </>

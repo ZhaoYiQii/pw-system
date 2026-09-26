@@ -156,8 +156,8 @@ export default function PlayerIncomePage() {
               >
                 <View className="pw-row-copy">
                   <Text className="income-row-title">
-                    订单 {record.orderNo} ·{" "}
-                    {record.source === "SLOT" ? "档位收入" : "旧流程"}
+                    {record.source === "SLOT" ? "档位收入" : "服务收入"}
+                    <Text className="income-row-no"> {record.orderNo}</Text>
                   </Text>
                   <Text className="pw-muted">
                     {new Date(record.createdAt).toLocaleString()}

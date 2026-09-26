@@ -637,7 +637,7 @@ export default function OrderHallPage() {
           <View className="pw-stat-card hall-command-card">
             <View className="hall-command-label">
               <View className="hall-live-dot" />
-              <Text className="pw-stat-label">MATCH STRIP · 今日大厅</Text>
+              <Text className="pw-stat-label">今日大厅</Text>
             </View>
             <View className="hall-command-main">
               <Text className="pw-stat-value">{hall.length}</Text>
