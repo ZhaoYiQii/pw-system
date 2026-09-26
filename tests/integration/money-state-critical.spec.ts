@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseFenString } from "../../apps/api/src/common/money.js";
+import {
+  fenToYuanText,
+  parseFenString,
+} from "../../apps/api/src/common/money.js";
 import { splitSettlement } from "../../apps/api/src/modules/ledger/domain/split.js";
 import {
   ORDER_TRANSITIONS,
@@ -21,6 +24,24 @@ describe("critical domain coverage: MoneyFen / split / order state machine", () 
     expect(parseFenString("0", true)).toBe("0");
     expect(parseFenString("1", true)).toBe("1");
     expect(parseFenString("1500", false)).toBe("1500");
+  });
+
+  it("fenToYuanText 合法换算与非法兜底（全程整数，不经浮点）", () => {
+    expect(fenToYuanText("0")).toBe("0.00");
+    expect(fenToYuanText("1")).toBe("0.01");
+    expect(fenToYuanText("15")).toBe("0.15");
+    expect(fenToYuanText("100")).toBe("1.00");
+    expect(fenToYuanText("1500")).toBe("15.00");
+    // 超出 Number.MAX_SAFE_INTEGER（9007199254740991）：若经浮点会得到
+    // "…409.92"（该串会被 Number 舍入到 …992），此处断言 BigInt 结果 …409.93
+    expect(fenToYuanText("9007199254740993")).toBe("90071992547409.93");
+    // 非法值沿用既有支付台账导出的兜底语义（返回 "0.00"）
+    expect(fenToYuanText("")).toBe("0.00");
+    expect(fenToYuanText(" 1")).toBe("0.00");
+    expect(fenToYuanText("1 ")).toBe("0.00");
+    expect(fenToYuanText("1.5")).toBe("0.00");
+    expect(fenToYuanText("-1")).toBe("0.00");
+    expect(fenToYuanText("01")).toBe("0.00");
   });
 
   it("splitSettlement 非法金额/费率全部拒绝", () => {
