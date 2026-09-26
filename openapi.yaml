@@ -183,6 +183,14 @@ paths:
         "201":
           description: ""
       tags: *a5
+  /api/v1/auth/register:
+    post:
+      operationId: auth_register
+      parameters: []
+      responses:
+        "201":
+          description: ""
+      tags: *a5
   /api/v1/auth/switch-context:
     post:
       operationId: auth_switchContext
@@ -205,6 +213,14 @@ paths:
       parameters: []
       responses:
         "201":
+          description: ""
+      tags: *a5
+  /api/v1/auth/password:
+    post:
+      operationId: auth_setPassword
+      parameters: []
+      responses:
+        "200":
           description: ""
       tags: *a5
   /api/v1/auth/me:

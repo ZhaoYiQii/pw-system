@@ -511,6 +511,17 @@ export type AuthPhoneLoginResponses = {
     201: unknown;
 };
 
+export type AuthRegisterData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/register';
+};
+
+export type AuthRegisterResponses = {
+    201: unknown;
+};
+
 export type AuthSwitchContextData = {
     body?: never;
     path?: never;
@@ -542,6 +553,17 @@ export type AuthLogoutData = {
 
 export type AuthLogoutResponses = {
     201: unknown;
+};
+
+export type AuthSetPasswordData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password';
+};
+
+export type AuthSetPasswordResponses = {
+    200: unknown;
 };
 
 export type AuthMeData = {
