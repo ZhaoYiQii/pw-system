@@ -28,6 +28,7 @@
 ### 3. 登录与支付
 
 - [ ] 微信一键登录（手机验证码登录/注册 P1 已于 2026-09-10 完成，见第五节）。
+- [x] **账号密码自助注册（SP2，2026-09-26 实施完成并提交，`committed`，分支 `feat/account-password-registration`，未推送）**：老板（`CUSTOMER`）与陪玩（`PLAYER`）自助注册——注册只建 `CUSTOMER`，`PLAYER` 仅经老板审批叠加；手机号可选绑定，绑定后手机号快捷登录与密码登录收敛到同一账号；存量随机密码账号走「设置密码」入口激活（初次设置免验原密码，修改必验）。新增 2 个 operation（`POST /api/v1/auth/register`、`POST /api/v1/auth/password`），**一次新增列迁移**（`tenant_accounts.password_set_by_user`）已获授权并执行（`20260926095348_add_password_set_by_user`，两库 44 migrations 核对通过，回滚=`DROP COLUMN`）。门禁全绿：`pnpm test` / `test:integration` / `test:tenant-isolation` / `typecheck` / `openapi:generate`（幂等）均退出码 0。设计：`docs/superpowers/specs/2026-09-26-account-password-registration-design.md` + `docs/adr/0009-account-password-registration-and-multi-role-authz.md`；实施：`docs/superpowers/plans/2026-09-26-account-password-registration-sp2.md`。前置 **SP1 多角色授权解析修复已于 2026-09-26 实施完成并提交**（`committed`，同一分支，见 `docs/unverified-and-deferred.md` 第五节）。**遗留（均记录在 spec §12）**：陪玩端入口显隐未接线；`phone-login` 对停用门店的既有 500 缺陷未修；改密后不撤销其他 refresh 会话。
 - [ ] 线上支付：钱包充值仍走本地模拟支付；接真实渠道前保持“可插拔支付模块”，实施需商户号/密钥（挂起）。
 - [ ] 自动催缴：余额/可服务时长接近耗尽时通知老板续费（后端需定时检查 + 通知）。
 
