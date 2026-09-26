@@ -5,7 +5,7 @@ import {
   Injectable,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { permissionsFor } from "../../modules/identity-access/domain/roles.js";
+import { permissionsForAny } from "../../modules/identity-access/domain/roles.js";
 import { REQUIRED_PERMISSIONS_KEY } from "./decorators.js";
 import type { AuthenticatedRequest } from "./auth.guard.js";
 
@@ -27,7 +27,10 @@ export class PermissionsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const principal = request.principal;
     if (!principal) return true;
-    const granted = permissionsFor(principal.role);
+    // 多角色账号取并集；旧 token 无 roles claim 时回退到单角色。
+    // 空数组表示账号无角色 → 无权限（fail-closed），不回退。
+    const roles = principal.roles ?? [principal.role];
+    const granted = permissionsForAny(roles);
     const missing = required.filter((key) => !granted.includes(key as never));
     if (missing.length > 0)
       throw new ForbiddenException(`missing permissions: ${missing.join(",")}`);

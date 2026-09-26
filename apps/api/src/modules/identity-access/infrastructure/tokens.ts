@@ -2,6 +2,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { createHash, randomBytes } from "node:crypto";
 import { UnauthorizedError } from "../domain/errors.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
+import type { RoleKey } from "../domain/roles.js";
 
 const ISSUER = "pw-saas-api";
 export const AUD_PLATFORM = "pw-platform";
@@ -18,6 +19,7 @@ interface TokenClaims {
   jti: string;
   scope: Scope;
   role: string;
+  roles?: string[];
   username: string;
   tenantId?: string;
 }
@@ -39,6 +41,7 @@ export class TokenService {
       scope: principal.scope,
       role: principal.role,
       username: principal.username,
+      ...(principal.roles !== undefined ? { roles: [...principal.roles] } : {}),
       ...(principal.tenantId !== undefined
         ? { tenantId: principal.tenantId }
         : {}),
@@ -75,6 +78,9 @@ export class TokenService {
       sub: payload.sub,
       scope: payload.scope,
       role: payload.role as AccessPrincipal["role"],
+      ...(payload.roles !== undefined
+        ? { roles: payload.roles as readonly RoleKey[] }
+        : {}),
       username: payload.username,
       ...(payload.tenantId !== undefined ? { tenantId: payload.tenantId } : {}),
     };

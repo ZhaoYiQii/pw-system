@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   HttpException,
   HttpStatus,
   Inject,
@@ -27,9 +28,14 @@ import { RateLimitService } from "../../../common/auth/rate-limit.service.js";
 import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import {
   AccountDisabledError,
+  AuthInputError,
+  CurrentPasswordInvalidError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
+  PhoneAlreadyBoundError,
   TenantInactiveError,
+  TenantNotFoundError,
+  UsernameTakenError,
 } from "../domain/errors.js";
 import type { Scope } from "../domain/principal.js";
 import {
@@ -43,6 +49,8 @@ import {
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 5;
+const REGISTER_WINDOW_MS = 15 * 60 * 1000;
+const REGISTER_MAX_ATTEMPTS = 5;
 
 interface LoginBody {
   kind?: unknown;
@@ -51,9 +59,23 @@ interface LoginBody {
   tenantCode?: unknown;
 }
 
+interface RegisterBody {
+  tenantCode?: unknown;
+  username?: unknown;
+  password?: unknown;
+  displayName?: unknown;
+  phone?: unknown;
+  code?: unknown;
+}
+
 interface TokenBody {
   scope?: unknown;
   refreshToken?: unknown;
+}
+
+interface PasswordBody {
+  newPassword?: unknown;
+  currentPassword?: unknown;
 }
 
 function requiredString(value: unknown, field: string): string {
@@ -217,6 +239,79 @@ export class AuthController {
     };
   }
 
+  /**
+   * SP2（spec §5.1）：租户内自助注册。
+   *
+   * 限流按「尝试次数」计数（§5.1）：成功也占额度，故无条件记一次——同一 IP 对同一门店
+   * 15 分钟内最多 5 次注册尝试，第 6 次 429。这是有意的（防批量刷号），代价是成功注册后
+   * 该 IP 在本窗口内不能再注册。
+   */
+  @Public()
+  @Post("register")
+  async register(
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: RegisterBody,
+  ) {
+    const tenantCode = requiredString(body.tenantCode, "tenantCode");
+    const rateKey = (req.ip ?? "unknown") + ":register:" + tenantCode;
+    if (
+      await this.rateLimit.isBlocked(
+        rateKey,
+        REGISTER_MAX_ATTEMPTS,
+        REGISTER_WINDOW_MS,
+      )
+    ) {
+      throw new HttpException("尝试次数过多", HttpStatus.TOO_MANY_REQUESTS);
+    }
+    await this.rateLimit.recordFailure(rateKey, REGISTER_WINDOW_MS);
+    try {
+      const bundle = await this.auth.registerTenantCustomer({
+        tenantCode,
+        username: requiredString(body.username, "username"),
+        password: requiredString(body.password, "password"),
+        ...(typeof body.displayName === "string"
+          ? { displayName: body.displayName }
+          : {}),
+        ...(typeof body.phone === "string" ? { phone: body.phone } : {}),
+        ...(typeof body.code === "string" ? { code: body.code } : {}),
+      });
+      setRefreshCookie(res, bundle.refreshToken);
+      const csrfToken = setCsrfCookie(res);
+      return {
+        data: {
+          accessToken: bundle.accessToken,
+          principal: bundle.principal,
+          expiresInSeconds: bundle.expiresInSeconds,
+          csrfToken,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof UsernameTakenError ||
+        error instanceof PhoneAlreadyBoundError
+      ) {
+        throw new HttpException(error.message, HttpStatus.CONFLICT);
+      }
+      if (error instanceof TenantNotFoundError) {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      }
+      if (error instanceof TenantInactiveError) {
+        throw new HttpException(error.message, HttpStatus.FORBIDDEN);
+      }
+      if (
+        error instanceof AuthInputError ||
+        error instanceof PhoneVerificationInputError ||
+        error instanceof PhoneVerificationExpiredError ||
+        error instanceof PhoneVerificationCodeMismatchError ||
+        error instanceof PhoneVerificationConsumedError
+      ) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      throw error;
+    }
+  }
+
   @TenantScope()
   @Permissions("tenant.view")
   @Post("switch-context")
@@ -323,6 +418,53 @@ export class AuthController {
     await this.auth.logout(cookieToken);
     clearRefreshCookie(res);
     return { data: { ok: true } };
+  }
+
+  /**
+   * SP2（spec §5.2）：设置/修改密码。不加 scope 装饰器 → platform 与 tenant 两种 audience 都接受，
+   * 由 AuthGuard 保证未认证 401；「初次设置 / 修改」的分支判定在 AuthService.setPassword 内。
+   * 错误映射按 §5.2 的错误集：400（入参、原密码）/ 401（未认证、账号或门店不可用）。
+   */
+  @Post("password")
+  @HttpCode(HttpStatus.OK)
+  async setPassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: PasswordBody,
+  ) {
+    const principal = req.principal;
+    if (!principal) {
+      throw new HttpException("missing bearer token", HttpStatus.UNAUTHORIZED);
+    }
+    const newPassword = requiredString(body.newPassword, "newPassword");
+    try {
+      await this.auth.setPassword({
+        scope: principal.scope,
+        accountId: principal.sub,
+        newPassword,
+        ...(principal.tenantId !== undefined
+          ? { tenantId: principal.tenantId }
+          : {}),
+        ...(typeof body.currentPassword === "string"
+          ? { currentPassword: body.currentPassword }
+          : {}),
+      });
+      return { data: { ok: true } };
+    } catch (error) {
+      if (
+        error instanceof AuthInputError ||
+        error instanceof CurrentPasswordInvalidError
+      ) {
+        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+      }
+      if (
+        error instanceof InvalidCredentialsError ||
+        error instanceof AccountDisabledError ||
+        error instanceof TenantInactiveError
+      ) {
+        throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);
+      }
+      throw error;
+    }
   }
 
   @Get("me")

@@ -2,6 +2,13 @@ import type { DbTransaction, PrismaClient } from "@pw/database";
 import { withTenantContext } from "@pw/database";
 import { hashPassword } from "../infrastructure/password.js";
 import { ROLE_KEYS, type RoleKey } from "../domain/roles.js";
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_RULE_MESSAGE,
+  USERNAME_PATTERN,
+  USERNAME_RULE_MESSAGE,
+} from "../domain/account-credentials.js";
 
 export const TENANT_ACCOUNT_ROLES = ROLE_KEYS.filter(
   (role) => role !== "PLATFORM_SUPER_ADMIN" && role !== "PLATFORM_SUPPORT",
@@ -43,8 +50,8 @@ function normalizeRoles(roles: unknown[]): TenantAccountRoleKey[] {
 
 function assertUsername(username: string): string {
   const name = username.trim();
-  if (!/^[a-zA-Z0-9_-]{2,64}$/.test(name)) {
-    throw new TenantAccountValidationError("用户名需为 2-64 位字母/数字/_/-");
+  if (!USERNAME_PATTERN.test(name)) {
+    throw new TenantAccountValidationError(USERNAME_RULE_MESSAGE);
   }
   return name;
 }
@@ -53,8 +60,11 @@ function assertPassword(password: string | undefined): string {
   if (password === undefined) {
     throw new TenantAccountValidationError("新账号必须设置密码");
   }
-  if (password.length < 8 || password.length > 128) {
-    throw new TenantAccountValidationError("密码长度需为 8-128 字符");
+  if (
+    password.length < PASSWORD_MIN_LENGTH ||
+    password.length > PASSWORD_MAX_LENGTH
+  ) {
+    throw new TenantAccountValidationError(PASSWORD_RULE_MESSAGE);
   }
   return password;
 }

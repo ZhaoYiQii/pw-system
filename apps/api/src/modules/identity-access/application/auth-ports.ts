@@ -12,6 +12,12 @@ export interface TenantAccountRecord {
   tenantStatus: "ACTIVE" | "INACTIVE" | "CONFIG_ERROR";
   username: string;
   passwordHash: string;
+  /**
+   * SP2 §5.2：密码是否由用户本人设置过。
+   * false = 系统生成（存量随机密码账号 / 手机与微信自动建号 / 管理员建号）→ 改密免验原密码；
+   * true  = 用户本人设过 → 改密必须校验原密码。
+   */
+  passwordSetByUser: boolean;
   status: "ACTIVE" | "DISABLED";
   roles: readonly string[];
   /** S3c-2：补绑/合并需要知道当前账号是否已经绑了微信。 */
@@ -32,6 +38,15 @@ export interface RegisterWechatCustomerInput {
   passwordHash: string;
   wechatOpenid: string;
   displayName: string;
+}
+
+/** SP2 §5.1：自助注册只建 CUSTOMER；手机号可选，给了就必须带 phoneEnc/phoneHash 一并落库。 */
+export interface RegisterTenantCustomerInput {
+  username: string;
+  passwordHash: string;
+  displayName: string;
+  phoneEnc?: string;
+  phoneHash?: string;
 }
 
 /** S3c-1：微信授权 state 的服务端记录（预认证表，不启用 RLS）。 */
@@ -93,6 +108,15 @@ export interface AuthRepository {
     username: string,
   ): Promise<TenantAccountRecord | null>;
   findTenantIdByCode(tenantCode: string): Promise<string | null>;
+  /** SP2 §5.1：注册必须在建号前读到租户状态（停用门店不建号）。 */
+  findTenantByCode(
+    tenantCode: string,
+  ): Promise<{ id: string; status: string } | null>;
+  /** SP2 §5.1：单事务写 tenant_accounts + tenant_account_roles(CUSTOMER) + customer_profiles。 */
+  registerTenantCustomer(
+    tenantId: string,
+    input: RegisterTenantCustomerInput,
+  ): Promise<TenantAccountRecord>;
   findTenantAccountByPhoneHash(
     tenantId: string,
     phoneHash: string,
@@ -127,6 +151,17 @@ export interface AuthRepository {
     accountId: string,
     tenantId?: string | null,
   ): Promise<TenantAccountRecord | null>;
+  /** SP2 §5.2：改密写入口，成功后同时把 password_set_by_user 置 true。 */
+  updateTenantAccountPassword(
+    tenantId: string,
+    accountId: string,
+    passwordHash: string,
+  ): Promise<void>;
+  /** SP2 §5.2：平台账号改密（platform_accounts 无 password_set_by_user 列）。 */
+  updatePlatformAccountPassword(
+    accountId: string,
+    passwordHash: string,
+  ): Promise<void>;
   createRefreshSession(session: NewRefreshSession): Promise<void>;
   findRefreshSessionByTokenHash(
     tokenHash: string,

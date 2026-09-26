@@ -121,3 +121,40 @@ export const ROLE_PERMISSIONS: Record<RoleKey, readonly PermissionKey[]> = {
 export function permissionsFor(role: RoleKey): readonly PermissionKey[] {
   return ROLE_PERMISSIONS[role] ?? [];
 }
+
+/**
+ * 多角色账号的主角色优先级（ADR-0009 决定 7，2026-09-26 用户确认）：
+ * 管理类角色在前，CUSTOMER 先于 PLAYER —— 老板端是所有账号的基线落地面，
+ * 陪玩端是叠加态，只在账号持有 PLAYER 时才能切入。
+ */
+export const ROLE_PRIORITY: readonly RoleKey[] = [
+  "PLATFORM_SUPER_ADMIN",
+  "PLATFORM_SUPPORT",
+  "TENANT_OWNER",
+  "TENANT_ADMIN",
+  "CUSTOMER_SERVICE",
+  "FINANCE",
+  "CUSTOMER",
+  "PLAYER",
+];
+
+/** 过滤未知角色值并按 ROLE_PRIORITY 升序排列；首元素即默认落地端的主角色。 */
+export function sortRolesByPriority(roles: readonly string[]): RoleKey[] {
+  const known = roles.filter((role): role is RoleKey =>
+    (ROLE_KEYS as readonly string[]).includes(role),
+  );
+  return [...known].sort(
+    (a, b) => ROLE_PRIORITY.indexOf(a) - ROLE_PRIORITY.indexOf(b),
+  );
+}
+
+/** 多角色的有效权限 = 各角色权限集的并集（ADR-0009 决定四 C）。 */
+export function permissionsForAny(
+  roles: readonly RoleKey[],
+): readonly PermissionKey[] {
+  const granted = new Set<PermissionKey>();
+  for (const role of roles) {
+    for (const permission of permissionsFor(role)) granted.add(permission);
+  }
+  return [...granted];
+}

@@ -9,10 +9,12 @@ import type {
   BindPhoneInput,
   NewWechatLoginState,
   RegisterPhoneCustomerInput,
+  RegisterTenantCustomerInput,
   RegisterWechatCustomerInput,
   TenantAccountRecord,
   WechatLoginStateRecord,
 } from "../application/auth-ports.js";
+import { PhoneAlreadyBoundError, UsernameTakenError } from "../domain/errors.js";
 
 function mapPlatform(row: {
   id: string;
@@ -36,6 +38,7 @@ function mapTenant(row: {
   tenantStatus: string;
   username: string;
   passwordHash: string;
+  passwordSetByUser: boolean;
   status: string;
   roles: { role: string }[];
   wechatOpenid?: string | null;
@@ -46,10 +49,31 @@ function mapTenant(row: {
     tenantStatus: row.tenantStatus as TenantAccountRecord["tenantStatus"],
     username: row.username,
     passwordHash: row.passwordHash,
+    passwordSetByUser: row.passwordSetByUser,
     status: row.status as TenantAccountRecord["status"],
     roles: row.roles.map((r) => r.role),
     wechatOpenid: row.wechatOpenid ?? null,
   };
+}
+
+/**
+ * SP2 §5.1：注册的预查重与 create 之间有竞态，唯一约束是最后一道闸。
+ * `meta.target` 在不同 Prisma/驱动版本下可能是字段名、DB 列名或完整约束名，
+ * 故先归一化（去下划线、转小写）再做包含匹配——`phone_hash` / `phoneHash` /
+ * `tenant_accounts_tenant_id_phone_hash_key` 三种形态都能命中。
+ */
+function isUniqueViolation(error: unknown, column: string): boolean {
+  if (error === null || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
+  const e = error as { code?: string; meta?: { target?: unknown } };
+  if (e.code !== "P2002") return false;
+  const target = e.meta?.target;
+  const fields = Array.isArray(target) ? target.map(String) : [String(target)];
+  const needle = column.replace(/_/g, "").toLowerCase();
+  return fields.some((f) =>
+    f.replace(/_/g, "").toLowerCase().includes(needle),
+  );
 }
 
 export class PrismaAuthRepository implements AuthRepository {
@@ -100,6 +124,7 @@ export class PrismaAuthRepository implements AuthRepository {
           tenantStatus: tenant.status,
           username: row.username,
           passwordHash: row.passwordHash,
+          passwordSetByUser: row.passwordSetByUser,
           status: row.status,
           roles: row.roles,
           wechatOpenid: row.wechatOpenid,
@@ -114,6 +139,17 @@ export class PrismaAuthRepository implements AuthRepository {
       select: { id: true },
     });
     return tenant?.id ?? null;
+  }
+
+  /** SP2 §5.1：注册要在建号前读到租户状态（停用门店不建号）。 */
+  async findTenantByCode(
+    tenantCode: string,
+  ): Promise<{ id: string; status: string } | null> {
+    const tenant = await this.runtime.tenant.findUnique({
+      where: { code: tenantCode },
+      select: { id: true, status: true },
+    });
+    return tenant ?? null;
   }
 
   async findTenantAccountByPhoneHash(
@@ -135,6 +171,7 @@ export class PrismaAuthRepository implements AuthRepository {
           tenantStatus: row.tenant.status,
           username: row.username,
           passwordHash: row.passwordHash,
+          passwordSetByUser: row.passwordSetByUser,
           status: row.status,
           roles: row.roles,
           // S3c-2：补绑/合并要看这个字段判断冲突，漏映射会让冲突规则失效（E2E 抓到过）
@@ -182,6 +219,7 @@ export class PrismaAuthRepository implements AuthRepository {
           tenantStatus: tenant?.status ?? "ACTIVE",
           username: account.username,
           passwordHash: account.passwordHash,
+          passwordSetByUser: account.passwordSetByUser,
           status: account.status,
           roles: account.roles,
           wechatOpenid: account.wechatOpenid,
@@ -209,6 +247,7 @@ export class PrismaAuthRepository implements AuthRepository {
           tenantStatus: row.tenant.status,
           username: row.username,
           passwordHash: row.passwordHash,
+          passwordSetByUser: row.passwordSetByUser,
           status: row.status,
           roles: row.roles,
           wechatOpenid: row.wechatOpenid,
@@ -252,6 +291,86 @@ export class PrismaAuthRepository implements AuthRepository {
           tenantStatus: tenant?.status ?? "ACTIVE",
           username: account.username,
           passwordHash: account.passwordHash,
+          passwordSetByUser: account.passwordSetByUser,
+          status: account.status,
+          roles: account.roles,
+          wechatOpenid: account.wechatOpenid,
+        });
+      },
+    );
+  }
+
+  /**
+   * SP2 §5.1：自助注册建号——单事务写 tenant_accounts + tenant_account_roles(CUSTOMER) + customer_profiles。
+   * 只建 CUSTOMER：陪玩角色走陪玩申请审核（player-applications），不在这里开角色。
+   * password_set_by_user 置 true：注册密码是用户本人设定的，此后改密必须校验原密码。
+   */
+  async registerTenantCustomer(
+    tenantId: string,
+    input: RegisterTenantCustomerInput,
+  ): Promise<TenantAccountRecord> {
+    return withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        const dup = await tx.tenantAccount.findFirst({
+          where: { tenantId, username: input.username },
+          select: { id: true },
+        });
+        if (dup) throw new UsernameTakenError();
+        const account = await tx.tenantAccount
+          .create({
+            data: {
+              tenantId,
+              username: input.username,
+              passwordHash: input.passwordHash,
+              passwordSetByUser: true,
+              ...(input.phoneEnc !== undefined
+                ? { phoneEnc: input.phoneEnc }
+                : {}),
+              ...(input.phoneHash !== undefined
+                ? { phoneHash: input.phoneHash }
+                : {}),
+              roles: { create: [{ tenantId, role: "CUSTOMER" }] },
+            },
+            include: { roles: true },
+          })
+          .catch((error: unknown) => {
+            // 预查重与 create 之间有竞态：以 DB 唯一约束兜底，按 meta.target 定位是哪一个唯一索引
+            if (isUniqueViolation(error, "phone_hash")) {
+              throw new PhoneAlreadyBoundError(
+                "该手机号已绑定其他账号，请改用手机号登录后在「设置密码」中激活",
+              );
+            }
+            if (isUniqueViolation(error, "username")) {
+              throw new UsernameTakenError();
+            }
+            throw error;
+          });
+        await tx.customerProfile.create({
+          data: {
+            tenantId,
+            tenantAccountId: account.id,
+            name: input.displayName,
+            ...(input.phoneEnc !== undefined
+              ? { mobileEnc: input.phoneEnc }
+              : {}),
+            ...(input.phoneHash !== undefined
+              ? { mobileHash: input.phoneHash }
+              : {}),
+          },
+        });
+        const tenant = await tx.tenant.findUnique({
+          where: { id: tenantId },
+          select: { status: true },
+        });
+        return mapTenant({
+          id: account.id,
+          tenantId: account.tenantId,
+          tenantStatus: tenant?.status ?? "ACTIVE",
+          username: account.username,
+          passwordHash: account.passwordHash,
+          passwordSetByUser: account.passwordSetByUser,
           status: account.status,
           roles: account.roles,
           wechatOpenid: account.wechatOpenid,
@@ -374,12 +493,45 @@ export class PrismaAuthRepository implements AuthRepository {
           tenantStatus: row.tenant.status,
           username: row.username,
           passwordHash: row.passwordHash,
+          passwordSetByUser: row.passwordSetByUser,
           status: row.status,
           roles: row.roles,
           wechatOpenid: row.wechatOpenid,
         });
       },
     );
+  }
+
+  /**
+   * SP2 §5.2：设置/修改密码的唯一写入口。置 password_set_by_user=true 是「修改分支」的全部意义
+   * ——此后该账号再改密码必须校验原密码（服务端权威判定，客户端无法影响）。
+   */
+  async updateTenantAccountPassword(
+    tenantId: string,
+    accountId: string,
+    passwordHash: string,
+  ): Promise<void> {
+    await withTenantContext(
+      this.runtime,
+      tenantId,
+      async (tx: DbTransaction) => {
+        await tx.tenantAccount.update({
+          where: { id: accountId },
+          data: { passwordHash, passwordSetByUser: true },
+        });
+      },
+    );
+  }
+
+  /** SP2 §5.2：platform 无自助激活路径，一律按「修改」处理；该表无 password_set_by_user 列。 */
+  async updatePlatformAccountPassword(
+    accountId: string,
+    passwordHash: string,
+  ): Promise<void> {
+    await this.client.platformAccount.update({
+      where: { id: accountId },
+      data: { passwordHash },
+    });
   }
 
   async createRefreshSession(session: NewRefreshSession): Promise<void> {

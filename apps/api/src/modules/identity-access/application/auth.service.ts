@@ -1,15 +1,27 @@
 import {
   AccountDisabledError,
+  AuthInputError,
+  CurrentPasswordInvalidError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
   PhoneAlreadyBoundError,
   TenantInactiveError,
+  TenantNotFoundError,
 } from "../domain/errors.js";
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  DISPLAY_NAME_RULE_MESSAGE,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_RULE_MESSAGE,
+  USERNAME_PATTERN,
+  USERNAME_RULE_MESSAGE,
+} from "../domain/account-credentials.js";
 import type { PhoneVerificationService } from "./phone-verification.service.js";
 import { createHash, randomBytes } from "node:crypto";
 import { encryptPhone } from "../../../common/pii/phone.js";
 import type { AccessPrincipal, Scope } from "../domain/principal.js";
-import type { RoleKey } from "../domain/roles.js";
+import { sortRolesByPriority, type RoleKey } from "../domain/roles.js";
 import { hashPassword, verifyPassword } from "../infrastructure/password.js";
 import { maskOpenid } from "../infrastructure/wechat-oauth.client.js";
 import {
@@ -38,10 +50,12 @@ export class AuthService {
   ) {}
 
   private platformPrincipal(account: PlatformAccountRecord): AccessPrincipal {
+    const role = account.role as RoleKey;
     return {
       sub: account.id,
       scope: "platform",
-      role: account.role as RoleKey,
+      role,
+      roles: [role],
       username: account.username,
     };
   }
@@ -50,11 +64,15 @@ export class AuthService {
     account: TenantAccountRecord,
     overrideRole?: RoleKey,
   ): AccessPrincipal {
-    const role = overrideRole ?? ((account.roles[0] ?? "CUSTOMER") as RoleKey);
+    // 账号持有的全部角色 → 权限并集的计算输入。
+    const roles = sortRolesByPriority(account.roles);
+    // 主角色 = 入口覆盖值（switch-context / 手机号 / 微信登录）或优先级最高的角色。
+    const role = overrideRole ?? roles[0] ?? "CUSTOMER";
     return {
       sub: account.id,
       scope: "tenant",
       role,
+      roles,
       username: account.username,
       tenantId: account.tenantId,
     };
@@ -129,6 +147,87 @@ export class AuthService {
 
   async resolveTenantId(tenantCode: string): Promise<string | null> {
     return this.repository.findTenantIdByCode(tenantCode);
+  }
+
+  /**
+   * SP2 §5.1：租户内自助注册。
+   *
+   * 只建 CUSTOMER（陪玩走陪玩申请审核，不在这里开角色）；手机号可选，给了就先验短信码再建号
+   * （验证码不通过时一行都不写）；门店状态在建号前判定，避免给停用门店留下账号。
+   * tenantId 只来自服务端解析的 tenantCode——不接受请求体里的任何 tenantId。
+   */
+  async registerTenantCustomer(input: {
+    tenantCode: string;
+    username: string;
+    password: string;
+    displayName?: string;
+    phone?: string;
+    code?: string;
+  }): Promise<SessionBundle> {
+    const tenant = await this.repository.findTenantByCode(input.tenantCode);
+    if (!tenant) throw new TenantNotFoundError();
+    if (tenant.status !== "ACTIVE") throw new TenantInactiveError();
+
+    const username = input.username.trim();
+    if (!USERNAME_PATTERN.test(username)) {
+      throw new AuthInputError(USERNAME_RULE_MESSAGE);
+    }
+    if (
+      input.password.length < PASSWORD_MIN_LENGTH ||
+      input.password.length > PASSWORD_MAX_LENGTH
+    ) {
+      throw new AuthInputError(PASSWORD_RULE_MESSAGE);
+    }
+    const displayName =
+      (input.displayName ?? "").trim() || `用户${username.slice(-4)}`;
+    if (displayName.length > DISPLAY_NAME_MAX_LENGTH) {
+      throw new AuthInputError(DISPLAY_NAME_RULE_MESSAGE);
+    }
+
+    let phone: { phoneEnc: string; phoneHash: string } | undefined;
+    if (input.phone !== undefined) {
+      if (input.code === undefined || input.code.length === 0) {
+        throw new AuthInputError("缺少短信验证码");
+      }
+      await this.phoneVerification.consumeCode(
+        tenant.id,
+        input.phone,
+        input.code,
+        "register_login",
+      );
+      const phoneCipher = encryptPhone(tenant.id, input.phone);
+      const existing = await this.repository.findTenantAccountByPhoneHash(
+        tenant.id,
+        phoneCipher.mobileHash,
+      );
+      if (existing) {
+        throw new PhoneAlreadyBoundError(
+          "该手机号已绑定其他账号，请改用手机号登录后在「设置密码」中激活",
+        );
+      }
+      phone = {
+        phoneEnc: phoneCipher.mobileEnc,
+        phoneHash: phoneCipher.mobileHash,
+      };
+    }
+
+    const account = await this.repository.registerTenantCustomer(tenant.id, {
+      username,
+      passwordHash: await hashPassword(input.password),
+      displayName,
+      ...(phone !== undefined ? phone : {}),
+    });
+    const bundle = await this.issue(this.tenantPrincipal(account));
+    await this.repository.recordAudit({
+      tenantId: account.tenantId,
+      actorType: "tenant_account",
+      actorId: bundle.principal.sub,
+      action: "auth.register",
+      resourceType: "tenant_account",
+      resourceId: bundle.principal.sub,
+      summary: `自助注册成功：${username}`,
+    });
+    return bundle;
   }
 
   async phoneCustomerLogin(
@@ -300,6 +399,85 @@ export class AuthService {
       summary: `补绑手机号时合并到已有账号 ${existing.username} phone_tail=****${phoneTail}`,
     });
     return { phoneTail, merged: true, session };
+  }
+
+  /**
+   * SP2（spec §5.2）：设置或修改当前账号密码。
+   *
+   * 分支由服务端判定，客户端无法影响——否则被窃会话可以用「初次设置」入口绕过原密码校验：
+   * - tenant + passwordSetByUser=false（全部存量账号、管理员建号、手机/微信自动建号）→「初次设置」，免验原密码；
+   * - tenant + passwordSetByUser=true →「修改」，必须校验 currentPassword，缺失或错误一行都不写；
+   * - platform → 无自助激活路径，一律按「修改」处理。
+   * 校验全部通过后才计算哈希与写库。审计 `auth.password.set` 只记动作与摘要，不含任何密码或哈希；
+   * platform 分支因 audit_logs.tenant_id 非空、平台自助改密没有可归属租户而不写审计（见 spec §5.2）。
+   */
+  async setPassword(input: {
+    scope: Scope;
+    accountId: string;
+    tenantId?: string;
+    newPassword: string;
+    currentPassword?: string;
+  }): Promise<{ mode: "set" | "change" }> {
+    if (
+      input.newPassword.length < PASSWORD_MIN_LENGTH ||
+      input.newPassword.length > PASSWORD_MAX_LENGTH
+    ) {
+      throw new AuthInputError(PASSWORD_RULE_MESSAGE);
+    }
+
+    if (input.scope === "platform") {
+      const account = await this.repository.findPlatformAccountById(
+        input.accountId,
+      );
+      if (!account || account.status !== "ACTIVE") {
+        throw new InvalidCredentialsError();
+      }
+      if (
+        input.currentPassword === undefined ||
+        !(await verifyPassword(input.currentPassword, account.passwordHash))
+      ) {
+        throw new CurrentPasswordInvalidError();
+      }
+      await this.repository.updatePlatformAccountPassword(
+        account.id,
+        await hashPassword(input.newPassword),
+      );
+      return { mode: "change" };
+    }
+
+    if (!input.tenantId) throw new InvalidCredentialsError();
+    const account = await this.repository.findTenantAccountById(
+      input.accountId,
+      input.tenantId,
+    );
+    if (!account) throw new InvalidCredentialsError();
+    if (account.tenantStatus !== "ACTIVE") throw new TenantInactiveError();
+    if (account.status !== "ACTIVE") throw new AccountDisabledError();
+
+    const mode = account.passwordSetByUser ? "change" : "set";
+    if (mode === "change") {
+      if (
+        input.currentPassword === undefined ||
+        !(await verifyPassword(input.currentPassword, account.passwordHash))
+      ) {
+        throw new CurrentPasswordInvalidError();
+      }
+    }
+    await this.repository.updateTenantAccountPassword(
+      account.tenantId,
+      account.id,
+      await hashPassword(input.newPassword),
+    );
+    await this.repository.recordAudit({
+      tenantId: account.tenantId,
+      actorType: "tenant_account",
+      actorId: account.id,
+      action: "auth.password.set",
+      resourceType: "tenant_account",
+      resourceId: account.id,
+      summary: mode === "set" ? "初次设置密码" : "修改密码",
+    });
+    return { mode };
   }
 
   async switchTenantContext(
