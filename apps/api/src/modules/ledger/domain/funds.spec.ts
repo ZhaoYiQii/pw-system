@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  assertBalancedFundEntries,
-  type FundEntryDraft,
-} from "./funds.js";
+import { assertBalancedFundEntries, type FundEntryDraft } from "./funds.js";
 
 describe("business funds ledger", () => {
   const balanced: FundEntryDraft[] = [

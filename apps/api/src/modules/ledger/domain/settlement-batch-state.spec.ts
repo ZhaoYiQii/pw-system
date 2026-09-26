@@ -13,7 +13,9 @@ const ALL_STATUSES: SettlementBatchStatus[] = [
   "VOID",
 ];
 
-const ALLOWED_TRANSITIONS: Array<[SettlementBatchStatus, SettlementBatchStatus]> = [
+const ALLOWED_TRANSITIONS: Array<
+  [SettlementBatchStatus, SettlementBatchStatus]
+> = [
   ["DRAFT", "REVIEWED"],
   ["DRAFT", "VOID"],
   ["REVIEWED", "APPROVED"],
@@ -24,7 +26,9 @@ const ALLOWED_TRANSITIONS: Array<[SettlementBatchStatus, SettlementBatchStatus]>
 describe("结算批次状态机（DS-001 状态流转规则）", () => {
   it("五条允许流转全部放行", () => {
     for (const [from, to] of ALLOWED_TRANSITIONS) {
-      expect(canTransitionSettlementBatch(from, to), `${from} -> ${to}`).toBe(true);
+      expect(canTransitionSettlementBatch(from, to), `${from} -> ${to}`).toBe(
+        true,
+      );
     }
   });
 
@@ -50,20 +54,36 @@ describe("结算批次状态机（DS-001 状态流转规则）", () => {
 
   it("PAID 与 VOID 是终态，无任何后续迁移", () => {
     for (const status of ALL_STATUSES) {
-      expect(canTransitionSettlementBatch("PAID", status), `PAID -> ${status}`).toBe(false);
-      expect(canTransitionSettlementBatch("VOID", status), `VOID -> ${status}`).toBe(false);
+      expect(
+        canTransitionSettlementBatch("PAID", status),
+        `PAID -> ${status}`,
+      ).toBe(false);
+      expect(
+        canTransitionSettlementBatch("VOID", status),
+        `VOID -> ${status}`,
+      ).toBe(false);
     }
   });
 
   it("未知状态一律拒绝，不能默认允许", () => {
-    expect(canTransitionSettlementBatch("UNKNOWN" as SettlementBatchStatus, "PAID")).toBe(false);
-    expect(canTransitionSettlementBatch("DRAFT", "unknown" as SettlementBatchStatus)).toBe(false);
     expect(
-      canTransitionSettlementBatch("" as SettlementBatchStatus, "" as SettlementBatchStatus),
+      canTransitionSettlementBatch("UNKNOWN" as SettlementBatchStatus, "PAID"),
+    ).toBe(false);
+    expect(
+      canTransitionSettlementBatch("DRAFT", "unknown" as SettlementBatchStatus),
+    ).toBe(false);
+    expect(
+      canTransitionSettlementBatch(
+        "" as SettlementBatchStatus,
+        "" as SettlementBatchStatus,
+      ),
     ).toBe(false);
     // 原型链上的属性名不能被误判为已知状态
     expect(
-      canTransitionSettlementBatch("constructor" as SettlementBatchStatus, "PAID"),
+      canTransitionSettlementBatch(
+        "constructor" as SettlementBatchStatus,
+        "PAID",
+      ),
     ).toBe(false);
     expect(
       canTransitionSettlementBatch(
@@ -75,7 +95,10 @@ describe("结算批次状态机（DS-001 状态流转规则）", () => {
 
   it("assert 放行合法流转且不抛错", () => {
     for (const [from, to] of ALLOWED_TRANSITIONS) {
-      expect(() => assertSettlementBatchTransition(from, to), `${from} -> ${to}`).not.toThrow();
+      expect(
+        () => assertSettlementBatchTransition(from, to),
+        `${from} -> ${to}`,
+      ).not.toThrow();
     }
   });
 
@@ -95,12 +118,18 @@ describe("结算批次状态机（DS-001 状态流转规则）", () => {
       assertSettlementBatchTransition("BOGUS" as SettlementBatchStatus, "PAID"),
     ).toThrow();
     expect(() =>
-      assertSettlementBatchTransition("DRAFT", "BOGUS" as SettlementBatchStatus),
+      assertSettlementBatchTransition(
+        "DRAFT",
+        "BOGUS" as SettlementBatchStatus,
+      ),
     ).toThrow();
 
     let message = "";
     try {
-      assertSettlementBatchTransition("DRAFT", "BOGUS" as SettlementBatchStatus);
+      assertSettlementBatchTransition(
+        "DRAFT",
+        "BOGUS" as SettlementBatchStatus,
+      );
     } catch (error) {
       message = (error as Error).message;
     }

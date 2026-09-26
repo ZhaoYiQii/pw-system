@@ -2,10 +2,7 @@ import { Button, Input, Text, Textarea, View } from "@tarojs/components";
 import Taro, { useLoad } from "@tarojs/taro";
 import { useState } from "react";
 import { tenantLocator } from "@platform-locator";
-import {
-  CustomerMessage,
-  CustomerShell,
-} from "../../components/customer-ui";
+import { CustomerMessage, CustomerShell } from "../../components/customer-ui";
 import { sendPhoneCode } from "../../features/customer-ui/session";
 import {
   applyAsPlayer,

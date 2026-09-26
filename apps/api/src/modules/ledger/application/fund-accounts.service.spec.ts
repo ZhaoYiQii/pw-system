@@ -29,9 +29,14 @@ interface FakeRepo extends FundAccountRepositoryPort {
   createCalls: Array<{ tenantId: string; input: NormalizedFundAccountInput }>;
 }
 
-function fakeRepo(overrides: Partial<FundAccountRepositoryPort> = {}): FakeRepo {
+function fakeRepo(
+  overrides: Partial<FundAccountRepositoryPort> = {},
+): FakeRepo {
   const listTenants: string[] = [];
-  const createCalls: Array<{ tenantId: string; input: NormalizedFundAccountInput }> = [];
+  const createCalls: Array<{
+    tenantId: string;
+    input: NormalizedFundAccountInput;
+  }> = [];
   const base: FundAccountRepositoryPort = {
     list: async (tenantId: string): Promise<FundAccountRecord[]> => {
       listTenants.push(tenantId);
@@ -64,7 +69,10 @@ describe("FundAccountsService（DS-002 应用层编排）", () => {
     const repo = fakeRepo();
     const service = new FundAccountsService(repo);
 
-    await service.create("tenant-real", { ...VALID_BODY, tenantId: "attacker" });
+    await service.create("tenant-real", {
+      ...VALID_BODY,
+      tenantId: "attacker",
+    });
 
     expect(repo.createCalls).toEqual([
       {
@@ -91,8 +99,14 @@ describe("FundAccountsService（DS-002 应用层编排）", () => {
   it("list 按仓储返回顺序映射为 view，createdAt 为 ISO 字符串", async () => {
     const repo = fakeRepo({
       list: async () => [
-        record({ id: "acc-1", createdAt: new Date("2026-09-24T00:00:00.000Z") }),
-        record({ id: "acc-2", createdAt: new Date("2026-09-25T00:00:00.000Z") }),
+        record({
+          id: "acc-1",
+          createdAt: new Date("2026-09-24T00:00:00.000Z"),
+        }),
+        record({
+          id: "acc-2",
+          createdAt: new Date("2026-09-25T00:00:00.000Z"),
+        }),
       ],
     });
     const service = new FundAccountsService(repo);
@@ -119,15 +133,19 @@ describe("FundAccountsService（DS-002 应用层编排）", () => {
   it("重复 code 的领域错误不被吞掉，原样抛出", async () => {
     const repo = fakeRepo({
       create: async () => {
-        throw new FundAccountDuplicateCodeError("资金账户 code 已存在：WECHAT_MAIN");
+        throw new FundAccountDuplicateCodeError(
+          "资金账户 code 已存在：WECHAT_MAIN",
+        );
       },
     });
     const service = new FundAccountsService(repo);
 
-    await expect(service.create("tenant-real", VALID_BODY)).rejects.toBeInstanceOf(
-      FundAccountDuplicateCodeError,
+    await expect(
+      service.create("tenant-real", VALID_BODY),
+    ).rejects.toBeInstanceOf(FundAccountDuplicateCodeError);
+    await expect(service.create("tenant-real", VALID_BODY)).rejects.toThrow(
+      "WECHAT_MAIN",
     );
-    await expect(service.create("tenant-real", VALID_BODY)).rejects.toThrow("WECHAT_MAIN");
   });
 
   it("输入不合法时在调用仓储前就抛 FundAccountInputError", async () => {
@@ -135,7 +153,11 @@ describe("FundAccountsService（DS-002 应用层编排）", () => {
     const service = new FundAccountsService(repo);
 
     await expect(
-      service.create("tenant-real", { code: "9BAD", name: "现金账户", kind: "CASH" }),
+      service.create("tenant-real", {
+        code: "9BAD",
+        name: "现金账户",
+        kind: "CASH",
+      }),
     ).rejects.toBeInstanceOf(FundAccountInputError);
     expect(repo.createCalls).toHaveLength(0);
   });

@@ -1,5 +1,11 @@
-import { normalizeCreateFundAccountInput, toFundAccountView } from "../domain/fund-account.js";
-import type { FundAccountRepositoryPort, FundAccountView } from "../domain/fund-account.js";
+import {
+  normalizeCreateFundAccountInput,
+  toFundAccountView,
+} from "../domain/fund-account.js";
+import type {
+  FundAccountRepositoryPort,
+  FundAccountView,
+} from "../domain/fund-account.js";
 
 /** 资金账户应用层：只编排领域规范化、仓储调用与视图转换。 */
 export class FundAccountsService {

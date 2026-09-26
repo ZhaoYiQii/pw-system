@@ -278,7 +278,9 @@ describe("SP2 注册与密码（HTTP 边界）", () => {
       expect(data.accessToken.length).toBeGreaterThan(0);
       expect(await accountCount(groupATenantId)).toBe(1);
       expect(
-        await client.customerProfile.count({ where: { tenantId: groupATenantId } }),
+        await client.customerProfile.count({
+          where: { tenantId: groupATenantId },
+        }),
       ).toBe(1);
       expect(
         await client.auditLog.count({
@@ -306,8 +308,9 @@ describe("SP2 注册与密码（HTTP 边界）", () => {
         phone: A_PHONE,
         code: regCode,
       }).expect(201);
-      const registeredId = (res.body as { data: { principal: { sub: string } } })
-        .data.principal.sub;
+      const registeredId = (
+        res.body as { data: { principal: { sub: string } } }
+      ).data.principal.sub;
       expect(await accountCount(groupATenantId)).toBe(2);
 
       const loginCode = await issueCodeFor(groupATenantId, groupA, A_PHONE);

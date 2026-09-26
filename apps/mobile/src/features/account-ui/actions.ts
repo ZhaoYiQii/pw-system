@@ -58,7 +58,9 @@ const ports: RegisterPorts = {
 };
 
 /** 自助注册入口（两段式）：第 1 段失败抛错；陪玩申请失败只降级，账号会话照常返回。 */
-export function registerAccount(input: RegisterInput): Promise<RegisterOutcome> {
+export function registerAccount(
+  input: RegisterInput,
+): Promise<RegisterOutcome> {
   return runRegistration(ports, input);
 }
 

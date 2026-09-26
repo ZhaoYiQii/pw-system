@@ -11,10 +11,7 @@
  * 两者属于不同实体的独立状态机（订单表 vs payment_refunds），语义不可互换，也不得复用同一套中文标签。
  */
 export type RefundStatus =
-  | "PENDING_CONFIRMATION"
-  | "SUCCEEDED"
-  | "REJECTED"
-  | "CANCELLED";
+  "PENDING_CONFIRMATION" | "SUCCEEDED" | "REJECTED" | "CANCELLED";
 
 /**
  * 允许的退款状态；顺序为状态机自然顺序（初始态在前，终态在后）。

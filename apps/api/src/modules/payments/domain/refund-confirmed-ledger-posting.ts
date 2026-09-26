@@ -44,10 +44,9 @@ export const REFUND_SUCCEEDED_STATUS = "SUCCEEDED" satisfies RefundStatus;
  * 多张"待确认"申请，合计金额超过原支付金额，等它们逐一确认时才发现超退——那时候钱已经出去了。
  * 被拒（REJECTED）与撤销（CANCELLED）不占用，额度自动释放。
  */
-export const REFUND_OCCUPYING_STATUSES: readonly RefundStatus[] = Object.freeze([
-  REFUND_CONFIRMABLE_STATUS,
-  REFUND_SUCCEEDED_STATUS,
-]);
+export const REFUND_OCCUPYING_STATUSES: readonly RefundStatus[] = Object.freeze(
+  [REFUND_CONFIRMABLE_STATUS, REFUND_SUCCEEDED_STATUS],
+);
 
 /** 入参非法（金额不是正整数分）：明确拒绝，不做静默纠正。 */
 export class RefundConfirmedInputError extends Error {

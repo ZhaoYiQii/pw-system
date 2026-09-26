@@ -14,7 +14,10 @@ import type {
   TenantAccountRecord,
   WechatLoginStateRecord,
 } from "../application/auth-ports.js";
-import { PhoneAlreadyBoundError, UsernameTakenError } from "../domain/errors.js";
+import {
+  PhoneAlreadyBoundError,
+  UsernameTakenError,
+} from "../domain/errors.js";
 
 function mapPlatform(row: {
   id: string;
@@ -71,9 +74,7 @@ function isUniqueViolation(error: unknown, column: string): boolean {
   const target = e.meta?.target;
   const fields = Array.isArray(target) ? target.map(String) : [String(target)];
   const needle = column.replace(/_/g, "").toLowerCase();
-  return fields.some((f) =>
-    f.replace(/_/g, "").toLowerCase().includes(needle),
-  );
+  return fields.some((f) => f.replace(/_/g, "").toLowerCase().includes(needle));
 }
 
 export class PrismaAuthRepository implements AuthRepository {

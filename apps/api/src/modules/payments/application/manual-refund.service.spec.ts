@@ -30,7 +30,9 @@ import { RefundStatusTransitionError } from "../domain/refund-confirmation-state
 type CreateInput = Parameters<
   ManualRefundRepository["createPendingManualRefund"]
 >[0];
-type ConfirmInput = Parameters<ManualRefundRepository["confirmManualRefund"]>[0];
+type ConfirmInput = Parameters<
+  ManualRefundRepository["confirmManualRefund"]
+>[0];
 type CreateFn = ManualRefundRepository["createPendingManualRefund"];
 type ConfirmFn = ManualRefundRepository["confirmManualRefund"];
 

@@ -58,9 +58,8 @@ describe("微信支付确认入账领域口径（DS-003）", () => {
   });
 
   it("科目、资金账户与客户辅助核算按固定口径落到正确的一侧", () => {
-    const [debit, credit] = buildPaymentConfirmedLedgerPosting(
-      validInput(),
-    ).entries;
+    const [debit, credit] =
+      buildPaymentConfirmedLedgerPosting(validInput()).entries;
 
     expect(debit.accountCode).toBe(WECHAT_SETTLEMENT_ASSET_ACCOUNT.code);
     expect(debit.accountCode).toBe("WECHAT_SETTLEMENT_ASSET");

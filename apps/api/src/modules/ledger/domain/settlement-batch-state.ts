@@ -6,11 +6,7 @@
  * 本模块只校验状态流转，不涉及角色权限、金额、数据库写入、事务、审计或实际打款。
  */
 export type SettlementBatchStatus =
-  | "DRAFT"
-  | "REVIEWED"
-  | "APPROVED"
-  | "PAID"
-  | "VOID";
+  "DRAFT" | "REVIEWED" | "APPROVED" | "PAID" | "VOID";
 
 const ALLOWED_TRANSITIONS: Readonly<
   Record<SettlementBatchStatus, readonly SettlementBatchStatus[]>
@@ -42,6 +38,8 @@ export function assertSettlementBatchTransition(
   to: SettlementBatchStatus,
 ): void {
   if (!canTransitionSettlementBatch(from, to)) {
-    throw new Error(`结算批次状态不允许从 ${String(from)} 变更为 ${String(to)}`);
+    throw new Error(
+      `结算批次状态不允许从 ${String(from)} 变更为 ${String(to)}`,
+    );
   }
 }

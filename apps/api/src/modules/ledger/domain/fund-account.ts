@@ -124,7 +124,9 @@ function normalizeName(value: unknown): string {
 
 function normalizeKind(value: unknown): FundAccountKind {
   if (typeof value === "string" && isFundAccountKind(value)) return value;
-  throw new FundAccountInputError(`kind 仅接受 ${FUND_ACCOUNT_KINDS.join(" / ")}`);
+  throw new FundAccountInputError(
+    `kind 仅接受 ${FUND_ACCOUNT_KINDS.join(" / ")}`,
+  );
 }
 
 function normalizeExternalRef(

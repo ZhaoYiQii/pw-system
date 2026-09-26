@@ -7,7 +7,9 @@ import {
 } from "./fund-account.js";
 import type { FundAccountRecord } from "./fund-account.js";
 
-function valid(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+function valid(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     code: "WECHAT_MAIN",
     name: "微信结算主账户",
@@ -19,20 +21,37 @@ function valid(overrides: Record<string, unknown> = {}): Record<string, unknown>
 describe("资金账户领域规则（DS-002 规范化与校验）", () => {
   it("四种 kind 全部接受", () => {
     for (const kind of FUND_ACCOUNT_KINDS) {
-      expect(normalizeCreateFundAccountInput(valid({ kind })).kind, kind).toBe(kind);
+      expect(normalizeCreateFundAccountInput(valid({ kind })).kind, kind).toBe(
+        kind,
+      );
     }
   });
 
   it("code 规范化：trim 后转大写", () => {
-    expect(normalizeCreateFundAccountInput(valid({ code: "  bank_a1  " })).code).toBe("BANK_A1");
-    expect(normalizeCreateFundAccountInput(valid({ code: "A1" })).code).toBe("A1");
+    expect(
+      normalizeCreateFundAccountInput(valid({ code: "  bank_a1  " })).code,
+    ).toBe("BANK_A1");
+    expect(normalizeCreateFundAccountInput(valid({ code: "A1" })).code).toBe(
+      "A1",
+    );
   });
 
   it("非法 code 抛 FundAccountInputError，不静默截断", () => {
-    for (const code of ["9ABC", "A1!", "A", "", "  ", "_A", "A-B", "啊".repeat(3), "A".repeat(33)]) {
-      expect(() => normalizeCreateFundAccountInput(valid({ code })), `code=${code}`).toThrow(
-        FundAccountInputError,
-      );
+    for (const code of [
+      "9ABC",
+      "A1!",
+      "A",
+      "",
+      "  ",
+      "_A",
+      "A-B",
+      "啊".repeat(3),
+      "A".repeat(33),
+    ]) {
+      expect(
+        () => normalizeCreateFundAccountInput(valid({ code })),
+        `code=${code}`,
+      ).toThrow(FundAccountInputError);
     }
     expect(() => normalizeCreateFundAccountInput(valid({ code: 123 }))).toThrow(
       FundAccountInputError,
@@ -40,21 +59,35 @@ describe("资金账户领域规则（DS-002 规范化与校验）", () => {
   });
 
   it("name 去空白后长度需为 1-64", () => {
-    expect(normalizeCreateFundAccountInput(valid({ name: "  现金账户  " })).name).toBe("现金账户");
-    expect(normalizeCreateFundAccountInput(valid({ name: "啊".repeat(64) })).name.length).toBe(64);
-    expect(() => normalizeCreateFundAccountInput(valid({ name: "   " }))).toThrow(
-      FundAccountInputError,
-    );
-    expect(() => normalizeCreateFundAccountInput(valid({ name: "啊".repeat(65) }))).toThrow(
-      FundAccountInputError,
-    );
+    expect(
+      normalizeCreateFundAccountInput(valid({ name: "  现金账户  " })).name,
+    ).toBe("现金账户");
+    expect(
+      normalizeCreateFundAccountInput(valid({ name: "啊".repeat(64) })).name
+        .length,
+    ).toBe(64);
+    expect(() =>
+      normalizeCreateFundAccountInput(valid({ name: "   " })),
+    ).toThrow(FundAccountInputError);
+    expect(() =>
+      normalizeCreateFundAccountInput(valid({ name: "啊".repeat(65) })),
+    ).toThrow(FundAccountInputError);
     expect(() => normalizeCreateFundAccountInput(valid({ name: 42 }))).toThrow(
       FundAccountInputError,
     );
   });
 
   it("kind 必须是四个枚举字符串之一，不精确匹配即拒绝", () => {
-    for (const kind of ["bank", "Bank", "  BANK", "UNKNOWN", "", null, 1, undefined]) {
+    for (const kind of [
+      "bank",
+      "Bank",
+      "  BANK",
+      "UNKNOWN",
+      "",
+      null,
+      1,
+      undefined,
+    ]) {
       expect(
         () => normalizeCreateFundAccountInput(valid({ kind })),
         `kind=${String(kind)}`,
@@ -63,43 +96,60 @@ describe("资金账户领域规则（DS-002 规范化与校验）", () => {
   });
 
   it("externalRef 未传或空白归为 null，非空时 trim", () => {
-    expect(normalizeCreateFundAccountInput(valid({ kind: "CASH" })).externalRef).toBeNull();
     expect(
-      normalizeCreateFundAccountInput(valid({ kind: "CASH", externalRef: "   " })).externalRef,
+      normalizeCreateFundAccountInput(valid({ kind: "CASH" })).externalRef,
     ).toBeNull();
     expect(
-      normalizeCreateFundAccountInput(valid({ kind: "CASH", externalRef: "  现金抽屉#1  " }))
-        .externalRef,
+      normalizeCreateFundAccountInput(
+        valid({ kind: "CASH", externalRef: "   " }),
+      ).externalRef,
+    ).toBeNull();
+    expect(
+      normalizeCreateFundAccountInput(
+        valid({ kind: "CASH", externalRef: "  现金抽屉#1  " }),
+      ).externalRef,
     ).toBe("现金抽屉#1");
   });
 
   it("externalRef 非空时长度需为 1-64", () => {
     expect(
-      normalizeCreateFundAccountInput(valid({ kind: "OFFLINE", externalRef: "x".repeat(64) }))
-        .externalRef,
+      normalizeCreateFundAccountInput(
+        valid({ kind: "OFFLINE", externalRef: "x".repeat(64) }),
+      ).externalRef,
     ).toHaveLength(64);
     expect(() =>
-      normalizeCreateFundAccountInput(valid({ kind: "OFFLINE", externalRef: "x".repeat(65) })),
+      normalizeCreateFundAccountInput(
+        valid({ kind: "OFFLINE", externalRef: "x".repeat(65) }),
+      ),
     ).toThrow(FundAccountInputError);
     expect(() =>
-      normalizeCreateFundAccountInput(valid({ kind: "OFFLINE", externalRef: 42 })),
+      normalizeCreateFundAccountInput(
+        valid({ kind: "OFFLINE", externalRef: 42 }),
+      ),
     ).toThrow(FundAccountInputError);
   });
 
   it("BANK 传入 externalRef 时必须包含 *，防止存完整卡号", () => {
     expect(
-      normalizeCreateFundAccountInput(valid({ kind: "BANK", externalRef: "6222****1234" }))
-        .externalRef,
+      normalizeCreateFundAccountInput(
+        valid({ kind: "BANK", externalRef: "6222****1234" }),
+      ).externalRef,
     ).toBe("6222****1234");
     expect(() =>
-      normalizeCreateFundAccountInput(valid({ kind: "BANK", externalRef: "6222021234567890" })),
+      normalizeCreateFundAccountInput(
+        valid({ kind: "BANK", externalRef: "6222021234567890" }),
+      ),
     ).toThrow(FundAccountInputError);
   });
 
   it("BANK 未传 externalRef 允许，不触发卡号规则", () => {
-    expect(normalizeCreateFundAccountInput(valid({ kind: "BANK" })).externalRef).toBeNull();
     expect(
-      normalizeCreateFundAccountInput(valid({ kind: "BANK", externalRef: "  " })).externalRef,
+      normalizeCreateFundAccountInput(valid({ kind: "BANK" })).externalRef,
+    ).toBeNull();
+    expect(
+      normalizeCreateFundAccountInput(
+        valid({ kind: "BANK", externalRef: "  " }),
+      ).externalRef,
     ).toBeNull();
   });
 

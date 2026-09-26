@@ -46,7 +46,8 @@ export function defaultDisplayName(username: string): string {
 
 /** 只带真正有值的字段：空串与 undefined 一律不发，避免服务端把 `""` 当有效值。 */
 export function registerBody(input: RegisterInput): Record<string, unknown> {
-  const displayName = (input.displayName ?? "").trim() || defaultDisplayName(input.username);
+  const displayName =
+    (input.displayName ?? "").trim() || defaultDisplayName(input.username);
   const body: Record<string, unknown> = {
     tenantCode: input.tenantCode,
     username: input.username,
