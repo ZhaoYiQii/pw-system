@@ -29,6 +29,7 @@ import type { AuthenticatedRequest } from "../../../common/auth/auth.guard.js";
 import {
   AccountDisabledError,
   AuthInputError,
+  ContextRoleMissingError,
   CurrentPasswordInvalidError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
@@ -328,11 +329,33 @@ export class AuthController {
       );
     }
     const tenantId = tenantIdOf(req);
-    const bundle = await this.auth.switchTenantContext(
-      tenantId,
-      req.principal?.sub ?? "",
-      context,
-    );
+    let bundle;
+    try {
+      bundle = await this.auth.switchTenantContext(
+        tenantId,
+        req.principal?.sub ?? "",
+        context,
+      );
+    } catch (error) {
+      // 账号已通过认证，只是缺少目标端角色：必须是 403，客户端据此提示
+      // 「陪玩申请审核中」并保留会话，而不是把域错误升级成 500。
+      if (error instanceof ContextRoleMissingError) {
+        throw new HttpException(error.message, HttpStatus.FORBIDDEN);
+      }
+      // 会话本身不可继续（账号禁用 / 门店停用 / 账号已不存在）：401，
+      // 客户端据此清 token 退回登录卡。消息不透出域错误原文。
+      if (
+        error instanceof AccountDisabledError ||
+        error instanceof TenantInactiveError ||
+        error instanceof InvalidCredentialsError
+      ) {
+        throw new HttpException(
+          "登录状态已失效，请重新登录。",
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      throw error;
+    }
     setRefreshCookie(res, bundle.refreshToken);
     const csrfToken = setCsrfCookie(res);
     return {

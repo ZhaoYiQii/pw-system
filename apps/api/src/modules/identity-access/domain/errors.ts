@@ -26,6 +26,18 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
+/**
+ * 切换端上下文时账号未持有目标端角色（控制器映射 403）。
+ * 与 InvalidCredentialsError 区分：此处账号已通过认证，只是没有该端的角色，
+ * 复用登录失败语义会让未获批准的陪玩申请显示成 500 或「账号密码错误」。
+ */
+export class ContextRoleMissingError extends Error {
+  constructor() {
+    super("该账号未开通目标端权限，请先提交对应申请或联系门店");
+    this.name = "ContextRoleMissingError";
+  }
+}
+
 export class PhoneAlreadyBoundError extends Error {
   constructor(message = "该手机号已绑定其他账号，请联系门店处理") {
     super(message);

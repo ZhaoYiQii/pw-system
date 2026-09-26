@@ -5,6 +5,9 @@ import {
   createHmac,
   randomBytes,
 } from "node:crypto";
+import { Logger } from "@nestjs/common";
+
+const logger = new Logger("PiiPhone");
 
 /** 读取 PII 主密钥：生产必须配置 PII_MASTER_KEY（32 字节 base64）；本地测试用 SESSION_SECRET 派生。 */
 function masterKey(): Buffer {
@@ -57,6 +60,22 @@ export function decryptPhone(mobileEnc: string): string {
   return Buffer.concat([decipher.update(ct), decipher.final()]).toString(
     "utf8",
   );
+}
+
+/**
+ * 容错版解密：历史行可能是另一把 SESSION_SECRET / PII_MASTER_KEY 写下的（密钥没有持久化就会漂移），
+ * 这时返回 null，由调用方按「未绑定手机号」降级展示，避免一行坏数据让整个列表接口 500。
+ * 失败会打日志，不做静默吞异常。
+ */
+export function tryDecryptPhone(mobileEnc: string): string | null {
+  try {
+    return decryptPhone(mobileEnc);
+  } catch (error) {
+    logger.warn(
+      `手机号解密失败，按未绑定处理：${error instanceof Error ? error.message : String(error)}`,
+    );
+    return null;
+  }
 }
 
 export function phoneHash(tenantId: string, value: string): string {

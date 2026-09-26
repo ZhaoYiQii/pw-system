@@ -6,9 +6,9 @@ import type {
   PlayerView,
 } from "../domain/player.js";
 import {
-  decryptPhone,
   encryptPhone,
   phoneHash,
+  tryDecryptPhone,
 } from "../../../common/pii/phone.js";
 import {
   AccountNotPlayerError,
@@ -51,7 +51,7 @@ function mapPlayer(row: {
     id: row.id,
     tenantId: row.tenantId,
     name: row.name,
-    mobile: row.mobileEnc ? decryptPhone(row.mobileEnc) : null,
+    mobile: row.mobileEnc ? tryDecryptPhone(row.mobileEnc) : null,
     intro: row.intro,
     status: row.status as PlayerView["status"],
     acceptingOrders: row.acceptingOrders,

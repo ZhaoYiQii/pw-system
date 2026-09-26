@@ -1,6 +1,7 @@
 import {
   AccountDisabledError,
   AuthInputError,
+  ContextRoleMissingError,
   CurrentPasswordInvalidError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
@@ -493,7 +494,7 @@ export class AuthService {
     if (account.tenantStatus !== "ACTIVE") throw new TenantInactiveError();
     if (account.status !== "ACTIVE") throw new AccountDisabledError();
     if (!account.roles.includes(context)) {
-      throw new InvalidCredentialsError();
+      throw new ContextRoleMissingError();
     }
     const bundle = await this.issue(this.tenantPrincipal(account, context));
     await this.repository.recordAudit({

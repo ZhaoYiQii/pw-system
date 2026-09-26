@@ -5,7 +5,7 @@ import type {
   CustomerView,
 } from "../domain/customer.js";
 import {
-  decryptPhone,
+  tryDecryptPhone,
   encryptPhone,
   phoneHash,
 } from "../../../common/pii/phone.js";
@@ -44,7 +44,7 @@ function map(row: {
     id: row.id,
     tenantId: row.tenantId,
     name: row.name,
-    mobile: row.mobileEnc ? decryptPhone(row.mobileEnc) : null,
+    mobile: row.mobileEnc ? tryDecryptPhone(row.mobileEnc) : null,
     remark: row.remark,
     status: row.status as CustomerView["status"],
     createdAt: row.createdAt,
