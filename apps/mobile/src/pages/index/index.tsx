@@ -12,8 +12,8 @@ import type { ResolvedTenantInfo } from "../../platform/contracts/tenant-locator
 import type { StorefrontInfo } from "../../platform/contracts/runtime-config";
 import "./index.css";
 
-const FALLBACK_PRIMARY = "#2f54eb";
-const FALLBACK_ACCENT = "#fa8c16";
+const FALLBACK_PRIMARY = "#24543f";
+const FALLBACK_ACCENT = "#cf6040";
 
 export default function Index() {
   const [info, setInfo] = useState<ResolvedTenantInfo | null>(null);
@@ -100,57 +100,81 @@ export default function Index() {
 
       {info?.state === "ok" && info.tenant ? (
         <View className="portal-body">
-          <View
-            className="portal-hero"
-            style={{ backgroundColor: primaryColor }}
-          >
-            <Text className="portal-store">{info.tenant.name}</Text>
-            {logoText ? (
-              <Text className="portal-logo">
-                {logoText}
-                <Text
-                  className="portal-logo-dot"
-                  style={{ backgroundColor: accentColor }}
-                />
-              </Text>
-            ) : null}
-            <Text className="portal-welcome">欢迎光临，选择你的身份开始</Text>
+          <View className="portal-brandrow">
+            <Text
+              className="portal-seal"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {logoText ? logoText.slice(0, 2) : "灵析"}
+            </Text>
+            <View className="portal-brandcopy">
+              {logoText ? (
+                <Text className="portal-brandname">{logoText}</Text>
+              ) : null}
+              <Text className="portal-brandsub">LINGXI PLAY · 门店数字化</Text>
+            </View>
           </View>
+          <Text className="portal-store">
+            {info.tenant.name}
+            ，
+          </Text>
+          <Text className="portal-welcome">欢迎光临，选择你的身份开始</Text>
 
           <Text className="portal-section-title">选择入口</Text>
 
-          <View className="role-card">
-            <View className="role-head">
-              <Text className="role-badge" style={{ color: primaryColor }}>
-                陪玩
+          <View
+            className="role-card"
+            style={{ borderColor: primaryColor }}
+            onClick={openPlayer}
+            aria-role="button"
+            aria-label="进入陪玩端：查看可接订单、报名、开始与结束服务"
+          >
+            <View
+              className="role-ic"
+              style={{ backgroundColor: `${primaryColor}1A` }}
+            >
+              <Text
+                className="role-ic-glyph"
+                style={{ color: primaryColor }}
+              >
+                陪
               </Text>
-              <View className="role-copy">
-                <Text className="role-title">我是陪玩</Text>
-                <Text className="role-desc">
-                  查看可接订单、报名、开始与结束服务
-                </Text>
-              </View>
             </View>
-            <Button className="role-btn" onClick={openPlayer}>
-              进入陪玩端
-            </Button>
+            <View className="role-copy">
+              <Text className="role-title">我是陪玩</Text>
+              <Text className="role-desc">
+                查看可接订单、报名、开始与结束服务
+              </Text>
+            </View>
+            <Text className="role-arrow" style={{ color: primaryColor }}>
+              ›
+            </Text>
           </View>
 
-          <View className="role-card">
-            <View className="role-head">
-              <Text className="role-badge" style={{ color: accentColor }}>
-                老板
+          <View
+            className="role-card"
+            style={{ borderColor: accentColor }}
+            onClick={openBoss}
+            aria-role="button"
+            aria-label="进入老板端：自助下单、选人确认、钱包结算与查看争议"
+          >
+            <View
+              className="role-ic"
+              style={{ backgroundColor: `${accentColor}1A` }}
+            >
+              <Text className="role-ic-glyph" style={{ color: accentColor }}>
+                老
               </Text>
-              <View className="role-copy">
-                <Text className="role-title">我是老板</Text>
-                <Text className="role-desc">
-                  自助下单、选人确认、钱包结算与查看争议
-                </Text>
-              </View>
             </View>
-            <Button className="role-btn" onClick={openBoss}>
-              进入老板端
-            </Button>
+            <View className="role-copy">
+              <Text className="role-title">我是老板</Text>
+              <Text className="role-desc">
+                自助下单、选人确认、钱包结算与查看争议
+              </Text>
+            </View>
+            <Text className="role-arrow" style={{ color: accentColor }}>
+              ›
+            </Text>
           </View>
 
           <View className="register-entry">

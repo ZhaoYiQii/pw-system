@@ -17,113 +17,117 @@
   flex-direction: column;
 }
 
-.portal-hero {
-  border-radius: 24px;
-  padding: 44px 36px 40px;
-  color: #ffffff;
+/* 品牌行：宋体方章 + 品牌字标（Slice A 灵析重设计） */
+.portal-brandrow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.portal-seal {
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  color: #f5f2ea;
+  font-family: var(--cu-serif, serif);
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(24, 35, 30, 0.18);
+}
+.portal-brandcopy {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 12px 28px rgba(47, 84, 235, 0.18);
+  gap: 4px;
 }
-
-.portal-store {
-  font-size: 30px;
-  font-weight: 600;
-  opacity: 0.92;
-}
-
-.portal-logo {
-  font-size: 52px;
-  line-height: 1.15;
+.portal-brandname {
+  font-family: var(--cu-serif, serif);
+  font-size: 42px;
   font-weight: 700;
-  word-break: break-all;
+  letter-spacing: 2px;
+  color: #18231e;
 }
-
-.portal-logo-dot {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  margin-left: 10px;
+.portal-brandsub {
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: #8b9188;
 }
-
+.portal-store {
+  margin-top: 40px;
+  font-family: var(--cu-serif, serif);
+  font-size: 56px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #18231e;
+}
 .portal-welcome {
+  margin-top: 10px;
   font-size: 26px;
-  opacity: 0.9;
-  margin-top: 8px;
+  color: #656b63;
+  line-height: 1.7;
 }
-
 .portal-section-title {
   margin: 44px 8px 20px;
   color: #454c59;
   font-size: 30px;
   font-weight: 600;
 }
-
+/* 身份卡：整卡可点，图标容器 + 文案 + 箭头（替代原黑色大按钮） */
 .role-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 28px 28px 24px;
+  background: var(--cu-card, #fffdf8);
+  border: 1px solid var(--cu-line, #e3ded2);
+  border-radius: var(--cu-radius-card, 28px);
+  padding: 30px 28px;
   margin-bottom: 20px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 22px;
-  box-shadow: 0 6px 18px rgba(31, 41, 55, 0.06);
+  box-shadow: var(--cu-shadow-card, 0 2px 6px rgba(24, 35, 30, 0.05));
+  cursor: pointer;
+  overflow: hidden;
 }
-
-.role-head {
+.role-card:active {
+  transform: scale(0.99);
+}
+.role-ic {
+  width: 88px;
+  height: 88px;
+  border-radius: 26px;
+  flex: none;
   display: flex;
-  align-items: flex-start;
-  gap: 18px;
+  align-items: center;
+  justify-content: center;
 }
-
-.role-badge {
-  min-width: 88px;
-  height: 44px;
-  line-height: 44px;
-  text-align: center;
-  border-radius: 12px;
-  background: rgba(47, 84, 235, 0.08);
-  font-size: 28px;
+.role-ic-glyph {
+  font-family: var(--cu-serif, serif);
+  font-size: 40px;
   font-weight: 700;
 }
-
 .role-copy {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 0;
 }
-
 .role-title {
   font-size: 34px;
   font-weight: 600;
   color: #1f2937;
 }
-
 .role-desc {
   font-size: 24px;
-  color: #8a919f;
-  line-height: 1.5;
+  color: var(--cu-muted, #656b63);
+  line-height: 1.55;
 }
-
-.role-btn {
-  height: 88px;
-  line-height: 88px;
-  border-radius: 16px;
-  background: #1f2937;
-  color: #ffffff;
-  font-size: 30px;
-  font-weight: 600;
-  border: none;
+.role-arrow {
+  flex: none;
+  font-size: 44px;
+  line-height: 1;
+  opacity: 0.7;
 }
-
-.role-btn::after {
-  border: none;
-}
-
 .register-entry {
   margin-top: 8px;
   background: #ffffff;
@@ -144,8 +148,8 @@
 .register-entry-btn {
   height: 88px;
   line-height: 88px;
-  border-radius: 16px;
-  background: #2f54eb;
+  border-radius: var(--cu-radius-btn, 24px);
+  background: var(--cu-primary, #24543f);
   color: #ffffff;
   font-size: 30px;
   font-weight: 600;
@@ -174,8 +178,8 @@
   width: 220px;
   height: 76px;
   line-height: 76px;
-  border-radius: 14px;
-  background: #2f54eb;
+  border-radius: var(--cu-radius-btn, 24px);
+  background: var(--cu-primary, #24543f);
   color: #ffffff;
   font-size: 28px;
 }
