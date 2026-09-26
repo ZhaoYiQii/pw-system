@@ -45,4 +45,24 @@ describe("TokenService", () => {
       tokens.verifyAccess(tampered, ["pw-platform"]),
     ).rejects.toThrow();
   });
+
+  it("roles claim 经签发/校验往返后保持顺序", async () => {
+    const multi = {
+      ...principal,
+      scope: "tenant" as const,
+      tenantId: "22222222-2222-4222-8222-222222222222",
+      role: "CUSTOMER" as const,
+      roles: ["CUSTOMER", "PLAYER"] as const,
+    };
+    const token = await tokens.signAccess(multi);
+    const verified = await tokens.verifyAccess(token, ["pw-tenant"]);
+    expect(verified.role).toBe("CUSTOMER");
+    expect(verified.roles).toEqual(["CUSTOMER", "PLAYER"]);
+  });
+
+  it("无 roles 的 principal（旧 token 形态）校验后 roles 仍为 undefined", async () => {
+    const token = await tokens.signAccess(principal);
+    const verified = await tokens.verifyAccess(token, ["pw-platform"]);
+    expect(verified.roles).toBeUndefined();
+  });
 });

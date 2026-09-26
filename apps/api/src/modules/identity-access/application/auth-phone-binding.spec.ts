@@ -26,6 +26,7 @@ function account(
     tenantStatus: "ACTIVE",
     username: "w-caller",
     passwordHash: "scrypt:x:y",
+    passwordSetByUser: false,
     status: "ACTIVE",
     roles: ["CUSTOMER"],
     wechatOpenid: "oCallerOpenid",

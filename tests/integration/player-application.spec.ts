@@ -146,4 +146,58 @@ describe("P-3 player application（申请/审核/追加 PLAYER）", () => {
         .principal.role,
     ).toBe("PLAYER");
   });
+
+  // 依赖声明：本用例依赖上一个用例已完成 approve（同一 describe 顺序执行）。
+  // 断言顺序刻意把「权限并集」放在最前：它是本缺陷的决定性判据，且在修复前
+  // 恒为红灯（role=PLAYER 时 PLAYER 权限集无 order.manage）。角色解析与 claim
+  // 形态的断言在修复前是随机的（取决于 DB 返回顺序），放后面避免掩盖真因。
+  it("多角色（SP1 回归）：默认落地老板端，且切换端上下文后仍保有另一端权限", async () => {
+    const login = await request(app.getHttpServer())
+      .post("/api/v1/auth/login")
+      .send({ kind: "tenant", tenantCode, username: "bossone", password: PW })
+      .expect(201);
+    const bundle = (
+      login.body as {
+        data: {
+          accessToken: string;
+          principal: { role: string; roles?: readonly string[] };
+        };
+      }
+    ).data;
+
+    // 1) 切到陪玩端上下文
+    const switched = await request(app.getHttpServer())
+      .post("/api/v1/auth/switch-context")
+      .set("authorization", `Bearer ${bundle.accessToken}`)
+      .send({ context: "PLAYER" })
+      .expect(201);
+    const playerToken = (switched.body as { data: { accessToken: string } })
+      .data.accessToken;
+
+    // 2) 决定性判据：切到陪玩端后，老板端权限接口仍必须可用（权限并集；修复前为 403）
+    await request(app.getHttpServer())
+      .get("/api/v1/tenant/orders")
+      .set("authorization", `Bearer ${playerToken}`)
+      .expect(200);
+
+    // 3) 默认（CUSTOMER 上下文）下老板端权限接口可用
+    await request(app.getHttpServer())
+      .get("/api/v1/tenant/orders")
+      .set("authorization", `Bearer ${bundle.accessToken}`)
+      .expect(200);
+
+    // 4) 默认落地老板端：主角色必须是 CUSTOMER（ROLE_PRIORITY 中 CUSTOMER 先于 PLAYER）
+    expect(bundle.principal.role).toBe("CUSTOMER");
+    // 5) 会话 principal 必须携带全部角色
+    expect(bundle.principal.roles).toEqual(["CUSTOMER", "PLAYER"]);
+
+    // 6) roles 经 JWT 签发/校验往返后不丢失
+    const me = await request(app.getHttpServer())
+      .get("/api/v1/auth/me")
+      .set("authorization", `Bearer ${playerToken}`)
+      .expect(200);
+    expect(
+      (me.body as { data: { roles?: readonly string[] } }).data.roles,
+    ).toEqual(["CUSTOMER", "PLAYER"]);
+  });
 });
