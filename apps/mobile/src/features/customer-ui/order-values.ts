@@ -6,6 +6,8 @@
 // - MONEY_FEN 必须是规范整数分字符串（无前导零、非负）；
 // - DATETIME 必须是带时区的 ISO 字符串；
 // - SINGLE_SELECT 是选项值字符串，MULTI_SELECT 是选项值数组（不得重复）；
+// - 单选字段若是豁免语义角色（SERVER_REGION / TARGET_RANK / MODE），库外值放行：
+//   预设库只是建议，库外值不加价、按基础价（ADR-0010 决定 4/6）；
 // - 只收集「启用区块内的启用组件」的值：停用区块 / 停用组件 / 未知键一律不提交
 //   （服务端只认这些键，多送会被判未知字段）；
 // - 人数与价格不在这里计算，界面也不展示客户端算出来的数（规格 C-9）。
@@ -39,6 +41,8 @@ export interface OrderFieldLike {
   sortOrder: number;
   fieldType: OrderFieldTypeV2;
   required: boolean;
+  /** 语义角色（发布快照自带）：豁免角色允许库外值，见 ADR-0010 决定 4。 */
+  semanticRole?: string | null;
   options?: readonly OrderChoiceOptionLike[];
 }
 
@@ -103,6 +107,23 @@ export interface OrderValuesResult {
 const MAX_STAFFING_COUNT = 500;
 const NON_NEGATIVE_FEN = /^(?:0|[1-9][0-9]*)$/;
 const MINUTE_PRECISION = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/;
+
+// 豁免语义角色：这些字段的预设选项只是「建议」，库外值照样能提交（不加价、按基础价）。
+// 与服务端 game-template-values.ts 的 FREE_INPUT_SEMANTIC_ROLES 保持同一集合（ADR-0010 决定 4）。
+export const FREE_INPUT_SEMANTIC_ROLES: ReadonlySet<string> = new Set([
+  "SERVER_REGION",
+  "TARGET_RANK",
+  "MODE",
+]);
+
+export function allowsFreeInput(field: {
+  semanticRole?: string | null;
+}): boolean {
+  return (
+    field.semanticRole != null &&
+    FREE_INPUT_SEMANTIC_ROLES.has(field.semanticRole)
+  );
+}
 
 function asText(value: unknown): string {
   if (typeof value === "string") return value;
@@ -243,9 +264,10 @@ function convertChoice(
   label: string,
   raw: string,
   options: readonly OrderChoiceOptionLike[],
+  allowFreeValue: boolean,
 ): Conversion {
   const value = raw.trim();
-  if (!options.some((option) => option.value === value)) {
+  if (!allowFreeValue && !options.some((option) => option.value === value)) {
     return { ok: false, message: `${label} 的值不在模板选项中` };
   }
   return { ok: true, value };
@@ -281,7 +303,12 @@ function convertFieldValue(
     case "DATETIME":
       return convertDateTime(field.label, asText(raw));
     case "SINGLE_SELECT":
-      return convertChoice(field.label, asText(raw), field.options ?? []);
+      return convertChoice(
+        field.label,
+        asText(raw),
+        field.options ?? [],
+        allowsFreeInput(field),
+      );
     case "MULTI_SELECT": {
       const selected = Array.isArray(raw)
         ? raw.filter((item): item is string => typeof item === "string")
@@ -293,7 +320,13 @@ function convertFieldValue(
         return { ok: false, message: `${field.label} 不能重复选择同一选项` };
       }
       for (const item of selected) {
-        const converted = convertChoice(field.label, item, field.options ?? []);
+        // 多选不在豁免范围（ADR-0010 决定 4）：与服务端算价侧的封闭口径一致。
+        const converted = convertChoice(
+          field.label,
+          item,
+          field.options ?? [],
+          false,
+        );
         if (!converted.ok) return converted;
       }
       return { ok: true, value: selected };
@@ -325,7 +358,9 @@ function convertCellValue(
       : { ok: false, message: `${path} 必须是数字` };
   }
   if (column.columnType === "SINGLE_SELECT") {
-    return convertChoice(path, text, column.options ?? []);
+    // 表格列不属于本批豁免（服务端算价侧同样不覆盖列；文案侧对豁免角色的列已放行）。
+    // 移动端此处仍按封闭口径预检，差异登记在 docs/unverified-and-deferred.md。
+    return convertChoice(path, text, column.options ?? [], false);
   }
   return { ok: true, value: text };
 }

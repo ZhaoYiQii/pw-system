@@ -200,4 +200,62 @@ describe("P-3 player application（申请/审核/追加 PLAYER）", () => {
       (me.body as { data: { roles?: readonly string[] } }).data.roles,
     ).toEqual(["CUSTOMER", "PLAYER"]);
   });
+
+  // 端上下文切换的错误契约：账号未持有目标端角色时必须 403（「需要陪玩身份」），
+  // 而不是 500。修复前 service 抛 InvalidCredentialsError（登录失败语义的域错误），
+  // switchContext 控制器未做错误映射 → 全局过滤器把域错误转成 500
+  // Internal server error，移动端的 403「待审核」分支因此永远走不到。
+  // 依赖声明：boss 账号在 beforeAll 创建，全程只持有 TENANT_OWNER（approve 给
+  // bossone 追加 PLAYER，不影响 boss），因此它是稳定的「无陪玩角色」夹具。
+  it("未持有陪玩角色：switch-context 返回 403 而非 500", async () => {
+    const res = await request(app.getHttpServer())
+      .post("/api/v1/auth/switch-context")
+      .set("authorization", `Bearer ${ownerToken}`)
+      .send({ context: "PLAYER" });
+    expect(res.status).toBe(403);
+    const body = res.body as { code?: string; status?: number; message?: string };
+    expect(body.status).toBe(403);
+    expect(body.code).not.toBe("INTERNAL_ERROR");
+    expect(typeof body.message).toBe("string");
+  });
+
+  it("非法 context：switch-context 返回 400（非法入参不升级为 5xx）", async () => {
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/switch-context")
+      .set("authorization", `Bearer ${ownerToken}`)
+      .send({ context: "ADMIN" })
+      .expect(400);
+  });
+
+  // 账号被禁用后不得继续签发新上下文 token：客户端 401 分支据此清 token 退回登录卡。
+  // 若此处返回 403，被禁账号会看到「陪玩申请审核中」的误导提示，因此单独钉住 401。
+  it("账号被禁用：switch-context 返回 401（会话不可继续）", async () => {
+    const hash = await hashPassword(PW);
+    const disabled = await client.tenantAccount.create({
+      data: { tenantId, username: "disabledone", passwordHash: hash },
+    });
+    await client.tenantAccountRole.create({
+      data: { tenantId, tenantAccountId: disabled.id, role: "CUSTOMER" },
+    });
+    const login = await request(app.getHttpServer())
+      .post("/api/v1/auth/login")
+      .send({
+        kind: "tenant",
+        tenantCode,
+        username: "disabledone",
+        password: PW,
+      })
+      .expect(201);
+    const token = (login.body as { data: { accessToken: string } }).data
+      .accessToken;
+    await client.tenantAccount.update({
+      where: { id: disabled.id },
+      data: { status: "DISABLED" },
+    });
+    await request(app.getHttpServer())
+      .post("/api/v1/auth/switch-context")
+      .set("authorization", `Bearer ${token}`)
+      .send({ context: "CUSTOMER" })
+      .expect(401);
+  });
 });

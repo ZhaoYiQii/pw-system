@@ -4,6 +4,7 @@ import { useState } from "react";
 import { identityAdapter } from "@platform-identity";
 import { session } from "@platform-session";
 import { apiAdapter } from "@platform-api";
+import { enterPlayer } from "../../../features/player-context/actions";
 import {
   PlayerLoginCard,
   PlayerMessage,
@@ -46,10 +47,25 @@ export default function GameSignupPage() {
     }
   };
 
+  /** 陪玩端入口：端上下文判别是单值（ADR-0009），必须先切到陪玩上下文再加载。 */
+  const enterAndLoad = async (accessToken: string) => {
+    const outcome = await enterPlayer(accessToken);
+    if (outcome.sessionExpired) {
+      session.clearToken();
+      setToken(null);
+    }
+    if (!outcome.token) {
+      setMsg(outcome.message);
+      return;
+    }
+    setToken(outcome.token);
+    await load(outcome.token);
+  };
+
   useLoad(() => {
     const accessToken = session.getToken();
     setToken(accessToken);
-    if (accessToken) void load(accessToken);
+    if (accessToken) void enterAndLoad(accessToken);
   });
 
   const login = async () => {
@@ -62,9 +78,8 @@ export default function GameSignupPage() {
         password,
       });
       session.setToken(loginSession.accessToken);
-      setToken(loginSession.accessToken);
       setPassword("");
-      await load(loginSession.accessToken);
+      await enterAndLoad(loginSession.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     }

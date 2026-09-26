@@ -624,6 +624,45 @@ describe("S4 新建派单：模板读取与创建", () => {
     expect(audit?.action).toBe("game_dispatch.template_order.create");
   });
 
+  it("豁免语义角色（MODE）允许库外值：建单成功、不加价、文案原样显示（ADR-0010 决定 4/6）", async () => {
+    const template = await createPublishedTemplate(
+      ownerToken,
+      "S4 库外模式模板",
+      gameId,
+      orderConfig(),
+    );
+    const res = await request(app.getHttpServer())
+      .post("/api/v1/tenant/game-dispatch/template-orders")
+      .set({
+        authorization: `Bearer ${ownerToken}`,
+        "idempotency-key": `k-${suffix}-free-mode`,
+      })
+      .send(
+        orderBody({
+          templateId: template.templateId,
+          templateVersionId: template.versionId,
+          values: {
+            // 规则库里只有 mode=ranked → 1500；aram 是库外值：放行、不加价（按基础价）。
+            mode: "aram",
+            roster_table: [
+              { position: "陪玩", count: 2 },
+              { position: "陪练", count: 1 },
+            ],
+          },
+        }),
+      )
+      .expect(201);
+    const created = (res.body as { data: CreateOrderResult }).data;
+
+    expect(created.priceAdjustmentFen).toBe("0");
+    expect(created.document.plainText).toContain("游戏模式：aram");
+
+    const dispatchOrder = await client.gameDispatchOrder.findFirstOrThrow({
+      where: { tenantId, id: created.dispatchOrderId },
+    });
+    expect(dispatchOrder.formValuesJson).toMatchObject({ mode: "aram" });
+  });
+
   it("同一幂等键重试回放首次结果，不同请求体 422 且只创建一个派单", async () => {
     const template = await createPublishedTemplate(
       ownerToken,

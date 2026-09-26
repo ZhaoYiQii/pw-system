@@ -2,7 +2,17 @@
   --cu-paper: #f5f2ea;
   --cu-card: #fffdf8;
   --cu-ink: #18231e;
-  --cu-muted: #71766f;
+  /* 灵析重设计 v2（Slice A）：muted 加深至米纸底 4.88:1（原 #71766f 仅 4.27:1，未达 AA）。 */
+  --cu-muted: #656b63;
+  /* 渐变第二色：主色同族亮一档，用于 hero/余额卡的 135° 双色渐变。 */
+  --cu-primary-g2: #35684e;
+  /* 宋体展示字族：价格、余额、主标语等「值得截图」的位置。 */
+  --cu-serif: "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
+  /* 统一圆角档位：卡片 28px（Taro 750 稿约等于概念稿 20px@390），按钮 24px。 */
+  --cu-radius-card: 28px;
+  --cu-radius-btn: 24px;
+  /* 双层轻阴影：卡片边界不靠描边靠投影。 */
+  --cu-shadow-card: 0 2px 6px rgba(24, 35, 30, 0.05), 0 12px 32px rgba(24, 35, 30, 0.07);
   --cu-line: #e3ded2;
   --cu-primary: #cf6040;
   --cu-primary-soft: #f6e3db;
@@ -86,9 +96,9 @@
   margin-bottom: 22px;
   padding: 26px 28px;
   border: 1px solid var(--cu-line);
-  border-radius: 28px;
+  border-radius: var(--cu-radius-card);
   background: var(--cu-card);
-  box-shadow: 0 8px 24px rgba(24, 35, 30, 0.035);
+  box-shadow: var(--cu-shadow-card);
 }
 .cu-card-title {
   display: block;
@@ -130,8 +140,8 @@
 .cu-stat {
   margin-bottom: 24px;
   padding: 30px 32px;
-  border-radius: 30px;
-  background: var(--cu-primary);
+  border-radius: var(--cu-radius-card);
+  background: linear-gradient(135deg, var(--cu-primary) 0%, var(--cu-primary-g2) 100%);
   color: #fff;
 }
 .cu-stat-pine {
@@ -145,10 +155,11 @@
 .cu-stat-value {
   display: block;
   margin-top: 5px;
-  font:
-    700 50px/1.2 ui-monospace,
-    Consolas,
-    monospace;
+  font-family: var(--cu-serif);
+  font-size: 50px;
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .cu-stat-note {
   display: block;
@@ -217,6 +228,14 @@
   opacity: 0.48;
   transform: none;
   filter: none;
+}
+/* Taro 对每个 taro-button-core[disabled] 强制 color: rgba(255, 255, 255, 0.6)；[disabled] 是
+   属性存在性匹配，disabled={false} 也会命中，于是任何传了 disabled 的按钮都会中招，浅色底
+   （基类 / outline / soft）上的文字因此不可见。这里只覆盖颜色，不加透明度：属性恒存在，
+   按下不按下它都在，用透明度表达禁用会让可点的按钮看起来像禁用的。
+   primary / dark / green 保留 Taro 的白字禁用态。 */
+.cu-button[disabled]:not(.cu-button-primary):not(.cu-button-dark):not(.cu-button-green) {
+  color: var(--cu-ink);
 }
 .cu-button:focus-visible,
 .cu-tab:focus-visible,
@@ -673,6 +692,7 @@ taro-input-core.cu-input input {
   padding: 12px 20px calc(18px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--cu-line);
   background: rgba(255, 253, 248, 0.97);
+  backdrop-filter: blur(8px);
 }
 .cu-nav-item {
   flex: 1;
@@ -681,6 +701,7 @@ taro-input-core.cu-input input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   margin: 0;
   padding: 8px 0;
   border-radius: 16px;
@@ -688,6 +709,23 @@ taro-input-core.cu-input input {
   color: var(--cu-muted);
   font-size: 22px;
   line-height: 1.2;
+}
+/* 图标容器：SVG 线性图标，颜色随文字（currentColor 由 SVG 内 stroke 继承）。 */
+.cu-nav-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cu-nav-icon svg {
+  width: 40px;
+  height: 40px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .cu-nav-item::after {
   border: 0;
@@ -713,6 +751,37 @@ taro-input-core.cu-input input {
 }
 .cu-login-card .cu-section-label {
   margin: 0;
+}
+/* 登录方式切换（手机号 / 账号密码）：老板端首页两个窗口并列，样式贴 cu-button 的量级但更轻。 */
+.cu-login-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px;
+  border: 1px solid var(--cu-line);
+  border-radius: 22px;
+  background: var(--cu-card);
+}
+.cu-login-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--cu-muted);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cu-login-tab.is-active {
+  background: var(--cu-primary-soft);
+  color: var(--cu-primary);
 }
 .cu-message {
   margin-bottom: 20px;

@@ -67,3 +67,26 @@ test("老板可在 H5 登录并打开钱包", async ({ page }) => {
   });
   await expect(page.getByText(/账户余额/)).toBeVisible();
 });
+
+/**
+ * 老板端首页必须同时给出「手机号」与「账号密码」两个登录窗口（用户 2026-09-26 指令：
+ * 账号密码和手机号一样允许不注册，但不能没有这个窗口）。
+ *
+ * 首页要过租户定位才渲染（`?t=` 短码，适配器转 `?code=` 调公开解析接口），
+ * 所以这里必须带 `?t=`——否则页面是 blank，红灯会红在 setup 上而不是缺功能上。
+ */
+test("老板可在 H5 首页用账号密码登录", async ({ page }) => {
+  await page.goto(`/?t=${TENANT_CODE}#/pages/customer/home/index`);
+  // 先证明页面确实渲染了（租户已解析、手机号卡已挂载）
+  await expect(page.getByText("手机号登录 / 注册")).toBeVisible();
+  const tabs = page.locator(".cu-login-tabs");
+  await expect(tabs).toBeVisible();
+  await tabs.getByText("账号密码登录").click();
+  await loginOnH5(page, {
+    accountLabel: "老板账号",
+    account: "customer",
+    accountPlaceholder: "customer",
+    submit: "登录老板端",
+  });
+  await expect(page.locator("#app").getByText("欢迎回来")).toBeVisible();
+});

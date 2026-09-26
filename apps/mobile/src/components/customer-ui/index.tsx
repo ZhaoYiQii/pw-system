@@ -32,6 +32,17 @@ export function CustomerShell({
   );
 }
 
+/**
+ * 底部导航图标（灵析重设计 Slice A）：线性风格，stroke 跟随文字色。
+ * Taro H5 会把 SVG 渲染成内联节点；weapp 端 unsupported-svg 由平台层兜底（当前 weapp 未开工）。
+ */
+const NAV_ICONS: Record<CustomerNavId, string> = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/>',
+  order: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  wallet: '<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M3 11h18M16 15h2"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+};
+
 export function CustomerBottomNav({ active }: { active: CustomerNavId }) {
   return (
     <View className="cu-bottom-nav">
@@ -42,6 +53,12 @@ export function CustomerBottomNav({ active }: { active: CustomerNavId }) {
           aria-label={item.label}
           onClick={() => void Taro.redirectTo({ url: item.path })}
         >
+          <View
+            className="cu-nav-icon"
+            dangerouslySetInnerHTML={{
+              __html: `<svg viewBox="0 0 24 24">${NAV_ICONS[item.id] ?? ""}</svg>`,
+            }}
+          />
           <Text>{item.label}</Text>
         </Button>
       ))}
@@ -127,7 +144,7 @@ export function CustomerLoginCard({
         {busy ? "正在登录…" : actionLabel}
       </Button>
       <Text className="cu-footnote">
-        当前使用门店账号登录；微信与验证码登录将在平台能力接入后开放。
+        已绑定手机号的账号也可用手机验证码登录；忘记密码可先用手机号登录后重设。
       </Text>
     </View>
   );

@@ -121,6 +121,54 @@ describe("collectOrderValues：草稿值 → 提交体", () => {
     ).toEqual([]);
   });
 
+  it("豁免语义角色（TARGET_RANK）的库外值放行并进入提交体（ADR-0010 决定 4）", () => {
+    const exempt = config({
+      components: [
+        {
+          kind: "FIELD",
+          stableKey: "target_rank",
+          sectionKey: "basic",
+          label: "目标段位",
+          enabled: true,
+          sortOrder: 0,
+          fieldType: "SINGLE_SELECT",
+          semanticRole: "TARGET_RANK",
+          required: true,
+          options: [{ value: "翡翠1", label: "翡翠1" }],
+        },
+      ],
+    });
+
+    const result = collectOrderValues(exempt, { target_rank: "神秘段位" });
+
+    expect(result.errors).toEqual([]);
+    expect(result.values).toEqual({ target_rank: "神秘段位" });
+  });
+
+  it("未豁免语义角色的 SINGLE_SELECT 仍然拦截库外值", () => {
+    const strict = config({
+      components: [
+        {
+          kind: "FIELD",
+          stableKey: "target_rank",
+          sectionKey: "basic",
+          label: "目标段位",
+          enabled: true,
+          sortOrder: 0,
+          fieldType: "SINGLE_SELECT",
+          semanticRole: "CUSTOM",
+          required: true,
+          options: [{ value: "翡翠1", label: "翡翠1" }],
+        },
+      ],
+    });
+
+    const result = collectOrderValues(strict, { target_rank: "神秘段位" });
+
+    expect(result.errors).toEqual(["目标段位 的值不在模板选项中"]);
+    expect(result.values).toEqual({});
+  });
+
   it("必填缺失与选项越界都会给出可读错误，且不进入提交体", () => {
     const missing = collectOrderValues(config(), { mode: "ranked" });
     expect(missing.errors).toEqual(["请填写 备注"]);

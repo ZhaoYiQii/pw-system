@@ -28,6 +28,7 @@ import {
   type OrderIntent,
 } from "../../../features/customer-ui/order-intent";
 import {
+  allowsFreeInput,
   collectOrderValues,
   missingRequirements,
   type OrderComponentLike,
@@ -267,9 +268,22 @@ function FieldInput({
             );
           })}
         </View>
+        {field.fieldType === "SINGLE_SELECT" && allowsFreeInput(field) ? (
+          <Input
+            className="cu-input"
+            name={field.stableKey}
+            aria-label={`${field.label}（可自定义）`}
+            value={asText(value)}
+            placeholder="也可直接填写，例如 翡翠1"
+            onInput={(event) => onChange(event.detail.value)}
+          />
+        ) : null}
         <Text className="cu-field-note">
           {field.required ? "必填" : "选填"} ·{" "}
           {FIELD_TYPE_LABELS[field.fieldType]}
+          {field.fieldType === "SINGLE_SELECT" && allowsFreeInput(field)
+            ? "，可填写预设外的值；不在预设库中不影响提交，将按基础价。"
+            : ""}
         </Text>
         {missing ? <Text className="cu-field-hint">此项必填</Text> : null}
       </View>

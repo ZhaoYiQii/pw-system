@@ -20,6 +20,15 @@ export interface IdentityAdapter {
     username: string;
     password: string;
   }): Promise<IdentitySession>;
+  /**
+   * 切换端上下文（老板端 ↔ 陪玩端）。端上下文判别是单值：多角色账号登录后默认落在老板端，
+   * 进入陪玩端前必须显式切换。账号未持有目标角色时服务端返回 403，
+   * 适配器抛出的错误对象带 `status`，调用方据此区分「未获批准」与「会话失效」。
+   */
+  switchContext(
+    context: "CUSTOMER" | "PLAYER",
+    accessToken: string,
+  ): Promise<IdentitySession>;
   refresh(
     refreshToken: string,
     scope: "platform" | "tenant",

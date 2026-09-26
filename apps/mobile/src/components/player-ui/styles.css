@@ -193,6 +193,11 @@
 .pw-button[disabled] {
   opacity: 0.48;
 }
+/* 同 customer-ui：Taro 的 disabled 白字会在浅色底（soft / plain）上消失，显式覆盖颜色；
+   primary / dark / green 保留 Taro 的白字禁用态。 */
+.pw-button[disabled]:not(.pw-button-primary):not(.pw-button-dark):not(.pw-button-green) {
+  color: var(--pw-ink);
+}
 .pw-button-primary {
   color: #fff;
   background: var(--pw-primary);

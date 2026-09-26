@@ -7,6 +7,7 @@ import { tenantLocator } from "@platform-locator";
 import { apiAdapter } from "@platform-api";
 import { mediaAdapter } from "@platform-media";
 import { formatFenYuan } from "../../../features/money/money";
+import { enterPlayer } from "../../../features/player-context/actions";
 import {
   PlayerLoginCard,
   PlayerMessage,
@@ -252,13 +253,26 @@ export default function OrderHallPage() {
     }
   };
 
+  /** 陪玩端入口：端上下文判别是单值（ADR-0009），必须先切到陪玩上下文再加载。 */
+  const enterAndLoad = async (accessToken: string) => {
+    const outcome = await enterPlayer(accessToken);
+    if (outcome.sessionExpired) {
+      session.clearToken();
+      setToken(null);
+    }
+    if (!outcome.token) {
+      setMsg(outcome.message);
+      return;
+    }
+    setToken(outcome.token);
+    await load(outcome.token);
+    await loadFeatureGate(outcome.token);
+  };
+
   useLoad(async () => {
     const accessToken = session.getToken();
     setToken(accessToken);
-    if (accessToken) {
-      await load(accessToken);
-      await loadFeatureGate(accessToken);
-    }
+    if (accessToken) await enterAndLoad(accessToken);
     const info = await tenantLocator.resolveTenant();
     if (info.state === "ok" && info.tenant?.code)
       setTenantCode(info.tenant.code);
@@ -277,10 +291,8 @@ export default function OrderHallPage() {
       if (tenantCode) input.tenantCode = tenantCode;
       const loginSession = await identityAdapter.login(input);
       session.setToken(loginSession.accessToken);
-      setToken(loginSession.accessToken);
       setPassword("");
-      await load(loginSession.accessToken);
-      await loadFeatureGate(loginSession.accessToken);
+      await enterAndLoad(loginSession.accessToken);
     } catch (error) {
       setMsg(error instanceof Error ? error.message : String(error));
     } finally {

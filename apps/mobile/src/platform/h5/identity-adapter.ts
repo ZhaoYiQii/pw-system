@@ -18,6 +18,36 @@ export const identityAdapter: IdentityAdapter = {
     if (body.data.csrfToken) session.setCsrf(body.data.csrfToken);
     return body.data;
   },
+  async switchContext(context, accessToken) {
+    const base = apiBase();
+    if (!base) throw new Error("TARO_APP_API_BASE not configured");
+    const res = await fetch(`${base}/api/v1/auth/switch-context`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${accessToken}`,
+        ...(session.getCsrf()
+          ? { "x-csrf-token": session.getCsrf() as string }
+          : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify({ context }),
+    });
+    const body = (await res.json().catch(() => null)) as {
+      data?: IdentitySession;
+      message?: string;
+    } | null;
+    if (!res.ok || !body?.data) {
+      // 调用方（features/player-context）按 status 区分「陪玩申请未通过」与「会话失效」，必须带上。
+      const error = new Error(
+        body?.message ?? `switch-context failed: ${res.status}`,
+      ) as Error & { status?: number };
+      error.status = res.status;
+      throw error;
+    }
+    if (body.data.csrfToken) session.setCsrf(body.data.csrfToken);
+    return body.data;
+  },
   async refresh(_refreshToken, scope) {
     const base = apiBase();
     if (!base) throw new Error("TARO_APP_API_BASE not configured");

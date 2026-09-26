@@ -5,12 +5,14 @@ import { apiAdapter } from "@platform-api";
 import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
 import {
+  CustomerLoginCard,
   CustomerMessage,
   CustomerPhoneLoginCard,
   CustomerShell,
   goCustomer,
 } from "../../../components/customer-ui";
 import {
+  customerLogin,
   phoneLogin,
   resolveTenantCode,
   sendPhoneCode,
@@ -34,6 +36,10 @@ export default function CustomerHomePage() {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [debugCode, setDebugCode] = useState("");
+  /** 登录方式：手机号（免注册直达）/ 账号密码（已注册账号）。 */
+  const [mode, setMode] = useState<"phone" | "password">("phone");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [me, setMe] = useState<CustomerMe | null>(null);
@@ -76,7 +82,7 @@ export default function CustomerHomePage() {
       setStoreName(info.tenant.name);
   });
 
-  const login = async () => {
+  const loginByPhone = async () => {
     setBusy(true);
     setMsg(null);
     try {
@@ -84,6 +90,24 @@ export default function CustomerHomePage() {
       setToken(accessToken);
       setCode("");
       setDebugCode("");
+      await loadMe(accessToken);
+    } catch (error) {
+      setMsg({
+        tone: "error",
+        text: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loginByPassword = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const accessToken = await customerLogin(tenantCode, username, password);
+      setToken(accessToken);
+      setPassword("");
       await loadMe(accessToken);
     } catch (error) {
       setMsg({
@@ -121,28 +145,71 @@ export default function CustomerHomePage() {
               {storeName} · 登录后下单、选人与管理钱包
             </Text>
           </View>
-          <CustomerPhoneLoginCard
-            tenantCode={tenantCode}
-            phone={phone}
-            code={code}
-            debugCode={debugCode}
-            busy={busy}
-            sending={sending}
-            onTenantCode={setTenantCode}
-            onPhone={setPhone}
-            onCode={setCode}
-            onSend={() => void sendCode()}
-            onLogin={() => void login()}
-            showWechatLogin={isWechatBrowser(
-              typeof navigator !== "undefined"
-                ? navigator.userAgent
-                : undefined,
-            )}
-            onWechatLogin={() =>
-              startWechatAuthorize(tenantCode, "/pages/customer/home/index")
-            }
-            onRegister={() => goCustomer("/pages/register/index")}
-          />
+          {/* 两个窗口并列：手机号可免注册直达，账号密码给已注册账号（用户 2026-09-26 指令）。 */}
+          <View className="cu-login-tabs">
+            <Button
+              className={`cu-login-tab${mode === "phone" ? " is-active" : ""}`}
+              onClick={() => {
+                setMode("phone");
+                setMsg(null);
+              }}
+            >
+              手机号登录
+            </Button>
+            <Button
+              className={`cu-login-tab${mode === "password" ? " is-active" : ""}`}
+              onClick={() => {
+                setMode("password");
+                setMsg(null);
+              }}
+            >
+              账号密码登录
+            </Button>
+          </View>
+          {mode === "phone" ? (
+            <CustomerPhoneLoginCard
+              tenantCode={tenantCode}
+              phone={phone}
+              code={code}
+              debugCode={debugCode}
+              busy={busy}
+              sending={sending}
+              onTenantCode={setTenantCode}
+              onPhone={setPhone}
+              onCode={setCode}
+              onSend={() => void sendCode()}
+              onLogin={() => void loginByPhone()}
+              showWechatLogin={isWechatBrowser(
+                typeof navigator !== "undefined"
+                  ? navigator.userAgent
+                  : undefined,
+              )}
+              onWechatLogin={() =>
+                startWechatAuthorize(tenantCode, "/pages/customer/home/index")
+              }
+              onRegister={() => goCustomer("/pages/register/index")}
+            />
+          ) : (
+            <>
+              <CustomerLoginCard
+                tenantCode={tenantCode}
+                username={username}
+                password={password}
+                busy={busy}
+                actionLabel="登录老板端"
+                onTenantCode={setTenantCode}
+                onUsername={setUsername}
+                onPassword={setPassword}
+                onLogin={() => void loginByPassword()}
+              />
+              <Button
+                className="cu-button cu-button-outline cu-button-full"
+                onClick={() => goCustomer("/pages/register/index")}
+              >
+                注册新账号
+              </Button>
+            </>
+          )}
         </>
       ) : null}
       {msg ? (

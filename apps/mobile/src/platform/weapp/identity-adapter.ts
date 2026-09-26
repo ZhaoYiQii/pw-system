@@ -5,6 +5,9 @@ export const identityAdapter: IdentityAdapter = {
   async login() {
     throw new Error("WECHAT_IDENTITY_NOT_CONFIGURED");
   },
+  async switchContext() {
+    throw new Error("WECHAT_IDENTITY_NOT_CONFIGURED");
+  },
   async refresh() {
     throw new Error("WECHAT_IDENTITY_NOT_CONFIGURED");
   },
