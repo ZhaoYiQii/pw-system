@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiFetch, setAccessToken, setCsrfToken } from "../../_lib/api";
+import { apiFetch, setAccessToken, setCsrfToken, setSessionScope } from "../../_lib/api";
 
 interface LoginResult {
   accessToken: string;
@@ -26,6 +26,7 @@ export default function PlatformLoginPage() {
         body: JSON.stringify({ kind: "platform", username, password }),
       });
       setAccessToken(data.accessToken);
+      setSessionScope("platform");
       if (data.csrfToken) setCsrfToken(data.csrfToken);
       router.replace("/overview");
     } catch (error) {

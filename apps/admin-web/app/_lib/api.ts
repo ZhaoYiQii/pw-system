@@ -42,6 +42,67 @@ export function clearCsrfToken(): void {
   window.sessionStorage.removeItem(CSRF_KEY);
 }
 
+/**
+ * 会话自动刷新（single-flight）。
+ *
+ * 背景：access token 只有 15 分钟（安全基线），refresh cookie 有 14 天；
+ * 之前前端收到 401 只会清 token 抛错，从不调用 refresh——用户每 15 分钟
+ * 被踢回登录页。现在：401 → 静默 refresh → 重试原请求一次；并发 401 共享
+ * 同一次刷新；refresh 失败才清会话并要求重新登录。
+ */
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+/** 当前会话属于平台端还是商家端（refresh 接口必须显式声明 scope）。 */
+function sessionScope(): "platform" | "tenant" {
+  return (
+    (window.sessionStorage.getItem("pw_session_scope") as
+      | "platform"
+      | "tenant"
+      | null) ?? "tenant"
+  );
+}
+
+/** 登录成功后由登录页调用：记录会话 scope，供 refresh 使用。 */
+export function setSessionScope(scope: "platform" | "tenant"): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem("pw_session_scope", scope);
+}
+
+export function getSessionScope(): "platform" | "tenant" {
+  if (typeof window === "undefined") return "tenant";
+  return sessionScope();
+}
+
+async function requestRefresh(): Promise<boolean> {
+  const headers = new Headers({ "content-type": "application/json" });
+  const csrf = getCsrfToken();
+  if (csrf) headers.set("x-csrf-token", csrf);
+  const res = await fetch(`${apiOrigin}/api/v1/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify({ scope: sessionScope() }),
+  });
+  if (!res.ok) return false;
+  const body = (await res.json()) as {
+    data?: { accessToken?: string; csrfToken?: string };
+  };
+  const accessToken = body.data?.accessToken;
+  if (!accessToken) return false;
+  setAccessToken(accessToken);
+  if (body.data?.csrfToken) setCsrfToken(body.data.csrfToken);
+  return true;
+}
+
+/** 并发 401 只允许一次 refresh 在飞；结果（成败）共享给所有等待者。 */
+function refreshOnce(): Promise<boolean> {
+  refreshInFlight ??= requestRefresh().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
 /** 调用服务端 logout 撤销 refresh session，随后清理本地会话。 */
 export async function logoutSession(): Promise<void> {
   try {
@@ -65,6 +126,15 @@ export async function apiFetch<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  return apiFetchOnce<T>(path, init, true);
+}
+
+/** allowRefresh=false：重试请求不再触发第二次刷新，防止 401 循环。 */
+async function apiFetchOnce<T = unknown>(
+  path: string,
+  init?: RequestInit,
+  allowRefresh?: boolean,
+): Promise<T> {
   const token = getAccessToken();
   const headers = new Headers(init?.headers);
   headers.set("content-type", "application/json");
@@ -81,6 +151,10 @@ export async function apiFetch<T = unknown>(
     body = null;
   }
   if (res.status === 401) {
+    // access token 过期：静默刷新一次并重试；刷新失败或重试仍 401 才要求登录。
+    if (allowRefresh === true && (await refreshOnce())) {
+      return apiFetchOnce<T>(path, init, false);
+    }
     clearAccessToken();
     throw new ApiError(401, "登录已失效，请重新登录");
   }

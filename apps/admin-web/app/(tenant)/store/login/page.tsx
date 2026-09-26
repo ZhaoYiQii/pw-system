@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { apiFetch, setAccessToken, setCsrfToken } from "../../../_lib/api";
+import { apiFetch, setAccessToken, setCsrfToken, setSessionScope } from "../../../_lib/api";
 
 interface LoginResult {
   accessToken: string;
@@ -43,6 +43,7 @@ export default function TenantLoginPage() {
         }),
       });
       setAccessToken(data.accessToken);
+      setSessionScope("tenant");
       if (data.csrfToken) setCsrfToken(data.csrfToken);
       router.push("/merchant-console/work");
     } catch (error) {
