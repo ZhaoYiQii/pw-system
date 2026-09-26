@@ -154,18 +154,21 @@ model PlatformAccessGrant {
 
 /// 门店账号（店员/陪玩/客户）。租户级资源，启用 RLS（按 tenant_id）。
 model TenantAccount {
-  id           String        @id @default(uuid()) @db.Uuid
-  tenantId     String        @map("tenant_id") @db.Uuid
-  username     String
-  passwordHash String        @map("password_hash")
-  phoneEnc     String?       @map("phone_enc")
-  phoneHash    String?       @map("phone_hash")
+  id                String        @id @default(uuid()) @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
+  username          String
+  passwordHash      String        @map("password_hash")
+  /// 密码是否由用户本人设置过。false=系统生成（存量随机密码账号 / 手机与微信自动建号 / 管理员建号）→「设置密码」免验原密码；
+  /// true=用户设过 → 改密必须校验 currentPassword。判定必须在服务端，见 ADR-0009 决策三 D 与 spec §5.2。
+  passwordSetByUser Boolean       @default(false) @map("password_set_by_user")
+  phoneEnc          String?       @map("phone_enc")
+  phoneHash         String?       @map("phone_hash")
   /// S3：公众号网页授权的 openid（单公众号场景下 app 级唯一；将来做小程序/多公众号上 unionid 时再拆表）
-  wechatOpenid String?       @map("wechat_openid")
-  status       AccountStatus @default(ACTIVE)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  version      Int           @default(1)
+  wechatOpenid      String?       @map("wechat_openid")
+  status            AccountStatus @default(ACTIVE)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  version           Int           @default(1)
 
   tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   roles  TenantAccountRole[]
@@ -827,21 +830,21 @@ model FundAccount {
 
 /// 账本交易组：任一组的借方=贷方由提交逻辑保证；只追加。
 model LedgerTransaction {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  txNo        String   @map("tx_no")
-  description String?
-  sourceType  String?  @map("source_type")
-  sourceId    String?  @map("source_id")
-  eventType   LedgerEventType? @map("event_type")
-  status      LedgerTransactionStatus @default(CONFIRMED)
-  fundAccountId String? @map("fund_account_id") @db.Uuid
-  reversalOfId String? @map("reversal_of_id") @db.Uuid
-  createdBy   String?  @map("created_by") @db.Uuid
-  confirmedBy String?  @map("confirmed_by") @db.Uuid
-  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
-  occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String                  @id @default(uuid()) @db.Uuid
+  tenantId      String                  @map("tenant_id") @db.Uuid
+  txNo          String                  @map("tx_no")
+  description   String?
+  sourceType    String?                 @map("source_type")
+  sourceId      String?                 @map("source_id")
+  eventType     LedgerEventType?        @map("event_type")
+  status        LedgerTransactionStatus @default(CONFIRMED)
+  fundAccountId String?                 @map("fund_account_id") @db.Uuid
+  reversalOfId  String?                 @map("reversal_of_id") @db.Uuid
+  createdBy     String?                 @map("created_by") @db.Uuid
+  confirmedBy   String?                 @map("confirmed_by") @db.Uuid
+  confirmedAt   DateTime?               @map("confirmed_at") @db.Timestamptz
+  occurredAt    DateTime                @default(now()) @map("occurred_at") @db.Timestamptz
+  createdAt     DateTime                @default(now()) @map("created_at")
 
   reconciliationCases ReconciliationCase[]
 
@@ -1593,7 +1596,7 @@ model ReconciliationDifference {
   resolvedAt     DateTime? @map("resolved_at") @db.Timestamptz
   createdAt      DateTime  @default(now()) @map("created_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   case   ReconciliationCase?
 
   @@index([tenantId, kind, createdAt])
