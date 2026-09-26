@@ -183,49 +183,70 @@ export default function WalletPage() {
       ) : null}
       {token && wallet ? (
         <>
-          <View className="cu-stat">
-            <Text className="cu-stat-label">账户余额（{wallet.bossNo}）</Text>
-            <Text className="cu-stat-value">
+          <View className="cu-wallet-hero">
+            <Text className="cu-wallet-label">
+              可用余额（元）· {wallet.bossNo}
+            </Text>
+            <Text className="cu-wallet-value">
               {formatFenYuan(wallet.balanceFen)}
             </Text>
-            <Text className="cu-stat-note">金额与流水以服务端核算结果为准</Text>
+            <View className="cu-wallet-row">
+              <Text className="cu-wallet-hint">
+                金额与流水以服务端核算结果为准
+              </Text>
+            </View>
           </View>
+          <Text className="cu-section-label">充值</Text>
           <View className="cu-card cu-recharge">
             <Input
               className="cu-input cu-grow"
               type="number"
               name="rechargeAmount"
               aria-label="充值金额"
+              placeholder="输入充值金额（元）"
               value={amount}
               onInput={(event) => setAmount(event.detail.value)}
             />
             <Button
-              className="cu-button cu-button-dark cu-button-small"
+              className="cu-button cu-button-primary cu-button-small"
               disabled={busy}
               onClick={() => void recharge()}
             >
               {busy ? "充值中…" : "充值"}
             </Button>
           </View>
-          <Text className="cu-section-label">最近流水</Text>
+          <Text className="cu-section-label">收支明细</Text>
           <View className="cu-card">
             {wallet.entries.length === 0 ? (
               <View className="cu-empty">暂无流水，充值后显示在这里。</View>
             ) : null}
-            {wallet.entries.slice(0, 20).map((entry) => (
-              <View className="cu-money-line" key={entry.id}>
-                <View>
-                  <Text>{walletTypeText(entry.type)}</Text>
-                  {entry.reason ? (
-                    <Text className="cu-meta">{entry.reason}</Text>
-                  ) : null}
+            {wallet.entries.slice(0, 20).map((entry) => {
+              const isPlus = entry.type === "RECHARGE";
+              return (
+                <View className="cu-flow-item" key={entry.id}>
+                  <View
+                    className={`cu-flow-icon${isPlus ? "" : " is-out"}`}
+                  >
+                    <Text>{isPlus ? "收" : "支"}</Text>
+                  </View>
+                  <View className="cu-flow-copy">
+                    <Text className="cu-flow-title">
+                      {walletTypeText(entry.type)}
+                    </Text>
+                    <Text className="cu-flow-desc">
+                      {new Date(entry.createdAt).toLocaleString()}
+                      {entry.reason ? ` · ${entry.reason}` : ""}
+                    </Text>
+                  </View>
+                  <Text
+                    className={`cu-flow-amount${isPlus ? " is-plus" : ""}`}
+                  >
+                    {isPlus ? "+" : "-"}
+                    {formatFenYuan(entry.amountFen)}
+                  </Text>
                 </View>
-                <Text className="cu-money-line-value">
-                  {entry.type === "RECHARGE" ? "+" : "-"}
-                  {formatFenYuan(entry.amountFen)}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </>
       ) : null}

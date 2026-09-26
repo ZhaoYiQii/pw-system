@@ -414,6 +414,99 @@
   font-variant-numeric: tabular-nums;
   color: var(--cu-ink);
 }
+/* ── Slice D：钱包与个人中心 ─────────────────────────────── */
+
+/* 余额 hero 卡（松绿渐变 + 宋体大数字）。 */
+.cu-wallet-hero {
+  margin-bottom: 22px;
+  padding: 34px 32px 30px;
+  border-radius: var(--cu-radius-card);
+  background: linear-gradient(135deg, var(--cu-primary) 0%, var(--cu-primary-g2) 100%);
+  color: #f2f5ef;
+  box-shadow: var(--cu-shadow-card);
+}
+.cu-wallet-label {
+  display: block;
+  font-size: 22px;
+  letter-spacing: 2px;
+  opacity: 0.82;
+}
+.cu-wallet-value {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--cu-serif);
+  font-size: 76px;
+  line-height: 1.1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cu-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.cu-wallet-hint {
+  font-size: 20px;
+  opacity: 0.72;
+}
+
+/* 收支条目行。 */
+.cu-flow-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--cu-line);
+}
+.cu-flow-item:last-child {
+  border-bottom: 0;
+}
+.cu-flow-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cu-primary-soft);
+  color: var(--cu-primary);
+  font-size: 26px;
+  font-weight: 600;
+}
+.cu-flow-icon.is-out {
+  background: var(--cu-accent-soft);
+  color: var(--cu-accent);
+}
+.cu-flow-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cu-flow-title {
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--cu-ink);
+}
+.cu-flow-desc {
+  font-size: 20px;
+  color: var(--cu-muted);
+  line-height: 1.45;
+}
+.cu-flow-amount {
+  font-family: var(--cu-serif);
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cu-ink);
+  white-space: nowrap;
+}
+.cu-flow-amount.is-plus {
+  color: var(--cu-primary);
+}
 /* ── Slice C：下单流程 ─────────────────────────────────────── */
 
 /* 步骤条（选游戏 → 选模板 → 确认）。 */
@@ -890,10 +983,11 @@ taro-input-core.cu-input input {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #d7d2c6;
-  color: #554f45;
+  background: linear-gradient(135deg, var(--cu-primary), var(--cu-primary-g2));
+  color: #f5f2ea;
   font-size: 28px;
   font-weight: 700;
+  box-shadow: 0 4px 14px rgba(36, 84, 63, 0.28);
 }
 .cu-avatar-large {
   width: 116px;
