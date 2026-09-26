@@ -321,12 +321,42 @@ describe("通用模板选项加价计算", () => {
     ).toBe("0");
   });
 
-  it("拒绝未知选项、错误值形状和非规范整数分价格", () => {
+  it("豁免语义角色（TARGET_RANK / MODE）允许库外值且不加价（ADR-0010 决定 4/6）", () => {
+    expect(
+      validateTemplateChoiceValues(pricedConfig(), {
+        target_rank: "神秘段位",
+      }),
+    ).toBeUndefined();
+    expect(
+      calculateTemplatePriceAdjustmentFen(pricedConfig(), {
+        target_rank: "神秘段位",
+      }),
+    ).toBe("0");
+    // 库外值不加价，但同一订单里命中选项的其他字段照旧加价。
+    expect(
+      calculateTemplatePriceAdjustmentFen(pricedConfig(), {
+        target_rank: "king",
+        game_mode: "自定义模式",
+      }),
+    ).toBe("100");
+  });
+
+  it("未豁免的多选字段仍然拒绝库外值", () => {
     expect(() =>
+      calculateTemplatePriceAdjustmentFen(pricedConfig(), {
+        extras: ["fast", "unknown_extra"],
+      }),
+    ).toThrow(/不在模板选项中/);
+  });
+
+  it("拒绝未知选项、错误值形状和非规范整数分价格", () => {
+    // TARGET_RANK 属豁免语义角色（ADR-0010 决定 4）：库外值放行且不加价。
+    // 「未知选项被拒」的覆盖已改挂到未豁免的多选字段（见上一条用例）。
+    expect(
       calculateTemplatePriceAdjustmentFen(pricedConfig(), {
         target_rank: "unknown",
       }),
-    ).toThrow(/不在模板选项中/);
+    ).toBe("0");
     expect(() =>
       calculateTemplatePriceAdjustmentFen(pricedConfig(), {
         target_rank: ["king"],
@@ -422,8 +452,10 @@ describe("算价模型（ADR-0003）：维度字段与取值校验", () => {
   });
 
   it("取值校验保留：未知选项、重复多选被拒，合法取值放行", () => {
+    // MODE 属豁免语义角色（ADR-0010 决定 4）：该字段的未知选项不再被拒，
+    // 故把这条覆盖改挂到未豁免的 extras（CUSTOM 多选）。
     expect(() =>
-      validateTemplateChoiceValues(choiceConfig(), { mode: "unknown" }),
+      validateTemplateChoiceValues(choiceConfig(), { extras: ["unknown"] }),
     ).toThrow(/不在模板选项中/);
     expect(() =>
       validateTemplateChoiceValues(choiceConfig(), {

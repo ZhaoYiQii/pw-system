@@ -136,6 +136,26 @@ describe("通用模板自动文案", () => {
     ).toThrow(/未知字段/);
   });
 
+  it("豁免语义角色（MODE）的库外值在文案里原样显示（ADR-0010 决定 4）", () => {
+    const document = renderDispatchDocument(documentConfig(), {
+      mode: "自定义模式",
+    });
+
+    expect(document.rows).toEqual([
+      {
+        sectionLabel: "基本信息",
+        fieldLabel: "游戏模式",
+        value: "自定义模式",
+      },
+      {
+        sectionLabel: "基本信息",
+        fieldLabel: "温馨提示",
+        value: "请准时上线",
+      },
+    ]);
+    expect(document.plainText).toContain("游戏模式：自定义模式");
+  });
+
   it("逐行输出可重复表格，并格式化选择项、整数分和 ISO 时间", () => {
     const config = documentConfig();
     config.components = [

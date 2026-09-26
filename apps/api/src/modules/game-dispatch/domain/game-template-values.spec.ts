@@ -66,6 +66,48 @@ describe("派单模板有效字段与服务端值校验", () => {
     ).toBeNull();
   });
 
+  it("带豁免语义角色的下拉字段允许库外值（ADR-0010 决定 4）", () => {
+    for (const semanticRole of ["SERVER_REGION", "TARGET_RANK", "MODE"]) {
+      const exempt = [
+        {
+          fieldKey: "rank",
+          label: "目标段位",
+          fieldType: "select",
+          required: true,
+          enabled: true,
+          sectionId: "on",
+          options: ["翡翠1", "翡翠2"],
+          semanticRole,
+        },
+      ];
+      expect(
+        templateFormValueError(activeTemplateFields(sections, exempt), {
+          rank: "神秘段位",
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it("未标豁免语义角色的下拉字段仍然拦截库外值", () => {
+    const notExempt = [
+      {
+        fieldKey: "rank",
+        label: "目标段位",
+        fieldType: "select",
+        required: true,
+        enabled: true,
+        sectionId: "on",
+        options: ["翡翠1", "翡翠2"],
+        semanticRole: "CUSTOM",
+      },
+    ];
+    expect(
+      templateFormValueError(activeTemplateFields(sections, notExempt), {
+        rank: "神秘段位",
+      }),
+    ).toBe("目标段位的值不在模板选项中");
+  });
+
   it("只保留启用字段的值，忽略停用字段和未知键", () => {
     const activeFields = activeTemplateFields(sections, fields);
     expect(

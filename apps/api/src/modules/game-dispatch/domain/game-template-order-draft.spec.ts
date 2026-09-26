@@ -213,14 +213,42 @@ describe("buildTemplateOrderDraft：按发布快照生成订单草稿", () => {
   });
 
   it("拒绝未声明的选项值与越界人数", () => {
+    // MODE 属豁免语义角色（ADR-0010 决定 4）：该字段的库外值不再被拒，
+    // 故「未声明选项被拒」的覆盖改挂到未豁免的 CUSTOM 单选字段上。
+    const withCustomSelect = orderConfig();
+    withCustomSelect.components = [
+      ...withCustomSelect.components,
+      {
+        kind: "FIELD",
+        stableKey: "plan",
+        sectionKey: "basic",
+        label: "套餐",
+        enabled: true,
+        sortOrder: 2,
+        layout: { colSpan: 1, rowBreakBefore: false },
+        fieldType: "SINGLE_SELECT",
+        semanticRole: "CUSTOM",
+        required: false,
+        options: [{ value: "standard", label: "标准" }],
+      },
+    ];
     expectTemplateError(
       () =>
-        buildTemplateOrderDraft(orderConfig(), {
-          mode: "unknown",
+        buildTemplateOrderDraft(withCustomSelect, {
+          mode: "ranked",
+          plan: "not-declared",
           roster_table: [{ position: "陪玩", count: 1 }],
         }),
       "TEMPLATE_COMPONENT_INVALID",
     );
+
+    // 豁免角色的库外值正常建草稿：沿用 legacy 选项加价 9900 也不参与定价（ADR-0003）。
+    const freeValueDraft = buildTemplateOrderDraft(orderConfig(), {
+      mode: "unknown",
+      roster_table: [{ position: "陪玩", count: 1 }],
+    });
+    expect(freeValueDraft.priceAdjustmentFen).toBe("0");
+    expect(freeValueDraft.document.plainText).toContain("游戏模式：unknown");
 
     expectTemplateError(
       () =>

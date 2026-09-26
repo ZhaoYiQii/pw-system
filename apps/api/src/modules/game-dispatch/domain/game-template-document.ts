@@ -9,6 +9,7 @@ import {
   type TemplateRepeatableTableV2,
 } from "./game-template-config-v2.js";
 import type { TemplateRuntimeValues } from "./game-template-calculations.js";
+import { allowsFreeInput } from "./game-template-values.js";
 
 export const TEMPLATE_DOCUMENT_LIMITS = {
   valueCharacters: 2_000,
@@ -62,6 +63,7 @@ function findOption(
   },
   value: unknown,
   path = `$.values.${source.stableKey}`,
+  allowFreeValue = false,
 ): TemplateChoiceOptionV2 {
   if (typeof value !== "string") {
     throw new TemplateDocumentError(
@@ -72,6 +74,9 @@ function findOption(
   }
   const option = source.options?.find((candidate) => candidate.value === value);
   if (!option) {
+    // ADR-0010 决定 4：豁免语义角色的库外值在文案里原样显示（label = 原值），
+    // 使文案与服务端「库外值放行」的口径一致。
+    if (allowFreeValue) return { value, label: value };
     throw new TemplateDocumentError(
       "TEMPLATE_VALUE_INVALID",
       path,
@@ -89,7 +94,9 @@ function formatTableColumnValue(
 ): string {
   const path = `$.values.${table.stableKey}[${rowIndex}].${column.stableKey}`;
   if (column.columnType === "SINGLE_SELECT") {
-    return limitedValue(findOption(column, rawValue, path).label);
+    return limitedValue(
+      findOption(column, rawValue, path, allowsFreeInput(column)).label,
+    );
   }
   if (column.columnType === "NUMBER") {
     if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) {
@@ -176,7 +183,14 @@ function formatFieldValue(
   rawValue: unknown,
 ): string {
   if (field.fieldType === "SINGLE_SELECT") {
-    return limitedValue(findOption(field, rawValue).label);
+    return limitedValue(
+      findOption(
+        field,
+        rawValue,
+        `$.values.${field.stableKey}`,
+        allowsFreeInput(field),
+      ).label,
+    );
   }
   if (field.fieldType === "MULTI_SELECT") {
     if (!Array.isArray(rawValue)) {
@@ -187,7 +201,14 @@ function formatFieldValue(
       );
     }
     return limitedValue(
-      rawValue.map((value) => findOption(field, value).label).join("、"),
+      // 多选不在豁免范围（ADR-0010 决定 4）：与算价侧的封闭口径保持一致。
+      rawValue
+        .map(
+          (value) =>
+            findOption(field, value, `$.values.${field.stableKey}`, false)
+              .label,
+        )
+        .join("、"),
     );
   }
   if (field.fieldType === "NUMBER") {

@@ -12,6 +12,31 @@ export interface TemplateValueField {
   enabled: boolean;
   sectionId: string | null;
   options: unknown;
+  /** 语义角色（Prisma 行自带；这里只做字面量比较，故不引入 Prisma 类型）。 */
+  semanticRole?: string | null;
+}
+
+/**
+ * ADR-0010 决定 4：大区 / 目标段位 / 模式允许老板填写预设库之外的值。
+ *
+ * 这三个字段的选项是「建议」而不是「枚举」——老板写「翡1」「神秘段位」都应当能提交，
+ * 价格由按游戏的加价规则决定，未命中即按基础价，不在这里拦。
+ * 该集合与移动端 `apps/mobile/src/features/customer-ui/order-values.ts` 的同名常量必须一致。
+ */
+export const FREE_INPUT_SEMANTIC_ROLES: ReadonlySet<string> = new Set([
+  "SERVER_REGION",
+  "TARGET_RANK",
+  "MODE",
+]);
+
+/** 该字段是否允许库外值（仅三个豁免语义角色；未标注语义角色的字段一律不允许）。 */
+export function allowsFreeInput(field: {
+  semanticRole?: string | null;
+}): boolean {
+  return (
+    field.semanticRole != null &&
+    FREE_INPUT_SEMANTIC_ROLES.has(field.semanticRole)
+  );
 }
 
 /** 创建派单只消费启用区块中的启用填写字段。 */
@@ -71,6 +96,7 @@ export function templateFormValueError(
     if (
       value &&
       field.fieldType === "select" &&
+      !allowsFreeInput(field) &&
       (!Array.isArray(field.options) || !field.options.includes(value))
     ) {
       return `${field.label}的值不在模板选项中`;

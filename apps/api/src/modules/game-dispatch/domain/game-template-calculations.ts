@@ -8,6 +8,7 @@ import {
   type TemplateFieldComponentV2,
   type TemplateRepeatableTableV2,
 } from "./game-template-config-v2.js";
+import { allowsFreeInput } from "./game-template-values.js";
 
 export const MAX_TEMPLATE_STAFFING_COUNT = 500;
 
@@ -219,6 +220,7 @@ function selectedOption(
   options: readonly TemplateChoiceOptionV2[],
   value: unknown,
   path: string,
+  allowFreeValue: boolean,
 ): TemplateChoiceOptionV2 {
   if (typeof value !== "string") {
     throw new TemplateRuntimeValueError(
@@ -229,6 +231,10 @@ function selectedOption(
   }
   const option = options.find((candidate) => candidate.value === value);
   if (!option) {
+    // ADR-0010 决定 4/6：豁免语义角色的选项是「建议」——库外值放行，
+    // 合成一个无加价选项（priceDeltaFen 缺省 ⇒ optionPriceFen 返回 0n），
+    // 即「未命中预设库 = 按基础价」。
+    if (allowFreeValue) return { value, label: value };
     throw new TemplateRuntimeValueError(
       "TEMPLATE_VALUE_INVALID",
       path,
@@ -329,7 +335,12 @@ function collectChoiceSelections(
       selections.push({
         component,
         options: [
-          selectedOption(options, rawValue, `$.values.${component.stableKey}`),
+          selectedOption(
+            options,
+            rawValue,
+            `$.values.${component.stableKey}`,
+            allowsFreeInput(component),
+          ),
         ],
       });
       continue;
@@ -362,7 +373,13 @@ function collectChoiceSelections(
     selections.push({
       component,
       options: rawValue.map((value) =>
-        selectedOption(options, value, `$.values.${component.stableKey}`),
+        // 多选不在豁免范围（ADR-0010 决定 4）：确认库外值的豁免只给单选的三字段。
+        selectedOption(
+          options,
+          value,
+          `$.values.${component.stableKey}`,
+          false,
+        ),
       ),
     });
   }
