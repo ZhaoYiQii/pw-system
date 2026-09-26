@@ -10,22 +10,39 @@ export function CustomerShell({
   badge,
   active,
   children,
+  /** 灵析重设计 Slice B：问候式页头（首页用）。提供 greeting 时替代纯标题页头。 */
+  greeting,
+  avatarName,
 }: {
   title: string;
   subtitle?: string;
   badge?: ReactNode;
   active: CustomerNavId;
   children: ReactNode;
+  greeting?: { hello: string; sub: string };
+  avatarName?: string | undefined;
 }) {
   return (
     <View className="cu-page">
-      <View className="cu-appbar">
-        <View className="cu-appbar-copy">
-          <Text className="cu-title">{title}</Text>
-          {subtitle ? <Text className="cu-subtitle">{subtitle}</Text> : null}
+      {greeting ? (
+        <View className="cu-appbar cu-appbar-greet">
+          <View className="cu-appbar-copy">
+            <Text className="cu-title">{greeting.hello}</Text>
+            <Text className="cu-subtitle">{greeting.sub}</Text>
+          </View>
+          <View className="cu-avatar">
+            <Text>{(avatarName ?? "客").slice(0, 1)}</Text>
+          </View>
         </View>
-        {badge ? <View className="cu-chip">{badge}</View> : null}
-      </View>
+      ) : (
+        <View className="cu-appbar">
+          <View className="cu-appbar-copy">
+            <Text className="cu-title">{title}</Text>
+            {subtitle ? <Text className="cu-subtitle">{subtitle}</Text> : null}
+          </View>
+          {badge ? <View className="cu-chip">{badge}</View> : null}
+        </View>
+      )}
       <View className="cu-content">{children}</View>
       <CustomerBottomNav active={active} />
     </View>
@@ -43,6 +60,20 @@ const NAV_ICONS: Record<CustomerNavId, string> = {
   profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
 };
 
+/**
+ * 问候卡（灵析重设计 Slice B）：首页登录后的松绿渐变 hero。
+ * 文案沿用产品既有标语；不展示后端不存在的统计数据。
+ */
+export function CustomerGreetCard({ name }: { name: string }) {
+  return (
+    <View className="cu-greet-card">
+      <Text className="cu-greet-title">今晚，选个合拍的队友</Text>
+      <Text className="cu-greet-note">
+        {name}，欢迎回来 · 资金平台托管 · 服务完成后再结算
+      </Text>
+    </View>
+  );
+}
 export function CustomerBottomNav({ active }: { active: CustomerNavId }) {
   return (
     <View className="cu-bottom-nav">
@@ -66,15 +97,30 @@ export function CustomerBottomNav({ active }: { active: CustomerNavId }) {
   );
 }
 
+export type StatusTone = "ok" | "wait" | "bad" | "muted";
+
+/** 状态 → 语义色映射（灵析重设计 Slice B）：服务中=陶土（进行态）、待确认=琥珀（需行动）、完成=松绿、终止=灰。 */
+export function statusTone(status: string): StatusTone {
+  if (status === "IN_PROGRESS" || status === "READY") return "wait";
+  if (status === "PENDING_CONFIRMATION") return "bad";
+  if (status === "COMPLETED") return "ok";
+  if (status === "CANCELLED" || status === "DRAFT") return "muted";
+  return "muted";
+}
+
 export function StatusPill({
   children,
   wait = false,
+  tone,
 }: {
   children: ReactNode;
+  /** 兼容旧调用：wait=true 等价于 tone="wait"。 */
   wait?: boolean;
+  tone?: StatusTone;
 }) {
+  const resolved = tone ?? (wait ? "wait" : "ok");
   return (
-    <Text className={`cu-state${wait ? " is-wait" : ""}`}>{children}</Text>
+    <Text className={`cu-state is-tone-${resolved}`}>{children}</Text>
   );
 }
 

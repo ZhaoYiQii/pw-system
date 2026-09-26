@@ -260,6 +260,191 @@
   color: var(--cu-amber);
   background: var(--cu-amber-soft);
 }
+/* 灵析重设计 Slice B：语义色 tone 色板（服务中=陶土/待确认=琥珀/完成=松绿/终止=灰）。 */
+.cu-state.is-tone-ok {
+  color: var(--cu-primary);
+  background: var(--cu-primary-soft);
+}
+.cu-state.is-tone-wait {
+  color: var(--cu-accent);
+  background: var(--cu-accent-soft);
+}
+.cu-state.is-tone-bad {
+  color: var(--cu-amber);
+  background: var(--cu-amber-soft);
+}
+.cu-state.is-tone-muted {
+  color: var(--cu-muted);
+  background: #efeae0;
+}
+/* 问候式页头 + 头像（首页）。 */
+.cu-appbar-greet {
+  align-items: center;
+}
+.cu-avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--cu-primary), var(--cu-primary-g2));
+  box-shadow: 0 4px 14px rgba(36, 84, 63, 0.28);
+}
+/* 问候卡（松绿渐变 hero）。 */
+.cu-greet-card {
+  margin-bottom: 22px;
+  padding: 30px 32px;
+  border-radius: var(--cu-radius-card);
+  background: linear-gradient(135deg, var(--cu-primary) 0%, var(--cu-primary-g2) 100%);
+  color: #f2f5ef;
+  box-shadow: var(--cu-shadow-card);
+}
+.cu-greet-card .cu-greet-title {
+  display: block;
+  font-family: var(--cu-serif);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.cu-greet-card .cu-greet-note {
+  display: block;
+  margin-top: 10px;
+  font-size: 22px;
+  line-height: 1.6;
+  opacity: 0.82;
+}
+/* 四宫格快捷入口。 */
+.cu-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.cu-quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 24px 8px 20px;
+  border: 0;
+  border-radius: 26px;
+  background: var(--cu-card);
+  box-shadow: var(--cu-shadow-card);
+  color: var(--cu-ink);
+}
+.cu-quick-item::after {
+  border: 0;
+}
+.cu-quick-item:active {
+  transform: scale(0.97);
+}
+.cu-quick-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cu-quick-icon svg {
+  width: 44px;
+  height: 44px;
+  fill: none;
+  stroke: var(--cu-primary);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cu-quick-label {
+  font-size: 21px;
+  font-weight: 500;
+  color: var(--cu-ink);
+}
+/* 订单迷你卡（首页「进行中的订单」）。 */
+.cu-order-mini {
+  margin-bottom: 22px;
+  padding: 26px 28px;
+  border: 1px solid var(--cu-line);
+  border-radius: var(--cu-radius-card);
+  background: var(--cu-card);
+  box-shadow: var(--cu-shadow-card);
+}
+.cu-order-mini .cu-row-first {
+  margin-top: 0;
+}
+/* 订单列表卡片（列表页）。 */
+.cu-order-card {
+  margin-bottom: 20px;
+  padding: 26px 28px;
+  border: 1px solid var(--cu-line);
+  border-radius: var(--cu-radius-card);
+  background: var(--cu-card);
+  box-shadow: var(--cu-shadow-card);
+}
+.cu-order-card .cu-order-goods {
+  display: block;
+  margin-top: 12px;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--cu-ink);
+}
+.cu-order-card .cu-order-sub {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+  color: var(--cu-muted);
+  line-height: 1.5;
+}
+.cu-order-card .cu-order-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+}
+.cu-order-amount {
+  font-family: var(--cu-serif);
+  font-size: 32px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cu-ink);
+}
+/* 筛选 chips（列表页）。 */
+.cu-filter-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.cu-filter-chip {
+  min-height: 56px;
+  margin: 0;
+  padding: 0 26px;
+  border: 1px solid var(--cu-line);
+  border-radius: 999px;
+  background: var(--cu-card);
+  color: var(--cu-muted);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 54px;
+}
+.cu-filter-chip::after {
+  border: 0;
+}
+.cu-filter-chip.is-active {
+  background: var(--cu-primary);
+  border-color: var(--cu-primary);
+  color: #fff;
+  font-weight: 600;
+}
+.cu-filter-chip:active {
+  transform: scale(0.97);
+}
 
 .cu-tabs {
   display: flex;

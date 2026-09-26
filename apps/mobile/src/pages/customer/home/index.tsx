@@ -6,6 +6,7 @@ import { session } from "@platform-session";
 import { tenantLocator } from "@platform-locator";
 import {
   CustomerLoginCard,
+  CustomerGreetCard,
   CustomerMessage,
   CustomerPhoneLoginCard,
   CustomerShell,
@@ -136,7 +137,16 @@ export default function CustomerHomePage() {
   };
 
   return (
-    <CustomerShell title={storeName} subtitle="老板端" active="home">
+    <CustomerShell
+        title={storeName}
+        subtitle="老板端"
+        active="home"
+        greeting={{
+          hello: me ? `晚上好，${me.name}` : "晚上好",
+          sub: `${storeName} · 老板端`,
+        }}
+        avatarName={me?.name}
+      >
       {!token ? (
         <>
           <View className="cu-login-hero">
@@ -217,37 +227,59 @@ export default function CustomerHomePage() {
       ) : null}
       {token && me ? (
         <>
-          <View className="cu-stat">
-            <Text className="cu-stat-label">欢迎回来</Text>
-            <Text className="cu-stat-value">{me.name}</Text>
-            <Text className="cu-stat-note">
-              老板编号请在我的钱包中查看 · 服务状态以门店为准
-            </Text>
+          <CustomerGreetCard name={me.name} />
+          <View className="cu-quick">
+            <Button
+              className="cu-quick-item"
+              onClick={() => goCustomer("/pages/customer/game-order/index")}
+            >
+              <View className="cu-quick-icon">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v8M8 12h8" />
+                </svg>
+              </View>
+              <Text className="cu-quick-label">去下单</Text>
+            </Button>
+            <Button
+              className="cu-quick-item"
+              onClick={() => goCustomer("/pages/customer/orders/index")}
+            >
+              <View className="cu-quick-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M8 6h11M8 12h11M8 18h11" />
+                  <circle cx="4" cy="6" r="1" />
+                  <circle cx="4" cy="12" r="1" />
+                  <circle cx="4" cy="18" r="1" />
+                </svg>
+              </View>
+              <Text className="cu-quick-label">我的订单</Text>
+            </Button>
+            <Button
+              className="cu-quick-item"
+              onClick={() => goCustomer("/pages/customer/wallet/index")}
+            >
+              <View className="cu-quick-icon">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="7" width="18" height="13" rx="3" />
+                  <path d="M3 11h18M16 15h2" />
+                </svg>
+              </View>
+              <Text className="cu-quick-label">钱包</Text>
+            </Button>
+            <Button
+              className="cu-quick-item"
+              onClick={() => goCustomer("/pages/customer/disputes/index")}
+            >
+              <View className="cu-quick-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3l9 16H3z" />
+                  <path d="M12 10v4M12 17.5v.5" />
+                </svg>
+              </View>
+              <Text className="cu-quick-label">争议</Text>
+            </Button>
           </View>
-          <Button
-            className="cu-button cu-button-primary cu-button-full"
-            onClick={() => goCustomer("/pages/customer/orders/index")}
-          >
-            我的订单
-          </Button>
-          <Button
-            className="cu-button cu-button-outline cu-button-full"
-            onClick={() => goCustomer("/pages/customer/game-order/index")}
-          >
-            自助下单
-          </Button>
-          <Button
-            className="cu-button cu-button-outline cu-button-full"
-            onClick={() => goCustomer("/pages/customer/wallet/index")}
-          >
-            我的钱包
-          </Button>
-          <Button
-            className="cu-button cu-button-outline cu-button-full"
-            onClick={() => goCustomer("/pages/customer/disputes/index")}
-          >
-            我的争议
-          </Button>
         </>
       ) : null}
     </CustomerShell>

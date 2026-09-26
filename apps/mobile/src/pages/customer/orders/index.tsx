@@ -8,6 +8,7 @@ import {
   CustomerMessage,
   CustomerShell,
   goCustomer,
+  statusTone,
   StatusPill,
 } from "../../../components/customer-ui";
 import {
@@ -28,6 +29,11 @@ interface BossOrder {
     durationSeconds: number | null;
     desiredStartAt: string | null;
   } | null;
+  /** 金额来源：下单快照行（整数分字符串），订单列表只读展示。 */
+  snapshot: Array<{
+    productName: string;
+    lineTotalFen: string;
+  }> | null;
 }
 
 const STATUS_TEXT: Record<string, string> = {
@@ -41,6 +47,23 @@ const STATUS_TEXT: Record<string, string> = {
   COMPLETED: "已完成",
   CANCELLED: "已取消",
 };
+
+/** 快照合计（整数分 → 元文本）；无快照显示 —。 */
+function orderAmountFen(order: BossOrder): string | null {
+  const lines = order.snapshot ?? [];
+  if (lines.length === 0) return null;
+  let total = BigInt(0);
+  for (const line of lines) {
+    try {
+      total += BigInt(line.lineTotalFen);
+    } catch {
+      return null;
+    }
+  }
+  const yuan = total / BigInt(100);
+  const fen = total % BigInt(100);
+  return `${yuan}.${fen.toString().padStart(2, "0")}`;
+}
 
 function describe(order: BossOrder): string {
   const requirement = order.requirement?.description;
@@ -180,11 +203,11 @@ export default function CustomerOrdersPage() {
       ) : null}
       {token && loaded ? (
         <>
-          <View className="cu-tabs">
+          <View className="cu-filter-row">
             {groups.map((group) => (
               <Button
                 key={group.key}
-                className={`cu-tab${filter === group.key ? " is-active" : ""}`}
+                className={`cu-filter-chip${filter === group.key ? " is-active" : ""}`}
                 onClick={() => setFilter(group.key)}
               >
                 {group.label}
@@ -206,34 +229,41 @@ export default function CustomerOrdersPage() {
           ) : null}
           {visible.map((order) => {
             const action = primaryAction(order);
+            const amount = orderAmountFen(order);
+            const tone = statusTone(order.status);
             return (
-              <View className="cu-card" key={order.id}>
+              <View className="cu-order-card" key={order.id}>
                 <View className="cu-row cu-row-first">
-                  <Text className="cu-card-title">{describe(order)}</Text>
-                  <StatusPill wait={order.status === "PENDING_CONFIRMATION"}>
+                  <Text className="cu-meta">订单号 {order.orderNo}</Text>
+                  <StatusPill tone={tone}>
                     {STATUS_TEXT[order.status] ?? order.status}
                   </StatusPill>
                 </View>
-                <Text className="cu-meta">订单号 {order.orderNo}</Text>
-                <Text className="cu-meta">
+                <Text className="cu-order-goods">{describe(order)}</Text>
+                <Text className="cu-order-sub">
                   创建于 {new Date(order.createdAt).toLocaleString()}
                 </Text>
                 {order.scheduledStartAt ? (
-                  <Text className="cu-meta">
-                    计划开始 {new Date(order.scheduledStartAt).toLocaleString()}
+                  <Text className="cu-order-sub">
+                    计划开始{" "}
+                    {new Date(order.scheduledStartAt).toLocaleString()}
                   </Text>
                 ) : null}
-                {action ? (
-                  <Button
-                    className="cu-button cu-button-outline cu-button-small cu-button-full"
-                    onClick={() => goCustomer(action.path)}
-                  >
-                    {action.label}
-                  </Button>
-                ) : null}
+                <View className="cu-order-foot">
+                  <Text className="cu-order-amount">
+                    {amount ? `¥${amount}` : "¥ —"}
+                  </Text>
+                  {action ? (
+                    <Button
+                      className="cu-button cu-button-outline cu-button-small"
+                      onClick={() => goCustomer(action.path)}
+                    >
+                      {action.label}
+                    </Button>
+                  ) : null}
+                </View>
               </View>
-            );
-          })}
+            );          })}
         </>
       ) : null}
     </CustomerShell>
